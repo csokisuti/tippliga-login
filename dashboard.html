@@ -40,17 +40,20 @@
         return;
       }
 
-      document.getElementById("welcome").innerText = `Üdvözlünk, ${user.email}!`;
-
       try {
         const docRef = db.collection("users").doc(user.uid);
         const docSnap = await docRef.get();
 
         if (docSnap.exists()) {
           const data = docSnap.data();
+          const displayName = data.nickname || user.email;
+          document.getElementById("welcome").innerText = `Üdvözlünk, ${displayName}!`;
+
           if (data.role === "admin") {
             document.getElementById("adminLink").style.display = "list-item";
           }
+        } else {
+          document.getElementById("welcome").innerText = `Üdvözlünk, ${user.email}!`;
         }
       } catch (error) {
         console.error("Hiba a Firestore lekérdezésnél:", error);
@@ -65,3 +68,4 @@
   </script>
 </body>
 </html>
+
