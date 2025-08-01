@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <title>Meccsek és Tippelés</title>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
 </head>
 <body>
   <h1>Meccsek és Tippelés</h1>
@@ -21,7 +21,7 @@
       appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
 
-    firebase.initializeApp(firebaseConfig);
+    const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
 
@@ -30,38 +30,45 @@
     let userTips = {};
 
     auth.onAuthStateChanged(async (user) => {
-      if (!user) {
+      if (user) {
+        currentUserId = user.uid;
+        const tipsSnapshot = await db.collection("tips").where("userId", "==", currentUserId).get();
+        tipsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          userTips[data.matchId] = { tip: data.tip, isDouble: data.isDouble, id: doc.id, roundId: data.roundId };
+        });
+        loadMatches();
+      } else {
         alert("Nincs bejelentkezve!");
         window.location.href = "login.html";
-        return;
       }
-
-      currentUserId = user.uid;
-      const tipsSnapshot = await db.collection("tips").where("userId", "==", currentUserId).get();
-      tipsSnapshot.forEach((doc) => {
-        const data = doc.data();
-        userTips[data.matchId] = { tip: data.tip, isDouble: data.isDouble, id: doc.id, roundId: data.roundId };
-      });
-      loadMatches();
     });
 
     function loadMatches() {
       db.collection("matches").orderBy("startTime").onSnapshot((querySnapshot) => {
         const matchesByRound = {};
+
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           const roundId = data.roundId || "Egyéb";
-          if (!matchesByRound[roundId]) matchesByRound[roundId] = [];
+
+          if (!matchesByRound[roundId]) {
+            matchesByRound[roundId] = [];
+          }
+
           matchesByRound[roundId].push({ id: doc.id, ...data });
         });
 
         matchesContainer.innerHTML = "";
-        const sortedRounds = Object.keys(matchesByRound).sort();
+        const sortedRounds = Object.keys(matchesByRound).sort((a, b) => {
+          const numA = parseInt(a.replace(/\D/g, "")) || 0;
+          const numB = parseInt(b.replace(/\D/g, "")) || 0;
+          return numA - numB;
+        });
 
         sortedRounds.forEach((roundId) => {
           const roundHeader = document.createElement("h2");
-          const roundNumber = roundId.replace(/\D/g, "") || roundId;
-          roundHeader.textContent = `${roundNumber}. forduló`;
+          roundHeader.textContent = `${roundId.replace(/\D*(\d+)/, "$1")}. forduló`;
           matchesContainer.appendChild(roundHeader);
 
           matchesByRound[roundId].forEach((match) => {
@@ -71,7 +78,7 @@
             matchDiv.style.marginBottom = "10px";
 
             const startTime = match.startTime?.toDate?.();
-            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Hibás dátum";
+            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "nincs időpont";
 
             matchDiv.innerHTML = `
               <strong>${match.homeTeam} vs ${match.awayTeam}</strong><br/>
@@ -84,7 +91,7 @@
             select.innerHTML = `
               <option value="">Válassz</option>
               <option value="1">1 (odds: ${match.odds?.["1"] ?? "-"})</option>
-              <option value="X">X (odds: ${match.odds?.["X"] ?? match.odds?.["x"] ?? "-"})</option>
+              <option value="x">X (odds: ${match.odds?.["x"] ?? "-"})</option>
               <option value="2">2 (odds: ${match.odds?.["2"] ?? "-"})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
@@ -92,6 +99,7 @@
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.checked = existingTip?.isDouble || false;
+            if (existingTip?.id) checkbox.setAttribute("data-tip-id", existingTip.id);
 
             const saveBtn = document.createElement("button");
             saveBtn.textContent = "Tipp mentése";
@@ -114,17 +122,26 @@
               const tipRef = db.collection("tips");
               const existing = userTips[match.id];
 
-              let oldDoubleTipId = null;
-              for (const [mid, tip] of Object.entries(userTips)) {
+              let previousDoubleId = null;
+              for (const [matchId, tip] of Object.entries(userTips)) {
                 if (tip.roundId === match.roundId && tip.isDouble && (!existing || tip.id !== existing.id)) {
-                  oldDoubleTipId = tip.id;
-                  userTips[mid].isDouble = false;
+                  previousDoubleId = tip.id;
                   break;
                 }
               }
 
-              if (oldDoubleTipId) {
-                await tipRef.doc(oldDoubleTipId).update({ isDouble: false });
+              if (isDouble && previousDoubleId) {
+                const prevCheckbox = document.querySelector(`[data-tip-id="${previousDoubleId}"]`);
+                if (prevCheckbox) {
+                  prevCheckbox.checked = false;
+                }
+                await tipRef.doc(previousDoubleId).update({ isDouble: false });
+                for (const tip of Object.values(userTips)) {
+                  if (tip.id === previousDoubleId) {
+                    tip.isDouble = false;
+                    break;
+                  }
+                }
               }
 
               if (existing) {
@@ -138,14 +155,15 @@
                   tip: selected,
                   isDouble,
                   roundId: match.roundId,
-                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 userTips[match.id] = {
                   id: newDoc.id,
                   tip: selected,
                   isDouble,
-                  roundId: match.roundId,
+                  roundId: match.roundId
                 };
+                checkbox.setAttribute("data-tip-id", newDoc.id);
               }
 
               status.innerHTML = `✅ Tippeltél: ${selected} ${isDouble ? "(dupla)" : ""}`;
@@ -154,11 +172,16 @@
 
             matchDiv.appendChild(select);
             matchDiv.appendChild(document.createElement("br"));
+
+            const label = document.createElement("label");
+            label.textContent = "Dupla pont";
             matchDiv.appendChild(checkbox);
-            matchDiv.appendChild(document.createTextNode(" Dupla pont"));
+            matchDiv.appendChild(label);
             matchDiv.appendChild(document.createElement("br"));
+
             matchDiv.appendChild(saveBtn);
             matchDiv.appendChild(status);
+
             matchesContainer.appendChild(matchDiv);
           });
         });
