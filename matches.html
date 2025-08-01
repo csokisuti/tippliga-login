@@ -94,14 +94,14 @@
 
             const existingTip = userTips[match.id];
             const odds1 = match.odds?.["1"] ?? "-";
-            const oddsX = match.odds?.["x"] ?? match.odds?.["X"] ?? "-";
+            const oddsX = match.odds?.["X"] ?? "-";
             const odds2 = match.odds?.["2"] ?? "-";
 
             const select = document.createElement("select");
             select.innerHTML = `
               <option value="">Válassz</option>
               <option value="1">1 (odds: ${odds1})</option>
-              <option value="x">X (odds: ${oddsX})</option>
+              <option value="X">X (odds: ${oddsX})</option>
               <option value="2">2 (odds: ${odds2})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
@@ -188,3 +188,4 @@
   </script>
 </body>
 </html>
+
