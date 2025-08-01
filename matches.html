@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <title>Meccsek és Tippelés</title>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 </head>
 <body>
   <h1>Meccsek és Tippelés</h1>
@@ -16,12 +16,12 @@
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
       projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.firebasestorage.app",
+      storageBucket: "tippliga-4b3af.appspot.com",
       messagingSenderId: "720359845241",
       appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
 
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
 
@@ -52,23 +52,16 @@
           const data = doc.data();
           const roundId = data.roundId || "Egyéb";
 
-          if (!matchesByRound[roundId]) {
-            matchesByRound[roundId] = [];
-          }
-
+          if (!matchesByRound[roundId]) matchesByRound[roundId] = [];
           matchesByRound[roundId].push({ id: doc.id, ...data });
         });
 
         matchesContainer.innerHTML = "";
-        const sortedRounds = Object.keys(matchesByRound).sort((a, b) => {
-          const numA = parseInt(a.replace(/\D/g, "")) || 0;
-          const numB = parseInt(b.replace(/\D/g, "")) || 0;
-          return numA - numB;
-        });
 
+        const sortedRounds = Object.keys(matchesByRound).sort((a, b) => parseInt(a) - parseInt(b));
         sortedRounds.forEach((roundId) => {
           const roundHeader = document.createElement("h2");
-          roundHeader.textContent = `${roundId.replace(/\D*(\d+)/, "$1")}. forduló`;
+          roundHeader.textContent = `${roundId}. forduló`;
           matchesContainer.appendChild(roundHeader);
 
           matchesByRound[roundId].forEach((match) => {
@@ -78,7 +71,7 @@
             matchDiv.style.marginBottom = "10px";
 
             const startTime = match.startTime?.toDate?.();
-            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "nincs időpont";
+            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Invalid Date";
 
             matchDiv.innerHTML = `
               <strong>${match.homeTeam} vs ${match.awayTeam}</strong><br/>
@@ -90,16 +83,15 @@
             const select = document.createElement("select");
             select.innerHTML = `
               <option value="">Válassz</option>
-              <option value="1">1 (odds: ${match.odds?.["1"] ?? "-"})</option>
-              <option value="x">X (odds: ${match.odds?.["x"] ?? "-"})</option>
-              <option value="2">2 (odds: ${match.odds?.["2"] ?? "-"})</option>
+              <option value="1">1 (odds: ${match.odds?.["1"] ?? "nincs megadva"})</option>
+              <option value="x">X (odds: ${match.odds?.["x"] ?? "nincs megadva"})</option>
+              <option value="2">2 (odds: ${match.odds?.["2"] ?? "nincs megadva"})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
 
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.checked = existingTip?.isDouble || false;
-            if (existingTip?.id) checkbox.setAttribute("data-tip-id", existingTip.id);
 
             const saveBtn = document.createElement("button");
             saveBtn.textContent = "Tipp mentése";
@@ -122,30 +114,19 @@
               const tipRef = db.collection("tips");
               const existing = userTips[match.id];
 
-              let previousDoubleId = null;
-              for (const [matchId, tip] of Object.entries(userTips)) {
+              // ha már van másik duplázás, töröljük először
+              for (const tip of Object.values(userTips)) {
                 if (tip.roundId === match.roundId && tip.isDouble && (!existing || tip.id !== existing.id)) {
-                  previousDoubleId = tip.id;
-                  break;
-                }
-              }
-
-              if (isDouble && previousDoubleId) {
-                const prevCheckbox = document.querySelector(`[data-tip-id="${previousDoubleId}"]`);
-                if (prevCheckbox) {
-                  prevCheckbox.checked = false;
-                }
-                await tipRef.doc(previousDoubleId).update({ isDouble: false });
-                for (const tip of Object.values(userTips)) {
-                  if (tip.id === previousDoubleId) {
-                    tip.isDouble = false;
-                    break;
-                  }
+                  await tipRef.doc(tip.id).update({ isDouble: false });
+                  userTips[tip.matchId].isDouble = false;
                 }
               }
 
               if (existing) {
-                await tipRef.doc(existing.id).update({ tip: selected, isDouble });
+                await tipRef.doc(existing.id).update({
+                  tip: selected,
+                  isDouble,
+                });
                 userTips[match.id].tip = selected;
                 userTips[match.id].isDouble = isDouble;
               } else {
@@ -155,19 +136,17 @@
                   tip: selected,
                   isDouble,
                   roundId: match.roundId,
-                  timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 });
                 userTips[match.id] = {
                   id: newDoc.id,
                   tip: selected,
                   isDouble,
-                  roundId: match.roundId
+                  roundId: match.roundId,
                 };
-                checkbox.setAttribute("data-tip-id", newDoc.id);
               }
 
-              status.innerHTML = `✅ Tippeltél: ${selected} ${isDouble ? "(dupla)" : ""}`;
-              status.style.color = "green";
+              loadMatches(); // frissítés, hogy azonnal látszódjon az új állapot
             };
 
             matchDiv.appendChild(select);
