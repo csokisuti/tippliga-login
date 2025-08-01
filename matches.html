@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <title>Meccsek és Tippelés</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 </head>
 <body>
   <h1>Meccsek és Tippelés</h1>
-  <div id="matchesContainer">Betöltés...</div>
+  <div id="matchesContainer"></div>
 
   <script>
     const firebaseConfig = {
@@ -51,9 +51,11 @@
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           const roundId = data.roundId || "Egyéb";
+
           if (!matchesByRound[roundId]) {
             matchesByRound[roundId] = [];
           }
+
           matchesByRound[roundId].push({ id: doc.id, ...data });
         });
 
@@ -62,10 +64,9 @@
 
         sortedRounds.forEach((roundId) => {
           const roundHeader = document.createElement("h2");
-          roundHeader.textContent = `Forduló: ${roundId}`;
+          const roundNumber = roundId.replace(/\D/g, "") || roundId;
+          roundHeader.textContent = `${roundNumber}. forduló`;
           matchesContainer.appendChild(roundHeader);
-
-          matchesByRound[roundId].sort((a, b) => a.startTime?.toDate?.() - b.startTime?.toDate?.());
 
           matchesByRound[roundId].forEach((match) => {
             const matchDiv = document.createElement("div");
@@ -74,7 +75,7 @@
             matchDiv.style.marginBottom = "10px";
 
             const startTime = match.startTime?.toDate?.();
-            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Ismeretlen időpont";
+            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Hibás dátum";
 
             matchDiv.innerHTML = `
               <strong>${match.homeTeam} vs ${match.awayTeam}</strong><br/>
@@ -87,7 +88,7 @@
             select.innerHTML = `
               <option value="">Válassz</option>
               <option value="1">1 (odds: ${match.odds?.["1"] ?? "-"})</option>
-              <option value="x">X (odds: ${match.odds?.["x"] ?? "-"})</option>
+              <option value="X">X (odds: ${match.odds?.["X"] ?? match.odds?.["x"] ?? "-"})</option>
               <option value="2">2 (odds: ${match.odds?.["2"] ?? "-"})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
@@ -110,7 +111,7 @@
               const isDouble = checkbox.checked;
 
               if (!selected) {
-                alert("Válassz tippet!");
+                alert("Kérlek válassz egy tippet.");
                 return;
               }
 
@@ -126,12 +127,15 @@
               }
 
               if (isDouble && hasDoubleInThisRound) {
-                alert("Már van duplázás ebben a fordulóban.");
+                alert("Már használtál duplázást ebben a fordulóban.");
                 return;
               }
 
               if (existing) {
-                await tipRef.doc(existing.id).update({ tip: selected, isDouble });
+                await tipRef.doc(existing.id).update({
+                  tip: selected,
+                  isDouble,
+                });
                 userTips[match.id].tip = selected;
                 userTips[match.id].isDouble = isDouble;
               } else {
@@ -166,6 +170,7 @@
 
             matchDiv.appendChild(saveBtn);
             matchDiv.appendChild(status);
+
             matchesContainer.appendChild(matchDiv);
           });
         });
