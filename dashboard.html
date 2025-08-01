@@ -9,32 +9,32 @@
 
   <button onclick="logout()">Kilépés</button>
 
-  <ul>
+  <ul id="navLinks">
     <li><a href="matches.html">Meccsek és tippek</a></li>
     <li><a href="past-matches.html">Régi meccsek</a></li>
     <li><a href="points.html">Összpontszám</a></li>
     <li id="adminLink" style="display: none;"><a href="admin.html">Admin felület</a></li>
   </ul>
 
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-  <script>
     const firebaseConfig = {
-  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain: "tippliga-4b3af.firebaseapp.com",
-  projectId: "tippliga-4b3af",
-  storageBucket: "tippliga-4b3af.firebasestorage.app",
-  messagingSenderId: "720359845241",
-  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.firebasestorage.app",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    auth.onAuthStateChanged(async (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "login.html";
         return;
@@ -42,19 +42,19 @@
 
       document.getElementById("welcome").innerText = `Üdvözlünk, ${user.email}!`;
 
-      const docRef = db.collection("users").doc(user.uid);
-      const docSnap = await docRef.get();
+      const userDocRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userDocRef);
 
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.role === "admin") {
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.role === "admin") {
           document.getElementById("adminLink").style.display = "list-item";
         }
       }
     });
 
-    function logout() {
-      auth.signOut().then(() => {
+    window.logout = function () {
+      signOut(auth).then(() => {
         window.location.href = "login.html";
       });
     }
