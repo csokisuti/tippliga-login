@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,9 @@
 </head>
 <body>
   <h1 id="welcome">Üdvözlünk!</h1>
+
   <button onclick="logout()">Kilépés</button>
+
   <ul>
     <li><a href="matches.html">Meccsek és tippek</a></li>
     <li><a href="past-matches.html">Régi meccsek</a></li>
@@ -33,12 +35,15 @@
     const db = firebase.firestore();
 
     auth.onAuthStateChanged(async (user) => {
-      console.log("Auth state changed:", user);
+      console.log("Auth state changed fired");
+
       if (!user) {
+        console.log("No user, redirecting to login.");
         window.location.href = "login.html";
         return;
       }
 
+      console.log("Logged in user:", user.email);
       document.getElementById("welcome").innerText = `Üdvözlünk, ${user.email}!`;
 
       try {
@@ -47,14 +52,15 @@
 
         if (!querySnapshot.empty) {
           const userData = querySnapshot.docs[0].data();
+          console.log("User role:", userData.role);
           if (userData.role === "admin") {
             document.getElementById("adminLink").style.display = "list-item";
           }
         } else {
-          console.log("User not found in Firestore users collection");
+          console.log("User not found in Firestore users collection.");
         }
-      } catch (err) {
-        console.error("Error fetching user role:", err);
+      } catch (error) {
+        console.error("Hiba a jogosultság lekérdezésekor:", error);
       }
     });
 
@@ -66,5 +72,3 @@
   </script>
 </body>
 </html>
-
-
