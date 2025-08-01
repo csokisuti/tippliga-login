@@ -1,22 +1,24 @@
 <!DOCTYPE html>
-<html lang="hu">
+<html>
 <head>
   <meta charset="UTF-8" />
   <title>Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-  <h1>Focis Tippjáték Dashboard</h1>
-  <div id="welcome"></div>
-  <button id="logout">Kilépés</button>
+  <h1 id="welcome">Üdvözlünk!</h1>
+
+  <button onclick="logout()">Kilépés</button>
+
   <ul>
     <li><a href="matches.html">Meccsek és tippek</a></li>
-    <li><a href="archived.html">Régi meccsek</a></li>
-    <li><a href="standings.html">Összpontszám</a></li>
-    <li id="adminLink" style="display:none;"><a href="admin.html">Admin felület</a></li>
+    <li><a href="past-matches.html">Régi meccsek</a></li>
+    <li><a href="points.html">Összpontszám</a></li>
+    <li id="adminLink" style="display: none;"><a href="admin.html">Admin felület</a></li>
   </ul>
+
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -32,33 +34,31 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    const welcomeDiv = document.getElementById("welcome");
-    const adminLink = document.getElementById("adminLink");
-
     auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        const email = user.email || "";
-        welcomeDiv.textContent = `Üdvözlünk, ${email}!`;
-
-        const usersRef = db.collection("users");
-        const snapshot = await usersRef.where("email", "==", email).get();
-
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          if (data.role === "admin") {
-            adminLink.style.display = "list-item";
-          }
-        }
-      } else {
+      if (!user) {
         window.location.href = "login.html";
+        return;
+      }
+
+      document.getElementById("welcome").innerText = `Üdvözlünk, ${user.email}!`;
+
+      const docRef = db.collection("users").doc(user.uid);
+      const docSnap = await docRef.get();
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.role === "admin") {
+          document.getElementById("adminLink").style.display = "list-item";
+        }
       }
     });
 
-    document.getElementById("logout").addEventListener("click", () => {
+    function logout() {
       auth.signOut().then(() => {
         window.location.href = "login.html";
       });
-    });
+    }
   </script>
 </body>
 </html>
+
