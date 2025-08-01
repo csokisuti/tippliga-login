@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <title>Meccsek és Tippelés</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <h1>Meccsek és Tippelés</h1>
-  <div id="matchesContainer"></div>
+  <div id="matchesContainer">Betöltés...</div>
 
   <script>
     const firebaseConfig = {
@@ -74,7 +74,7 @@
             matchDiv.style.marginBottom = "10px";
 
             const startTime = match.startTime?.toDate?.();
-            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Invalid Date";
+            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Ismeretlen időpont";
 
             matchDiv.innerHTML = `
               <strong>${match.homeTeam} vs ${match.awayTeam}</strong><br/>
@@ -86,9 +86,9 @@
             const select = document.createElement("select");
             select.innerHTML = `
               <option value="">Válassz</option>
-              <option value="1">1 (odds: ${match.odds?.["1"] ?? "nincs megadva"})</option>
-              <option value="x">X (odds: ${match.odds?.["x"] ?? "nincs megadva"})</option>
-              <option value="2">2 (odds: ${match.odds?.["2"] ?? "nincs megadva"})</option>
+              <option value="1">1 (odds: ${match.odds?.["1"] ?? "-"})</option>
+              <option value="x">X (odds: ${match.odds?.["x"] ?? "-"})</option>
+              <option value="2">2 (odds: ${match.odds?.["2"] ?? "-"})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
 
@@ -110,7 +110,7 @@
               const isDouble = checkbox.checked;
 
               if (!selected) {
-                alert("Kérlek válassz egy tippet.");
+                alert("Válassz tippet!");
                 return;
               }
 
@@ -126,15 +126,12 @@
               }
 
               if (isDouble && hasDoubleInThisRound) {
-                alert("Már használtál duplázást ebben a fordulóban.");
+                alert("Már van duplázás ebben a fordulóban.");
                 return;
               }
 
               if (existing) {
-                await tipRef.doc(existing.id).update({
-                  tip: selected,
-                  isDouble,
-                });
+                await tipRef.doc(existing.id).update({ tip: selected, isDouble });
                 userTips[match.id].tip = selected;
                 userTips[match.id].isDouble = isDouble;
               } else {
@@ -148,4 +145,32 @@
                 });
                 userTips[match.id] = {
                   id: newDoc.id,
-                  t
+                  tip: selected,
+                  isDouble,
+                  roundId: match.roundId,
+                };
+              }
+
+              status.innerHTML = `✅ Tippeltél: ${selected} ${isDouble ? "(dupla)" : ""}`;
+              status.style.color = "green";
+            };
+
+            matchDiv.appendChild(select);
+            matchDiv.appendChild(document.createElement("br"));
+
+            const label = document.createElement("label");
+            label.textContent = "Dupla pont";
+            matchDiv.appendChild(checkbox);
+            matchDiv.appendChild(label);
+            matchDiv.appendChild(document.createElement("br"));
+
+            matchDiv.appendChild(saveBtn);
+            matchDiv.appendChild(status);
+            matchesContainer.appendChild(matchDiv);
+          });
+        });
+      });
+    }
+  </script>
+</body>
+</html>
