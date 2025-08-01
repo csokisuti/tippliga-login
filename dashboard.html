@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="hu">
 <head>
   <meta charset="UTF-8" />
   <title>Dashboard</title>
@@ -36,4 +36,32 @@
 
     auth.onAuthStateChanged(async (user) => {
       if (!user) {
-        window.loc
+        window.location.href = "login.html";
+        return;
+      }
+
+      document.getElementById("welcome").innerText = `Üdvözlünk, ${user.email}!`;
+
+      try {
+        const docRef = db.collection("users").doc(user.uid);
+        const docSnap = await docRef.get();
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.role === "admin") {
+            document.getElementById("adminLink").style.display = "list-item";
+          }
+        }
+      } catch (error) {
+        console.error("Hiba a Firestore lekérdezésnél:", error);
+      }
+    });
+
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
+  </script>
+</body>
+</html>
