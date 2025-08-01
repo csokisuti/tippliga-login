@@ -1,72 +1,70 @@
 body {
   font-family: Arial, sans-serif;
+  background-color: #f5f7fa;
+  margin: 0;
   padding: 20px;
-  background: #f5f5f5;
-}
-
-h1, h2 {
   color: #333;
 }
 
-form {
-  background: #fff;
-  padding: 20px;
-  margin-bottom: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+h1, h2, h3 {
+  color: #2c3e50;
 }
 
-label {
-  display: block;
-  margin-top: 10px;
-  font-weight: bold;
+form, .match-card {
+  background-color: #ffffff;
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 input, select, button {
-  padding: 8px;
+  display: block;
   margin-top: 5px;
+  margin-bottom: 10px;
+  padding: 8px;
   width: 100%;
-  box-sizing: border-box;
+  max-width: 400px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
 }
 
 button {
-  background-color: #007bff;
+  background-color: #3498db;
   color: white;
   border: none;
   cursor: pointer;
-  margin-top: 15px;
+  transition: background-color 0.2s;
 }
 
 button:hover {
-  background-color: #0056b3;
+  background-color: #2980b9;
 }
 
-.match-card {
-  background: #fff;
-  margin-bottom: 15px;
-  padding: 15px;
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+section {
+  margin-bottom: 40px;
 }
 
-.section-header {
-  margin-top: 40px;
-  border-bottom: 2px solid #ccc;
-  padding-bottom: 5px;
-  color: #444;
+#matchesList {
+  margin-top: 20px;
 }
 
-.toggle-btn {
-  margin-bottom: 10px;
-  background-color: #28a745;
+.match-card button {
+  width: auto;
+  margin-right: 10px;
+  display: inline-block;
 }
 
-.toggle-btn:hover {
-  background-color: #1e7e34;
+.match-card input {
+  display: inline-block;
+  width: calc(33% - 10px);
+  margin-right: 10px;
 }
 
-.hidden {
-  display: none;
+ul#userList {
+  list-style-type: disc;
+  padding-left: 20px;
 }
