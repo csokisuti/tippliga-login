@@ -47,17 +47,14 @@
     function loadMatches() {
       db.collection("matches").orderBy("startTime").onSnapshot((querySnapshot) => {
         const matchesByRound = {};
-
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           const roundId = data.roundId || "Egyéb";
-
           if (!matchesByRound[roundId]) matchesByRound[roundId] = [];
           matchesByRound[roundId].push({ id: doc.id, ...data });
         });
 
         matchesContainer.innerHTML = "";
-
         const sortedRounds = Object.keys(matchesByRound).sort((a, b) => parseInt(a) - parseInt(b));
         sortedRounds.forEach((roundId) => {
           const roundHeader = document.createElement("h2");
@@ -79,13 +76,12 @@
             `;
 
             const existingTip = userTips[match.id];
-
             const select = document.createElement("select");
             select.innerHTML = `
               <option value="">Válassz</option>
-              <option value="1">1 (odds: ${match.odds?.["1"] ?? "nincs megadva"})</option>
-              <option value="x">X (odds: ${match.odds?.["x"] ?? "nincs megadva"})</option>
-              <option value="2">2 (odds: ${match.odds?.["2"] ?? "nincs megadva"})</option>
+              <option value="1">1 (odds: ${match.odds?.["1"] ?? "-"})</option>
+              <option value="x">X (odds: ${match.odds?.["x"] ?? "-"})</option>
+              <option value="2">2 (odds: ${match.odds?.["2"] ?? "-"})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
 
@@ -93,19 +89,15 @@
             checkbox.type = "checkbox";
             checkbox.checked = existingTip?.isDouble || false;
 
+            const status = document.createElement("div");
+            status.style.color = "green";
+            if (existingTip) status.textContent = `✅ Tippeltél: ${existingTip.tip}${existingTip.isDouble ? " (dupla)" : ""}`;
+
             const saveBtn = document.createElement("button");
             saveBtn.textContent = "Tipp mentése";
-
-            const status = document.createElement("div");
-            if (existingTip) {
-              status.innerHTML = `✅ Tippeltél: ${existingTip.tip} ${existingTip.isDouble ? "(dupla)" : ""}`;
-              status.style.color = "green";
-            }
-
             saveBtn.onclick = async () => {
               const selected = select.value;
               const isDouble = checkbox.checked;
-
               if (!selected) {
                 alert("Kérlek válassz egy tippet.");
                 return;
@@ -114,11 +106,19 @@
               const tipRef = db.collection("tips");
               const existing = userTips[match.id];
 
-              // ha már van másik duplázás, töröljük először
+              // korábbi dupla keresése és levétele
               for (const tip of Object.values(userTips)) {
-                if (tip.roundId === match.roundId && tip.isDouble && (!existing || tip.id !== existing.id)) {
+                if (
+                  tip.roundId === match.roundId &&
+                  tip.isDouble &&
+                  (!existing || tip.id !== existing.id)
+                ) {
                   await tipRef.doc(tip.id).update({ isDouble: false });
                   userTips[tip.matchId].isDouble = false;
+                  const checkboxToUncheck = document.querySelector(`input[data-match-id="${tip.matchId}"]`);
+                  if (checkboxToUncheck) checkboxToUncheck.checked = false;
+                  const statusToUpdate = document.querySelector(`div[data-status-id="${tip.matchId}"]`);
+                  if (statusToUpdate) statusToUpdate.textContent = `✅ Tippeltél: ${userTips[tip.matchId].tip}`;
                 }
               }
 
@@ -146,8 +146,12 @@
                 };
               }
 
-              loadMatches(); // frissítés, hogy azonnal látszódjon az új állapot
+              checkbox.checked = isDouble;
+              status.textContent = `✅ Tippeltél: ${selected}${isDouble ? " (dupla)" : ""}`;
             };
+
+            checkbox.setAttribute("data-match-id", match.id);
+            status.setAttribute("data-status-id", match.id);
 
             matchDiv.appendChild(select);
             matchDiv.appendChild(document.createElement("br"));
