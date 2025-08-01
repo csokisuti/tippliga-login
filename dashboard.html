@@ -16,9 +16,9 @@
     <li id="adminLink" style="display: none;"><a href="admin.html">Admin felület</a></li>
   </ul>
 
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -35,32 +35,25 @@
     const db = firebase.firestore();
 
     auth.onAuthStateChanged(async (user) => {
-      console.log("Auth state changed fired");
-
       if (!user) {
-        console.log("No user, redirecting to login.");
         window.location.href = "login.html";
         return;
       }
 
-      console.log("Logged in user:", user.email);
       document.getElementById("welcome").innerText = `Üdvözlünk, ${user.email}!`;
 
       try {
-        const usersRef = db.collection("users");
-        const querySnapshot = await usersRef.where("email", "==", user.email).get();
+        const docRef = db.collection("users").doc(user.uid);
+        const docSnap = await docRef.get();
 
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
-          console.log("User role:", userData.role);
-          if (userData.role === "admin") {
+        if (docSnap.exists) {
+          const data = docSnap.data();
+          if (data.role === "admin") {
             document.getElementById("adminLink").style.display = "list-item";
           }
-        } else {
-          console.log("User not found in Firestore users collection.");
         }
       } catch (error) {
-        console.error("Hiba a jogosultság lekérdezésekor:", error);
+        console.error("Hiba a Firestore lekérdezésnél:", error);
       }
     });
 
