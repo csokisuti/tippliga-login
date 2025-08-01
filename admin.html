@@ -9,14 +9,14 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, Timestamp,
-      doc, updateDoc, deleteDoc, setDoc
+      doc, updateDoc, deleteDoc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
       projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.firebasestorage.app",
+      storageBucket: "tippliga-4b3af.appspot.com",
       messagingSenderId: "720359845241",
       appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
@@ -24,10 +24,18 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const adminEmail = "krisz@krisz.com";
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user || user.email !== adminEmail) {
+      if (!user) {
+        document.body.innerHTML = "<h2>⛔ Nincs jogosultságod az admin felülethez.</h2>";
+        return;
+      }
+
+      const docRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(docRef);
+      const data = userSnap.data();
+
+      if (!userSnap.exists() || data.role !== "admin") {
         document.body.innerHTML = "<h2>⛔ Nincs jogosultságod az admin felülethez.</h2>";
         return;
       }
@@ -103,17 +111,17 @@
 
       document.getElementById("userForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const emailValue = document.getElementById("email").value;
-        const passwordValue = document.getElementById("password").value;
-        const nicknameValue = document.getElementById("nickname").value;
-        const roleValue = document.getElementById("role").value;
+        const email = email.value;
+        const password = password.value;
+        const nickname = nickname.value;
+        const role = role.value;
 
         try {
-          const cred = await createUserWithEmailAndPassword(auth, emailValue, passwordValue);
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
           await setDoc(doc(db, "users", cred.user.uid), {
-            email: emailValue,
-            nickname: nicknameValue,
-            role: roleValue
+            email,
+            nickname,
+            role
           });
           alert("Felhasználó létrehozva!");
           e.target.reset();
@@ -183,7 +191,7 @@
         btn.textContent = "Törlés";
         btn.onclick = async () => {
           if (confirm(`Törlöd: ${user.email}? Ez nem törli a belépési fiókot, csak a Firestore-ból.`)) {
-            await deleteDoc(doc(db, "users", docSnap.id));
+            await deleteDoc(docSnap.ref);
             await loadUsers();
           }
         };
