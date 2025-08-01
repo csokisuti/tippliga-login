@@ -93,13 +93,16 @@
             `;
 
             const existingTip = userTips[match.id];
+            const odds1 = match.odds?.["1"] ?? "-";
+            const oddsX = match.odds?.["x"] ?? match.odds?.["X"] ?? "-";
+            const odds2 = match.odds?.["2"] ?? "-";
 
             const select = document.createElement("select");
             select.innerHTML = `
               <option value="">Válassz</option>
-              <option value="1">1 (odds: ${match.odds?.["1"] ?? "nincs"})</option>
-              <option value="x">X (odds: ${match.odds?.["x"] ?? "nincs"})</option>
-              <option value="2">2 (odds: ${match.odds?.["2"] ?? "nincs"})</option>
+              <option value="1">1 (odds: ${odds1})</option>
+              <option value="x">X (odds: ${oddsX})</option>
+              <option value="2">2 (odds: ${odds2})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
 
@@ -134,6 +137,7 @@
                 );
                 if (oldDouble) {
                   await tipRef.doc(oldDouble[1].id).update({ isDouble: false });
+                  userTips[oldDouble[0]].isDouble = false;
                 }
               }
 
@@ -142,6 +146,8 @@
                   tip: selected,
                   isDouble,
                 });
+                userTips[match.id].tip = selected;
+                userTips[match.id].isDouble = isDouble;
               } else {
                 const newDoc = await tipRef.add({
                   userId: currentUserId,
