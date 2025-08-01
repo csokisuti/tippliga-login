@@ -36,36 +36,4 @@
 
     auth.onAuthStateChanged(async (user) => {
       if (!user) {
-        window.location.href = "login.html";
-        return;
-      }
-
-      try {
-        const docRef = db.collection("users").doc(user.uid);
-        const docSnap = await docRef.get();
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          document.getElementById("welcome").innerText = `Üdvözlünk, ${data.nickname || user.email}!`;
-          if (data.role === "admin") {
-            document.getElementById("adminLink").style.display = "list-item";
-          }
-        } else {
-          alert("Nincs jogosultságod.");
-          auth.signOut().then(() => {
-            window.location.href = "login.html";
-          });
-        }
-      } catch (error) {
-        console.error("Hiba a Firestore lekérdezésnél:", error);
-      }
-    });
-
-    function logout() {
-      auth.signOut().then(() => {
-        window.location.href = "login.html";
-      });
-    }
-  </script>
-</body>
-</html>
+        window.loc
