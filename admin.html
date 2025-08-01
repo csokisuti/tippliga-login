@@ -9,7 +9,7 @@
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, Timestamp,
-      doc, updateDoc, deleteDoc, getDoc
+      doc, updateDoc, deleteDoc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -24,7 +24,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
     const adminEmail = "krisz@krisz.com";
 
     onAuthStateChanged(auth, async (user) => {
@@ -180,6 +179,15 @@
         const user = doc.data();
         const li = document.createElement("li");
         li.textContent = `${user.nickname || user.email} (${user.role})`;
+        const btn = document.createElement("button");
+        btn.textContent = "Törlés";
+        btn.onclick = async () => {
+          if (confirm(`Törlöd: ${user.email}? Ez nem törli a belépési fiókot, csak a Firestore-ból.`)) {
+            await deleteDoc(doc.ref);
+            await loadUsers();
+          }
+        };
+        li.appendChild(btn);
         list.appendChild(li);
       });
     }
@@ -191,4 +199,3 @@
 <body>
 </body>
 </html>
-
