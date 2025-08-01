@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Tippliga Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+</head>
+<body>
+  <h2>Üdvözlünk a Tippligában!</h2>
+  <p id="userEmail"></p>
+  <button id="logoutBtn">Kijelentkezés</button>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIZaSyC2pWM1xgaWTdI2JoEhK23vkC8FTf2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d36ded6acc6b43ebff853a8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("userEmail").textContent = "Bejelentkezve: " + user.email;
+      } else {
+        window.location.href = "login.html"; // ha nincs bejelentkezve, vissza loginre
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      firebase.auth().signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    });
+  </script>
+</body>
+</html>

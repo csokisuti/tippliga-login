@@ -3,15 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Tippliga Bejelentkezés</title>
+
+  <!-- Firebase compat SDK-k -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
 <body>
   <h2>Bejelentkezés</h2>
   <form id="loginForm">
-    <label for="username">Felhasználónév:</label><br>
-    <input type="text" id="username" name="username" required><br><br>
+    <label for="email">Email:</label><br>
+    <input type="email" id="email" required><br><br>
 
     <label for="password">Jelszó:</label><br>
-    <input type="password" id="password" name="password" required><br><br>
+    <input type="password" id="password" required><br><br>
 
     <button type="submit">Bejelentkezés</button>
   </form>
@@ -19,27 +23,30 @@
   <p id="result"></p>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycby0wVE-hpHYM8IIjlYU6SlMUcCusZpru0aRd535VViP4myWzjlR_AuHH6U6HFKUhu0S/exec";
+    const firebaseConfig = {
+  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+  authDomain: "tippliga-4b3af.firebaseapp.com",
+  projectId: "tippliga-4b3af",
+  storageBucket: "tippliga-4b3af.firebasestorage.app",
+  messagingSenderId: "720359845241",
+  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+};
+
+    firebase.initializeApp(firebaseConfig);
 
     document.getElementById("loginForm").addEventListener("submit", function(e) {
       e.preventDefault();
-      const username = document.getElementById("username").value;
+      const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
 
-      fetch(scriptURL, {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
-        headers: {
-          "Content-Type": "application/json"
-        }
-      })
-      .then(res => res.text())
-      .then(data => {
-        document.getElementById("result").innerText = data;
-      })
-      .catch(error => {
-        document.getElementById("result").innerText = "Hiba történt: " + error;
-      });
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then(() => {
+          document.getElementById("result").innerText = "Sikeres bejelentkezés";
+          window.location.href = "dashboard.html";
+        })
+        .catch(error => {
+          document.getElementById("result").innerText = "Hiba: " + error.message;
+        });
     });
   </script>
 </body>
