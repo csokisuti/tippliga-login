@@ -1,37 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="hu">
 <head>
-  <title>Admin – Meccs hozzáadása</title>
+  <meta charset="UTF-8" />
+  <title>Admin – Meccs és Felhasználókezelés</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore, collection, addDoc, Timestamp
+      getFirestore, collection, addDoc, Timestamp, getDocs,
+      doc, updateDoc, deleteDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain: "tippliga-4b3af.firebaseapp.com",
-  projectId: "tippliga-4b3af",
-  storageBucket: "tippliga-4b3af.firebasestorage.app",
-  messagingSenderId: "720359845241",
-  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.firebasestorage.app",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
     const adminEmail = "krisz@krisz.com";
 
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (!user || user.email !== adminEmail) {
         document.body.innerHTML = "<h2>⛔ Nincs jogosultságod az admin felülethez.</h2>";
         return;
       }
 
       const form = document.createElement("form");
-
       form.innerHTML = `
         <h1>Meccs hozzáadása</h1>
         <label>Hazai csapat: <input type="text" id="homeTeam" required></label><br><br>
@@ -43,10 +43,8 @@
         <label>Odds 2: <input type="number" step="0.01" id="odds2" required></label><br><br>
         <button type="submit">Meccs mentése</button>
       `;
-
       form.onsubmit = async (e) => {
         e.preventDefault();
-
         const homeTeam = document.getElementById("homeTeam").value;
         const awayTeam = document.getElementById("awayTeam").value;
         const startTimeInput = document.getElementById("startTime").value;
@@ -54,29 +52,134 @@
         const odds1 = parseFloat(document.getElementById("odds1").value);
         const oddsX = parseFloat(document.getElementById("oddsX").value);
         const odds2 = parseFloat(document.getElementById("odds2").value);
-
         const startTime = Timestamp.fromDate(new Date(startTimeInput));
-
         await addDoc(collection(db, "matches"), {
           homeTeam,
           awayTeam,
           startTime,
           roundId,
-          odds: {
-            "1": odds1,
-            "X": oddsX,
-            "2": odds2
-          }
+          odds: { "1": odds1, "X": oddsX, "2": odds2 }
         });
-
         alert("✅ Meccs sikeresen mentve!");
         form.reset();
+        loadMatches();
       };
-
       document.body.appendChild(form);
+
+      const matchList = document.createElement("div");
+      matchList.innerHTML = "<h2>Meglévő meccsek</h2>";
+      document.body.appendChild(matchList);
+
+      async function loadMatches() {
+        matchList.innerHTML = "<h2>Meglévő meccsek</h2>";
+        const snapshot = await getDocs(collection(db, "matches"));
+        snapshot.forEach((docSnap) => {
+          const match = docSnap.data();
+          const container = document.createElement("div");
+          container.style.border = "1px solid #ccc";
+          container.style.padding = "10px";
+          container.style.marginBottom = "10px";
+          const startTime = match.startTime.toDate().toISOString().slice(0, 16);
+          container.innerHTML = `
+            <label>Hazai: <input type="text" value="${match.homeTeam}" class="homeTeam" /></label><br>
+            <label>Vendég: <input type="text" value="${match.awayTeam}" class="awayTeam" /></label><br>
+            <label>Kezdés: <input type="datetime-local" value="${startTime}" class="startTime" /></label><br>
+            <label>Forduló: <input type="text" value="${match.roundId}" class="roundId" /></label><br>
+            <label>Odds 1: <input type="number" step="0.01" value="${match.odds["1"]}" class="odds1" /></label><br>
+            <label>Odds X: <input type="number" step="0.01" value="${match.odds["X"]}" class="oddsX" /></label><br>
+            <label>Odds 2: <input type="number" step="0.01" value="${match.odds["2"]}" class="odds2" /></label><br>
+            <button class="update">Frissítés</button>
+            <button class="delete">Törlés</button>
+          `;
+          container.querySelector(".update").onclick = async () => {
+            const updated = {
+              homeTeam: container.querySelector(".homeTeam").value,
+              awayTeam: container.querySelector(".awayTeam").value,
+              startTime: Timestamp.fromDate(new Date(container.querySelector(".startTime").value)),
+              roundId: container.querySelector(".roundId").value,
+              odds: {
+                "1": parseFloat(container.querySelector(".odds1").value),
+                "X": parseFloat(container.querySelector(".oddsX").value),
+                "2": parseFloat(container.querySelector(".odds2").value)
+              }
+            };
+            await updateDoc(doc(db, "matches", docSnap.id), updated);
+            alert("✅ Meccs frissítve.");
+          };
+          container.querySelector(".delete").onclick = async () => {
+            if (confirm("Biztosan törlöd ezt a meccset?")) {
+              await deleteDoc(doc(db, "matches", docSnap.id));
+              container.remove();
+            }
+          };
+          matchList.appendChild(container);
+        });
+      }
+
+      await loadMatches();
+
+      const userForm = document.createElement("form");
+      userForm.innerHTML = `
+        <h2>Felhasználó hozzáadása</h2>
+        <label>Email: <input type="email" id="newUserEmail" required /></label><br>
+        <label>Szerepkör: <input type="text" id="newUserRole" required /></label><br>
+        <label>UID: <input type="text" id="newUserUID" required /></label><br><br>
+        <button type="submit">Felhasználó hozzáadása</button>
+      `;
+      userForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("newUserEmail").value;
+        const role = document.getElementById("newUserRole").value;
+        const uid = document.getElementById("newUserUID").value;
+        await setDoc(doc(db, "users", uid), { email, role });
+        alert("✅ Felhasználó hozzáadva.");
+        userForm.reset();
+        await loadUsers();
+      };
+      document.body.appendChild(userForm);
+
+      const userList = document.createElement("div");
+      userList.innerHTML = "<h2>Meglévő felhasználók</h2>";
+      document.body.appendChild(userList);
+
+      async function loadUsers() {
+        userList.innerHTML = "<h2>Meglévő felhasználók</h2>";
+        const snapshot = await getDocs(collection(db, "users"));
+        snapshot.forEach((docSnap) => {
+          const user = docSnap.data();
+          const container = document.createElement("div");
+          container.style.border = "1px solid #ccc";
+          container.style.padding = "10px";
+          container.style.marginBottom = "10px";
+          container.innerHTML = `
+            <label>Email: <input type="email" value="${user.email}" class="email" /></label><br>
+            <label>Szerepkör: <input type="text" value="${user.role}" class="role" /></label><br>
+            <button class="update">Frissítés</button>
+            <button class="delete">Törlés</button>
+          `;
+          container.querySelector(".update").onclick = async () => {
+            const updatedEmail = container.querySelector(".email").value;
+            const updatedRole = container.querySelector(".role").value;
+            await updateDoc(doc(db, "users", docSnap.id), {
+              email: updatedEmail,
+              role: updatedRole
+            });
+            alert("✅ Felhasználó frissítve.");
+          };
+          container.querySelector(".delete").onclick = async () => {
+            if (confirm("Biztosan törlöd ezt a felhasználót?")) {
+              await deleteDoc(doc(db, "users", docSnap.id));
+              container.remove();
+            }
+          };
+          userList.appendChild(container);
+        });
+      }
+
+      await loadUsers();
     });
   </script>
 </head>
-<body>
-</body>
+<body></body>
 </html>
+
