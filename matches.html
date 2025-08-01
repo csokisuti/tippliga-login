@@ -32,11 +32,7 @@
     auth.onAuthStateChanged(async (user) => {
       if (user) {
         currentUserId = user.uid;
-        const tipsSnapshot = await db.collection("tips").where("userId", "==", currentUserId).get();
-        tipsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          userTips[data.matchId] = { tip: data.tip, isDouble: data.isDouble, id: doc.id, roundId: data.roundId };
-        });
+        await fetchUserTips();
         loadMatches();
       } else {
         alert("Nincs bejelentkezve!");
@@ -44,21 +40,42 @@
       }
     });
 
+    async function fetchUserTips() {
+      const tipsSnapshot = await db.collection("tips").where("userId", "==", currentUserId).get();
+      userTips = {};
+      tipsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        userTips[data.matchId] = { tip: data.tip, isDouble: data.isDouble, id: doc.id, roundId: data.roundId };
+      });
+    }
+
     function loadMatches() {
-      db.collection("matches").orderBy("startTime").onSnapshot((querySnapshot) => {
+      db.collection("matches").orderBy("startTime").onSnapshot(async (querySnapshot) => {
+        await fetchUserTips();
         const matchesByRound = {};
+
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           const roundId = data.roundId || "Egyéb";
-          if (!matchesByRound[roundId]) matchesByRound[roundId] = [];
+
+          if (!matchesByRound[roundId]) {
+            matchesByRound[roundId] = [];
+          }
+
           matchesByRound[roundId].push({ id: doc.id, ...data });
         });
 
         matchesContainer.innerHTML = "";
-        const sortedRounds = Object.keys(matchesByRound).sort((a, b) => parseInt(a) - parseInt(b));
+
+        const sortedRounds = Object.keys(matchesByRound).sort((a, b) => {
+          const numA = parseInt(a.replace(/\D/g, '')) || 0;
+          const numB = parseInt(b.replace(/\D/g, '')) || 0;
+          return numA - numB;
+        });
+
         sortedRounds.forEach((roundId) => {
           const roundHeader = document.createElement("h2");
-          roundHeader.textContent = `${roundId}. forduló`;
+          roundHeader.textContent = `${roundId.replace(/\D*(\d+)/, "$1")}. forduló`;
           matchesContainer.appendChild(roundHeader);
 
           matchesByRound[roundId].forEach((match) => {
@@ -76,12 +93,13 @@
             `;
 
             const existingTip = userTips[match.id];
+
             const select = document.createElement("select");
             select.innerHTML = `
               <option value="">Válassz</option>
-              <option value="1">1 (odds: ${match.odds?.["1"] ?? "-"})</option>
-              <option value="x">X (odds: ${match.odds?.["x"] ?? "-"})</option>
-              <option value="2">2 (odds: ${match.odds?.["2"] ?? "-"})</option>
+              <option value="1">1 (odds: ${match.odds?.["1"] ?? "nincs"})</option>
+              <option value="x">X (odds: ${match.odds?.["x"] ?? "nincs"})</option>
+              <option value="2">2 (odds: ${match.odds?.["2"] ?? "nincs"})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
 
@@ -89,15 +107,19 @@
             checkbox.type = "checkbox";
             checkbox.checked = existingTip?.isDouble || false;
 
-            const status = document.createElement("div");
-            status.style.color = "green";
-            if (existingTip) status.textContent = `✅ Tippeltél: ${existingTip.tip}${existingTip.isDouble ? " (dupla)" : ""}`;
-
             const saveBtn = document.createElement("button");
             saveBtn.textContent = "Tipp mentése";
+
+            const status = document.createElement("div");
+            if (existingTip) {
+              status.innerHTML = `✅ Tippeltél: ${existingTip.tip} ${existingTip.isDouble ? "(dupla)" : ""}`;
+              status.style.color = "green";
+            }
+
             saveBtn.onclick = async () => {
               const selected = select.value;
               const isDouble = checkbox.checked;
+
               if (!selected) {
                 alert("Kérlek válassz egy tippet.");
                 return;
@@ -106,19 +128,12 @@
               const tipRef = db.collection("tips");
               const existing = userTips[match.id];
 
-              // korábbi dupla keresése és levétele
-              for (const tip of Object.values(userTips)) {
-                if (
-                  tip.roundId === match.roundId &&
-                  tip.isDouble &&
-                  (!existing || tip.id !== existing.id)
-                ) {
-                  await tipRef.doc(tip.id).update({ isDouble: false });
-                  userTips[tip.matchId].isDouble = false;
-                  const checkboxToUncheck = document.querySelector(`input[data-match-id="${tip.matchId}"]`);
-                  if (checkboxToUncheck) checkboxToUncheck.checked = false;
-                  const statusToUpdate = document.querySelector(`div[data-status-id="${tip.matchId}"]`);
-                  if (statusToUpdate) statusToUpdate.textContent = `✅ Tippeltél: ${userTips[tip.matchId].tip}`;
+              if (isDouble) {
+                const oldDouble = Object.entries(userTips).find(
+                  ([, tip]) => tip.roundId === match.roundId && tip.isDouble && tip.id !== existing?.id
+                );
+                if (oldDouble) {
+                  await tipRef.doc(oldDouble[1].id).update({ isDouble: false });
                 }
               }
 
@@ -127,8 +142,6 @@
                   tip: selected,
                   isDouble,
                 });
-                userTips[match.id].tip = selected;
-                userTips[match.id].isDouble = isDouble;
               } else {
                 const newDoc = await tipRef.add({
                   userId: currentUserId,
@@ -146,12 +159,8 @@
                 };
               }
 
-              checkbox.checked = isDouble;
-              status.textContent = `✅ Tippeltél: ${selected}${isDouble ? " (dupla)" : ""}`;
+              loadMatches();
             };
-
-            checkbox.setAttribute("data-match-id", match.id);
-            status.setAttribute("data-status-id", match.id);
 
             matchDiv.appendChild(select);
             matchDiv.appendChild(document.createElement("br"));
