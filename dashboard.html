@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
@@ -6,9 +6,7 @@
 </head>
 <body>
   <h1 id="welcome">Üdvözlünk!</h1>
-
   <button onclick="logout()">Kilépés</button>
-
   <ul>
     <li><a href="matches.html">Meccsek és tippek</a></li>
     <li><a href="past-matches.html">Régi meccsek</a></li>
@@ -35,6 +33,7 @@
     const db = firebase.firestore();
 
     auth.onAuthStateChanged(async (user) => {
+      console.log("Auth state changed:", user);
       if (!user) {
         window.location.href = "login.html";
         return;
@@ -42,14 +41,20 @@
 
       document.getElementById("welcome").innerText = `Üdvözlünk, ${user.email}!`;
 
-      const usersRef = db.collection("users");
-      const querySnapshot = await usersRef.where("email", "==", user.email).get();
+      try {
+        const usersRef = db.collection("users");
+        const querySnapshot = await usersRef.where("email", "==", user.email).get();
 
-      if (!querySnapshot.empty) {
-        const userData = querySnapshot.docs[0].data();
-        if (userData.role === "admin") {
-          document.getElementById("adminLink").style.display = "list-item";
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          if (userData.role === "admin") {
+            document.getElementById("adminLink").style.display = "list-item";
+          }
+        } else {
+          console.log("User not found in Firestore users collection");
         }
+      } catch (err) {
+        console.error("Error fetching user role:", err);
       }
     });
 
@@ -61,4 +66,5 @@
   </script>
 </body>
 </html>
+
 
