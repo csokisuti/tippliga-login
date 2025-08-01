@@ -4,7 +4,7 @@
   <title>Admin – TippLiga</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, orderBy, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -61,37 +61,53 @@
       };
       container.appendChild(matchForm);
 
+      const toggleBtn = document.createElement("button");
+      toggleBtn.textContent = "Meccsek megjelenítése";
+      toggleBtn.style.marginTop = "20px";
+      container.appendChild(toggleBtn);
+
       const matchesDiv = document.createElement("div");
+      matchesDiv.style.display = "none";
+      toggleBtn.onclick = () => {
+        matchesDiv.style.display = matchesDiv.style.display === "none" ? "block" : "none";
+        toggleBtn.textContent = matchesDiv.style.display === "none" ? "Meccsek megjelenítése" : "Meccsek elrejtése";
+      };
+
       matchesDiv.innerHTML = "<h2>Feltöltött meccsek</h2>";
       const q = query(collection(db, "matches"), orderBy("startTime"));
       const snapshot = await getDocs(q);
       snapshot.forEach(docSnap => {
         const m = docSnap.data();
-        const box = document.createElement("div");
+        const box = document.createElement("form");
         box.innerHTML = `
-          <strong>${m.homeTeam} - ${m.awayTeam}</strong><br>
-          Kezdés: ${new Date(m.startTime.toDate()).toLocaleString()} | Forduló: ${m.roundId}<br>
-          Odds: 1 - ${m.odds["1"]}, X - ${m.odds["X"]}, 2 - ${m.odds["2"]}
-          <br><button id="edit">Szerkesztés</button>
-          <button id="delete">Törlés</button><br><br>
+          <input value="${m.homeTeam}" id="homeTeam"><br>
+          <input value="${m.awayTeam}" id="awayTeam"><br>
+          <input type="datetime-local" value="${new Date(m.startTime.toDate()).toISOString().slice(0,16)}" id="start"><br>
+          <input value="${m.roundId}" id="roundId"><br>
+          <input value="${m.odds["1"]}" id="odds1"><br>
+          <input value="${m.odds["X"]}" id="oddsX"><br>
+          <input value="${m.odds["2"]}" id="odds2"><br>
+          <button type="submit">Mentés</button>
+          <button type="button" id="del">Törlés</button><br><br>
         `;
-        box.querySelector("#delete").onclick = async () => {
+        box.onsubmit = async (e) => {
+          e.preventDefault();
+          await updateDoc(doc(db, "matches", docSnap.id), {
+            homeTeam: box.querySelector("#homeTeam").value,
+            awayTeam: box.querySelector("#awayTeam").value,
+            startTime: new Date(box.querySelector("#start").value),
+            roundId: box.querySelector("#roundId").value,
+            odds: {
+              "1": parseFloat(box.querySelector("#odds1").value),
+              "X": parseFloat(box.querySelector("#oddsX").value),
+              "2": parseFloat(box.querySelector("#odds2").value)
+            }
+          });
+          alert("Mentve");
+        };
+        box.querySelector("#del").onclick = async () => {
           await deleteDoc(doc(db, "matches", docSnap.id));
           location.reload();
-        };
-        box.querySelector("#edit").onclick = () => {
-          const new1 = prompt("Új odds 1:", m.odds["1"]);
-          const newX = prompt("Új odds X:", m.odds["X"]);
-          const new2 = prompt("Új odds 2:", m.odds["2"]);
-          const newRound = prompt("Új forduló ID:", m.roundId);
-          updateDoc(doc(db, "matches", docSnap.id), {
-            odds: {
-              "1": parseFloat(new1),
-              "X": parseFloat(newX),
-              "2": parseFloat(new2),
-            },
-            roundId: newRound
-          }).then(() => location.reload());
         };
         matchesDiv.appendChild(box);
       });
@@ -102,6 +118,7 @@
         <h2>Új felhasználó hozzáadása</h2>
         <input id="newEmail" placeholder="Email"><br>
         <input id="newPass" placeholder="Jelszó" type="password"><br>
+        <input id="nickname" placeholder="Becenév"><br>
         <select id="newRole">
           <option value="user">user</option>
           <option value="admin">admin</option>
@@ -113,10 +130,12 @@
         const email = document.getElementById("newEmail").value;
         const pass = document.getElementById("newPass").value;
         const role = document.getElementById("newRole").value;
+        const nickname = document.getElementById("nickname").value;
         const tempUser = await createUserWithEmailAndPassword(auth, email, pass);
         await setDoc(doc(db, "users", tempUser.user.uid), {
           email,
-          role
+          role,
+          nickname
         });
         alert("Sikeres regisztráció");
         location.reload();
@@ -129,7 +148,7 @@
       userSnap.forEach(userDoc => {
         const u = userDoc.data();
         const item = document.createElement("div");
-        item.innerHTML = `${u.email} (${u.role}) <button id="remove">Törlés</button>`;
+        item.innerHTML = `${u.email} (${u.role}) - ${u.nickname || ""} <button id="remove">Törlés</button>`;
         item.querySelector("#remove").onclick = async () => {
           await deleteDoc(doc(db, "users", userDoc.id));
           location.reload();
@@ -144,4 +163,3 @@
 </head>
 <body></body>
 </html>
-
