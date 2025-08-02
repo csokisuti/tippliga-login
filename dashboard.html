@@ -3,14 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <title>Dashboard</title>
-  <style>
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #999; padding: 8px; text-align: center; }
-    th { background-color: #f2f2f2; }
-  </style>
 </head>
 <body>
   <h1 id="welcome">Üdvözlünk!</h1>
+
   <button onclick="logout()">Kilépés</button>
 
   <ul>
@@ -20,8 +16,8 @@
     <li id="adminLink" style="display: none;"><a href="admin.html">Admin felület</a></li>
   </ul>
 
-  <h2>NB1 Tabella</h2>
-  <div id="nb1-table">Betöltés...</div>
+  <h2>NB I tabella</h2>
+  <div id="nb1Table">Betöltés...</div>
 
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth-compat.js"></script>
@@ -47,13 +43,18 @@
         return;
       }
 
-      const docRef = db.collection("users").doc(user.uid);
-      const docSnap = await docRef.get();
-      const data = docSnap.data();
-      document.getElementById("welcome").innerText = `Üdvözlünk, ${data.nickname || user.email}!`;
-
-      if (data.role === "admin") {
-        document.getElementById("adminLink").style.display = "list-item";
+      try {
+        const docRef = db.collection("users").doc(user.uid);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          const data = docSnap.data();
+          document.getElementById("welcome").innerText = `Üdvözlünk, ${data.nickname || user.email}!`;
+          if (data.role === "admin") {
+            document.getElementById("adminLink").style.display = "list-item";
+          }
+        }
+      } catch (error) {
+        console.error("Hiba a Firestore lekérdezésnél:", error);
       }
     });
 
@@ -63,37 +64,59 @@
       });
     }
 
-    fetch("https://v3.football.api-sports.io/standings?season=2025&league=271", {
-      method: "GET",
+    fetch("https://api.football-data.org/v4/competitions/HNB/standings", {
       headers: {
-        "x-apisports-key": "5173c2acec1b0547a59bbae5a65480d3"
+        "X-Auth-Token": "5173c2acec1b0547a59bbae5a65480d3"
       }
     })
-    .then(res => res.json())
+    .then(response => response.json())
     .then(data => {
-      const table = data.response[0].league.standings[0];
-      let html = '<table><tr><th>#</th><th>Csapat</th><th>Meccs</th><th>Gy</th><th>D</th><th>V</th><th>Gk</th><th>Pont</th></tr>';
-      table.forEach(team => {
-        html += `<tr>
-          <td>${team.rank}</td>
+      const standings = data.standings?.[0]?.table;
+      if (!standings) {
+        document.getElementById("nb1Table").innerText = "Nem sikerült betölteni a tabellát.";
+        return;
+      }
+
+      const table = document.createElement("table");
+      table.border = "1";
+      table.style.borderCollapse = "collapse";
+      table.style.marginTop = "10px";
+      table.innerHTML = `
+        <tr>
+          <th>Helyezés</th>
+          <th>Csapat</th>
+          <th>Lejátszott</th>
+          <th>Győzelem</th>
+          <th>Döntetlen</th>
+          <th>Vereség</th>
+          <th>Gólkülönbség</th>
+          <th>Pont</th>
+        </tr>
+      `;
+
+      standings.forEach(team => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${team.position}</td>
           <td>${team.team.name}</td>
-          <td>${team.all.played}</td>
-          <td>${team.all.win}</td>
-          <td>${team.all.draw}</td>
-          <td>${team.all.lose}</td>
-          <td>${team.goalsDiff}</td>
+          <td>${team.playedGames}</td>
+          <td>${team.won}</td>
+          <td>${team.draw}</td>
+          <td>${team.lost}</td>
+          <td>${team.goalDifference}</td>
           <td>${team.points}</td>
-        </tr>`;
+        `;
+        table.appendChild(row);
       });
-      html += '</table>';
-      document.getElementById("nb1-table").innerHTML = html;
+
+      const container = document.getElementById("nb1Table");
+      container.innerHTML = "";
+      container.appendChild(table);
     })
     .catch(err => {
-      document.getElementById("nb1-table").innerText = "Nem sikerült betölteni a tabellát.";
+      document.getElementById("nb1Table").innerText = "Hiba a tabella betöltésekor.";
+      console.error("API hiba:", err);
     });
   </script>
 </body>
 </html>
-
-
-
