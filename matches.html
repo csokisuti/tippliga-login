@@ -6,6 +6,19 @@
   <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <style>
+    .team-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.1em;
+    }
+    .crest {
+      height: 28px;
+      width: 28px;
+      object-fit: contain;
+    }
+  </style>
 </head>
 <body>
   <h1>Meccsek és Tippelés</h1>
@@ -28,6 +41,21 @@
     const matchesContainer = document.getElementById("matchesContainer");
     let currentUserId = null;
     let userTips = {};
+
+    const crestMap = {
+      "Debreceni VSC": "crest/crest-dvsc.png",
+      "Diósgyőri VTK": "crest/crest-dvtk.png",
+      "Ferencváros": "crest/crest-fradi.png",
+      "ETO FC Győr": "crest/crest-gyor.png",
+      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
+      "Kisvárda FC": "crest/crest-kisvarda.png",
+      "MTK Budapest": "crest/crest-mtk.png",
+      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
+      "Paksi FC": "crest/crest-paks.png",
+      "Puskás Akadémia": "crest/crest-puskas.png",
+      "Újpest FC": "crest/crest-ujpest.png",
+      "Zalaegerszegi TE FC": "crest/crest-zte.png"
+    };
 
     auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -87,8 +115,16 @@
             const startTime = match.startTime?.toDate?.();
             const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Invalid Date";
 
+            const homeCrest = crestMap[match.homeTeam] || "";
+            const awayCrest = crestMap[match.awayTeam] || "";
+
             matchDiv.innerHTML = `
-              <strong>${match.homeTeam} vs ${match.awayTeam}</strong><br/>
+              <div class="team-row">
+                <img src="${homeCrest}" class="crest">
+                <strong>${match.homeTeam}</strong> vs
+                <strong>${match.awayTeam}</strong>
+                <img src="${awayCrest}" class="crest">
+              </div>
               Kezdés: ${formattedTime}<br/>
             `;
 
@@ -188,4 +224,3 @@
   </script>
 </body>
 </html>
-
