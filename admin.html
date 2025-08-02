@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="style.css">
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
@@ -94,14 +94,14 @@
         e.preventDefault();
         const startTime = Timestamp.fromDate(new Date(document.getElementById("startTime").value));
         await addDoc(collection(db, "matches"), {
-          homeTeam: document.getElementById("homeTeam").value,
-          awayTeam: document.getElementById("awayTeam").value,
+          homeTeam: homeTeam.value,
+          awayTeam: awayTeam.value,
           startTime,
-          roundId: document.getElementById("roundId").value,
+          roundId: roundId.value,
           odds: {
-            "1": parseFloat(document.getElementById("odds1").value),
-            "X": parseFloat(document.getElementById("oddsX").value),
-            "2": parseFloat(document.getElementById("odds2").value)
+            "1": parseFloat(odds1.value),
+            "X": parseFloat(oddsX.value),
+            "2": parseFloat(odds2.value)
           }
         });
         alert("Meccs mentve");
@@ -111,21 +111,31 @@
 
       document.getElementById("userForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const nickname = document.getElementById("nickname").value;
-        const role = document.getElementById("role").value;
+        const emailInput = document.getElementById("email").value;
+        const passwordInput = document.getElementById("password").value;
+        const nicknameInput = document.getElementById("nickname").value;
+        const roleInput = document.getElementById("role").value;
+
+        const originalUser = auth.currentUser;
+        const originalEmail = originalUser.email;
 
         try {
-          const cred = await createUserWithEmailAndPassword(auth, email, password);
+          const cred = await createUserWithEmailAndPassword(auth, emailInput, passwordInput);
           await setDoc(doc(db, "users", cred.user.uid), {
-            email,
-            nickname,
-            role
+            email: emailInput,
+            nickname: nicknameInput,
+            role: roleInput
           });
-          alert("Felhasználó létrehozva!");
-          e.target.reset();
-          await loadUsers();
+
+          const adminPassword = prompt("Új felhasználó létrehozva.\nKérlek, írd be az eredeti admin jelszavát a visszajelentkezéshez:");
+          if (adminPassword) {
+            await signInWithEmailAndPassword(auth, originalEmail, adminPassword);
+            alert("Felhasználó létrehozva és visszajelentkeztél!");
+            e.target.reset();
+            await loadUsers();
+          } else {
+            alert("Sikertelen visszajelentkezés.");
+          }
         } catch (err) {
           alert("Hiba: " + err.message);
         }
@@ -207,5 +217,3 @@
 <body>
 </body>
 </html>
-
-    
