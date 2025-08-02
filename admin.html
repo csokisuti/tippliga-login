@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="style.css">
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
@@ -94,14 +94,14 @@
         e.preventDefault();
         const startTime = Timestamp.fromDate(new Date(document.getElementById("startTime").value));
         await addDoc(collection(db, "matches"), {
-          homeTeam: homeTeam.value,
-          awayTeam: awayTeam.value,
+          homeTeam: document.getElementById("homeTeam").value,
+          awayTeam: document.getElementById("awayTeam").value,
           startTime,
-          roundId: roundId.value,
+          roundId: document.getElementById("roundId").value,
           odds: {
-            "1": parseFloat(odds1.value),
-            "X": parseFloat(oddsX.value),
-            "2": parseFloat(odds2.value)
+            "1": parseFloat(document.getElementById("odds1").value),
+            "X": parseFloat(document.getElementById("oddsX").value),
+            "2": parseFloat(document.getElementById("odds2").value)
           }
         });
         alert("Meccs mentve");
@@ -117,21 +117,13 @@
         const role = document.getElementById("role").value;
 
         try {
-          const secondaryApp = initializeApp(firebaseConfig, "Secondary");
-          const secondaryAuth = getAuth(secondaryApp);
-
-          const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
           await setDoc(doc(db, "users", cred.user.uid), {
             email,
             nickname,
             role
           });
-
           alert("Felhasználó létrehozva!");
-
-          await signOut(secondaryAuth);
-          await secondaryApp.delete();
-
           e.target.reset();
           await loadUsers();
         } catch (err) {
@@ -215,3 +207,5 @@
 <body>
 </body>
 </html>
+
+    
