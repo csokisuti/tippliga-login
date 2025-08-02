@@ -25,6 +25,12 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    const teams = [
+      "Debreceni VSC", "Diósgyőri VTK", "Ferencváros", "ETO FC Győr", "Kazincbarcikai SC",
+      "Kisvárda FC", "MTK Budapest", "Nyíregyháza Spartacus", "Paksi FC",
+      "Puskás Akadémia", "Újpest FC", "Zalaegerszegi TE FC"
+    ];
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         document.body.innerHTML = "<h2>⛔ Nincs jogosultságod az admin felülethez.</h2>";
@@ -47,39 +53,15 @@
 
     function initUI() {
       const formSection = document.createElement("section");
+
+      const homeOptions = teams.map(team => `<option value="${team}">${team}</option>`).join('');
+      const awayOptions = teams.map(team => `<option value="${team}">${team}</option>`).join('');
+
       formSection.innerHTML = `
         <h2>Új meccs hozzáadása</h2>
         <form id="matchForm">
-          <select id="homeTeam" required>
-            <option value="">Hazai csapat</option>
-            <option value="Ferencváros">Ferencváros</option>
-            <option value="Paks">Paks</option>
-            <option value="Fehérvár">Fehérvár</option>
-            <option value="Debrecen">Debrecen</option>
-            <option value="Kecskemét">Kecskemét</option>
-            <option value="Zalaegerszeg">Zalaegerszeg</option>
-            <option value="Diósgyőr">Diósgyőr</option>
-            <option value="MTK">MTK</option>
-            <option value="Kisvárda">Kisvárda</option>
-            <option value="Mezőkövesd">Mezőkövesd</option>
-            <option value="Nyíregyháza">Nyíregyháza</option>
-            <option value="Vasas">Vasas</option>
-          </select><br>
-          <select id="awayTeam" required>
-            <option value="">Vendég csapat</option>
-            <option value="Ferencváros">Ferencváros</option>
-            <option value="Paks">Paks</option>
-            <option value="Fehérvár">Fehérvár</option>
-            <option value="Debrecen">Debrecen</option>
-            <option value="Kecskemét">Kecskemét</option>
-            <option value="Zalaegerszeg">Zalaegerszeg</option>
-            <option value="Diósgyőr">Diósgyőr</option>
-            <option value="MTK">MTK</option>
-            <option value="Kisvárda">Kisvárda</option>
-            <option value="Mezőkövesd">Mezőkövesd</option>
-            <option value="Nyíregyháza">Nyíregyháza</option>
-            <option value="Vasas">Vasas</option>
-          </select><br>
+          <select id="homeTeam" required><option value="">Hazai csapat</option>${homeOptions}</select><br>
+          <select id="awayTeam" required><option value="">Vendég csapat</option>${awayOptions}</select><br>
           <input type="datetime-local" id="startTime" required><br>
           <input placeholder="Forduló ID (pl. 1)" id="roundId" required><br>
           <input type="number" step="0.01" placeholder="Odds 1" id="odds1" required><br>
@@ -87,7 +69,6 @@
           <input type="number" step="0.01" placeholder="Odds 2" id="odds2" required><br>
           <button type="submit">Mentés</button>
         </form>
-        <button onclick="window.location.href='dashboard.html'">Vissza a főoldalra</button>
       `;
 
       const toggleButton = document.createElement("button");
@@ -117,7 +98,13 @@
         <ul id="userList"></ul>
       `;
 
-      document.body.append(formSection, toggleButton, matchesList, userSection);
+      const backButton = document.createElement("button");
+      backButton.textContent = "⬅️ Vissza a dashboardra";
+      backButton.onclick = () => {
+        window.location.href = "dashboard.html";
+      };
+
+      document.body.append(formSection, toggleButton, matchesList, userSection, backButton);
 
       document.getElementById("matchForm").addEventListener("submit", async (e) => {
         e.preventDefault();
