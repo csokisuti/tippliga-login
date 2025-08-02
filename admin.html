@@ -46,6 +46,12 @@
     });
 
     function initUI() {
+      const backButton = document.createElement("button");
+      backButton.textContent = "⬅️ Vissza a dashboardra";
+      backButton.onclick = () => {
+        window.location.href = "dashboard.html";
+      };
+
       const formSection = document.createElement("section");
       formSection.innerHTML = `
         <h2>Új meccs hozzáadása</h2>
@@ -88,7 +94,7 @@
         <ul id="userList"></ul>
       `;
 
-      document.body.append(formSection, toggleButton, matchesList, userSection);
+      document.body.append(backButton, formSection, toggleButton, matchesList, userSection);
 
       document.getElementById("matchForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -217,3 +223,4 @@
 <body>
 </body>
 </html>
+
