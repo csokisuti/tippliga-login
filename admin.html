@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="style.css">
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
@@ -46,18 +46,40 @@
     });
 
     function initUI() {
-      const backButton = document.createElement("button");
-      backButton.textContent = "⬅️ Vissza a dashboardra";
-      backButton.onclick = () => {
-        window.location.href = "dashboard.html";
-      };
-
       const formSection = document.createElement("section");
       formSection.innerHTML = `
         <h2>Új meccs hozzáadása</h2>
         <form id="matchForm">
-          <input placeholder="Hazai csapat" id="homeTeam" required><br>
-          <input placeholder="Vendég csapat" id="awayTeam" required><br>
+          <select id="homeTeam" required>
+            <option value="">Hazai csapat</option>
+            <option value="Ferencváros">Ferencváros</option>
+            <option value="Paks">Paks</option>
+            <option value="Fehérvár">Fehérvár</option>
+            <option value="Debrecen">Debrecen</option>
+            <option value="Kecskemét">Kecskemét</option>
+            <option value="Zalaegerszeg">Zalaegerszeg</option>
+            <option value="Diósgyőr">Diósgyőr</option>
+            <option value="MTK">MTK</option>
+            <option value="Kisvárda">Kisvárda</option>
+            <option value="Mezőkövesd">Mezőkövesd</option>
+            <option value="Nyíregyháza">Nyíregyháza</option>
+            <option value="Vasas">Vasas</option>
+          </select><br>
+          <select id="awayTeam" required>
+            <option value="">Vendég csapat</option>
+            <option value="Ferencváros">Ferencváros</option>
+            <option value="Paks">Paks</option>
+            <option value="Fehérvár">Fehérvár</option>
+            <option value="Debrecen">Debrecen</option>
+            <option value="Kecskemét">Kecskemét</option>
+            <option value="Zalaegerszeg">Zalaegerszeg</option>
+            <option value="Diósgyőr">Diósgyőr</option>
+            <option value="MTK">MTK</option>
+            <option value="Kisvárda">Kisvárda</option>
+            <option value="Mezőkövesd">Mezőkövesd</option>
+            <option value="Nyíregyháza">Nyíregyháza</option>
+            <option value="Vasas">Vasas</option>
+          </select><br>
           <input type="datetime-local" id="startTime" required><br>
           <input placeholder="Forduló ID (pl. 1)" id="roundId" required><br>
           <input type="number" step="0.01" placeholder="Odds 1" id="odds1" required><br>
@@ -65,6 +87,7 @@
           <input type="number" step="0.01" placeholder="Odds 2" id="odds2" required><br>
           <button type="submit">Mentés</button>
         </form>
+        <button onclick="window.location.href='dashboard.html'">Vissza a főoldalra</button>
       `;
 
       const toggleButton = document.createElement("button");
@@ -94,7 +117,7 @@
         <ul id="userList"></ul>
       `;
 
-      document.body.append(backButton, formSection, toggleButton, matchesList, userSection);
+      document.body.append(formSection, toggleButton, matchesList, userSection);
 
       document.getElementById("matchForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -117,31 +140,21 @@
 
       document.getElementById("userForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const emailInput = document.getElementById("email").value;
-        const passwordInput = document.getElementById("password").value;
-        const nicknameInput = document.getElementById("nickname").value;
-        const roleInput = document.getElementById("role").value;
-
-        const originalUser = auth.currentUser;
-        const originalEmail = originalUser.email;
+        const email = email.value;
+        const password = password.value;
+        const nickname = nickname.value;
+        const role = role.value;
 
         try {
-          const cred = await createUserWithEmailAndPassword(auth, emailInput, passwordInput);
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
           await setDoc(doc(db, "users", cred.user.uid), {
-            email: emailInput,
-            nickname: nicknameInput,
-            role: roleInput
+            email,
+            nickname,
+            role
           });
-
-          const adminPassword = prompt("Új felhasználó létrehozva.\nKérlek, írd be az eredeti admin jelszavát a visszajelentkezéshez:");
-          if (adminPassword) {
-            await signInWithEmailAndPassword(auth, originalEmail, adminPassword);
-            alert("Felhasználó létrehozva és visszajelentkeztél!");
-            e.target.reset();
-            await loadUsers();
-          } else {
-            alert("Sikertelen visszajelentkezés.");
-          }
+          alert("Felhasználó létrehozva!");
+          e.target.reset();
+          await loadUsers();
         } catch (err) {
           alert("Hiba: " + err.message);
         }
@@ -223,4 +236,3 @@
 <body>
 </body>
 </html>
-
