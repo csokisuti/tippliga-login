@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="style.css">
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
@@ -111,19 +111,27 @@
 
       document.getElementById("userForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const email = email.value;
-        const password = password.value;
-        const nickname = nickname.value;
-        const role = role.value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const nickname = document.getElementById("nickname").value;
+        const role = document.getElementById("role").value;
 
         try {
-          const cred = await createUserWithEmailAndPassword(auth, email, password);
+          const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+          const secondaryAuth = getAuth(secondaryApp);
+
+          const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
           await setDoc(doc(db, "users", cred.user.uid), {
             email,
             nickname,
             role
           });
+
           alert("Felhasználó létrehozva!");
+
+          await signOut(secondaryAuth);
+          await secondaryApp.delete();
+
           e.target.reset();
           await loadUsers();
         } catch (err) {
