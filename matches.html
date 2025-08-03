@@ -18,6 +18,11 @@
       width: 28px;
       object-fit: contain;
     }
+    .dupla-lezart {
+      color: #888;
+      font-size: 0.9em;
+      margin-left: 5px;
+    }
   </style>
 </head>
 <body>
@@ -94,6 +99,7 @@
         });
 
         matchesContainer.innerHTML = "";
+        const now = new Date();
 
         const sortedRounds = Object.keys(matchesByRound).sort((a, b) => {
           const numA = parseInt(a.replace(/\D/g, '')) || 0;
@@ -102,11 +108,22 @@
         });
 
         sortedRounds.forEach((roundId) => {
+          const matches = matchesByRound[roundId];
+
+          const allStarted = matches.every(m => m.startTime?.toDate?.() <= now);
+          if (allStarted) return; // ne jelenjen meg ha minden meccs elkezdődött
+
           const roundHeader = document.createElement("h2");
           roundHeader.textContent = `${roundId.replace(/\D*(\d+)/, "$1")}. forduló`;
           matchesContainer.appendChild(roundHeader);
 
-          matchesByRound[roundId].forEach((match) => {
+          const roundStartTime = matches.reduce((earliest, m) => {
+            const time = m.startTime?.toDate?.();
+            return (!earliest || time < earliest) ? time : earliest;
+          }, null);
+          const roundStarted = roundStartTime && roundStartTime <= now;
+
+          matches.forEach((match) => {
             const matchDiv = document.createElement("div");
             matchDiv.style.border = "1px solid #ccc";
             matchDiv.style.padding = "10px";
@@ -114,6 +131,7 @@
 
             const startTime = match.startTime?.toDate?.();
             const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Invalid Date";
+            const hasStarted = startTime && startTime <= now;
 
             const homeCrest = crestMap[match.homeTeam] || "";
             const awayCrest = crestMap[match.awayTeam] || "";
@@ -141,13 +159,20 @@
               <option value="2">2 (odds: ${odds2})</option>
             `;
             if (existingTip) select.value = existingTip.tip;
+            if (hasStarted) select.disabled = true;
 
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.checked = existingTip?.isDouble || false;
+            if (roundStarted) checkbox.disabled = true;
+
+            const duplaInfo = document.createElement("span");
+            if (roundStarted) duplaInfo.className = "dupla-lezart";
+            if (roundStarted) duplaInfo.textContent = "(duplázás lezárva)";
 
             const saveBtn = document.createElement("button");
             saveBtn.textContent = "Tipp mentése";
+            if (hasStarted) saveBtn.disabled = true;
 
             const status = document.createElement("div");
             if (existingTip) {
@@ -211,6 +236,7 @@
             label.textContent = "Dupla pont";
             matchDiv.appendChild(checkbox);
             matchDiv.appendChild(label);
+            matchDiv.appendChild(duplaInfo);
             matchDiv.appendChild(document.createElement("br"));
 
             matchDiv.appendChild(saveBtn);
