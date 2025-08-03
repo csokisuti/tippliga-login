@@ -11,6 +11,9 @@
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getStorage, ref, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -24,6 +27,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     const teams = [
       "Debreceni VSC", "Diósgyőri VTK", "Ferencváros", "ETO FC Győr", "Kazincbarcikai SC",
@@ -98,13 +102,20 @@
         <ul id="userList"></ul>
       `;
 
+      const tableSection = document.createElement("section");
+      tableSection.innerHTML = `
+        <h2>NB1 tabella kép feltöltése</h2>
+        <input type="file" id="tableImageInput" accept="image/*">
+        <button id="uploadTableImage">Feltöltés</button>
+      `;
+
       const backButton = document.createElement("button");
       backButton.textContent = "⬅️ Vissza a dashboardra";
       backButton.onclick = () => {
         window.location.href = "dashboard.html";
       };
 
-      document.body.append(formSection, toggleButton, matchesList, userSection, backButton);
+      document.body.append(formSection, toggleButton, matchesList, userSection, tableSection, backButton);
 
       document.getElementById("matchForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -145,6 +156,20 @@
         } catch (err) {
           alert("Hiba: " + err.message);
         }
+      });
+
+      document.getElementById("uploadTableImage").addEventListener("click", async () => {
+        const file = document.getElementById("tableImageInput").files[0];
+        if (!file) {
+          alert("Kérlek, válassz ki egy képet.");
+          return;
+        }
+
+        const storageRef = ref(storage, "nb1-table-image.jpg");
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        await setDoc(doc(db, "static", "tableImage"), { url });
+        alert("Tabellakép feltöltve.");
       });
     }
 
@@ -223,3 +248,5 @@
 <body>
 </body>
 </html>
+
+
