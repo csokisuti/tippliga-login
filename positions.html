@@ -174,21 +174,27 @@
             zone.classList.remove("over");
             const teamName = e.dataTransfer.getData("text/plain");
 
+            // remove same team from all dropzones
             document.querySelectorAll(".dropzone").forEach(z => {
-              if (z.children.length && z.children[0].dataset.name === teamName) {
+              if (z !== zone && z.children.length && z.children[0].dataset.name === teamName) {
                 z.innerHTML = "";
               }
             });
 
-            if (zone.children.length) {
-              const movedBack = zone.firstChild;
-              teamList.appendChild(movedBack);
+            // remove from previous dropzone or team list
+            const existingEl = document.querySelector(`.team[data-name="${teamName}"]`);
+            if (existingEl && existingEl.parentElement) {
+              existingEl.parentElement.removeChild(existingEl);
             }
 
-            const team = teams.find(t => t.name === teamName);
-            const newEl = createTeamElement(team);
+            // remove current content if any
+            if (zone.children.length) {
+              const toMoveBack = zone.firstChild;
+              teamList.appendChild(toMoveBack);
+            }
+
             zone.innerHTML = "";
-            zone.appendChild(newEl);
+            zone.appendChild(existingEl);
           });
         });
       }
@@ -220,6 +226,7 @@
                 if (team) {
                   const el = createTeamElement(team);
                   const zone = document.querySelector(`.dropzone[data-pos="${index + 1}"]`);
+                  zone.innerHTML = "";
                   zone.appendChild(el);
                 }
               }
