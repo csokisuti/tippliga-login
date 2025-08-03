@@ -78,15 +78,12 @@
   </style>
 </head>
 <body>
-
   <div class="teams" id="team-list"></div>
-
   <div class="table" id="table">
     <h3>Helyezések</h3>
     <div id="positions"></div>
     <button id="save">Mentés</button>
   </div>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -148,7 +145,7 @@
           row.classList.add("position");
           row.innerHTML = `
             <div class="position-number">${i}.</div>
-            <div class="dropzone" data-pos="${i}"></div>
+            <div class="dropzone" data-pos="${i}" id="pos-${i}"></div>
           `;
           positions.appendChild(row);
         }
@@ -158,7 +155,8 @@
         document.addEventListener("dragstart", e => {
           if (e.target.classList.contains("team")) {
             e.dataTransfer.setData("text/plain", e.target.dataset.name);
-            e.dataTransfer.setData("source", e.target.parentElement.id);
+            const parentZone = e.target.parentElement.closest(".dropzone");
+            e.dataTransfer.setData("source", parentZone ? parentZone.id : "team-list");
           }
         });
 
@@ -175,21 +173,20 @@
             zone.classList.remove("over");
 
             const teamName = e.dataTransfer.getData("text/plain");
-            const source = e.dataTransfer.getData("source");
+            const sourceId = e.dataTransfer.getData("source");
             const draggedEl = document.querySelector(`.team[data-name="${teamName}"]`);
 
-            const previous = zone.firstChild;
-            if (previous && previous !== draggedEl) {
-              if (source === "team-list") {
-                teamList.removeChild(draggedEl);
+            const previousEl = zone.firstChild;
+            const sourceZone = document.getElementById(sourceId);
+
+            if (previousEl && previousEl !== draggedEl) {
+              if (sourceZone && sourceZone.classList.contains("dropzone")) {
+                sourceZone.innerHTML = "";
+                sourceZone.appendChild(previousEl);
               } else {
-                const sourceZone = document.querySelector(`#${source}`) || document.querySelector(`.dropzone:has(.team[data-name="${teamName}"])`);
-                if (sourceZone) {
-                  sourceZone.innerHTML = "";
-                  sourceZone.appendChild(previous);
-                }
+                teamList.appendChild(previousEl);
               }
-            } else if (source === "team-list") {
+            } else if (sourceId === "team-list") {
               teamList.removeChild(draggedEl);
             }
 
