@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="hu">
 <head>
   <meta charset="UTF-8">
@@ -11,9 +11,6 @@
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import {
-      getStorage, ref, uploadBytes, getDownloadURL
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -27,7 +24,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
     const teams = [
       "Debreceni VSC", "Diósgyőri VTK", "Ferencváros", "ETO FC Győr", "Kazincbarcikai SC",
@@ -102,16 +98,15 @@
         <ul id="userList"></ul>
       `;
 
-      const imageSection = document.createElement("section");
-      imageSection.innerHTML = `
+      const tableImageSection = document.createElement("section");
+      tableImageSection.innerHTML = `
         <h2>NB1 tabella kép feltöltése</h2>
-        <input type="file" id="tableImage" accept="image/*"><br>
-        <button id="uploadImage">Feltöltés</button>
-        <br><br>
+        <input type="file" id="tableImageInput" accept="image/*">
+        <button id="uploadTableImage">Feltöltés</button><br><br>
         <button onclick="window.location.href='dashboard.html'">⬅️ Vissza a dashboardra</button>
       `;
 
-      document.body.append(formSection, toggleButton, matchesList, userSection, imageSection);
+      document.body.append(formSection, toggleButton, matchesList, userSection, tableImageSection);
 
       document.getElementById("matchForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -134,10 +129,10 @@
 
       document.getElementById("userForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const email = email.value;
-        const password = password.value;
-        const nickname = nickname.value;
-        const role = role.value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const nickname = document.getElementById("nickname").value;
+        const role = document.getElementById("role").value;
 
         try {
           const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -154,15 +149,18 @@
         }
       });
 
-      document.getElementById("uploadImage").addEventListener("click", async () => {
-        const file = document.getElementById("tableImage").files[0];
-        if (!file) return alert("Nincs fájl kiválasztva.");
+      document.getElementById("uploadTableImage").addEventListener("click", async () => {
+        const fileInput = document.getElementById("tableImageInput");
+        const file = fileInput.files[0];
+        if (!file) return alert("Válassz ki egy képet!");
 
-        const storageRef = ref(storage, 'nbi-table-image.jpg');
-        await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(storageRef);
-        await setDoc(doc(db, "meta", "table_image"), { url });
-        alert("Kép feltöltve és elmentve!");
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64String = reader.result.split(',')[1];
+          await setDoc(doc(db, "settings", "nbi_table_image"), { base64: base64String });
+          alert("Kép elmentve Firestore-ba!");
+        };
+        reader.readAsDataURL(file);
       });
     }
 
@@ -238,6 +236,5 @@
     window.deleteMatch = deleteMatch;
   </script>
 </head>
-<body>
-</body>
+<body></body>
 </html>
