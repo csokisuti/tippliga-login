@@ -178,25 +178,17 @@
             const sourceZone = document.getElementById(sourceId);
             const targetEl = zone.firstElementChild;
 
-            if (zone === sourceZone) return;
-
-            if (sourceZone.classList.contains("dropzone") && zone.classList.contains("dropzone")) {
-              if (targetEl && draggedEl) {
-                const temp = document.createElement("div");
-                temp.style.display = "none";
-                zone.appendChild(temp);
-                zone.replaceChild(draggedEl, targetEl);
-                sourceZone.replaceChild(targetEl, temp);
-              }
-            } else if (sourceId === "team-list") {
-              if (targetEl) {
-                teamList.appendChild(targetEl);
-              }
-              teamList.removeChild(draggedEl);
+            if (targetEl && draggedEl && targetEl !== draggedEl) {
               zone.innerHTML = "";
+              sourceZone.innerHTML = "";
               zone.appendChild(draggedEl);
+              sourceZone.appendChild(targetEl);
             } else {
-              if (sourceZone) sourceZone.innerHTML = "";
+              if (sourceZone && sourceZone.classList.contains("dropzone")) {
+                sourceZone.innerHTML = "";
+              } else if (sourceId === "team-list") {
+                teamList.removeChild(draggedEl);
+              }
               zone.innerHTML = "";
               zone.appendChild(draggedEl);
             }
