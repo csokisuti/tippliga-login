@@ -179,6 +179,7 @@
             const previousEl = zone.firstChild;
             const sourceZone = document.getElementById(sourceId);
 
+            // Helycsere logika
             if (previousEl && previousEl !== draggedEl) {
               if (sourceZone && sourceZone.classList.contains("dropzone")) {
                 sourceZone.innerHTML = "";
@@ -186,8 +187,16 @@
               } else {
                 teamList.appendChild(previousEl);
               }
-            } else if (sourceId === "team-list") {
+            }
+
+            // Ha a csapat a bal listáról jött, távolítsuk el onnan
+            if (sourceId === "team-list") {
               teamList.removeChild(draggedEl);
+            } else {
+              const srcZone = document.getElementById(sourceId);
+              if (srcZone && srcZone.classList.contains("dropzone")) {
+                srcZone.innerHTML = "";
+              }
             }
 
             zone.innerHTML = "";
