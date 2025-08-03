@@ -34,6 +34,7 @@
       margin-bottom: 8px;
       background-color: #fafafa;
       cursor: grab;
+      transition: background-color 0.2s ease;
     }
     .team img {
       width: 30px;
@@ -175,28 +176,24 @@
             const teamName = e.dataTransfer.getData("text/plain");
             const sourceId = e.dataTransfer.getData("source");
             const draggedEl = document.querySelector(`.team[data-name="${teamName}"]`);
-
-            const previousEl = zone.firstChild;
             const sourceZone = document.getElementById(sourceId);
+            const targetEl = zone.firstElementChild;
 
-            // Helycsere logika
-            if (previousEl && previousEl !== draggedEl) {
+            if (zone.contains(draggedEl)) return;
+
+            if (targetEl && targetEl !== draggedEl) {
               if (sourceZone && sourceZone.classList.contains("dropzone")) {
                 sourceZone.innerHTML = "";
-                sourceZone.appendChild(previousEl);
+                sourceZone.appendChild(targetEl);
               } else {
-                teamList.appendChild(previousEl);
+                teamList.appendChild(targetEl);
               }
             }
 
-            // Ha a csapat a bal listáról jött, távolítsuk el onnan
             if (sourceId === "team-list") {
               teamList.removeChild(draggedEl);
-            } else {
-              const srcZone = document.getElementById(sourceId);
-              if (srcZone && srcZone.classList.contains("dropzone")) {
-                srcZone.innerHTML = "";
-              }
+            } else if (sourceZone && sourceZone.classList.contains("dropzone")) {
+              sourceZone.innerHTML = "";
             }
 
             zone.innerHTML = "";
