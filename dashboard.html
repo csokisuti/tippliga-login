@@ -3,6 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #nb1Image {
+      max-width: 100%;
+      margin-top: 20px;
+      border: 1px solid #ccc;
+    }
+  </style>
 </head>
 <body>
   <h1 id="welcome">Üdvözlünk!</h1>
@@ -17,7 +25,7 @@
   </ul>
 
   <h2>NB I tabella</h2>
-  <div id="nb1Table">Betöltés...</div>
+  <div id="nb1Table">Kép betöltése...</div>
 
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth-compat.js"></script>
@@ -53,22 +61,25 @@
             document.getElementById("adminLink").style.display = "list-item";
           }
         }
+      } catch (error) {
+        console.error("Hiba a Firestore lekérdezésnél:", error);
+      }
 
-        const imageDoc = await db.collection("static").doc("tableImage").get();
-        if (imageDoc.exists) {
-          const url = imageDoc.data().url;
+      // Tabella kép betöltése
+      try {
+        const tableDoc = await db.collection("settings").doc("nb1TableImage").get();
+        if (tableDoc.exists) {
           const img = document.createElement("img");
-          img.src = url;
-          img.alt = "NB1 tabella";
-          img.style.maxWidth = "100%";
+          img.id = "nb1Image";
+          img.src = tableDoc.data().image;
           document.getElementById("nb1Table").innerHTML = "";
           document.getElementById("nb1Table").appendChild(img);
         } else {
           document.getElementById("nb1Table").innerText = "Nincs feltöltött tabellakép.";
         }
-      } catch (error) {
+      } catch (err) {
+        console.error("Tabella betöltési hiba:", err);
         document.getElementById("nb1Table").innerText = "Hiba a tabella betöltésekor.";
-        console.error("Hiba:", error);
       }
     });
 
