@@ -157,4 +157,94 @@
       function setupDragAndDrop() {
         document.addEventListener("dragstart", e => {
           if (e.target.classList.contains("team")) {
+            e.dataTransfer.setData("text/plain", e.target.dataset.name);
+          }
+        });
 
+        document.querySelectorAll(".dropzone").forEach(zone => {
+          zone.addEventListener("dragover", e => {
+            e.preventDefault();
+            zone.classList.add("over");
+          });
+          zone.addEventListener("dragleave", () => {
+            zone.classList.remove("over");
+          });
+          zone.addEventListener("drop", e => {
+            e.preventDefault();
+            zone.classList.remove("over");
+            const teamName = e.dataTransfer.getData("text/plain");
+
+            document.querySelectorAll(".dropzone").forEach(z => {
+              if (z.children.length && z.children[0].dataset.name === teamName) {
+                z.innerHTML = "";
+              }
+            });
+
+            if (zone.children.length) {
+              const movedBack = zone.firstChild;
+              teamList.appendChild(movedBack);
+            }
+
+            const team = teams.find(t => t.name === teamName);
+            const newEl = createTeamElement(team);
+            zone.innerHTML = "";
+            zone.appendChild(newEl);
+          });
+        });
+      }
+
+      async function saveToFirebase(user) {
+        const ranking = [];
+        document.querySelectorAll(".dropzone").forEach(zone => {
+          if (zone.children.length) {
+            ranking.push(zone.firstChild.dataset.name);
+          } else {
+            ranking.push(null);
+          }
+        });
+        await setDoc(doc(db, "standingsTips", user.email), {
+          user: user.email,
+          ranking
+        });
+        alert("Mentve!");
+      }
+
+      async function loadFromFirebase(user) {
+        const docSnap = await getDoc(doc(db, "standingsTips", user.email));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.ranking && Array.isArray(data.ranking)) {
+            data.ranking.forEach((teamName, index) => {
+              if (teamName) {
+                const team = teams.find(t => t.name === teamName);
+                if (team) {
+                  const el = createTeamElement(team);
+                  const zone = document.querySelector(`.dropzone[data-pos="${index + 1}"]`);
+                  zone.appendChild(el);
+                }
+              }
+            });
+          }
+        }
+      }
+
+      onAuthStateChanged(auth, async user => {
+        if (!user) {
+          alert("Bejelentkezés szükséges");
+          window.location.href = "login.html";
+          return;
+        }
+
+        renderTeamList();
+        renderPositions();
+        setupDragAndDrop();
+        await loadFromFirebase(user);
+
+        document.getElementById("save").addEventListener("click", () => {
+          saveToFirebase(user);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
