@@ -34,7 +34,6 @@
       margin-bottom: 8px;
       background-color: #fafafa;
       cursor: grab;
-      transition: background-color 0.2s ease;
     }
     .team img {
       width: 30px;
@@ -179,21 +178,18 @@
             const sourceZone = document.getElementById(sourceId);
             const targetEl = zone.firstElementChild;
 
-            if (zone.contains(draggedEl)) return;
+            if (zone === sourceZone) return;
 
-            if (targetEl && targetEl !== draggedEl) {
-              if (sourceZone && sourceZone.classList.contains("dropzone")) {
-                sourceZone.innerHTML = "";
+            if (sourceZone && sourceZone.classList.contains("dropzone")) {
+              sourceZone.innerHTML = "";
+              if (targetEl) {
                 sourceZone.appendChild(targetEl);
-              } else {
+              }
+            } else if (sourceId === "team-list") {
+              teamList.removeChild(draggedEl);
+              if (targetEl) {
                 teamList.appendChild(targetEl);
               }
-            }
-
-            if (sourceId === "team-list") {
-              teamList.removeChild(draggedEl);
-            } else if (sourceZone && sourceZone.classList.contains("dropzone")) {
-              sourceZone.innerHTML = "";
             }
 
             zone.innerHTML = "";
