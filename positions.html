@@ -180,15 +180,23 @@
 
             if (zone === sourceZone) return;
 
-            if (targetEl && draggedEl) {
-              zone.replaceChild(draggedEl, targetEl);
-              sourceZone.appendChild(targetEl);
-            } else {
-              if (sourceZone && sourceZone.classList.contains("dropzone")) {
-                sourceZone.innerHTML = "";
-              } else if (sourceId === "team-list") {
-                teamList.removeChild(draggedEl);
+            if (sourceZone.classList.contains("dropzone") && zone.classList.contains("dropzone")) {
+              if (targetEl && draggedEl) {
+                const temp = document.createElement("div");
+                temp.style.display = "none";
+                zone.appendChild(temp);
+                zone.replaceChild(draggedEl, targetEl);
+                sourceZone.replaceChild(targetEl, temp);
               }
+            } else if (sourceId === "team-list") {
+              if (targetEl) {
+                teamList.appendChild(targetEl);
+              }
+              teamList.removeChild(draggedEl);
+              zone.innerHTML = "";
+              zone.appendChild(draggedEl);
+            } else {
+              if (sourceZone) sourceZone.innerHTML = "";
               zone.innerHTML = "";
               zone.appendChild(draggedEl);
             }
