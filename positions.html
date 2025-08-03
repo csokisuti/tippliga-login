@@ -19,6 +19,10 @@
     }
     .teams {
       width: 250px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: sticky;
+      top: 20px;
     }
     .team {
       display: flex;
@@ -174,25 +178,28 @@
             zone.classList.remove("over");
             const teamName = e.dataTransfer.getData("text/plain");
 
-            // remove same team from all dropzones
+            // remove same team from all other dropzones
             document.querySelectorAll(".dropzone").forEach(z => {
               if (z !== zone && z.children.length && z.children[0].dataset.name === teamName) {
                 z.innerHTML = "";
               }
             });
 
-            // remove from previous dropzone or team list
+            // find the existing team element
             const existingEl = document.querySelector(`.team[data-name="${teamName}"]`);
-            if (existingEl && existingEl.parentElement) {
+
+            // remove it from old position only if it's in the team list
+            if (existingEl && existingEl.parentElement && existingEl.parentElement.id === "team-list") {
               existingEl.parentElement.removeChild(existingEl);
             }
 
-            // remove current content if any
+            // remove current dropzone content (if exists) and move back to team list
             if (zone.children.length) {
-              const toMoveBack = zone.firstChild;
-              teamList.appendChild(toMoveBack);
+              const movedBack = zone.firstChild;
+              teamList.appendChild(movedBack);
             }
 
+            // move the team element into this dropzone
             zone.innerHTML = "";
             zone.appendChild(existingEl);
           });
