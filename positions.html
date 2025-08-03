@@ -79,15 +79,11 @@
 </head>
 <body>
 
-  <div class="teams" id="team-list">
-    <!-- Csapatok itt generálódnak -->
-  </div>
+  <div class="teams" id="team-list"></div>
 
   <div class="table" id="table">
     <h3>Helyezések</h3>
-    <div id="positions">
-      <!-- Pozíciók itt generálódnak -->
-    </div>
+    <div id="positions"></div>
     <button id="save">Mentés</button>
   </div>
 
@@ -180,28 +176,25 @@
 
             const teamName = e.dataTransfer.getData("text/plain");
             const source = e.dataTransfer.getData("source");
-            const existingEl = document.querySelector(`.team[data-name="${teamName}"]`);
+            const draggedEl = document.querySelector(`.team[data-name="${teamName}"]`);
 
-            // töröld más zónából, ha ott volt
-            document.querySelectorAll(".dropzone").forEach(z => {
-              if (z !== zone && z.children.length && z.children[0].dataset.name === teamName) {
-                z.innerHTML = "";
+            const previous = zone.firstChild;
+            if (previous && previous !== draggedEl) {
+              if (source === "team-list") {
+                teamList.removeChild(draggedEl);
+              } else {
+                const sourceZone = document.querySelector(`#${source}`) || document.querySelector(`.dropzone:has(.team[data-name="${teamName}"])`);
+                if (sourceZone) {
+                  sourceZone.innerHTML = "";
+                  sourceZone.appendChild(previous);
+                }
               }
-            });
-
-            // ha bal oldalról jött → töröld onnan
-            if (existingEl && source === "team-list" && existingEl.parentElement) {
-              existingEl.parentElement.removeChild(existingEl);
-            }
-
-            // ha már volt valami a zónában → rakd vissza a listába
-            if (zone.children.length) {
-              const movedBack = zone.firstChild;
-              teamList.appendChild(movedBack);
+            } else if (source === "team-list") {
+              teamList.removeChild(draggedEl);
             }
 
             zone.innerHTML = "";
-            zone.appendChild(existingEl);
+            zone.appendChild(draggedEl);
           });
         });
       }
