@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>NB1 Tipp - Pozíciós sorrend</title>
-  <link rel="stylesheet" href="style.css">
   <style>
     body {
       font-family: sans-serif;
@@ -70,185 +69,115 @@
       border-color: #007bff;
       background-color: #e0f0ff;
     }
-    #save {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-weight: bold;
-    }
   </style>
 </head>
 <body>
   <div class="teams" id="team-list"></div>
-  <div class="table" id="table">
+  <div class="table">
     <h3>Helyezések</h3>
     <div id="positions"></div>
-    <button id="save">Mentés</button>
   </div>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <script>
+    const teams = [
+      { name: "Debreceni VSC", logo: "crest/crest-dvsc.png" },
+      { name: "Diósgyőri VTK", logo: "crest/crest-dvtk.png" },
+      { name: "Ferencváros", logo: "crest/crest-fradi.png" },
+      { name: "ETO FC Győr", logo: "crest/crest-gyor.png" },
+      { name: "Kazincbarcikai SC", logo: "crest/crest-kazincbarcika.png" },
+      { name: "Kisvárda FC", logo: "crest/crest-kisvarda.png" },
+      { name: "MTK Budapest", logo: "crest/crest-mtk.png" },
+      { name: "Nyíregyháza Spartacus", logo: "crest/crest-nyiregyhaza.png" },
+      { name: "Paksi FC", logo: "crest/crest-paks.png" },
+      { name: "Puskás Akadémia", logo: "crest/crest-puskas.png" },
+      { name: "Újpest FC", logo: "crest/crest-ujpest.png" },
+      { name: "Zalaegerszegi TE FC", logo: "crest/crest-zte.png" }
+    ];
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const firebaseConfig = {
-        apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-        authDomain: "tippliga-4b3af.firebaseapp.com",
-        projectId: "tippliga-4b3af",
-        storageBucket: "tippliga-4b3af.appspot.com",
-        messagingSenderId: "720359845241",
-        appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-      };
+    const teamList = document.getElementById("team-list");
+    const positions = document.getElementById("positions");
 
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const db = getFirestore(app);
+    function createTeamElement(team) {
+      const div = document.createElement("div");
+      div.classList.add("team");
+      div.setAttribute("draggable", "true");
+      div.dataset.name = team.name;
+      div.innerHTML = `<img src="${team.logo}" alt=""><span>${team.name}</span>`;
+      return div;
+    }
 
-      const teams = [
-        { name: "Debreceni VSC", logo: "crest/crest-dvsc.png" },
-        { name: "Diósgyőri VTK", logo: "crest/crest-dvtk.png" },
-        { name: "Ferencváros", logo: "crest/crest-fradi.png" },
-        { name: "ETO FC Győr", logo: "crest/crest-gyor.png" },
-        { name: "Kazincbarcikai SC", logo: "crest/crest-kazincbarcika.png" },
-        { name: "Kisvárda FC", logo: "crest/crest-kisvarda.png" },
-        { name: "MTK Budapest", logo: "crest/crest-mtk.png" },
-        { name: "Nyíregyháza Spartacus", logo: "crest/crest-nyiregyhaza.png" },
-        { name: "Paksi FC", logo: "crest/crest-paks.png" },
-        { name: "Puskás Akadémia", logo: "crest/crest-puskas.png" },
-        { name: "Újpest FC", logo: "crest/crest-ujpest.png" },
-        { name: "Zalaegerszegi TE FC", logo: "crest/crest-zte.png" }
-      ];
+    function renderTeamList() {
+      teamList.innerHTML = "";
+      teams.forEach(team => {
+        const el = createTeamElement(team);
+        teamList.appendChild(el);
+      });
+    }
 
-      const teamList = document.getElementById("team-list");
-      const positions = document.getElementById("positions");
-
-      function createTeamElement(team) {
-        const div = document.createElement("div");
-        div.classList.add("team");
-        div.setAttribute("draggable", "true");
-        div.dataset.name = team.name;
-        div.innerHTML = `<img src="${team.logo}" alt=""><span>${team.name}</span>`;
-        return div;
+    function renderPositions() {
+      for (let i = 1; i <= 12; i++) {
+        const row = document.createElement("div");
+        row.classList.add("position");
+        row.innerHTML = `
+          <div class="position-number">${i}.</div>
+          <div class="dropzone" data-pos="${i}" id="pos-${i}"></div>
+        `;
+        positions.appendChild(row);
       }
+    }
 
-      function renderTeamList() {
-        teamList.innerHTML = "";
-        teams.forEach(team => {
-          const el = createTeamElement(team);
-          teamList.appendChild(el);
-        });
-      }
-
-      function renderPositions() {
-        positions.innerHTML = "";
-        for (let i = 1; i <= 12; i++) {
-          const row = document.createElement("div");
-          row.classList.add("position");
-          row.innerHTML = `
-            <div class="position-number">${i}.</div>
-            <div class="dropzone" data-pos="${i}" id="pos-${i}"></div>
-          `;
-          positions.appendChild(row);
+    function setupDragAndDrop() {
+      document.addEventListener("dragstart", e => {
+        if (e.target.classList.contains("team")) {
+          e.dataTransfer.setData("text/plain", e.target.dataset.name);
+          e.dataTransfer.setData("html", e.target.outerHTML);
+          const parentZone = e.target.closest(".dropzone");
+          e.dataTransfer.setData("source", parentZone ? parentZone.id : "team-list");
         }
-      }
+      });
 
-      function setupDragAndDrop() {
-        document.addEventListener("dragstart", e => {
-          if (e.target.classList.contains("team")) {
-            e.dataTransfer.setData("text/plain", e.target.dataset.name);
-            const parentZone = e.target.parentElement.closest(".dropzone");
-            e.dataTransfer.setData("source", parentZone ? parentZone.id : "team-list");
-          }
+      document.querySelectorAll(".dropzone").forEach(zone => {
+        zone.addEventListener("dragover", e => {
+          e.preventDefault();
+          zone.classList.add("over");
         });
+        zone.addEventListener("dragleave", () => {
+          zone.classList.remove("over");
+        });
+        zone.addEventListener("drop", e => {
+          e.preventDefault();
+          zone.classList.remove("over");
 
-        document.querySelectorAll(".dropzone").forEach(zone => {
-          zone.addEventListener("dragover", e => {
-            e.preventDefault();
-            zone.classList.add("over");
-          });
-          zone.addEventListener("dragleave", () => {
-            zone.classList.remove("over");
-          });
-          zone.addEventListener("drop", e => {
-            e.preventDefault();
-            zone.classList.remove("over");
+          const teamName = e.dataTransfer.getData("text/plain");
+          const draggedEl = document.querySelector(`.team[data-name="${teamName}"]`);
+          const sourceId = e.dataTransfer.getData("source");
+          const sourceZone = document.getElementById(sourceId);
+          const targetZone = zone;
+          const targetEl = targetZone.firstElementChild;
 
-            const teamName = e.dataTransfer.getData("text/plain");
-            const sourceId = e.dataTransfer.getData("source");
-            const draggedEl = document.querySelector(`.team[data-name="${teamName}"]`);
-            const sourceZone = document.getElementById(sourceId);
-            const targetEl = zone.firstElementChild;
-
-            if (targetEl && draggedEl && targetEl !== draggedEl) {
-              zone.innerHTML = "";
+          if (targetEl && targetEl !== draggedEl) {
+            // Csere logika
+            targetZone.innerHTML = "";
+            if (sourceZone && sourceZone.classList.contains("dropzone")) {
               sourceZone.innerHTML = "";
-              zone.appendChild(draggedEl);
               sourceZone.appendChild(targetEl);
             } else {
-              if (sourceZone && sourceZone.classList.contains("dropzone")) {
-                sourceZone.innerHTML = "";
-              } else if (sourceId === "team-list") {
-                teamList.removeChild(draggedEl);
-              }
-              zone.innerHTML = "";
-              zone.appendChild(draggedEl);
+              teamList.appendChild(targetEl);
             }
-          });
-        });
-      }
-
-      async function saveToFirebase(user) {
-        const ranking = [];
-        document.querySelectorAll(".dropzone").forEach(zone => {
-          if (zone.children.length) {
-            ranking.push(zone.firstChild.dataset.name);
-          } else {
-            ranking.push(null);
+          } else if (sourceZone && sourceZone.classList.contains("dropzone")) {
+            sourceZone.innerHTML = "";
+          } else if (sourceId === "team-list") {
+            teamList.removeChild(draggedEl);
           }
-        });
-        await setDoc(doc(db, "standingsTips", user.email), {
-          user: user.email,
-          ranking
-        });
-        alert("Mentve!");
-      }
 
-      async function loadFromFirebase(user) {
-        const docSnap = await getDoc(doc(db, "standingsTips", user.email));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.ranking && Array.isArray(data.ranking)) {
-            data.ranking.forEach((teamName, index) => {
-              if (teamName) {
-                const team = teams.find(t => t.name === teamName);
-                if (team) {
-                  const el = createTeamElement(team);
-                  const zone = document.querySelector(`.dropzone[data-pos="${index + 1}"]`);
-                  zone.innerHTML = "";
-                  zone.appendChild(el);
-                }
-              }
-            });
-          }
-        }
-      }
-
-      onAuthStateChanged(auth, async user => {
-        if (!user) {
-          alert("Bejelentkezés szükséges");
-          window.location.href = "login.html";
-          return;
-        }
-
-        renderTeamList();
-        renderPositions();
-        setupDragAndDrop();
-        await loadFromFirebase(user);
-
-        document.getElementById("save").addEventListener("click", () => {
-          saveToFirebase(user);
+          targetZone.innerHTML = "";
+          targetZone.appendChild(draggedEl);
         });
       });
-    });
+    }
+
+    renderTeamList();
+    renderPositions();
+    setupDragAndDrop();
   </script>
 </body>
 </html>
