@@ -58,27 +58,30 @@
 
       document.getElementById("registerForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const email = document.getElementById("regEmail").value;
+        const email = document.getElementById("regEmail").value.trim();
         const password = document.getElementById("regPassword").value;
         const password2 = document.getElementById("regPassword2").value;
-        const nickname = document.getElementById("regNickname").value;
+        const nickname = document.getElementById("regNickname").value.trim();
         const resultEl = document.getElementById("registerResult");
 
+        resultEl.style.color = "red";
         resultEl.innerText = "Ellenőrzés folyamatban...";
 
         try {
-          if (!nickname.trim()) return resultEl.innerText = "Adj meg egy becenevet.";
+          if (!nickname) return resultEl.innerText = "Adj meg egy becenevet.";
           if (!email.includes("@")) return resultEl.innerText = "Érvényes email címet adj meg.";
           if (password.length < 6) return resultEl.innerText = "A jelszónak legalább 6 karakteresnek kell lennie.";
           if (password !== password2) return resultEl.innerText = "A két jelszó nem egyezik.";
 
-          const q = query(collection(db, "users"), where("nickname", "==", nickname));
-          const nicknameSnap = await getDocs(q);
-          if (!nicknameSnap.empty) return resultEl.innerText = "Ez a becenév már foglalt.";
+          const nickQuery = query(collection(db, "users"), where("nickname", "==", nickname));
+          const nickSnap = await getDocs(nickQuery);
+          if (!nickSnap.empty) return resultEl.innerText = "Ez a becenév már foglalt.";
+
+          const emailQuery = query(collection(db, "users"), where("email", "==", email));
+          const emailSnap = await getDocs(emailQuery);
+          if (!emailSnap.empty) return resultEl.innerText = "Ez az email cím már regisztrálva van.";
 
           const cred = await createUserWithEmailAndPassword(auth, email, password);
-          await signInWithEmailAndPassword(auth, email, password);
-
           await setDoc(doc(db, "users", cred.user.uid), {
             email,
             nickname,
@@ -90,11 +93,7 @@
           window.location.href = "dashboard.html";
 
         } catch (error) {
-          if (error.code === "auth/email-already-in-use") {
-            resultEl.innerText = "Ez az email cím már regisztrálva van.";
-          } else {
-            resultEl.innerText = "Hiba: " + error.message;
-          }
+          resultEl.innerText = "Hiba: " + error.message;
         }
       });
     });
