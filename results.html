@@ -22,7 +22,7 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    cconst firebaseConfig = {
+    const firebaseConfig = {
   apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
   authDomain: "tippliga-4b3af.firebaseapp.com",
   projectId: "tippliga-4b3af",
@@ -30,6 +30,7 @@
   messagingSenderId: "720359845241",
   appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
 };
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
