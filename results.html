@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Eredmények</title>
   <link rel="stylesheet" href="style.css" />
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore,
-      collection,
-      getDocs,
-      query,
-      where
+      getFirestore, collection, getDocs, query, where, doc, getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -34,92 +32,84 @@
         return;
       }
 
-      loadData();
-    });
+      const resultsDiv = document.getElementById("results");
 
-    async function loadData() {
-      const matchesSnap = await getDocs(collection(db, "matches"));
-      const tipsSnap = await getDocs(collection(db, "tips"));
-      const usersSnap = await getDocs(collection(db, "users"));
+      const matchesSnapshot = await getDocs(collection(db, "matches"));
+      const tipsSnapshot = await getDocs(collection(db, "tips"));
+      const usersSnapshot = await getDocs(collection(db, "users"));
 
-      const tips = tipsSnap.docs.map(doc => doc.data());
-      const users = {};
-      usersSnap.forEach(doc => {
-        const d = doc.data();
-        users[d.uid] = d.nickname || d.email || d.uid;
+      const usersMap = {};
+      usersSnapshot.forEach(doc => {
+        usersMap[doc.id] = doc.data().nickname || doc.data().email;
       });
 
-      const grouped = {};
-      matchesSnap.forEach(doc => {
+      const tipsByMatch = {};
+      tipsSnapshot.forEach(tipDoc => {
+        const tip = tipDoc.data();
+        if (!tipsByMatch[tip.matchId]) tipsByMatch[tip.matchId] = [];
+        tipsByMatch[tip.matchId].push(tip);
+      });
+
+      const matchesByRound = {};
+      matchesSnapshot.forEach(doc => {
         const match = doc.data();
-        if (!match.home || !match.away || !match.date) return;
+        if (!match.startTime) return;
 
-        const date = new Date(match.date.seconds * 1000);
-        if (date > new Date()) return; // Csak elkezdődött meccsek
+        const start = match.startTime.toDate?.() || match.startTime;
+        if (new Date() < new Date(start)) return;
 
-        const round = match.round || "Ismeretlen forduló";
-        if (!grouped[round]) grouped[round] = [];
-        grouped[round].push({ id: doc.id, ...match });
+        if (!matchesByRound[match.roundId]) matchesByRound[match.roundId] = [];
+        matchesByRound[match.roundId].push({ id: doc.id, ...match });
       });
 
-      const container = document.getElementById("results");
-      container.innerHTML = "";
+      const sortedRounds = Object.keys(matchesByRound).sort();
 
-      for (const round of Object.keys(grouped).sort()) {
-        const header = document.createElement("h2");
-        header.textContent = round;
-        container.appendChild(header);
+      sortedRounds.forEach(roundId => {
+        const roundSection = document.createElement("section");
+        roundSection.innerHTML = `<h2>${roundId}. forduló</h2>`;
+        matchesByRound[roundId]
+          .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
+          .forEach(match => {
+            const matchDiv = document.createElement("div");
+            matchDiv.classList.add("match-block");
+            matchDiv.innerHTML = `<h3>${match.homeTeam} - ${match.awayTeam}</h3>`;
+            if (match.result) {
+              matchDiv.innerHTML += `<p>Eredmény: <strong>${match.result}</strong></p>`;
+            } else {
+              matchDiv.innerHTML += `<p><em>Nincs még eredmény rögzítve.</em></p>`;
+            }
 
-        grouped[round].forEach(match => {
-          const div = document.createElement("div");
-          div.classList.add("match-result");
+            const tipList = document.createElement("ul");
 
-          const resultText = match.result ? ` (${match.result})` : "";
-          div.innerHTML = `<strong>${match.home} - ${match.away}</strong>${resultText}`;
+            (tipsByMatch[match.id] || []).forEach(tip => {
+              const li = document.createElement("li");
+              const user = usersMap[tip.userId] || "Ismeretlen";
+              const double = tip.isDouble ? " (dupla)" : "";
+              let points = "";
+              if (match.outcome && tip.tip === match.outcome) {
+                const multiplier = tip.isDouble ? 2 : 1;
+                const odds = match.odds?.[tip.tip] || 1;
+                points = ` - ${odds * multiplier} pont`;
+              } else if (match.outcome) {
+                points = " - 0 pont";
+              }
 
-          const ul = document.createElement("ul");
-          const relevantTips = tips.filter(t => t.matchId === match.id);
+              li.textContent = `${user}: ${tip.tip}${double}${points}`;
+              tipList.appendChild(li);
+            });
 
-          relevantTips.forEach(tip => {
-            const nickname = users[tip.userId] || tip.userId;
-            const correctOutcome = match.outcome;
-            const userPoints = (match.outcome && tip.outcome === match.outcome)
-              ? (tip.double ? 2 : 1) * (match.odds?.[tip.outcome] || 1)
-              : 0;
-            const li = document.createElement("li");
-            li.textContent = `${nickname}: ${tip.outcome || "-"} ${match.outcome ? `→ ${userPoints} pont` : ""}`;
-            ul.appendChild(li);
+            matchDiv.appendChild(tipList);
+            roundSection.appendChild(matchDiv);
           });
 
-          div.appendChild(ul);
-          container.appendChild(div);
-        });
-      }
-    }
+        resultsDiv.appendChild(roundSection);
+      });
+    });
   </script>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      background: #f9f9f9;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    .match-result {
-      background: white;
-      padding: 15px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    ul {
-      padding-left: 20px;
-    }
-  </style>
 </head>
 <body>
   <h1>Eredmények</h1>
-  <div id="results">Betöltés...</div>
+  <div id="results"></div>
 </body>
 </html>
+
