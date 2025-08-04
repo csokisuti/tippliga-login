@@ -10,24 +10,20 @@
       border: 1px solid #ccc;
       border-radius: 6px;
     }
-
     .round-header {
       background-color: #f0f0f0;
       padding: 10px;
       cursor: pointer;
       font-weight: bold;
     }
-
     .match-container {
       padding: 10px;
       border-top: 1px solid #ccc;
     }
-
     .match-header {
       font-weight: bold;
       margin-bottom: 6px;
     }
-
     .outcome {
       display: inline-block;
       margin-left: 8px;
@@ -36,17 +32,14 @@
       border-radius: 4px;
       font-size: 0.85em;
     }
-
     .tip-row {
       padding: 6px;
       margin: 4px 0;
       border-radius: 4px;
     }
-
     .correct {
       background-color: #d4edda;
     }
-
     .wrong {
       background-color: #f8d7da;
     }
@@ -74,7 +67,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
     const resultsDiv = document.getElementById("results");
 
     onAuthStateChanged(auth, async (user) => {
@@ -150,8 +142,14 @@
             tipRow.classList.add(correct ? "correct" : "wrong");
 
             const user = users[tip.userId] || tip.userId;
-            tipRow.textContent = `${user}: ${tip.tip}${tip.isDouble ? " (dupla)" : ""}`;
+            let pointText = "";
+            if (correct && match.odds && match.odds[tip.tip]) {
+              const base = tip.isDouble ? 2 : 1;
+              const point = base * match.odds[tip.tip];
+              pointText = ` (+${point} pont)`;
+            }
 
+            tipRow.textContent = `${user}: ${tip.tip}${tip.isDouble ? " (dupla)" : ""}${pointText}`;
             matchDiv.appendChild(tipRow);
           });
 
@@ -170,3 +168,4 @@
   <div id="results"></div>
 </body>
 </html>
+
