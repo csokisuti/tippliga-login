@@ -5,32 +5,21 @@
   <title>Eredmények</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .match-block { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-    .correct { background-color: #c8e6c9; }
-    .incorrect { background-color: #ffcdd2; }
+    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
     h2 { margin-top: 30px; }
+    .match-box { background: white; padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ccc; }
+    .tip { margin-left: 20px; padding: 4px 0; }
+    .tip.correct { color: green; font-weight: bold; }
+    .tip.incorrect { color: red; }
   </style>
 </head>
 <body>
   <h1>Eredmények</h1>
-  <div id="resultsContainer">Betöltés...</div>
+  <div id="resultsContainer"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      query,
-      where,
-      getDocs,
-      doc,
-      getDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -43,75 +32,81 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const auth = getAuth(app);
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
-      }
-
-      const matchesSnap = await getDocs(collection(db, "matches"));
-      const tipsSnap = await getDocs(collection(db, "tips"));
-      const usersSnap = await getDocs(collection(db, "users"));
-
-      const tips = tipsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const users = {};
-      usersSnap.forEach(u => users[u.id] = u.data().nickname || u.data().email);
-
-      const container = document.getElementById("resultsContainer");
-      container.innerHTML = "";
+    async function loadData() {
+      const [matchesSnap, tipsSnap, usersSnap] = await Promise.all([
+        getDocs(collection(db, "matches")),
+        getDocs(collection(db, "tips")),
+        getDocs(collection(db, "users"))
+      ]);
 
       const now = new Date();
+      const users = {};
+      usersSnap.forEach(doc => users[doc.id] = doc.data().nickname || doc.data().email);
+
+      const tipsByMatch = {};
+      tipsSnap.forEach(doc => {
+        const data = doc.data();
+        if (!tipsByMatch[data.matchId]) tipsByMatch[data.matchId] = [];
+        tipsByMatch[data.matchId].push({ ...data, id: doc.id });
+      });
 
       const matchesByRound = {};
       matchesSnap.forEach(doc => {
         const data = doc.data();
-        if (data.startTime && data.startTime.toDate() < now) {
-          if (!matchesByRound[data.round]) matchesByRound[data.round] = [];
-          matchesByRound[data.round].push({ id: doc.id, ...data });
-        }
+        const start = data.startTime?.toDate?.();
+        if (!start || start > now) return;
+        const round = data.roundId || "Egyéb";
+        if (!matchesByRound[round]) matchesByRound[round] = [];
+        matchesByRound[round].push({ id: doc.id, ...data });
       });
 
-      const sortedRounds = Object.keys(matchesByRound).sort((a, b) => b - a);
+      const container = document.getElementById("resultsContainer");
+      container.innerHTML = "";
 
-      for (const round of sortedRounds) {
-        const roundHeader = document.createElement("h2");
-        roundHeader.textContent = `${round}. forduló`;
-        container.appendChild(roundHeader);
+      Object.keys(matchesByRound).sort().forEach(roundId => {
+        const h2 = document.createElement("h2");
+        h2.textContent = `${roundId}. forduló`;
+        container.appendChild(h2);
 
-        for (const match of matchesByRound[round]) {
-          const block = document.createElement("div");
-          block.classList.add("match-block");
+        matchesByRound[roundId].forEach(match => {
+          const box = document.createElement("div");
+          box.className = "match-box";
 
-          const dateStr = match.startTime?.toDate().toLocaleString("hu-HU") || "";
+          const start = match.startTime?.toDate?.()?.toLocaleString("hu-HU") || "";
+          const resultText = match.result ? `Eredmény: ${match.result}` : "Eredmény még nincs";
 
-          const matchHeader = document.createElement("p");
-          matchHeader.innerHTML = `<strong>${match.homeTeam} - ${match.awayTeam}</strong><br>
-            Kezdés: ${dateStr}<br>
-            Oddsok: 1: ${match.odds1}, X: ${match.oddsX}, 2: ${match.odds2}<br>
-            Eredmény: ${match.result || "nincs"} (${match.outcome || "?"})`;
-          block.appendChild(matchHeader);
+          box.innerHTML = `
+            <strong>${match.homeTeam} - ${match.awayTeam}</strong><br>
+            Kezdés: ${start}<br>
+            ${resultText}<br>
+          `;
 
-          const tippek = tips.filter(t => t.matchId === match.id);
+          const matchTips = tipsByMatch[match.id] || [];
+          matchTips.forEach(tip => {
+            const p = document.createElement("div");
+            const userName = users[tip.userId] || tip.userId;
+            const tipVal = tip.tip;
+            const isDouble = tip.isDouble;
+            let outcome = match.outcome;
+            let correct = outcome && tipVal === outcome;
+            let pont = 0;
+            if (correct) {
+              const odd = match.odds?.[tipVal];
+              pont = odd ? (isDouble ? 2 * odd : odd) : 0;
+            }
 
-          tippek.forEach(tip => {
-            const tipLine = document.createElement("div");
-
-            const correct = match.outcome && tip.tip === match.outcome;
-            const point = correct ? (tip.double ? 2 : 1) * parseFloat(match[`odds${tip.tip}`] || 0) : 0;
-
-            tipLine.textContent = `${users[tip.userId] || tip.userId} tippje: ${tip.tip} (${point} pont)`;
-            tipLine.classList.add(correct ? "correct" : "incorrect");
-
-            block.appendChild(tipLine);
+            p.className = "tip" + (outcome ? (correct ? " correct" : " incorrect") : "");
+            p.textContent = `👉 ${userName} tippje: ${tipVal}${isDouble ? " (dupla)" : ""}${outcome ? ` → ${correct ? `✔️ ${pont} pont` : " ❌ 0 pont"}` : ""}`;
+            box.appendChild(p);
           });
 
-          container.appendChild(block);
-        }
-      }
-    });
+          container.appendChild(box);
+        });
+      });
+    }
+
+    loadData();
   </script>
 </body>
 </html>
-
