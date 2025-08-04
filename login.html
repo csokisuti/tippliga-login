@@ -17,7 +17,7 @@
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, doc, setDoc, collection, getDocs, query, where
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -76,23 +76,19 @@
           const nicknameSnap = await getDocs(q);
           if (!nicknameSnap.empty) return resultEl.innerText = "Ez a becenév már foglalt.";
 
-          await createUserWithEmailAndPassword(auth, email, password);
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
+          await signInWithEmailAndPassword(auth, email, password);
 
-          onAuthStateChanged(auth, async (user) => {
-            if (user) {
-              await setDoc(doc(db, "users", user.uid), {
-                email,
-                nickname,
-                role: "user"
-              });
-
-              resultEl.style.color = "green";
-              resultEl.innerText = "Sikeres regisztráció! Átirányítás...";
-              window.location.href = "dashboard.html";
-            } else {
-              resultEl.innerText = "Hiba: nem sikerült belépni regisztráció után.";
-            }
+          await setDoc(doc(db, "users", cred.user.uid), {
+            email,
+            nickname,
+            role: "user"
           });
+
+          resultEl.style.color = "green";
+          resultEl.innerText = "Sikeres regisztráció! Átirányítás...";
+          window.location.href = "dashboard.html";
+
         } catch (error) {
           if (error.code === "auth/email-already-in-use") {
             resultEl.innerText = "Ez az email cím már regisztrálva van.";
