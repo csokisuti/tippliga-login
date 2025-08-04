@@ -1,17 +1,66 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Eredmények</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .round-section {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .round-header {
+      background-color: #f0f0f0;
+      padding: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .match-container {
+      padding: 10px;
+      border-top: 1px solid #ccc;
+    }
+
+    .match-header {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .outcome {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 6px;
+      background-color: #ddd;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+
+    .tip-row {
+      padding: 6px;
+      margin: 4px 0;
+      border-radius: 4px;
+    }
+
+    .correct {
+      background-color: #d4edda;
+    }
+
+    .wrong {
+      background-color: #f8d7da;
+    }
+  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore, collection, getDocs, query, where, doc, getDoc
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -23,8 +72,10 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const resultsDiv = document.getElementById("results");
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -32,76 +83,83 @@
         return;
       }
 
-      const resultsDiv = document.getElementById("results");
-
       const matchesSnapshot = await getDocs(collection(db, "matches"));
       const tipsSnapshot = await getDocs(collection(db, "tips"));
       const usersSnapshot = await getDocs(collection(db, "users"));
 
-      const usersMap = {};
-      usersSnapshot.forEach(doc => {
-        usersMap[doc.id] = doc.data().nickname || doc.data().email;
+      const matches = {};
+      matchesSnapshot.forEach(doc => matches[doc.id] = { id: doc.id, ...doc.data() });
+
+      const users = {};
+      usersSnapshot.forEach(doc => users[doc.id] = doc.data().nickname || doc.data().email || doc.id);
+
+      const tipsByRound = {};
+      tipsSnapshot.forEach(doc => {
+        const tip = doc.data();
+        const match = matches[tip.matchId];
+        if (!match || !match.result || !match.outcome) return;
+
+        const roundId = match.roundId;
+        if (!tipsByRound[roundId]) tipsByRound[roundId] = {};
+        if (!tipsByRound[roundId][tip.matchId]) {
+          tipsByRound[roundId][tip.matchId] = {
+            match: match,
+            tips: []
+          };
+        }
+        tipsByRound[roundId][tip.matchId].tips.push({
+          userId: tip.userId,
+          tip: tip.tip,
+          isDouble: tip.isDouble
+        });
       });
 
-      const tipsByMatch = {};
-      tipsSnapshot.forEach(tipDoc => {
-        const tip = tipDoc.data();
-        if (!tipsByMatch[tip.matchId]) tipsByMatch[tip.matchId] = [];
-        tipsByMatch[tip.matchId].push(tip);
-      });
-
-      const matchesByRound = {};
-      matchesSnapshot.forEach(doc => {
-        const match = doc.data();
-        if (!match.startTime) return;
-
-        const start = match.startTime.toDate?.() || match.startTime;
-        if (new Date() < new Date(start)) return;
-
-        if (!matchesByRound[match.roundId]) matchesByRound[match.roundId] = [];
-        matchesByRound[match.roundId].push({ id: doc.id, ...match });
-      });
-
-      const sortedRounds = Object.keys(matchesByRound).sort();
+      const sortedRounds = Object.keys(tipsByRound).sort((a, b) => b - a);
 
       sortedRounds.forEach(roundId => {
-        const roundSection = document.createElement("section");
-        roundSection.innerHTML = `<h2>${roundId}. forduló</h2>`;
-        matchesByRound[roundId]
-          .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
-          .forEach(match => {
-            const matchDiv = document.createElement("div");
-            matchDiv.classList.add("match-block");
-            matchDiv.innerHTML = `<h3>${match.homeTeam} - ${match.awayTeam}</h3>`;
-            if (match.result) {
-              matchDiv.innerHTML += `<p>Eredmény: <strong>${match.result}</strong></p>`;
-            } else {
-              matchDiv.innerHTML += `<p><em>Nincs még eredmény rögzítve.</em></p>`;
-            }
+        const roundSection = document.createElement("div");
+        roundSection.className = "round-section";
 
-            const tipList = document.createElement("ul");
+        const header = document.createElement("div");
+        header.className = "round-header";
+        header.textContent = `Forduló ${roundId}`;
+        header.addEventListener("click", () => {
+          content.style.display = content.style.display === "none" ? "block" : "none";
+        });
 
-            (tipsByMatch[match.id] || []).forEach(tip => {
-              const li = document.createElement("li");
-              const user = usersMap[tip.userId] || "Ismeretlen";
-              const double = tip.isDouble ? " (dupla)" : "";
-              let points = "";
-              if (match.outcome && tip.tip === match.outcome) {
-                const multiplier = tip.isDouble ? 2 : 1;
-                const odds = match.odds?.[tip.tip] || 1;
-                points = ` - ${odds * multiplier} pont`;
-              } else if (match.outcome) {
-                points = " - 0 pont";
-              }
+        const content = document.createElement("div");
+        content.style.display = "none";
 
-              li.textContent = `${user}: ${tip.tip}${double}${points}`;
-              tipList.appendChild(li);
-            });
+        const matchGroup = tipsByRound[roundId];
+        for (const matchId in matchGroup) {
+          const { match, tips } = matchGroup[matchId];
 
-            matchDiv.appendChild(tipList);
-            roundSection.appendChild(matchDiv);
+          const matchDiv = document.createElement("div");
+          matchDiv.className = "match-container";
+
+          const matchHeader = document.createElement("div");
+          matchHeader.className = "match-header";
+          matchHeader.innerHTML = `${match.homeTeam} - ${match.awayTeam}: ${match.result} <span class="outcome">(${match.outcome})</span>`;
+          matchDiv.appendChild(matchHeader);
+
+          tips.forEach(tip => {
+            const tipRow = document.createElement("div");
+            tipRow.className = "tip-row";
+
+            const correct = tip.tip === match.outcome;
+            tipRow.classList.add(correct ? "correct" : "wrong");
+
+            const user = users[tip.userId] || tip.userId;
+            tipRow.textContent = `${user}: ${tip.tip}${tip.isDouble ? " (dupla)" : ""}`;
+
+            matchDiv.appendChild(tipRow);
           });
 
+          content.appendChild(matchDiv);
+        }
+
+        roundSection.appendChild(header);
+        roundSection.appendChild(content);
         resultsDiv.appendChild(roundSection);
       });
     });
@@ -112,4 +170,3 @@
   <div id="results"></div>
 </body>
 </html>
-
