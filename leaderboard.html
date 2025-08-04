@@ -8,8 +8,8 @@
     body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
     h1 { margin-bottom: 20px; }
     table { border-collapse: collapse; width: 100%; background: white; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
-    th { background: #eee; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+    th { background: #eee; text-align: center; }
     .highlight { font-weight: bold; background: #d4edda; }
     .back-btn {
       margin-bottom: 20px;
@@ -20,11 +20,28 @@
       border-radius: 6px;
       text-decoration: none;
     }
+    .toggle-btn {
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 18px;
+    }
+    .details {
+      background: #f9f9f9;
+    }
+    .hidden {
+      display: none;
+    }
+    .details td {
+      padding: 10px 20px;
+      font-size: 0.95em;
+      color: #444;
+    }
   </style>
 </head>
 <body>
   <a href="dashboard.html" class="back-btn">← Vissza a főoldalra</a>
-  <h1>Toplista – Fordulónkénti és összesített pontok</h1>
+  <h1>Toplista – Összesített és fordulónkénti pontok</h1>
   <div id="tableContainer">Betöltés...</div>
 
   <script type="module">
@@ -93,21 +110,40 @@
         .sort((a, b) => b[1].total - a[1].total);
 
       // táblázat építés
-      let html = "<table><thead><tr><th>Helyezés</th><th>Játékos</th>";
-      sortedRounds.forEach(r => html += `<th>${r}. forduló</th>`);
-      html += "<th>Összesen</th></tr></thead><tbody>";
+      let html = "<table><thead><tr><th>Helyezés</th><th>Játékos</th><th>Összesen</th><th></th></tr></thead><tbody>";
 
       sortedPlayers.forEach(([nick, points], idx) => {
-        html += `<tr${idx === 0 ? ' class="highlight"' : ''}><td>${idx + 1}.</td><td>${nick}</td>`;
-        sortedRounds.forEach(r => {
-          const p = points[r] || 0;
-          html += `<td>${p.toFixed(2)}</td>`;
-        });
-        html += `<td><strong>${points.total.toFixed(2)}</strong></td></tr>`;
+        const detailsId = `details_${idx}`;
+        html += `
+          <tr${idx === 0 ? ' class="highlight"' : ''}>
+            <td>${idx + 1}.</td>
+            <td>${nick}</td>
+            <td><strong>${points.total.toFixed(2)}</strong></td>
+            <td><button class="toggle-btn" data-target="${detailsId}">🔽</button></td>
+          </tr>
+          <tr id="${detailsId}" class="details hidden">
+            <td colspan="4">
+              ${sortedRounds.map(r => {
+                const p = points[r] || 0;
+                return `${r}. forduló: ${p.toFixed(2)} pont`;
+              }).join(" | ")}
+            </td>
+          </tr>
+        `;
       });
 
       html += "</tbody></table>";
       tableContainer.innerHTML = html;
+
+      // gombokhoz logika
+      document.querySelectorAll(".toggle-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const targetId = btn.getAttribute("data-target");
+          const row = document.getElementById(targetId);
+          row.classList.toggle("hidden");
+          btn.textContent = row.classList.contains("hidden") ? "🔽" : "🔼";
+        });
+      });
     });
   </script>
 </body>
