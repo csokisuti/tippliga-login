@@ -17,6 +17,7 @@
     .crest { height: 28px; width: 28px; object-fit: contain; }
     .back-btn { margin-bottom: 20px; display: inline-block; background: #007bff; color: white; padding: 10px 15px; border-radius: 6px; text-decoration: none; }
     .summary { font-weight: bold; background: #ffd; padding: 10px; border-radius: 8px; margin: 10px 0; }
+    .summary span { margin-right: 15px; cursor: help; }
   </style>
 </head>
 <body>
@@ -142,17 +143,26 @@
         roundBlock.appendChild(roundHeader);
 
         const scoreSummary = {};
-        Object.values(matchesInRound).forEach(({ tips }) => {
+        const scoreBreakdown = {};
+
+        Object.values(matchesInRound).forEach(({ match, tips }) => {
           tips.forEach(t => {
-            if (!scoreSummary[t.nickname]) scoreSummary[t.nickname] = 0;
+            if (!scoreSummary[t.nickname]) {
+              scoreSummary[t.nickname] = 0;
+              scoreBreakdown[t.nickname] = [];
+            }
             scoreSummary[t.nickname] += t.point;
+            scoreBreakdown[t.nickname].push(`${match.homeTeam}–${match.awayTeam}: ${t.tip} → ${t.point.toFixed(2)} pont`);
           });
         });
 
         const summaryDiv = document.createElement("div");
         summaryDiv.className = "summary";
         summaryDiv.innerHTML = Object.entries(scoreSummary)
-          .map(([nick, pt]) => `${nick}: ${pt.toFixed(2)} pont`).join(" | ");
+          .map(([nick, pt]) => {
+            const tooltip = scoreBreakdown[nick].join('\n');
+            return `<span title="${tooltip}">${nick}: ${pt.toFixed(2)} pont</span>`;
+          }).join(" | ");
         roundBlock.appendChild(summaryDiv);
 
         Object.values(matchesInRound).forEach(({ match, tips }) => {
