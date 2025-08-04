@@ -1,61 +1,52 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Eredmények</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
   <style>
-    .round-section {
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8fafd;
+      padding: 20px;
     }
     .round-header {
-      background-color: #f0f0f0;
-      padding: 10px;
+      font-weight: bold;
+      margin-top: 20px;
       cursor: pointer;
-      font-weight: bold;
-    }
-    .match-container {
+      background: #e8e8e8;
       padding: 10px;
-      border-top: 1px solid #ccc;
-      background-color: #fafafa;
-      margin-bottom: 5px;
+      border-radius: 5px;
     }
-    .match-header {
+    .match {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin: 10px 0;
+      padding: 10px;
+    }
+    .match.correct {
+      background-color: #d4f8d4;
+    }
+    .match.incorrect {
+      background-color: #f8d4d4;
+    }
+    .match .result {
       font-weight: bold;
-      margin-bottom: 6px;
     }
     .outcome {
-      display: inline-block;
-      margin-left: 8px;
       padding: 2px 6px;
-      background-color: #ddd;
       border-radius: 4px;
-      font-size: 0.85em;
-    }
-    .match-details {
+      background: #ddd;
+      margin-left: 5px;
       font-size: 0.9em;
-      color: #333;
-      margin-bottom: 8px;
     }
-    .tip-row {
-      padding: 6px;
-      margin: 4px 0;
-      border-radius: 4px;
-    }
-    .correct {
-      background-color: #d4edda;
-    }
-    .wrong {
-      background-color: #f8d7da;
-    }
-    .round-total {
-      margin-top: 10px;
+    .summary {
+      margin: 10px 0 20px;
       font-weight: bold;
-      padding: 10px;
-      background-color: #f7f7f7;
-      border-top: 1px solid #ccc;
+    }
+    .tip {
+      margin-left: 10px;
+      font-style: italic;
     }
   </style>
   <script type="module">
@@ -66,7 +57,9 @@
       collection,
       getDocs,
       doc,
-      getDoc
+      getDoc,
+      query,
+      where
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -81,7 +74,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const resultsDiv = document.getElementById("results");
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -89,118 +81,78 @@
         return;
       }
 
-      const matchesSnapshot = await getDocs(collection(db, "matches"));
-      const tipsSnapshot = await getDocs(collection(db, "tips"));
-      const usersSnapshot = await getDocs(collection(db, "users"));
+      const userId = user.uid;
+      const userDoc = await getDoc(doc(db, "users", userId));
+      const nickname = userDoc.exists() ? userDoc.data().nickname || user.email : user.email;
 
-      const matches = {};
-      matchesSnapshot.forEach(doc => matches[doc.id] = { id: doc.id, ...doc.data() });
+      const tipsSnap = await getDocs(query(collection(db, "tips"), where("userId", "==", userId)));
+      const tips = tipsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      const users = {};
-      usersSnapshot.forEach(doc => users[doc.id] = doc.data().nickname || doc.data().email || doc.id);
+      const matchesSnap = await getDocs(collection(db, "matches"));
+      const matches = matchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      const tipsByRound = {};
-      tipsSnapshot.forEach(doc => {
-        const tip = doc.data();
-        const match = matches[tip.matchId];
-        if (!match || !match.result || !match.outcome) return;
+      const rounds = {};
 
-        const roundId = match.roundId || "Ismeretlen";
-        if (!tipsByRound[roundId]) tipsByRound[roundId] = {};
-        if (!tipsByRound[roundId][tip.matchId]) {
-          tipsByRound[roundId][tip.matchId] = {
-            match: match,
-            tips: []
-          };
-        }
-        tipsByRound[roundId][tip.matchId].tips.push({
-          userId: tip.userId,
-          tip: tip.tip,
-          isDouble: tip.isDouble
-        });
-      });
+      for (const tip of tips) {
+        const match = matches.find(m => m.id === tip.matchId);
+        if (!match || !match.result || !match.outcome) continue;
 
-      const sortedRounds = Object.keys(tipsByRound).sort((a, b) => b - a);
+        const roundId = match.roundId || "1";
+        if (!rounds[roundId]) rounds[roundId] = [];
+        rounds[roundId].push({ tip, match });
+      }
 
-      sortedRounds.forEach(roundId => {
-        const roundSection = document.createElement("div");
-        roundSection.className = "round-section";
+      const container = document.body;
+      const sortedRounds = Object.keys(rounds).sort((a, b) => b - a);
 
+      for (const roundId of sortedRounds) {
+        let totalPoints = {};
         const header = document.createElement("div");
         header.className = "round-header";
         header.textContent = `Forduló ${roundId}`;
+        const roundContent = document.createElement("div");
+        roundContent.style.display = "none";
+
         header.addEventListener("click", () => {
-          content.style.display = content.style.display === "none" ? "block" : "none";
+          roundContent.style.display = roundContent.style.display === "none" ? "block" : "none";
         });
 
-        const content = document.createElement("div");
-        content.style.display = "none";
-
-        const matchGroup = tipsByRound[roundId];
-        const roundScores = {};
-
-        for (const matchId in matchGroup) {
-          const { match, tips } = matchGroup[matchId];
-
+        for (const { tip, match } of rounds[roundId]) {
           const matchDiv = document.createElement("div");
-          matchDiv.className = "match-container";
+          const correct = tip.tip === match.outcome;
+          const odds = match.odds?.[tip.tip] || 0;
+          const multiplier = tip.isDouble ? 2 : 1;
+          const points = correct ? (odds * multiplier).toFixed(1) : "0";
+          const userLabel = `${nickname}: ${tip.tip}${tip.isDouble ? " (dupla)" : ""} (${correct ? "+" + points : "+0"} pont)`;
 
-          const matchHeader = document.createElement("div");
-          matchHeader.className = "match-header";
-          matchHeader.innerHTML = `${match.homeTeam} - ${match.awayTeam}: ${match.result} <span class="outcome">(${match.outcome})</span>`;
-          matchDiv.appendChild(matchHeader);
+          totalPoints[nickname] = (totalPoints[nickname] || 0) + parseFloat(points);
 
-          const matchDetails = document.createElement("div");
-          matchDetails.className = "match-details";
-          matchDetails.innerHTML = `
-            Dátum: ${new Date(match.date).toLocaleString()}<br>
-            Oddsok: 1 - ${match.odds?.["1"] ?? "-"}, X - ${match.odds?.["X"] ?? "-"}, 2 - ${match.odds?.["2"] ?? "-"}
+          matchDiv.className = "match " + (correct ? "correct" : "incorrect");
+          matchDiv.innerHTML = `
+            <div class="result">${match.homeTeam} - ${match.awayTeam}: ${match.result}
+              <span class="outcome">(${match.outcome})</span>
+            </div>
+            <div class="details">
+              Dátum: ${match.startTime?.seconds ? new Date(match.startTime.seconds * 1000).toLocaleString() : "-"}<br>
+              Oddsok: 1 - ${match.odds?.["1"] ?? "-"}, X - ${match.odds?.["X"] ?? "-"}, 2 - ${match.odds?.["2"] ?? "-"}
+            </div>
+            <div class="tip">${userLabel}</div>
           `;
-          matchDiv.appendChild(matchDetails);
-
-          tips.forEach(tip => {
-            const tipRow = document.createElement("div");
-            tipRow.className = "tip-row";
-
-            const correct = tip.tip === match.outcome;
-            tipRow.classList.add(correct ? "correct" : "wrong");
-
-            const user = users[tip.userId] || tip.userId;
-            let pointText = "";
-            let points = 0;
-
-            if (correct && match.odds && match.odds[tip.tip]) {
-              const base = tip.isDouble ? 2 : 1;
-              points = base * match.odds[tip.tip];
-              pointText = ` (+${points} pont)`;
-            }
-
-            if (!roundScores[user]) roundScores[user] = 0;
-            roundScores[user] += points;
-
-            tipRow.textContent = `${user}: ${tip.tip}${tip.isDouble ? " (dupla)" : ""}${pointText}`;
-            matchDiv.appendChild(tipRow);
-          });
-
-          content.appendChild(matchDiv);
+          roundContent.appendChild(matchDiv);
         }
 
-        const summaryDiv = document.createElement("div");
-        summaryDiv.className = "round-total";
-        summaryDiv.innerHTML = "Forduló összesítés:<br>" + Object.entries(roundScores)
-          .map(([user, pts]) => `${user}: ${pts} pont`)
-          .join("<br>");
-        content.appendChild(summaryDiv);
+        const summary = document.createElement("div");
+        summary.className = "summary";
+        summary.innerHTML = `Forduló összesítés:<br>${nickname}: ${totalPoints[nickname].toFixed(1)} pont`;
+        roundContent.appendChild(summary);
 
-        roundSection.appendChild(header);
-        roundSection.appendChild(content);
-        resultsDiv.appendChild(roundSection);
-      });
+        container.appendChild(header);
+        container.appendChild(roundContent);
+      }
     });
   </script>
 </head>
 <body>
   <h1>Eredmények</h1>
-  <div id="results"></div>
 </body>
 </html>
