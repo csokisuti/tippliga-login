@@ -3,26 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <title>Eredmények</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
-    h2 { cursor: pointer; background-color: #ddd; padding: 10px; margin: 10px 0; }
-    .match { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-    .tip { padding: 5px; margin-left: 10px; }
-    .tip.correct { background-color: #c8e6c9; }
-    .tip.incorrect { background-color: #ffcdd2; }
-    .details { display: none; padding-left: 20px; }
-    .outcome { font-weight: bold; margin-top: 5px; }
-    .summary { font-weight: bold; margin-top: 10px; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>Eredmények</h1>
-  <div id="results"></div>
+  <div id="results-container"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
   apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -34,113 +24,105 @@
 };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    onAuthStateChanged(auth, async user => {
+    const resultsContainer = document.getElementById("results-container");
+
+    onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "login.html";
         return;
       }
-      loadResults();
-    });
 
-    async function loadResults() {
       const matchesSnap = await getDocs(collection(db, "matches"));
       const tipsSnap = await getDocs(collection(db, "tips"));
-      const usersSnap = await getDocs(collection(db, "users"));
-      const matches = [];
-      const tipsByMatch = {};
-      const users = {};
-
-      usersSnap.forEach(doc => {
-        users[doc.id] = doc.data().nickname || doc.id;
-      });
 
       const now = new Date();
-
-      tipsSnap.forEach(doc => {
-        const tip = doc.data();
-        if (!tipsByMatch[tip.matchId]) tipsByMatch[tip.matchId] = [];
-        tipsByMatch[tip.matchId].push({ ...tip, id: doc.id });
-      });
+      const matches = [];
 
       matchesSnap.forEach(doc => {
         const match = doc.data();
-        const startTime = match.startTime?.toDate?.();
+        let startTime;
+        if (match.startTime instanceof Object && typeof match.startTime.seconds === "number") {
+          startTime = new Date(match.startTime.seconds * 1000);
+        }
         if (startTime && startTime <= now) {
-          matches.push({ ...match, id: doc.id });
+          matches.push({ ...match, id: doc.id, startTime });
         }
       });
-
-      const resultsContainer = document.getElementById("results");
 
       const groupedByRound = {};
       matches.forEach(match => {
         const round = match.round || "Ismeretlen forduló";
-        if (!groupedByRound[round]) groupedByRound[round] = [];
+        if (!groupedByRound[round]) {
+          groupedByRound[round] = [];
+        }
         groupedByRound[round].push(match);
       });
 
-      const sortedRounds = Object.keys(groupedByRound).sort((a, b) => b - a);
+      const tips = {};
+      tipsSnap.forEach(doc => {
+        const data = doc.data();
+        if (!tips[data.matchId]) tips[data.matchId] = [];
+        tips[data.matchId].push(data);
+      });
 
+      const sortedRounds = Object.keys(groupedByRound).sort((a, b) => b - a);
       sortedRounds.forEach(round => {
-        const header = document.createElement("h2");
-        header.textContent = `Forduló ${round}`;
-        const section = document.createElement("div");
-        section.className = "details";
+        const details = document.createElement("details");
+        details.open = true;
+
+        const summary = document.createElement("summary");
+        summary.textContent = `Forduló ${round}`;
+        details.appendChild(summary);
 
         let roundTotal = 0;
 
         groupedByRound[round].forEach(match => {
           const matchDiv = document.createElement("div");
           matchDiv.className = "match";
-          const startTime = match.startTime?.toDate?.();
-          const result = match.result || "-";
-          const outcome = match.outcome || "-";
-          const home = match.homeTeam || "Hazai";
-          const away = match.awayTeam || "Vendég";
-          const homeOdds = match.odds?.home || "-";
-          const drawOdds = match.odds?.draw || "-";
-          const awayOdds = match.odds?.away || "-";
-          const tips = tipsByMatch[match.id] || [];
+          const startDate = match.startTime ? new Date(match.startTime).toLocaleString() : "Ismeretlen időpont";
 
+          const outcome = match.outcome ? `<strong style="color:blue">(${match.outcome})</strong>` : "";
           matchDiv.innerHTML = `
-            <strong>${home} vs ${away}</strong><br>
-            Dátum: ${startTime?.toLocaleString() || "-"}<br>
-            Odds: Hazai: ${homeOdds}, Döntetlen: ${drawOdds}, Vendég: ${awayOdds}<br>
-            Eredmény: ${result} (${outcome !== "-" ? `<span class="outcome">${outcome}</span>` : "-"})<br>
+            <h3>${match.teamA} vs ${match.teamB}</h3>
+            <p>Dátum: ${startDate}</p>
+            <p>Odds: ${match.oddsA} / ${match.oddsDraw} / ${match.oddsB}</p>
+            <p>Eredmény: ${match.result || "Nincs rögzítve"} ${outcome}</p>
           `;
 
-          tips.forEach(tip => {
-            const tipDiv = document.createElement("div");
-            const isCorrect = tip.prediction === outcome;
-            const multiplier = tip.double ? 2 : 1;
-            const odds = tip.prediction === "1" ? homeOdds : tip.prediction === "X" ? drawOdds : awayOdds;
-            const point = isCorrect ? Number(odds) * multiplier : 0;
-            if (isCorrect) roundTotal += point;
+          const matchTips = tips[match.id] || [];
+          matchTips.forEach(tip => {
+            let point = 0;
+            if (match.outcome && tip.tip === match.outcome) {
+              const oddsMap = { "1": match.oddsA, "X": match.oddsDraw, "2": match.oddsB };
+              point = (tip.double ? 2 : 1) * (oddsMap[match.outcome] || 1);
+              roundTotal += point;
+            }
 
-            tipDiv.className = "tip " + (outcome !== "-" ? (isCorrect ? "correct" : "incorrect") : "");
-            tipDiv.textContent = `${users[tip.user] || tip.user}: ${tip.prediction} ${tip.double ? "(dupla)" : ""} → ${point} pont`;
+            const tipDiv = document.createElement("div");
+            tipDiv.textContent = `${tip.userEmail} tippje: ${tip.tip} (${tip.double ? "dupla" : "szimpla"}) → ${point} pont`;
+            tipDiv.style.background = match.outcome
+              ? (tip.tip === match.outcome ? "#c8e6c9" : "#ffcdd2")
+              : "#eeeeee";
+            tipDiv.style.padding = "5px";
+            tipDiv.style.margin = "3px 0";
             matchDiv.appendChild(tipDiv);
           });
 
-          section.appendChild(matchDiv);
+          details.appendChild(matchDiv);
         });
 
-        const summary = document.createElement("div");
-        summary.className = "summary";
-        summary.textContent = `Forduló összpont: ${roundTotal.toFixed(2)} pont`;
-        section.appendChild(summary);
+        const totalP = document.createElement("p");
+        totalP.innerHTML = `<strong>Forduló összpontszám: ${roundTotal.toFixed(2)}</strong>`;
+        totalP.style.marginTop = "10px";
+        totalP.style.color = "darkgreen";
+        details.appendChild(totalP);
 
-        header.addEventListener("click", () => {
-          section.style.display = section.style.display === "none" ? "block" : "none";
-        });
-
-        resultsContainer.appendChild(header);
-        resultsContainer.appendChild(section);
+        resultsContainer.appendChild(details);
       });
-    }
+    });
   </script>
 </body>
 </html>
