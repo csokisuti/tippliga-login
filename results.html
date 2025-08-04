@@ -6,23 +6,14 @@
   <link rel="stylesheet" href="style.css">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
-    h2 { margin-top: 40px; }
+    h1, h2 { margin-top: 20px; }
     .match { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 0 5px #ccc; }
-    .tip { margin-left: 20px; padding: 8px; border-radius: 6px; background: #eef; margin-top: 5px; }
+    .tip { margin-left: 20px; padding: 8px; border-radius: 6px; background: #eef; margin-top: 5px; display: flex; align-items: center; gap: 10px; }
     .correct { background: #d4edda; }
-    .wrong { background: #f8d7da; }
+    .incorrect::after { content: "❌"; color: red; margin-left: 8px; }
     .bold { font-weight: bold; }
-    .team-row { display: flex; align-items: center; gap: 8px; font-size: 1.1em; }
-    .crest { height: 28px; width: 28px; object-fit: contain; }
-    .back-button {
-      display: inline-block;
-      margin-bottom: 20px;
-      padding: 8px 12px;
-      background: #007bff;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-    }
+    .crest { height: 24px; vertical-align: middle; margin-right: 5px; }
+    .back-button { display: inline-block; margin-bottom: 20px; padding: 8px 12px; background: #007bff; color: white; text-decoration: none; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -44,25 +35,22 @@
       appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
 
-    const crestMap = {
-      "Debreceni VSC": "crest/crest-dvsc.png",
-      "Diósgyőri VTK": "crest/crest-dvtk.png",
-      "Ferencváros": "crest/crest-fradi.png",
-      "ETO FC Győr": "crest/crest-gyor.png",
-      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
-      "Kisvárda FC": "crest/crest-kisvarda.png",
-      "MTK Budapest": "crest/crest-mtk.png",
-      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
-      "Paksi FC": "crest/crest-paks.png",
-      "Puskás Akadémia": "crest/crest-puskas.png",
-      "Újpest FC": "crest/crest-ujpest.png",
-      "Zalaegerszegi TE FC": "crest/crest-zte.png"
-    };
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
     const resultsContainer = document.getElementById('resultsContainer');
+
+    function getCrestFilename(teamName) {
+      return "crest/crest-" + teamName.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "") + ".png";
+    }
+
+    function formatDate(timestamp) {
+      const date = timestamp.toDate();
+      return `${date.getFullYear()}.${(date.getMonth()+1).toString().padStart(2,'0')}.${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+    }
 
     onAuthStateChanged(auth, async user => {
       if (!user) {
@@ -80,7 +68,7 @@
       matchesSnap.forEach(doc => matches[doc.id] = { id: doc.id, ...doc.data() });
 
       const users = {};
-      usersSnap.forEach(doc => users[doc.id] = doc.data().nickname || "Ismeretlen");
+      usersSnap.forEach(doc => users[doc.id] = doc.data().nickname || "Ismeretlen";
 
       const rounds = {};
 
@@ -92,11 +80,13 @@
         const roundId = match.roundId || "Egyéb";
         if (!rounds[roundId]) rounds[roundId] = {};
         if (!rounds[roundId][match.id]) {
-          rounds[roundId][match.id] = { match, tips: [] };
+          rounds[roundId][match.id] = {
+            match,
+            tips: []
+          };
         }
 
-        const outcome = match.outcome;
-        const isCorrect = outcome === tip.tip;
+        const isCorrect = match.outcome === tip.tip;
         const oddsValue = match.odds[tip.tip];
         const point = (oddsValue || 0) * (tip.isDouble ? 2 : 1);
 
@@ -113,7 +103,7 @@
 
       resultsContainer.innerHTML = "";
 
-      Object.keys(rounds).sort((a, b) => parseInt(b) - parseInt(a)).forEach(roundId => {
+      Object.keys(rounds).sort((a,b) => b - a).forEach(roundId => {
         const roundBlock = document.createElement("div");
         roundBlock.innerHTML = `<h2>${roundId}. forduló</h2>`;
 
@@ -121,28 +111,27 @@
         Object.values(matchesInRound).forEach(({ match, tips }) => {
           const matchBlock = document.createElement("div");
           matchBlock.className = "match";
-
-          const homeCrest = crestMap[match.homeTeam] || "";
-          const awayCrest = crestMap[match.awayTeam] || "";
+          const homeLogo = getCrestFilename(match.homeTeam);
+          const awayLogo = getCrestFilename(match.awayTeam);
+          const startTime = match.startTime ? formatDate(match.startTime) : "ismeretlen";
 
           matchBlock.innerHTML = `
-            <div class="team-row">
-              <img src="${homeCrest}" class="crest">
-              <strong>${match.homeTeam}</strong> - 
-              <strong>${match.awayTeam}</strong>
-              <img src="${awayCrest}" class="crest">
+            <div>
+              <img class="crest" src="${homeLogo}" alt=""> <span class="bold">${match.homeTeam}</span>
+              -
+              <img class="crest" src="${awayLogo}" alt=""> <span class="bold">${match.awayTeam}</span>
             </div>
-            <div>Kezdés: ${match.startTime?.toDate?.().toLocaleString("hu-HU") || "-"}</div>
+            <div>Kezdés: <span class="bold">${startTime}</span></div>
             <div>Eredmény: <span class="bold">${match.result || "?"}</span>, Kimenetel: <span class="bold">${match.outcome}</span></div>
             <div>Odds: 1 → ${match.odds["1"]}, X → ${match.odds["X"]}, 2 → ${match.odds["2"]}</div>
           `;
 
           tips.forEach(tip => {
             const tipDiv = document.createElement("div");
-            tipDiv.className = "tip" + (tip.correct ? " correct" : " wrong");
+            tipDiv.className = "tip" + (tip.correct ? " correct" : " incorrect");
             tipDiv.innerHTML = `
               Tippelő: <strong>${tip.nickname}</strong>,
-              Tipp: ${tip.tip} ${tip.correct ? "✅" : "❌"},
+              Tipp: ${tip.tip},
               ${tip.isDouble ? "Dupla, " : ""}
               Odds: ${tip.odds ?? "-"},
               Pont: ${tip.point.toFixed(2)}
