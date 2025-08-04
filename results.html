@@ -3,126 +3,145 @@
 <head>
   <meta charset="UTF-8">
   <title>Eredmények</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h1>Eredmények</h1>
-  <div id="results-container"></div>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, where, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain: "tippliga-4b3af.firebaseapp.com",
-  projectId: "tippliga-4b3af",
-  storageBucket: "tippliga-4b3af.firebasestorage.app",
-  messagingSenderId: "720359845241",
-  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const resultsContainer = document.getElementById("results-container");
+    const container = document.getElementById("results-container");
+
+    function formatDate(timestamp) {
+      try {
+        const date = timestamp.toDate();
+        return date.toLocaleString("hu-HU");
+      } catch {
+        return "Ismeretlen időpont";
+      }
+    }
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        window.location.href = "login.html";
+        container.innerHTML = "<p style='color: red;'>Be kell jelentkezned az eredmények megtekintéséhez.</p>";
         return;
       }
 
-      const matchesSnap = await getDocs(collection(db, "matches"));
-      const tipsSnap = await getDocs(collection(db, "tips"));
+      try {
+        const matchesSnap = await getDocs(collection(db, "matches"));
+        const tipsSnap = await getDocs(collection(db, "tips"));
 
-      const now = new Date();
-      const matches = [];
-
-      matchesSnap.forEach(doc => {
-        const match = doc.data();
-        let startTime;
-        if (match.startTime instanceof Object && typeof match.startTime.seconds === "number") {
-          startTime = new Date(match.startTime.seconds * 1000);
-        }
-        if (startTime && startTime <= now) {
-          matches.push({ ...match, id: doc.id, startTime });
-        }
-      });
-
-      const groupedByRound = {};
-      matches.forEach(match => {
-        const round = match.round || "Ismeretlen forduló";
-        if (!groupedByRound[round]) {
-          groupedByRound[round] = [];
-        }
-        groupedByRound[round].push(match);
-      });
-
-      const tips = {};
-      tipsSnap.forEach(doc => {
-        const data = doc.data();
-        if (!tips[data.matchId]) tips[data.matchId] = [];
-        tips[data.matchId].push(data);
-      });
-
-      const sortedRounds = Object.keys(groupedByRound).sort((a, b) => b - a);
-      sortedRounds.forEach(round => {
-        const details = document.createElement("details");
-        details.open = true;
-
-        const summary = document.createElement("summary");
-        summary.textContent = `Forduló ${round}`;
-        details.appendChild(summary);
-
-        let roundTotal = 0;
-
-        groupedByRound[round].forEach(match => {
-          const matchDiv = document.createElement("div");
-          matchDiv.className = "match";
-          const startDate = match.startTime ? new Date(match.startTime).toLocaleString() : "Ismeretlen időpont";
-
-          const outcome = match.outcome ? `<strong style="color:blue">(${match.outcome})</strong>` : "";
-          matchDiv.innerHTML = `
-            <h3>${match.teamA} vs ${match.teamB}</h3>
-            <p>Dátum: ${startDate}</p>
-            <p>Odds: ${match.oddsA} / ${match.oddsDraw} / ${match.oddsB}</p>
-            <p>Eredmény: ${match.result || "Nincs rögzítve"} ${outcome}</p>
-          `;
-
-          const matchTips = tips[match.id] || [];
-          matchTips.forEach(tip => {
-            let point = 0;
-            if (match.outcome && tip.tip === match.outcome) {
-              const oddsMap = { "1": match.oddsA, "X": match.oddsDraw, "2": match.oddsB };
-              point = (tip.double ? 2 : 1) * (oddsMap[match.outcome] || 1);
-              roundTotal += point;
-            }
-
-            const tipDiv = document.createElement("div");
-            tipDiv.textContent = `${tip.userEmail} tippje: ${tip.tip} (${tip.double ? "dupla" : "szimpla"}) → ${point} pont`;
-            tipDiv.style.background = match.outcome
-              ? (tip.tip === match.outcome ? "#c8e6c9" : "#ffcdd2")
-              : "#eeeeee";
-            tipDiv.style.padding = "5px";
-            tipDiv.style.margin = "3px 0";
-            matchDiv.appendChild(tipDiv);
-          });
-
-          details.appendChild(matchDiv);
+        const matches = [];
+        matchesSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.startTime && Timestamp.now().seconds >= data.startTime.seconds) {
+            matches.push({ id: doc.id, ...data });
+          }
         });
 
-        const totalP = document.createElement("p");
-        totalP.innerHTML = `<strong>Forduló összpontszám: ${roundTotal.toFixed(2)}</strong>`;
-        totalP.style.marginTop = "10px";
-        totalP.style.color = "darkgreen";
-        details.appendChild(totalP);
+        const tips = {};
+        tipsSnap.forEach(doc => {
+          const data = doc.data();
+          if (!tips[data.matchId]) tips[data.matchId] = [];
+          tips[data.matchId].push({ id: doc.id, ...data });
+        });
 
-        resultsContainer.appendChild(details);
-      });
+        const grouped = {};
+        for (const match of matches) {
+          const round = match.round || "Egyéb";
+          if (!grouped[round]) grouped[round] = [];
+          grouped[round].push(match);
+        }
+
+        const rounds = Object.keys(grouped).sort((a, b) => b - a);
+        for (const round of rounds) {
+          const roundSection = document.createElement("div");
+          const header = document.createElement("h2");
+          header.textContent = `Forduló ${round}`;
+          header.style.cursor = "pointer";
+          roundSection.appendChild(header);
+
+          const table = document.createElement("table");
+          table.style.borderCollapse = "collapse";
+          table.style.marginBottom = "20px";
+
+          grouped[round].forEach(match => {
+            const matchRow = document.createElement("tr");
+            matchRow.innerHTML = `
+              <td colspan="4" style="background: #ddd; padding: 8px;">
+                ${match.homeTeam} - ${match.awayTeam} (${match.result || "Nincs eredmény"})<br>
+                Kezdés: ${formatDate(match.startTime)}<br>
+                Oddsok: 1: ${match.odds1} | X: ${match.oddsX} | 2: ${match.odds2}
+              </td>
+            `;
+            table.appendChild(matchRow);
+
+            let roundPoints = {};
+
+            if (tips[match.id]) {
+              tips[match.id].forEach(tip => {
+                const isCorrect = match.outcome && tip.prediction === match.outcome;
+                const points = isCorrect ? (tip.double ? 2 : 1) * (match["odds" + tip.prediction] || 1) : 0;
+                roundPoints[tip.userEmail] = (roundPoints[tip.userEmail] || 0) + points;
+
+                const row = document.createElement("tr");
+                row.style.backgroundColor = isCorrect ? "#c8f7c5" : "#f7c5c5";
+                row.innerHTML = `
+                  <td style="padding: 6px;">${tip.userEmail}</td>
+                  <td style="padding: 6px;">Tipp: ${tip.prediction}</td>
+                  <td style="padding: 6px;">Dupla: ${tip.double ? "igen" : "nem"}</td>
+                  <td style="padding: 6px;">Pont: ${points.toFixed(2)}</td>
+                `;
+                table.appendChild(row);
+              });
+
+              const totalRow = document.createElement("tr");
+              totalRow.innerHTML = `
+                <td colspan="4" style="padding: 6px; background: #eee;">
+                  <strong>Összesített pontok ebben a fordulóban:</strong><br>
+                  ${Object.entries(roundPoints).map(([email, pt]) => `${email}: ${pt.toFixed(2)} pont`).join("<br>")}
+                </td>
+              `;
+              table.appendChild(totalRow);
+            }
+          });
+
+          const collapsible = document.createElement("div");
+          collapsible.style.display = "none";
+          collapsible.appendChild(table);
+          roundSection.appendChild(collapsible);
+
+          header.addEventListener("click", () => {
+            collapsible.style.display = collapsible.style.display === "none" ? "block" : "none";
+          });
+
+          container.appendChild(roundSection);
+        }
+
+        if (container.innerHTML === "") {
+          container.innerHTML = "<p>Nincs megjeleníthető eredmény.</p>";
+        }
+
+      } catch (error) {
+        container.innerHTML = "<p style='color: red;'>Hiba történt az adatok betöltésekor.</p>";
+        console.error(error);
+      }
     });
   </script>
+</head>
+<body>
+  <h1>Eredmények</h1>
+  <div id="results-container"></div>
 </body>
 </html>
