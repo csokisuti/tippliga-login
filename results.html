@@ -3,115 +3,141 @@
 <head>
   <meta charset="UTF-8">
   <title>Eredmények</title>
-  <link rel="stylesheet" href="style.css">
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
-    h2 { margin-top: 30px; }
-    .match-box { background: white; padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ccc; }
-    .tip { margin-left: 20px; padding: 4px 0; }
-    .tip.correct { color: green; font-weight: bold; }
-    .tip.incorrect { color: red; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+    h2 { cursor: pointer; background-color: #ddd; padding: 10px; margin: 10px 0; }
+    .match { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    .tip { padding: 5px; margin-left: 10px; }
+    .tip.correct { background-color: #c8e6c9; }
+    .tip.incorrect { background-color: #ffcdd2; }
+    .details { display: none; padding-left: 20px; }
+    .outcome { font-weight: bold; margin-top: 5px; }
+    .summary { font-weight: bold; margin-top: 10px; }
   </style>
 </head>
 <body>
   <h1>Eredmények</h1>
-  <div id="resultsContainer"></div>
+  <div id="results"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-      authDomain: "tippliga-4b3af.firebaseapp.com",
-      projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.appspot.com",
-      messagingSenderId: "720359845241",
-      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+      apiKey: "APIKEY",
+      authDomain: "YOUR_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
-    function convertToDate(obj) {
-      if (obj?.toDate) return obj.toDate();
-      return null;
-    }
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      loadResults();
+    });
 
-    async function loadData() {
-      const [matchesSnap, tipsSnap, usersSnap] = await Promise.all([
-        getDocs(collection(db, "matches")),
-        getDocs(collection(db, "tips")),
-        getDocs(collection(db, "users"))
-      ]);
+    async function loadResults() {
+      const matchesSnap = await getDocs(collection(db, "matches"));
+      const tipsSnap = await getDocs(collection(db, "tips"));
+      const usersSnap = await getDocs(collection(db, "users"));
+      const matches = [];
+      const tipsByMatch = {};
+      const users = {};
+
+      usersSnap.forEach(doc => {
+        users[doc.id] = doc.data().nickname || doc.id;
+      });
 
       const now = new Date();
-      const users = {};
-      usersSnap.forEach(doc => users[doc.id] = doc.data().nickname || doc.data().email);
 
-      const tipsByMatch = {};
       tipsSnap.forEach(doc => {
-        const data = doc.data();
-        if (!tipsByMatch[data.matchId]) tipsByMatch[data.matchId] = [];
-        tipsByMatch[data.matchId].push({ ...data, id: doc.id });
+        const tip = doc.data();
+        if (!tipsByMatch[tip.matchId]) tipsByMatch[tip.matchId] = [];
+        tipsByMatch[tip.matchId].push({ ...tip, id: doc.id });
       });
 
-      const matchesByRound = {};
       matchesSnap.forEach(doc => {
-        const data = doc.data();
-        const start = convertToDate(data.startTime);
-        if (!start || start > now) return;
-        const round = data.roundId || "Egyéb";
-        if (!matchesByRound[round]) matchesByRound[round] = [];
-        matchesByRound[round].push({ id: doc.id, ...data });
+        const match = doc.data();
+        const startTime = match.startTime?.toDate?.();
+        if (startTime && startTime <= now) {
+          matches.push({ ...match, id: doc.id });
+        }
       });
 
-      const container = document.getElementById("resultsContainer");
-      container.innerHTML = "";
+      const resultsContainer = document.getElementById("results");
 
-      Object.keys(matchesByRound).sort((a, b) => b - a).forEach(roundId => {
-        const h2 = document.createElement("h2");
-        h2.textContent = `${roundId}. forduló`;
-        container.appendChild(h2);
+      const groupedByRound = {};
+      matches.forEach(match => {
+        const round = match.round || "Ismeretlen forduló";
+        if (!groupedByRound[round]) groupedByRound[round] = [];
+        groupedByRound[round].push(match);
+      });
 
-        matchesByRound[roundId].forEach(match => {
-          const box = document.createElement("div");
-          box.className = "match-box";
+      const sortedRounds = Object.keys(groupedByRound).sort((a, b) => b - a);
 
-          const start = convertToDate(match.startTime)?.toLocaleString("hu-HU") || "";
-          const resultText = match.result ? `Eredmény: ${match.result}` : "Eredmény még nincs";
+      sortedRounds.forEach(round => {
+        const header = document.createElement("h2");
+        header.textContent = `Forduló ${round}`;
+        const section = document.createElement("div");
+        section.className = "details";
 
-          box.innerHTML = `
-            <strong>${match.homeTeam} - ${match.awayTeam}</strong><br>
-            Kezdés: ${start}<br>
-            ${resultText}<br>
+        let roundTotal = 0;
+
+        groupedByRound[round].forEach(match => {
+          const matchDiv = document.createElement("div");
+          matchDiv.className = "match";
+          const startTime = match.startTime?.toDate?.();
+          const result = match.result || "-";
+          const outcome = match.outcome || "-";
+          const home = match.homeTeam || "Hazai";
+          const away = match.awayTeam || "Vendég";
+          const homeOdds = match.odds?.home || "-";
+          const drawOdds = match.odds?.draw || "-";
+          const awayOdds = match.odds?.away || "-";
+          const tips = tipsByMatch[match.id] || [];
+
+          matchDiv.innerHTML = `
+            <strong>${home} vs ${away}</strong><br>
+            Dátum: ${startTime?.toLocaleString() || "-"}<br>
+            Odds: Hazai: ${homeOdds}, Döntetlen: ${drawOdds}, Vendég: ${awayOdds}<br>
+            Eredmény: ${result} (${outcome !== "-" ? `<span class="outcome">${outcome}</span>` : "-"})<br>
           `;
 
-          const matchTips = tipsByMatch[match.id] || [];
-          matchTips.forEach(tip => {
-            const p = document.createElement("div");
-            const userName = users[tip.userId] || tip.userId;
-            const tipVal = tip.tip;
-            const isDouble = tip.isDouble;
-            let outcome = match.outcome;
-            let correct = outcome && tipVal === outcome;
-            let pont = 0;
-            if (correct) {
-              const odd = match.odds?.[tipVal];
-              pont = odd ? (isDouble ? 2 * odd : odd) : 0;
-            }
+          tips.forEach(tip => {
+            const tipDiv = document.createElement("div");
+            const isCorrect = tip.prediction === outcome;
+            const multiplier = tip.double ? 2 : 1;
+            const odds = tip.prediction === "1" ? homeOdds : tip.prediction === "X" ? drawOdds : awayOdds;
+            const point = isCorrect ? Number(odds) * multiplier : 0;
+            if (isCorrect) roundTotal += point;
 
-            p.className = "tip" + (outcome ? (correct ? " correct" : " incorrect") : "");
-            p.textContent = `👉 ${userName} tippje: ${tipVal}${isDouble ? " (dupla)" : ""}${outcome ? ` → ${correct ? `✔️ ${pont} pont` : " ❌ 0 pont"}` : ""}`;
-            box.appendChild(p);
+            tipDiv.className = "tip " + (outcome !== "-" ? (isCorrect ? "correct" : "incorrect") : "");
+            tipDiv.textContent = `${users[tip.user] || tip.user}: ${tip.prediction} ${tip.double ? "(dupla)" : ""} → ${point} pont`;
+            matchDiv.appendChild(tipDiv);
           });
 
-          container.appendChild(box);
+          section.appendChild(matchDiv);
         });
+
+        const summary = document.createElement("div");
+        summary.className = "summary";
+        summary.textContent = `Forduló összpont: ${roundTotal.toFixed(2)} pont`;
+        section.appendChild(summary);
+
+        header.addEventListener("click", () => {
+          section.style.display = section.style.display === "none" ? "block" : "none";
+        });
+
+        resultsContainer.appendChild(header);
+        resultsContainer.appendChild(section);
       });
     }
-
-    loadData();
   </script>
 </body>
 </html>
