@@ -6,13 +6,13 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, getDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
       projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.firebasestorage.app",
+      storageBucket: "tippliga-4b3af.appspot.com",
       messagingSenderId: "720359845241",
       appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
@@ -20,15 +20,24 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
     const container = document.getElementById("results-container");
 
     function formatDate(timestamp) {
       try {
-        const date = timestamp.toDate();
-        return date.toLocaleString("hu-HU");
+        return timestamp.toDate().toLocaleString("hu-HU");
       } catch {
         return "Ismeretlen időpont";
       }
+    }
+
+    async function getNicknameMap() {
+      const usersSnap = await getDocs(collection(db, "users"));
+      const map = {};
+      usersSnap.forEach(doc => {
+        map[doc.id] = doc.data().nickname || doc.id;
+      });
+      return map;
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -38,19 +47,9 @@
       }
 
       try {
-        const [matchesSnap, tipsSnap, usersSnap] = await Promise.all([
-          getDocs(collection(db, "matches")),
-          getDocs(collection(db, "tips")),
-          getDocs(collection(db, "users"))
-        ]);
-
-        const nicknameMap = {};
-        usersSnap.forEach(doc => {
-          const data = doc.data();
-          if (data.email && data.nickname) {
-            nicknameMap[data.email] = data.nickname;
-          }
-        });
+        const nicknameMap = await getNicknameMap();
+        const matchesSnap = await getDocs(collection(db, "matches"));
+        const tipsSnap = await getDocs(collection(db, "tips"));
 
         const matches = [];
         matchesSnap.forEach(doc => {
@@ -86,16 +85,14 @@
           table.style.borderCollapse = "collapse";
           table.style.marginBottom = "20px";
           table.style.width = "100%";
-          table.style.border = "1px solid #aaa";
 
           grouped[round].forEach(match => {
             const matchRow = document.createElement("tr");
             matchRow.innerHTML = `
               <td colspan="4" style="background: #ddd; padding: 8px;">
-                <strong>${match.homeTeam} - ${match.awayTeam}</strong>
-                (${match.result || "Nincs eredmény"})<br>
-                <small>Kezdés: ${formatDate(match.startTime)}</small><br>
-                <small>Oddsok: 1: ${match.odds1 || "-"} | X: ${match.oddsX || "-"} | 2: ${match.odds2 || "-"}</small>
+                <strong>${match.homeTeam} - ${match.awayTeam}</strong> (${match.result || "Nincs eredmény"})<br>
+                Kezdés: ${formatDate(match.startTime)}<br>
+                Oddsok: 1: ${match.odds1 || "-"} | X: ${match.oddsX || "-"} | 2: ${match.odds2 || "-"}
               </td>
             `;
             table.appendChild(matchRow);
@@ -104,19 +101,21 @@
 
             if (tips[match.id]) {
               tips[match.id].forEach(tip => {
-                const isCorrect = match.outcome && tip.prediction === match.outcome;
-                const oddsValue = match["odds" + tip.prediction] || 1;
-                const points = isCorrect ? (tip.double ? 2 : 1) * oddsValue : 0;
-                const displayName = nicknameMap[tip.userEmail] || tip.userEmail;
-
-                roundPoints[displayName] = (roundPoints[displayName] || 0) + points;
+                const userId = tip.userId;
+                const name = nicknameMap[userId] || userId;
+                const prediction = (tip.tip || "").toUpperCase();
+                const double = tip.isDouble || false;
+                const isCorrect = match.outcome && prediction === match.outcome;
+                const odds = match["odds" + prediction] || 0;
+                const points = isCorrect ? (double ? 2 : 1) * odds : 0;
+                roundPoints[name] = (roundPoints[name] || 0) + points;
 
                 const row = document.createElement("tr");
                 row.style.backgroundColor = isCorrect ? "#c8f7c5" : "#f7c5c5";
                 row.innerHTML = `
-                  <td style="padding: 6px;">${displayName}</td>
-                  <td style="padding: 6px;">Tipp: ${tip.prediction}</td>
-                  <td style="padding: 6px;">Dupla: ${tip.double ? "igen" : "nem"}</td>
+                  <td style="padding: 6px;">${name}</td>
+                  <td style="padding: 6px;">Tipp: ${prediction}</td>
+                  <td style="padding: 6px;">Dupla: ${double ? "igen" : "nem"}</td>
                   <td style="padding: 6px;">Pont: ${points.toFixed(2)}</td>
                 `;
                 table.appendChild(row);
