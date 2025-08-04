@@ -1,25 +1,19 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Eredmények</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
-    h2 { margin-top: 30px; }
-    .match-box { background: white; padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ccc; }
-    .tip { margin-left: 20px; padding: 4px 0; }
-    .tip.correct { color: green; font-weight: bold; }
-    .tip.incorrect { color: red; }
-  </style>
-</head>
-<body>
-  <h1>Eredmények</h1>
-  <div id="resultsContainer"></div>
-
+  <link rel="stylesheet" href="style.css" />
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      query,
+      where
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -32,81 +26,100 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      loadData();
+    });
 
     async function loadData() {
-      const [matchesSnap, tipsSnap, usersSnap] = await Promise.all([
-        getDocs(collection(db, "matches")),
-        getDocs(collection(db, "tips")),
-        getDocs(collection(db, "users"))
-      ]);
+      const matchesSnap = await getDocs(collection(db, "matches"));
+      const tipsSnap = await getDocs(collection(db, "tips"));
+      const usersSnap = await getDocs(collection(db, "users"));
 
-      const now = new Date();
+      const tips = tipsSnap.docs.map(doc => doc.data());
       const users = {};
-      usersSnap.forEach(doc => users[doc.id] = doc.data().nickname || doc.data().email);
-
-      const tipsByMatch = {};
-      tipsSnap.forEach(doc => {
-        const data = doc.data();
-        if (!tipsByMatch[data.matchId]) tipsByMatch[data.matchId] = [];
-        tipsByMatch[data.matchId].push({ ...data, id: doc.id });
+      usersSnap.forEach(doc => {
+        const d = doc.data();
+        users[d.uid] = d.nickname || d.email || d.uid;
       });
 
-      const matchesByRound = {};
+      const grouped = {};
       matchesSnap.forEach(doc => {
-        const data = doc.data();
-        const start = data.startTime?.toDate?.();
-        if (!start || start > now) return;
-        const round = data.roundId || "Egyéb";
-        if (!matchesByRound[round]) matchesByRound[round] = [];
-        matchesByRound[round].push({ id: doc.id, ...data });
+        const match = doc.data();
+        if (!match.home || !match.away || !match.date) return;
+
+        const date = new Date(match.date.seconds * 1000);
+        if (date > new Date()) return; // Csak elkezdődött meccsek
+
+        const round = match.round || "Ismeretlen forduló";
+        if (!grouped[round]) grouped[round] = [];
+        grouped[round].push({ id: doc.id, ...match });
       });
 
-      const container = document.getElementById("resultsContainer");
+      const container = document.getElementById("results");
       container.innerHTML = "";
 
-      Object.keys(matchesByRound).sort().forEach(roundId => {
-        const h2 = document.createElement("h2");
-        h2.textContent = `${roundId}. forduló`;
-        container.appendChild(h2);
+      for (const round of Object.keys(grouped).sort()) {
+        const header = document.createElement("h2");
+        header.textContent = round;
+        container.appendChild(header);
 
-        matchesByRound[roundId].forEach(match => {
-          const box = document.createElement("div");
-          box.className = "match-box";
+        grouped[round].forEach(match => {
+          const div = document.createElement("div");
+          div.classList.add("match-result");
 
-          const start = match.startTime?.toDate?.()?.toLocaleString("hu-HU") || "";
-          const resultText = match.result ? `Eredmény: ${match.result}` : "Eredmény még nincs";
+          const resultText = match.result ? ` (${match.result})` : "";
+          div.innerHTML = `<strong>${match.home} - ${match.away}</strong>${resultText}`;
 
-          box.innerHTML = `
-            <strong>${match.homeTeam} - ${match.awayTeam}</strong><br>
-            Kezdés: ${start}<br>
-            ${resultText}<br>
-          `;
+          const ul = document.createElement("ul");
+          const relevantTips = tips.filter(t => t.matchId === match.id);
 
-          const matchTips = tipsByMatch[match.id] || [];
-          matchTips.forEach(tip => {
-            const p = document.createElement("div");
-            const userName = users[tip.userId] || tip.userId;
-            const tipVal = tip.tip;
-            const isDouble = tip.isDouble;
-            let outcome = match.outcome;
-            let correct = outcome && tipVal === outcome;
-            let pont = 0;
-            if (correct) {
-              const odd = match.odds?.[tipVal];
-              pont = odd ? (isDouble ? 2 * odd : odd) : 0;
-            }
-
-            p.className = "tip" + (outcome ? (correct ? " correct" : " incorrect") : "");
-            p.textContent = `👉 ${userName} tippje: ${tipVal}${isDouble ? " (dupla)" : ""}${outcome ? ` → ${correct ? `✔️ ${pont} pont` : " ❌ 0 pont"}` : ""}`;
-            box.appendChild(p);
+          relevantTips.forEach(tip => {
+            const nickname = users[tip.userId] || tip.userId;
+            const correctOutcome = match.outcome;
+            const userPoints = (match.outcome && tip.outcome === match.outcome)
+              ? (tip.double ? 2 : 1) * (match.odds?.[tip.outcome] || 1)
+              : 0;
+            const li = document.createElement("li");
+            li.textContent = `${nickname}: ${tip.outcome || "-"} ${match.outcome ? `→ ${userPoints} pont` : ""}`;
+            ul.appendChild(li);
           });
 
-          container.appendChild(box);
+          div.appendChild(ul);
+          container.appendChild(div);
         });
-      });
+      }
     }
-
-    loadData();
   </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .match-result {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    ul {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Eredmények</h1>
+  <div id="results">Betöltés...</div>
 </body>
 </html>
