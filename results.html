@@ -6,26 +6,25 @@
   <link rel="stylesheet" href="style.css">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
-    h2 { margin-top: 40px; cursor: pointer; }
+    h1, h2 { margin-top: 30px; }
     .match { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 0 5px #ccc; }
     .tip { margin-left: 20px; padding: 8px; border-radius: 6px; background: #eef; margin-top: 5px; }
     .correct { background: #d4edda; }
     .bold { font-weight: bold; }
-    .round-content { display: none; }
-    .open .round-content { display: block; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-    th { background-color: #eee; }
+    .hidden { display: none; }
+    select { padding: 6px; margin-bottom: 20px; }
   </style>
 </head>
 <body>
   <h1>Eredmények</h1>
+  <label for="roundSelector">Válassz fordulót:</label>
+  <select id="roundSelector"></select>
   <div id="resultsContainer">Betöltés...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -41,6 +40,15 @@
     const db = getFirestore(app);
 
     const resultsContainer = document.getElementById('resultsContainer');
+    const roundSelector = document.getElementById('roundSelector');
+
+    function formatDate(ts) {
+      try {
+        return ts.toDate().toLocaleString("hu-HU");
+      } catch {
+        return "Ismeretlen időpont";
+      }
+    }
 
     onAuthStateChanged(auth, async user => {
       if (!user) {
@@ -76,13 +84,11 @@
           };
         }
 
-        const outcome = match.outcome;
-        const isCorrect = outcome === tip.tip;
+        const isCorrect = match.outcome === tip.tip;
         const oddsValue = match.odds[tip.tip];
         const point = (oddsValue || 0) * (tip.isDouble ? 2 : 1);
 
         rounds[roundId][match.id].tips.push({
-          userId: tip.userId,
           nickname: users[tip.userId] || "Ismeretlen",
           tip: tip.tip,
           isDouble: tip.isDouble,
@@ -93,23 +99,25 @@
       });
 
       resultsContainer.innerHTML = "";
+      roundSelector.innerHTML = "";
 
       const sortedRounds = Object.keys(rounds).sort((a, b) => parseInt(b) - parseInt(a));
 
-      sortedRounds.forEach(roundId => {
+      sortedRounds.forEach((roundId, idx) => {
+        const option = document.createElement("option");
+        option.value = roundId;
+        option.textContent = roundId + ". forduló";
+        if (idx === 0) option.selected = true;
+        roundSelector.appendChild(option);
+
         const roundBlock = document.createElement("div");
-        roundBlock.className = roundId === sortedRounds[0] ? "open" : "";
-
-        const header = document.createElement("h2");
-        header.textContent = `${roundId}. forduló`;
-        header.onclick = () => roundBlock.classList.toggle("open");
-        roundBlock.appendChild(header);
-
-        const content = document.createElement("div");
-        content.className = "round-content";
-
+        roundBlock.id = "round_" + roundId;
+        if (idx !== 0) roundBlock.classList.add("hidden");
         const matchesInRound = rounds[roundId];
-        const userPoints = {};
+
+        const roundHeader = document.createElement("h2");
+        roundHeader.textContent = roundId + ". forduló";
+        roundBlock.appendChild(roundHeader);
 
         Object.values(matchesInRound).forEach(({ match, tips }) => {
           const matchBlock = document.createElement("div");
@@ -117,6 +125,7 @@
           matchBlock.innerHTML = `
             <div><span class="bold">${match.homeTeam}</span> - <span class="bold">${match.awayTeam}</span></div>
             <div>Eredmény: <span class="bold">${match.result || "?"}</span>, Kimenetel: <span class="bold">${match.outcome}</span></div>
+            <div>Kezdés: ${formatDate(match.startTime)}</div>
             <div>Odds: 1 → ${match.odds["1"]}, X → ${match.odds["X"]}, 2 → ${match.odds["2"]}</div>
           `;
 
@@ -124,36 +133,28 @@
             const tipDiv = document.createElement("div");
             tipDiv.className = "tip" + (tip.correct ? " correct" : "");
             tipDiv.innerHTML = `
-              Tippelő: <strong>${tip.nickname}</strong>,
-              Tipp: ${tip.tip},
-              ${tip.isDouble ? "Dupla, " : ""}
-              Odds: ${tip.odds ?? "-"},
+              Tippelő: <strong>${tip.nickname}</strong> - 
+              Tipp: ${tip.tip} ${tip.correct ? "✅" : "❌"} - 
+              ${tip.isDouble ? "Dupla, " : ""}Odds: ${tip.odds ?? "-"}, 
               Pont: ${tip.point.toFixed(2)}
             `;
             matchBlock.appendChild(tipDiv);
-
-            if (!userPoints[tip.nickname]) userPoints[tip.nickname] = 0;
-            userPoints[tip.nickname] += tip.point;
           });
 
-          content.appendChild(matchBlock);
+          roundBlock.appendChild(matchBlock);
         });
 
-        // Összesítő táblázat
-        const summaryTable = document.createElement("table");
-        summaryTable.innerHTML = `
-          <thead><tr><th>Játékos</th><th>Forduló Pont</th></tr></thead>
-          <tbody>
-            ${Object.entries(userPoints)
-              .sort((a, b) => b[1] - a[1])
-              .map(([name, pts]) => `<tr><td>${name}</td><td>${pts.toFixed(2)}</td></tr>`) 
-              .join("")}
-          </tbody>
-        `;
-        content.appendChild(summaryTable);
-
-        roundBlock.appendChild(content);
         resultsContainer.appendChild(roundBlock);
+      });
+
+      roundSelector.addEventListener("change", () => {
+        sortedRounds.forEach(rid => {
+          const section = document.getElementById("round_" + rid);
+          if (section) section.classList.add("hidden");
+        });
+        const selected = roundSelector.value;
+        const active = document.getElementById("round_" + selected);
+        if (active) active.classList.remove("hidden");
       });
     });
   </script>
