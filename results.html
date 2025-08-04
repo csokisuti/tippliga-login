@@ -19,6 +19,8 @@
     .match-container {
       padding: 10px;
       border-top: 1px solid #ccc;
+      background-color: #fafafa;
+      margin-bottom: 5px;
     }
     .match-header {
       font-weight: bold;
@@ -32,6 +34,11 @@
       border-radius: 4px;
       font-size: 0.85em;
     }
+    .match-details {
+      font-size: 0.9em;
+      color: #333;
+      margin-bottom: 8px;
+    }
     .tip-row {
       padding: 6px;
       margin: 4px 0;
@@ -42,6 +49,13 @@
     }
     .wrong {
       background-color: #f8d7da;
+    }
+    .round-total {
+      margin-top: 10px;
+      font-weight: bold;
+      padding: 10px;
+      background-color: #f7f7f7;
+      border-top: 1px solid #ccc;
     }
   </style>
   <script type="module">
@@ -91,7 +105,7 @@
         const match = matches[tip.matchId];
         if (!match || !match.result || !match.outcome) return;
 
-        const roundId = match.roundId;
+        const roundId = match.roundId || "Ismeretlen";
         if (!tipsByRound[roundId]) tipsByRound[roundId] = {};
         if (!tipsByRound[roundId][tip.matchId]) {
           tipsByRound[roundId][tip.matchId] = {
@@ -123,6 +137,8 @@
         content.style.display = "none";
 
         const matchGroup = tipsByRound[roundId];
+        const roundScores = {};
+
         for (const matchId in matchGroup) {
           const { match, tips } = matchGroup[matchId];
 
@@ -134,6 +150,14 @@
           matchHeader.innerHTML = `${match.homeTeam} - ${match.awayTeam}: ${match.result} <span class="outcome">(${match.outcome})</span>`;
           matchDiv.appendChild(matchHeader);
 
+          const matchDetails = document.createElement("div");
+          matchDetails.className = "match-details";
+          matchDetails.innerHTML = `
+            Dátum: ${new Date(match.date).toLocaleString()}<br>
+            Oddsok: 1 - ${match.odds?.["1"] ?? "-"}, X - ${match.odds?.["X"] ?? "-"}, 2 - ${match.odds?.["2"] ?? "-"}
+          `;
+          matchDiv.appendChild(matchDetails);
+
           tips.forEach(tip => {
             const tipRow = document.createElement("div");
             tipRow.className = "tip-row";
@@ -143,11 +167,16 @@
 
             const user = users[tip.userId] || tip.userId;
             let pointText = "";
+            let points = 0;
+
             if (correct && match.odds && match.odds[tip.tip]) {
               const base = tip.isDouble ? 2 : 1;
-              const point = base * match.odds[tip.tip];
-              pointText = ` (+${point} pont)`;
+              points = base * match.odds[tip.tip];
+              pointText = ` (+${points} pont)`;
             }
+
+            if (!roundScores[user]) roundScores[user] = 0;
+            roundScores[user] += points;
 
             tipRow.textContent = `${user}: ${tip.tip}${tip.isDouble ? " (dupla)" : ""}${pointText}`;
             matchDiv.appendChild(tipRow);
@@ -155,6 +184,13 @@
 
           content.appendChild(matchDiv);
         }
+
+        const summaryDiv = document.createElement("div");
+        summaryDiv.className = "round-total";
+        summaryDiv.innerHTML = "Forduló összesítés:<br>" + Object.entries(roundScores)
+          .map(([user, pts]) => `${user}: ${pts} pont`)
+          .join("<br>");
+        content.appendChild(summaryDiv);
 
         roundSection.appendChild(header);
         roundSection.appendChild(content);
@@ -168,4 +204,3 @@
   <div id="results"></div>
 </body>
 </html>
-
