@@ -20,7 +20,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
     const container = document.getElementById("results-container");
 
     function formatDate(timestamp) {
@@ -31,15 +30,6 @@
       }
     }
 
-    async function getNicknameMap() {
-      const usersSnap = await getDocs(collection(db, "users"));
-      const map = {};
-      usersSnap.forEach(doc => {
-        map[doc.id] = doc.data().nickname || doc.id;
-      });
-      return map;
-    }
-
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         container.innerHTML = "<p style='color: red;'>Be kell jelentkezned az eredmények megtekintéséhez.</p>";
@@ -47,9 +37,19 @@
       }
 
       try {
-        const nicknameMap = await getNicknameMap();
-        const matchesSnap = await getDocs(collection(db, "matches"));
-        const tipsSnap = await getDocs(collection(db, "tips"));
+        const [matchesSnap, tipsSnap, usersSnap] = await Promise.all([
+          getDocs(collection(db, "matches")),
+          getDocs(collection(db, "tips")),
+          getDocs(collection(db, "users")),
+        ]);
+
+        const usersMap = {};
+        usersSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.email && data.nickname) {
+            usersMap[doc.id] = data.nickname;
+          }
+        });
 
         const matches = [];
         matchesSnap.forEach(doc => {
@@ -59,11 +59,12 @@
           }
         });
 
-        const tips = {};
+        const tipsByMatch = {};
         tipsSnap.forEach(doc => {
-          const data = doc.data();
-          if (!tips[data.matchId]) tips[data.matchId] = [];
-          tips[data.matchId].push({ id: doc.id, ...data });
+          const tip = doc.data();
+          const matchId = tip.matchId;
+          if (!tipsByMatch[matchId]) tipsByMatch[matchId] = [];
+          tipsByMatch[matchId].push({ id: doc.id, ...tip });
         });
 
         const grouped = {};
@@ -84,7 +85,6 @@
           const table = document.createElement("table");
           table.style.borderCollapse = "collapse";
           table.style.marginBottom = "20px";
-          table.style.width = "100%";
 
           grouped[round].forEach(match => {
             const matchRow = document.createElement("tr");
@@ -99,37 +99,36 @@
 
             let roundPoints = {};
 
-            if (tips[match.id]) {
-              tips[match.id].forEach(tip => {
-                const userId = tip.userId;
-                const name = nicknameMap[userId] || userId;
-                const prediction = (tip.tip || "").toUpperCase();
-                const double = tip.isDouble || false;
-                const isCorrect = match.outcome && prediction === match.outcome;
-                const odds = match["odds" + prediction] || 0;
-                const points = isCorrect ? (double ? 2 : 1) * odds : 0;
-                roundPoints[name] = (roundPoints[name] || 0) + points;
+            const tips = tipsByMatch[match.id] || [];
+            for (const tip of tips) {
+              const userName = usersMap[tip.userId] || "Ismeretlen";
+              const prediction = tip.tip;
+              const double = tip.isDouble;
+              const correct = prediction === match.outcome;
+              const oddsKey = "odds" + prediction;
+              const odds = match[oddsKey] || 0;
+              const points = correct ? odds * (double ? 2 : 1) : 0;
+              roundPoints[userName] = (roundPoints[userName] || 0) + points;
 
-                const row = document.createElement("tr");
-                row.style.backgroundColor = isCorrect ? "#c8f7c5" : "#f7c5c5";
-                row.innerHTML = `
-                  <td style="padding: 6px;">${name}</td>
-                  <td style="padding: 6px;">Tipp: ${prediction}</td>
-                  <td style="padding: 6px;">Dupla: ${double ? "igen" : "nem"}</td>
-                  <td style="padding: 6px;">Pont: ${points.toFixed(2)}</td>
-                `;
-                table.appendChild(row);
-              });
-
-              const totalRow = document.createElement("tr");
-              totalRow.innerHTML = `
-                <td colspan="4" style="padding: 6px; background: #eee;">
-                  <strong>Összesített pontok ebben a fordulóban:</strong><br>
-                  ${Object.entries(roundPoints).map(([name, pt]) => `${name}: ${pt.toFixed(2)} pont`).join("<br>")}
-                </td>
+              const row = document.createElement("tr");
+              row.style.backgroundColor = correct ? "#c8f7c5" : "#f7c5c5";
+              row.innerHTML = `
+                <td style="padding: 6px;">${userName}</td>
+                <td style="padding: 6px;">Tipp: ${prediction}</td>
+                <td style="padding: 6px;">Dupla: ${double ? "igen" : "nem"}</td>
+                <td style="padding: 6px;">Pont: ${points.toFixed(2)}</td>
               `;
-              table.appendChild(totalRow);
+              table.appendChild(row);
             }
+
+            const totalRow = document.createElement("tr");
+            totalRow.innerHTML = `
+              <td colspan="4" style="padding: 6px; background: #eee;">
+                <strong>Összesített pontok ebben a fordulóban:</strong><br>
+                ${Object.entries(roundPoints).map(([user, pt]) => `${user}: ${pt.toFixed(2)} pont`).join("<br>")}
+              </td>
+            `;
+            table.appendChild(totalRow);
           });
 
           const collapsible = document.createElement("div");
@@ -149,8 +148,8 @@
         }
 
       } catch (error) {
-        container.innerHTML = "<p style='color: red;'>Hiba történt az adatok betöltésekor.</p>";
         console.error(error);
+        container.innerHTML = "<p style='color: red;'>Hiba történt az adatok betöltésekor.</p>";
       }
     });
   </script>
