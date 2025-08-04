@@ -3,9 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <title>Tippliga Bejelentkezés</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
+    form { margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
+    h2 { margin-top: 30px; }
+    input, button { padding: 8px; width: 100%; margin-top: 5px; margin-bottom: 15px; }
+    #result, #registerResult { font-weight: bold; color: #b30000; }
+  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore, doc, setDoc, collection, getDocs, query, where
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -18,35 +28,109 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      const resultEl = document.getElementById("result");
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const resultEl = document.getElementById("result");
 
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        resultEl.innerText = "Sikeres bejelentkezés";
-        window.location.href = "dashboard.html";
-      } catch (error) {
-        resultEl.innerText = "Hiba: " + error.message;
-      }
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+          resultEl.innerText = "Sikeres bejelentkezés";
+          window.location.href = "dashboard.html";
+        } catch (error) {
+          resultEl.innerText = "Hiba: " + error.message;
+        }
+      });
+
+      document.getElementById("registerForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("regEmail").value;
+        const password = document.getElementById("regPassword").value;
+        const nickname = document.getElementById("regNickname").value;
+        const resultEl = document.getElementById("registerResult");
+
+        resultEl.innerText = "Ellenőrzés folyamatban...";
+
+        try {
+          // 1. Nickname foglaltság ellenőrzése
+          const q = query(collection(db, "users"), where("nickname", "==", nickname));
+          const nicknameSnap = await getDocs(q);
+          if (!nickname.trim()) {
+            resultEl.innerText = "Adj meg egy becenevet.";
+            return;
+          }
+          if (!email.trim() || !password.trim()) {
+            resultEl.innerText = "Email és jelszó megadása kötelező.";
+            return;
+          }
+          if (!password || password.length < 6) {
+            resultEl.innerText = "A jelszónak legalább 6 karakteresnek kell lennie.";
+            return;
+          }
+          if (!email.includes("@")) {
+            resultEl.innerText = "Érvényes email címet adj meg.";
+            return;
+          }
+          if (!nicknameSnap.empty) {
+            resultEl.innerText = "Ez a becenév már foglalt, válassz másikat.";
+            return;
+          }
+
+          // 2. Regisztráció (Firebase dob hibát, ha e-mail már foglalt)
+          const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+          // 3. Firestore dokumentum mentése
+          await setDoc(doc(db, "users", cred.user.uid), {
+            email,
+            nickname,
+            role: "user"
+          });
+
+          resultEl.style.color = "green";
+          resultEl.innerText = "Sikeres regisztráció! Átirányítás...";
+          window.location.href = "dashboard.html";
+
+        } catch (error) {
+          if (error.code === "auth/email-already-in-use") {
+            resultEl.innerText = "Ez az email cím már regisztrálva van.";
+          } else {
+            resultEl.innerText = "Hiba: " + error.message;
+          }
+        }
+      });
     });
   </script>
 </head>
 <body>
   <h2>Bejelentkezés</h2>
   <form id="loginForm">
-    <label for="email">Email:</label><br>
-    <input type="email" id="email" required><br><br>
+    <label for="email">Email:</label>
+    <input type="email" id="email" required>
 
-    <label for="password">Jelszó:</label><br>
-    <input type="password" id="password" required><br><br>
+    <label for="password">Jelszó:</label>
+    <input type="password" id="password" required>
 
     <button type="submit">Bejelentkezés</button>
+    <p id="result"></p>
   </form>
 
-  <p id="result"></p>
+  <h2>Regisztráció</h2>
+  <form id="registerForm">
+    <label for="regNickname">Becenév:</label>
+    <input type="text" id="regNickname" required>
+
+    <label for="regEmail">Email:</label>
+    <input type="email" id="regEmail" required>
+
+    <label for="regPassword">Jelszó:</label>
+    <input type="password" id="regPassword" required>
+
+    <button type="submit">Regisztráció</button>
+    <p id="registerResult"></p>
+  </form>
 </body>
 </html>
