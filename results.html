@@ -19,7 +19,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -32,6 +32,11 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
+    function convertToDate(obj) {
+      if (obj?.toDate) return obj.toDate();
+      return null;
+    }
 
     async function loadData() {
       const [matchesSnap, tipsSnap, usersSnap] = await Promise.all([
@@ -54,7 +59,7 @@
       const matchesByRound = {};
       matchesSnap.forEach(doc => {
         const data = doc.data();
-        const start = data.startTime?.toDate?.();
+        const start = convertToDate(data.startTime);
         if (!start || start > now) return;
         const round = data.roundId || "Egyéb";
         if (!matchesByRound[round]) matchesByRound[round] = [];
@@ -64,7 +69,7 @@
       const container = document.getElementById("resultsContainer");
       container.innerHTML = "";
 
-      Object.keys(matchesByRound).sort().forEach(roundId => {
+      Object.keys(matchesByRound).sort((a, b) => b - a).forEach(roundId => {
         const h2 = document.createElement("h2");
         h2.textContent = `${roundId}. forduló`;
         container.appendChild(h2);
@@ -73,7 +78,7 @@
           const box = document.createElement("div");
           box.className = "match-box";
 
-          const start = match.startTime?.toDate?.()?.toLocaleString("hu-HU") || "";
+          const start = convertToDate(match.startTime)?.toLocaleString("hu-HU") || "";
           const resultText = match.result ? `Eredmény: ${match.result}` : "Eredmény még nincs";
 
           box.innerHTML = `
