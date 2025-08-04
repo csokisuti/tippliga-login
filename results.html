@@ -1,78 +1,211 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Eredmények</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h2>Eredmények</h2>
-  <div id="results">Betöltés...</div>
-
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    .round {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+    }
+    .round-header {
+      background: #ddd;
+      padding: 10px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .match {
+      padding: 10px;
+      border-top: 1px solid #eee;
+    }
+    .correct {
+      background-color: #d4edda;
+    }
+    .incorrect {
+      background-color: #f8d7da;
+    }
+    .match-info {
+      margin-bottom: 5px;
+    }
+    .outcome {
+      font-weight: bold;
+    }
+    .collapsed .round-content {
+      display: none;
+    }
+    .total-points {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore, collection, getDocs, query, where, orderBy
+      getFirestore,
+      collection,
+      getDocs,
+      query,
+      where,
+      doc,
+      getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getAuth,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain: "tippliga-4b3af.firebaseapp.com",
-  projectId: "tippliga-4b3af",
-  storageBucket: "tippliga-4b3af.appspot.com",
-  messagingSenderId: "720359845241",
-  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    function determineOutcome(result) {
+      const [home, away] = result.split("-").map(Number);
+      if (home > away) return "1";
+      if (home < away) return "2";
+      return "X";
+    }
+
+    function formatDate(date) {
+      return date.toLocaleString("hu-HU", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
 
     onAuthStateChanged(auth, async user => {
-      const resultsDiv = document.getElementById("results");
-
       if (!user) {
+        alert("Bejelentkezés szükséges.");
         window.location.href = "login.html";
         return;
       }
 
-      console.log("Bejelentkezve:", user.email);
+      const matchesSnap = await getDocs(collection(db, "matches"));
+      const tipsSnap = await getDocs(collection(db, "tips"));
+      const usersSnap = await getDocs(collection(db, "users"));
 
-      try {
-        const fixturesRef = collection(db, "fixtures");
-        const now = new Date();
+      const users = {};
+      usersSnap.forEach(doc => {
+        users[doc.id] = doc.data().nickname || doc.data().email;
+      });
 
-        const q = query(fixturesRef, where("startTime", "<=", now), orderBy("startTime", "desc"));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-          resultsDiv.innerText = "Nincsenek megjeleníthető meccsek.";
-          return;
+      const matches = [];
+      matchesSnap.forEach(doc => {
+        const data = doc.data();
+        const date = data.startTime?.toDate?.();
+        if (date && date < new Date()) {
+          matches.push({ id: doc.id, ...data, date });
         }
+      });
 
-        const html = [];
-        querySnapshot.forEach(doc => {
-          const data = doc.data();
-          const date = data.startTime?.toDate?.();
-          if (!date) {
-            console.warn("Hiányzó vagy hibás dátum:", data);
-            return;
-          }
+      const tips = {};
+      tipsSnap.forEach(doc => {
+        const data = doc.data();
+        if (!tips[data.matchId]) tips[data.matchId] = [];
+        tips[data.matchId].push(data);
+      });
 
-          const home = data.homeTeam;
-          const away = data.awayTeam;
-          const score = data.result || "N/A";
-          html.push(`<div><strong>${home} – ${away}</strong><br>Eredmény: ${score}</div><hr>`);
+      const grouped = {};
+      matches.forEach(match => {
+        const round = match.round || "Ismeretlen forduló";
+        if (!grouped[round]) grouped[round] = [];
+        grouped[round].push(match);
+      });
+
+      const container = document.createElement("div");
+      const sortedRounds = Object.keys(grouped).sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+
+      for (const round of sortedRounds) {
+        const roundDiv = document.createElement("div");
+        roundDiv.classList.add("round", "collapsed");
+
+        const header = document.createElement("div");
+        header.className = "round-header";
+        header.textContent = round;
+        header.addEventListener("click", () => {
+          roundDiv.classList.toggle("collapsed");
         });
 
-        resultsDiv.innerHTML = html.join("");
-      } catch (error) {
-        console.error("Hiba az eredmények betöltésekor:", error);
-        resultsDiv.innerText = "Hiba történt az eredmények betöltése közben.";
+        const content = document.createElement("div");
+        content.className = "round-content";
+
+        let totalPoints = {};
+
+        for (const match of grouped[round]) {
+          const matchDiv = document.createElement("div");
+          matchDiv.className = "match";
+
+          const outcome = match.result ? determineOutcome(match.result) : null;
+
+          const info = document.createElement("div");
+          info.className = "match-info";
+          info.innerHTML = `
+            <strong>${match.homeTeam} - ${match.awayTeam}</strong><br>
+            Dátum: ${formatDate(match.date)}<br>
+            Odds: ${match.odds1} / ${match.oddsX} / ${match.odds2}<br>
+            ${
+              match.result
+                ? `Eredmény: ${match.result} <span class="outcome">(${outcome})</span>`
+                : "Eredmény: még nincs rögzítve"
+            }
+          `;
+          matchDiv.appendChild(info);
+
+          const matchTips = tips[match.id] || [];
+          matchTips.forEach(tip => {
+            const row = document.createElement("div");
+            let correct = outcome && tip.tip === outcome;
+            row.className = correct ? "correct" : "incorrect";
+
+            const point = correct
+              ? (tip.double ? 2 : 1) * (outcome === "1" ? match.odds1 : outcome === "X" ? match.oddsX : match.odds2)
+              : 0;
+
+            totalPoints[tip.user] = (totalPoints[tip.user] || 0) + point;
+
+            row.innerHTML = `${users[tip.user] || tip.user}: ${tip.tip} ${correct ? `✅ +${point.toFixed(1)} pont` : "❌ 0 pont"}`;
+            matchDiv.appendChild(row);
+          });
+
+          content.appendChild(matchDiv);
+        }
+
+        const summary = document.createElement("div");
+        summary.className = "total-points";
+        summary.innerHTML = "Forduló pontszámok:<br>" + Object.entries(totalPoints)
+          .map(([user, pt]) => `${users[user] || user}: ${pt.toFixed(1)} pont`)
+          .join("<br>");
+        content.appendChild(summary);
+
+        roundDiv.appendChild(header);
+        roundDiv.appendChild(content);
+        container.appendChild(roundDiv);
       }
+
+      document.body.appendChild(container);
     });
   </script>
+</head>
+<body>
+  <h1>📜 Eredmények</h1>
 </body>
 </html>
-
