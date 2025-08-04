@@ -6,11 +6,16 @@
   <link rel="stylesheet" href="style.css">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
-    h2 { margin-top: 40px; }
+    h2 { margin-top: 40px; cursor: pointer; }
     .match { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 0 5px #ccc; }
     .tip { margin-left: 20px; padding: 8px; border-radius: 6px; background: #eef; margin-top: 5px; }
     .correct { background: #d4edda; }
     .bold { font-weight: bold; }
+    .round-content { display: none; }
+    .open .round-content { display: block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    th { background-color: #eee; }
   </style>
 </head>
 <body>
@@ -20,16 +25,16 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain: "tippliga-4b3af.firebaseapp.com",
-  projectId: "tippliga-4b3af",
-  storageBucket: "tippliga-4b3af.firebasestorage.app",
-  messagingSenderId: "720359845241",
-  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.firebasestorage.app",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -60,7 +65,7 @@
       tipsSnap.forEach(doc => {
         const tip = doc.data();
         const match = matches[tip.matchId];
-        if (!match || !match.outcome || !match.odds) return; // csak azok a meccsek, ahol van eredmény és odds
+        if (!match || !match.outcome || !match.odds) return;
 
         const roundId = match.roundId || "Egyéb";
         if (!rounds[roundId]) rounds[roundId] = {};
@@ -89,11 +94,23 @@
 
       resultsContainer.innerHTML = "";
 
-      Object.keys(rounds).sort().forEach(roundId => {
+      const sortedRounds = Object.keys(rounds).sort((a, b) => parseInt(b) - parseInt(a));
+
+      sortedRounds.forEach(roundId => {
         const roundBlock = document.createElement("div");
-        roundBlock.innerHTML = `<h2>${roundId}. forduló</h2>`;
-        
+        roundBlock.className = roundId === sortedRounds[0] ? "open" : "";
+
+        const header = document.createElement("h2");
+        header.textContent = `${roundId}. forduló`;
+        header.onclick = () => roundBlock.classList.toggle("open");
+        roundBlock.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "round-content";
+
         const matchesInRound = rounds[roundId];
+        const userPoints = {};
+
         Object.values(matchesInRound).forEach(({ match, tips }) => {
           const matchBlock = document.createElement("div");
           matchBlock.className = "match";
@@ -114,11 +131,28 @@
               Pont: ${tip.point.toFixed(2)}
             `;
             matchBlock.appendChild(tipDiv);
+
+            if (!userPoints[tip.nickname]) userPoints[tip.nickname] = 0;
+            userPoints[tip.nickname] += tip.point;
           });
 
-          roundBlock.appendChild(matchBlock);
+          content.appendChild(matchBlock);
         });
 
+        // Összesítő táblázat
+        const summaryTable = document.createElement("table");
+        summaryTable.innerHTML = `
+          <thead><tr><th>Játékos</th><th>Forduló Pont</th></tr></thead>
+          <tbody>
+            ${Object.entries(userPoints)
+              .sort((a, b) => b[1] - a[1])
+              .map(([name, pts]) => `<tr><td>${name}</td><td>${pts.toFixed(2)}</td></tr>`) 
+              .join("")}
+          </tbody>
+        `;
+        content.appendChild(summaryTable);
+
+        roundBlock.appendChild(content);
         resultsContainer.appendChild(roundBlock);
       });
     });
