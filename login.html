@@ -9,6 +9,11 @@
     h2 { margin-top: 30px; }
     input, button { padding: 8px; width: 100%; margin-top: 5px; margin-bottom: 15px; }
     #result, #registerResult { font-weight: bold; color: #b30000; }
+    #registerSection { display: none; }
+    .toggle-btn {
+      background: #007bff; color: white; padding: 10px 15px; border: none;
+      border-radius: 5px; cursor: pointer; margin-bottom: 20px;
+    }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -46,44 +51,36 @@
         }
       });
 
+      document.getElementById("toggleRegister").addEventListener("click", () => {
+        const regSection = document.getElementById("registerSection");
+        regSection.style.display = regSection.style.display === "none" ? "block" : "none";
+      });
+
       document.getElementById("registerForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const email = document.getElementById("regEmail").value;
         const password = document.getElementById("regPassword").value;
+        const password2 = document.getElementById("regPassword2").value;
         const nickname = document.getElementById("regNickname").value;
         const resultEl = document.getElementById("registerResult");
 
         resultEl.innerText = "Ellenőrzés folyamatban...";
 
         try {
-          // 1. Nickname foglaltság ellenőrzése
+          // Ellenőrzések
+          if (!nickname.trim()) return resultEl.innerText = "Adj meg egy becenevet.";
+          if (!email.includes("@")) return resultEl.innerText = "Érvényes email címet adj meg.";
+          if (password.length < 6) return resultEl.innerText = "A jelszónak legalább 6 karakteresnek kell lennie.";
+          if (password !== password2) return resultEl.innerText = "A két jelszó nem egyezik.";
+
+          // Nickname foglaltság ellenőrzés
           const q = query(collection(db, "users"), where("nickname", "==", nickname));
           const nicknameSnap = await getDocs(q);
-          if (!nickname.trim()) {
-            resultEl.innerText = "Adj meg egy becenevet.";
-            return;
-          }
-          if (!email.trim() || !password.trim()) {
-            resultEl.innerText = "Email és jelszó megadása kötelező.";
-            return;
-          }
-          if (!password || password.length < 6) {
-            resultEl.innerText = "A jelszónak legalább 6 karakteresnek kell lennie.";
-            return;
-          }
-          if (!email.includes("@")) {
-            resultEl.innerText = "Érvényes email címet adj meg.";
-            return;
-          }
-          if (!nicknameSnap.empty) {
-            resultEl.innerText = "Ez a becenév már foglalt, válassz másikat.";
-            return;
-          }
+          if (!nicknameSnap.empty) return resultEl.innerText = "Ez a becenév már foglalt.";
 
-          // 2. Regisztráció (Firebase dob hibát, ha e-mail már foglalt)
+          // Regisztráció
           const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-          // 3. Firestore dokumentum mentése
           await setDoc(doc(db, "users", cred.user.uid), {
             email,
             nickname,
@@ -118,19 +115,26 @@
     <p id="result"></p>
   </form>
 
-  <h2>Regisztráció</h2>
-  <form id="registerForm">
-    <label for="regNickname">Becenév:</label>
-    <input type="text" id="regNickname" required>
+  <button class="toggle-btn" id="toggleRegister">🔽 Regisztráció</button>
 
-    <label for="regEmail">Email:</label>
-    <input type="email" id="regEmail" required>
+  <div id="registerSection">
+    <h2>Regisztráció</h2>
+    <form id="registerForm">
+      <label for="regNickname">Becenév:</label>
+      <input type="text" id="regNickname" required>
 
-    <label for="regPassword">Jelszó:</label>
-    <input type="password" id="regPassword" required>
+      <label for="regEmail">Email:</label>
+      <input type="email" id="regEmail" required>
 
-    <button type="submit">Regisztráció</button>
-    <p id="registerResult"></p>
-  </form>
+      <label for="regPassword">Jelszó:</label>
+      <input type="password" id="regPassword" required>
+
+      <label for="regPassword2">Jelszó újra:</label>
+      <input type="password" id="regPassword2" required>
+
+      <button type="submit">Regisztráció</button>
+      <p id="registerResult"></p>
+    </form>
+  </div>
 </body>
 </html>
