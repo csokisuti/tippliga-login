@@ -3,44 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Eredmények</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    h2 {
-      background-color: #444;
-      color: white;
-      padding: 10px;
-      cursor: pointer;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    td, th {
-      border: 1px solid #ccc;
-      padding: 6px;
-      text-align: left;
-    }
-    .match-row {
-      background-color: #f0f0f0;
-      font-weight: bold;
-    }
-    .correct {
-      background-color: #c8f7c5;
-    }
-    .incorrect {
-      background-color: #f7c5c5;
-    }
-    .total-row {
-      background-color: #eee;
-    }
-  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -50,7 +12,7 @@
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
       projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.appspot.com",
+      storageBucket: "tippliga-4b3af.firebasestorage.app",
       messagingSenderId: "720359845241",
       appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
@@ -76,8 +38,19 @@
       }
 
       try {
-        const matchesSnap = await getDocs(collection(db, "matches"));
-        const tipsSnap = await getDocs(collection(db, "tips"));
+        const [matchesSnap, tipsSnap, usersSnap] = await Promise.all([
+          getDocs(collection(db, "matches")),
+          getDocs(collection(db, "tips")),
+          getDocs(collection(db, "users"))
+        ]);
+
+        const nicknameMap = {};
+        usersSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.email && data.nickname) {
+            nicknameMap[data.email] = data.nickname;
+          }
+        });
 
         const matches = [];
         matchesSnap.forEach(doc => {
@@ -87,11 +60,11 @@
           }
         });
 
-        const tipsByMatch = {};
+        const tips = {};
         tipsSnap.forEach(doc => {
           const data = doc.data();
-          if (!tipsByMatch[data.matchId]) tipsByMatch[data.matchId] = [];
-          tipsByMatch[data.matchId].push({ id: doc.id, ...data });
+          if (!tips[data.matchId]) tips[data.matchId] = [];
+          tips[data.matchId].push({ id: doc.id, ...data });
         });
 
         const grouped = {};
@@ -103,68 +76,82 @@
 
         const rounds = Object.keys(grouped).sort((a, b) => b - a);
         for (const round of rounds) {
-          const section = document.createElement("div");
+          const roundSection = document.createElement("div");
           const header = document.createElement("h2");
           header.textContent = `Forduló ${round}`;
-          section.appendChild(header);
+          header.style.cursor = "pointer";
+          roundSection.appendChild(header);
 
           const table = document.createElement("table");
+          table.style.borderCollapse = "collapse";
+          table.style.marginBottom = "20px";
+          table.style.width = "100%";
+          table.style.border = "1px solid #aaa";
 
           grouped[round].forEach(match => {
-            const tr = document.createElement("tr");
-            tr.className = "match-row";
-            tr.innerHTML = `
-              <td colspan="4">
-                ${match.homeTeam} - ${match.awayTeam} (${match.result || "Nincs eredmény"})<br>
-                Kezdés: ${formatDate(match.startTime)}<br>
-                Odds: 1 - ${match.odds1}, X - ${match.oddsX}, 2 - ${match.odds2}
+            const matchRow = document.createElement("tr");
+            matchRow.innerHTML = `
+              <td colspan="4" style="background: #ddd; padding: 8px;">
+                <strong>${match.homeTeam} - ${match.awayTeam}</strong>
+                (${match.result || "Nincs eredmény"})<br>
+                <small>Kezdés: ${formatDate(match.startTime)}</small><br>
+                <small>Oddsok: 1: ${match.odds1 || "-"} | X: ${match.oddsX || "-"} | 2: ${match.odds2 || "-"}</small>
               </td>
             `;
-            table.appendChild(tr);
+            table.appendChild(matchRow);
 
-            const roundPoints = {};
+            let roundPoints = {};
 
-            if (tipsByMatch[match.id]) {
-              tipsByMatch[match.id].forEach(tip => {
+            if (tips[match.id]) {
+              tips[match.id].forEach(tip => {
                 const isCorrect = match.outcome && tip.prediction === match.outcome;
-                const multiplier = tip.double ? 2 : 1;
-                const odds = match["odds" + tip.prediction] || 1;
-                const point = isCorrect ? multiplier * odds : 0;
-                roundPoints[tip.userEmail] = (roundPoints[tip.userEmail] || 0) + point;
+                const oddsValue = match["odds" + tip.prediction] || 1;
+                const points = isCorrect ? (tip.double ? 2 : 1) * oddsValue : 0;
+                const displayName = nicknameMap[tip.userEmail] || tip.userEmail;
+
+                roundPoints[displayName] = (roundPoints[displayName] || 0) + points;
 
                 const row = document.createElement("tr");
-                row.className = isCorrect ? "correct" : "incorrect";
+                row.style.backgroundColor = isCorrect ? "#c8f7c5" : "#f7c5c5";
                 row.innerHTML = `
-                  <td>${tip.userEmail}</td>
-                  <td>${tip.prediction}</td>
-                  <td>${tip.double ? "Dupla" : "-"}</td>
-                  <td>${point.toFixed(2)} pont</td>
+                  <td style="padding: 6px;">${displayName}</td>
+                  <td style="padding: 6px;">Tipp: ${tip.prediction}</td>
+                  <td style="padding: 6px;">Dupla: ${tip.double ? "igen" : "nem"}</td>
+                  <td style="padding: 6px;">Pont: ${points.toFixed(2)}</td>
                 `;
                 table.appendChild(row);
               });
 
               const totalRow = document.createElement("tr");
-              totalRow.className = "total-row";
               totalRow.innerHTML = `
-                <td colspan="4"><strong>Fordulónkénti összesített pontok:</strong><br>
-                ${Object.entries(roundPoints).map(([email, pt]) => `${email}: ${pt.toFixed(2)} pont`).join("<br>")}
+                <td colspan="4" style="padding: 6px; background: #eee;">
+                  <strong>Összesített pontok ebben a fordulóban:</strong><br>
+                  ${Object.entries(roundPoints).map(([name, pt]) => `${name}: ${pt.toFixed(2)} pont`).join("<br>")}
                 </td>
               `;
               table.appendChild(totalRow);
             }
           });
 
-          section.appendChild(table);
-          container.appendChild(section);
+          const collapsible = document.createElement("div");
+          collapsible.style.display = "none";
+          collapsible.appendChild(table);
+          roundSection.appendChild(collapsible);
+
+          header.addEventListener("click", () => {
+            collapsible.style.display = collapsible.style.display === "none" ? "block" : "none";
+          });
+
+          container.appendChild(roundSection);
         }
 
-        if (container.innerHTML.trim() === "") {
+        if (container.innerHTML === "") {
           container.innerHTML = "<p>Nincs megjeleníthető eredmény.</p>";
         }
 
-      } catch (e) {
-        container.innerHTML = "<p style='color: red;'>Hiba történt az adatok betöltése közben.</p>";
-        console.error(e);
+      } catch (error) {
+        container.innerHTML = "<p style='color: red;'>Hiba történt az adatok betöltésekor.</p>";
+        console.error(error);
       }
     });
   </script>
