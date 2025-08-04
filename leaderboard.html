@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <title>Toplista</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
+    h1 { margin-bottom: 20px; }
+    table { border-collapse: collapse; width: 100%; background: white; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    th { background: #eee; }
+    .highlight { font-weight: bold; background: #d4edda; }
+    .back-btn {
+      margin-bottom: 20px;
+      display: inline-block;
+      background: #007bff;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <a href="dashboard.html" class="back-btn">← Vissza a főoldalra</a>
+  <h1>Toplista – Fordulónkénti és összesített pontok</h1>
+  <div id="tableContainer">Betöltés...</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const tableContainer = document.getElementById("tableContainer");
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        tableContainer.innerHTML = "<p>Be kell jelentkezned a toplista megtekintéséhez.</p>";
+        return;
+      }
+
+      const [matchesSnap, tipsSnap, usersSnap] = await Promise.all([
+        getDocs(collection(db, "matches")),
+        getDocs(collection(db, "tips")),
+        getDocs(collection(db, "users"))
+      ]);
+
+      const matches = {};
+      matchesSnap.forEach(doc => matches[doc.id] = { id: doc.id, ...doc.data() });
+
+      const users = {};
+      usersSnap.forEach(doc => users[doc.id] = doc.data().nickname || "Ismeretlen");
+
+      const playerPoints = {}; // { nickname: { roundId: pont, ..., total: pont } }
+      const allRounds = new Set();
+
+      tipsSnap.forEach(doc => {
+        const tip = doc.data();
+        const match = matches[tip.matchId];
+        if (!match || !match.outcome || !match.odds || !tip.roundId) return;
+
+        const isCorrect = match.outcome === tip.tip;
+        const oddsValue = match.odds[tip.tip];
+        const point = isCorrect ? (oddsValue || 0) * (tip.isDouble ? 2 : 1) : 0;
+
+        const roundId = tip.roundId;
+        allRounds.add(roundId);
+
+        const nickname = users[tip.userId] || "Ismeretlen";
+        if (!playerPoints[nickname]) playerPoints[nickname] = { total: 0 };
+        if (!playerPoints[nickname][roundId]) playerPoints[nickname][roundId] = 0;
+
+        playerPoints[nickname][roundId] += point;
+        playerPoints[nickname].total += point;
+      });
+
+      const sortedRounds = Array.from(allRounds).sort((a, b) => parseInt(a) - parseInt(b));
+      const sortedPlayers = Object.entries(playerPoints)
+        .sort((a, b) => b[1].total - a[1].total);
+
+      // táblázat építés
+      let html = "<table><thead><tr><th>Helyezés</th><th>Játékos</th>";
+      sortedRounds.forEach(r => html += `<th>${r}. forduló</th>`);
+      html += "<th>Összesen</th></tr></thead><tbody>";
+
+      sortedPlayers.forEach(([nick, points], idx) => {
+        html += `<tr${idx === 0 ? ' class="highlight"' : ''}><td>${idx + 1}.</td><td>${nick}</td>`;
+        sortedRounds.forEach(r => {
+          const p = points[r] || 0;
+          html += `<td>${p.toFixed(2)}</td>`;
+        });
+        html += `<td><strong>${points.total.toFixed(2)}</strong></td></tr>`;
+      });
+
+      html += "</tbody></table>";
+      tableContainer.innerHTML = html;
+    });
+  </script>
+</body>
+</html>
