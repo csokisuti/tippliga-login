@@ -4,131 +4,131 @@
   <meta charset="UTF-8" />
   <title>Dashboard</title>
   <link rel="stylesheet" href="style-themed.css" />
+  <div id="fb-root"></div>
+  <script async defer crossorigin="anonymous" 
+    src="https://connect.facebook.net/hu_HU/sdk.js#xfbml=1&version=v19.0" nonce="fb"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      getDocs,
-      doc,
-      getDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-      authDomain: "tippliga-4b3af.firebaseapp.com",
-      projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.appspot.com",
-      messagingSenderId: "720359845241",
-      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-    };
-
-    const app = initializeApp(firebaseConfig);
+    const app = initializeApp({/* konfig */});
     const auth = getAuth(app);
     const db = getFirestore(app);
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
-      }
+      if (!user) return window.location.href = "login.html";
 
-      const email = user.email;
-      let nickname = email;
-      let role = "user";
-      let favoriteTeam = "";
-
-      const usersSnapshot = await getDocs(collection(db, "users"));
-      usersSnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        if (data.email === email) {
-          nickname = data.nickname;
-          role = data.role || "user";
-          favoriteTeam = data.favoriteTeam || "";
-        }
-      });
+      const userRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userRef);
+      if (!snap.exists()) return alert("Felhasználói adatok nem találhatók.");
+      const { nickname = user.email, favoriteTeam = "" } = snap.data();
 
       document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
-      if (role === "admin") {
-        document.getElementById("adminLink").style.display = "inline";
-      }
 
-      // 🎨 Csapatspecifikus téma osztály hozzáadása
       if (favoriteTeam) {
-        const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]+/g, '-');
+        const themeClass = "theme-" +
+          favoriteTeam.toLowerCase().normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-');
         document.body.classList.add(themeClass);
+        const logoImg = document.getElementById("teamLogo");
+        logoImg.src = `crest/crest-${themeClass.replace("theme-","")}.png`;
+        logoImg.alt = favoriteTeam;
+
+        const feeds = document.querySelectorAll('.fb-feed');
+        feeds.forEach(div => div.style.display = "none");
+
+        const currentFeed = document.getElementById(`fb-${themeClass.replace("theme-", "")}`);
+        if (currentFeed) {
+          currentFeed.style.display = "block";
+          if (window.FB) window.FB.XFBML.parse(currentFeed);
+        }
       }
 
-      // 📊 NB1 tabella megjelenítés
       const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
       if (tableDoc.exists()) {
-        const base64 = tableDoc.data().base64;
         const img = document.createElement("img");
-        img.src = `data:image/png;base64,${base64}`;
-        img.alt = "NB1 tabella";
-        img.style.maxWidth = "100%";
-        img.style.marginTop = "20px";
+        img.src = `data:image/png;base64,${tableDoc.data().base64}`;
+        img.style.maxWidth = "60%";
         document.getElementById("tableContainer").appendChild(img);
-      }
-
-      // 📣 Szpari hírfolyam (csak Szpari esetén)
-      if (favoriteTeam === "Nyíregyháza Spartacus") {
-        const feedDiv = document.getElementById("nyiregyhazaFeedContainer");
-        feedDiv.innerHTML = `
-          <h2>📣 Szpari hírek a Facebookról</h2>
-          <div class="fb-page" 
-               data-href="https://www.facebook.com/NYSFC/" 
-               data-tabs="timeline" 
-               data-width="500" 
-               data-height="" 
-               data-small-header="false" 
-               data-adapt-container-width="true" 
-               data-hide-cover="false" 
-               data-show-facepile="true">
-            <blockquote cite="https://www.facebook.com/NYSFC/" class="fb-xfbml-parse-ignore">
-              <a href="https://www.facebook.com/NYSFC/">Nyíregyháza Spartacus FC</a>
-            </blockquote>
-          </div>
-        `;
-
-        // Facebook SDK betöltés
-        if (!document.getElementById("fb-sdk")) {
-          const fbScript = document.createElement("script");
-          fbScript.id = "fb-sdk";
-          fbScript.async = true;
-          fbScript.defer = true;
-          fbScript.crossOrigin = "anonymous";
-          fbScript.src = "https://connect.facebook.net/hu_HU/sdk.js#xfbml=1&version=v19.0";
-          document.body.appendChild(fbScript);
-        } else {
-          if (window.FB) window.FB.XFBML.parse();
-        }
       }
     });
 
-    document.getElementById("logout").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "login.html";
-      });
+    document.getElementById("logoutButton").addEventListener("click", () => {
+      signOut(auth).then(() => window.location.href = "login.html");
     });
   </script>
 </head>
 <body>
-  <h1>NB1 TippLiga</h1>
+  <header>
+    <h1>NB1 TippLiga</h1>
+    <img id="teamLogo" style="height:40px; vertical-align: middle; margin-left:10px;">
+  </header>
   <p id="welcome"></p>
   <nav>
-    <a href="matches.html">🔮 Meccsek és tippek</a> |
-    <a href="results.html">📋 Eredmények</a> |
-    <a href="leaderboard.html">🏆 Összpontszám</a> |
-    <a href="positions.html">📊 Szezon végi sorrend</a> |
-    <a href="profile.html">👤 Profil</a> |
-    <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin felület</a> |
-    <button id="logout">Kilépés</button>
+    <a href="matches.html">Meccsek és tippek</a> |
+    <a href="results.html">Eredmények</a> |
+    <a href="leaderboard.html">Összpontszám</a> |
+    <a href="positions.html">Szezon végi sorrend</a> |
+    <a href="profile.html">Profil</a> |
+    <a id="adminLink" href="admin.html" style="display:none;">Admin felület</a> |
+    <button id="logoutButton">Kilépés</button>
   </nav>
-  <div id="tableContainer"></div>
-  <div id="nyiregyhazaFeedContainer" style="margin-top: 40px;"></div>
+
+  <div style="display:flex; gap:20px;">
+    <div id="tableContainer"></div>
+    <div id="newsContainer">
+      <h2>📣 Csapathírek</h2>
+
+      <div id="fb-debreceni-vsc" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/DVSCfoci/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-diosgyori-vtk" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/DVTKOfficial/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-ferencvaros" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/fradi.hu/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-eto-fc-gyor" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/EtoFCGyorOfficial/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-kazincbarcikai-sc" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/KazincbarcikaiSC/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-kisvarda-fc" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/Kisvardafc/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-mtk-budapest" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/mtkbudapestofficial/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-nyiregyhaza-spartacus" class="fb-feed" style="display: block;">
+        <div class="fb-page" data-href="https://www.facebook.com/NYSFC/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-paksi-fc" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/PaksiFootballClub/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-puskas-akademia" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/puskasakademiafc/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-ujpest-fc" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/ujpestfcofficial/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+
+      <div id="fb-zalaegerszegi-te-fc" class="fb-feed" style="display: none;">
+        <div class="fb-page" data-href="https://www.facebook.com/ztefcofficial/" data-tabs="timeline" data-width="400" data-height="500" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"></div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
