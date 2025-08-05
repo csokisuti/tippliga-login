@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
-  <title>Dashboard</title>
+  <title>Dashboard - UEFA BL</title>
   <link rel="stylesheet" href="style.css" />
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -50,58 +50,70 @@
         document.getElementById("adminLink").style.display = "inline";
       }
 
-      // NB1 tabella betöltése TheSportsDB API-ból
-      const apiKey = "134"; // <-- IDE ÍRD A SAJÁT API KULCSODAT
-      const apiUrl = `https://www.thesportsdb.com/api/v1/json/${apiKey}/lookuptable.php?l=4690&s=2025-2026`;
-
-      fetch(apiUrl)
+      const token = "5c177bbe629d4313af1c2899ee241309";
+      fetch("https://api.football-data.org/v4/competitions/CL/standings", {
+        headers: {
+          "X-Auth-Token": token
+        }
+      })
         .then(res => res.json())
         .then(data => {
           const container = document.getElementById("tableContainer");
-          const table = document.createElement("table");
-          table.style.width = "100%";
-          table.style.borderCollapse = "collapse";
-          table.style.marginTop = "20px";
-          table.innerHTML = `
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Csapat</th>
-                <th>M</th>
-                <th>Gy</th>
-                <th>D</th>
-                <th>V</th>
-                <th>RG</th>
-                <th>KG</th>
-                <th>Pont</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          `;
 
-          const tbody = table.querySelector("tbody");
+          data.standings.forEach(group => {
+            const groupTitle = document.createElement("h3");
+            groupTitle.textContent = group.group;
+            container.appendChild(groupTitle);
 
-          data.table.forEach((team, index) => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${index + 1}</td>
-              <td style="text-align:left;">${team.name}</td>
-              <td>${team.played}</td>
-              <td>${team.win}</td>
-              <td>${team.draw}</td>
-              <td>${team.loss}</td>
-              <td>${team.goalsfor}</td>
-              <td>${team.goalsagainst}</td>
-              <td>${team.total}</td>
+            const table = document.createElement("table");
+            table.style.width = "100%";
+            table.style.borderCollapse = "collapse";
+            table.style.marginBottom = "20px";
+            table.innerHTML = `
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Csapat</th>
+                  <th>M</th>
+                  <th>Gy</th>
+                  <th>D</th>
+                  <th>V</th>
+                  <th>RG</th>
+                  <th>KG</th>
+                  <th>GK</th>
+                  <th>Pont</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
             `;
-            tbody.appendChild(row);
-          });
 
-          container.appendChild(table);
+            const tbody = table.querySelector("tbody");
+            group.table.forEach(team => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${team.position}</td>
+                <td style="text-align:left;">
+                  <img src="${team.team.crest}" alt="" width="20" style="vertical-align:middle; margin-right:6px;">
+                  ${team.team.name}
+                </td>
+                <td>${team.playedGames}</td>
+                <td>${team.won}</td>
+                <td>${team.draw}</td>
+                <td>${team.lost}</td>
+                <td>${team.goalsFor}</td>
+                <td>${team.goalsAgainst}</td>
+                <td>${team.goalDifference}</td>
+                <td>${team.points}</td>
+              `;
+              tbody.appendChild(row);
+            });
+
+            container.appendChild(table);
+          });
         })
         .catch(err => {
-          document.getElementById("tableContainer").textContent = "Nem sikerült betölteni a tabellát.";
-          console.error("Tabella hiba:", err);
+          console.error("BL tabella betöltési hiba:", err);
+          document.getElementById("tableContainer").textContent = "Nem sikerült betölteni a Bajnokok Ligája tabellát.";
         });
     });
 
@@ -113,7 +125,7 @@
   </script>
 </head>
 <body>
-  <h1>NB1 TippLiga</h1>
+  <h1>NB1 TippLiga / UEFA BL</h1>
   <p id="welcome"></p>
   <nav>
     <a href="matches.html">🔮 Meccsek és tippek</a> |
@@ -123,6 +135,6 @@
     <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin felület</a> |
     <button id="logout">Kilépés</button>
   </nav>
-  <div id="tableContainer"></div>
+  <div id="tableContainer" style="margin-top: 30px;"></div>
 </body>
 </html>
