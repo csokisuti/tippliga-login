@@ -37,6 +37,7 @@
       const email = user.email;
       let nickname = email;
       let role = "user";
+      let favoriteTeam = "";
 
       const usersSnapshot = await getDocs(collection(db, "users"));
       usersSnapshot.forEach((docSnap) => {
@@ -44,6 +45,7 @@
         if (data.email === email) {
           nickname = data.nickname;
           role = data.role || "user";
+          favoriteTeam = data.favoriteTeam || "";
         }
       });
 
@@ -61,6 +63,40 @@
         img.style.maxWidth = "100%";
         img.style.marginTop = "20px";
         document.getElementById("tableContainer").appendChild(img);
+      }
+
+      // 🎯 Szpari hírfolyam megjelenítése
+      if (favoriteTeam === "Nyíregyháza Spartacus") {
+        const feedDiv = document.getElementById("nyiregyhazaFeedContainer");
+        feedDiv.innerHTML = `
+          <h2>📣 Szpari hírek a Facebookról</h2>
+          <div class="fb-page" 
+               data-href="https://www.facebook.com/NyiregyhazaSpartacus/" 
+               data-tabs="timeline" 
+               data-width="500" 
+               data-height="" 
+               data-small-header="false" 
+               data-adapt-container-width="true" 
+               data-hide-cover="false" 
+               data-show-facepile="true">
+            <blockquote cite="https://www.facebook.com/NyiregyhazaSpartacus/" class="fb-xfbml-parse-ignore">
+              <a href="https://www.facebook.com/NyiregyhazaSpartacus/">Nyíregyháza Spartacus FC</a>
+            </blockquote>
+          </div>
+        `;
+
+        // Facebook SDK betöltése (ha még nincs)
+        if (!document.getElementById("fb-sdk")) {
+          const fbScript = document.createElement("script");
+          fbScript.id = "fb-sdk";
+          fbScript.async = true;
+          fbScript.defer = true;
+          fbScript.crossOrigin = "anonymous";
+          fbScript.src = "https://connect.facebook.net/hu_HU/sdk.js#xfbml=1&version=v19.0";
+          document.body.appendChild(fbScript);
+        } else {
+          if (window.FB) window.FB.XFBML.parse();
+        }
       }
     });
 
@@ -84,5 +120,6 @@
     <button id="logout">Kilépés</button>
   </nav>
   <div id="tableContainer"></div>
+  <div id="nyiregyhazaFeedContainer" style="margin-top: 40px;"></div>
 </body>
 </html>
