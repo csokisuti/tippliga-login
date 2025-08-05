@@ -13,10 +13,15 @@
 
     <label for="favoriteTeam">Kedvenc csapat:</label>
     <select id="favoriteTeamSelect"></select>
+    <br />
+    <img id="favoriteTeamLogo" style="height: 40px; margin-top: 10px;" />
+
+    <br /><br />
     <button id="saveTeamBtn">Mentés</button>
 
     <h2>Jelszó megváltoztatása</h2>
     <input type="password" id="newPassword" placeholder="Új jelszó">
+    <br />
     <button id="changePasswordBtn">Jelszó módosítása</button>
 
     <div id="message" style="margin-top: 20px;"></div>
@@ -45,6 +50,7 @@
     const emailDisplay = document.getElementById("emailDisplay");
     const nicknameDisplay = document.getElementById("nicknameDisplay");
     const favoriteTeamSelect = document.getElementById("favoriteTeamSelect");
+    const favoriteTeamLogo = document.getElementById("favoriteTeamLogo");
     const saveTeamBtn = document.getElementById("saveTeamBtn");
     const newPasswordInput = document.getElementById("newPassword");
     const changePasswordBtn = document.getElementById("changePasswordBtn");
@@ -70,6 +76,17 @@
       messageDiv.style.color = color;
     }
 
+    function updateFavoriteTeamLogo(teamName) {
+      const logo = crestMap[teamName];
+      if (logo) {
+        favoriteTeamLogo.src = logo;
+        favoriteTeamLogo.alt = teamName;
+        favoriteTeamLogo.style.display = "inline-block";
+      } else {
+        favoriteTeamLogo.style.display = "none";
+      }
+    }
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "login.html";
@@ -85,15 +102,19 @@
         const userData = userSnap.data();
         nicknameDisplay.textContent = userData.nickname || "—";
 
-        // Legördülő kitöltése
         Object.keys(crestMap).forEach(team => {
           const option = document.createElement("option");
           option.value = team;
           option.textContent = team;
           if (userData.favoriteTeam === team) {
             option.selected = true;
+            updateFavoriteTeamLogo(team);
           }
           favoriteTeamSelect.appendChild(option);
+        });
+
+        favoriteTeamSelect.addEventListener("change", (e) => {
+          updateFavoriteTeamLogo(e.target.value);
         });
 
         saveTeamBtn.onclick = async () => {
