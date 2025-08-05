@@ -1,137 +1,121 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8" />
-  <title>Tippliga Bejelentkezés</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
-    form { margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
-    h2 { margin-top: 30px; }
-    input, button { padding: 8px; width: 100%; margin-top: 5px; margin-bottom: 15px; }
-    #result, #registerResult { font-weight: bold; color: #b30000; }
-    #registerSection { display: none; }
-    .toggle-btn {
-      background: #007bff; color: white; padding: 10px 15px; border: none;
-      border-radius: 5px; cursor: pointer; margin-bottom: 20px;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>Bejelentkezés</title>
+  <link rel="stylesheet" href="style.css">
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore, doc, setDoc, collection, getDocs, query, where
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, setDoc, getDocs, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-      authDomain: "tippliga-4b3af.firebaseapp.com",
-      projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.appspot.com",
-      messagingSenderId: "720359845241",
-      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-    };
+  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+  authDomain: "tippliga-4b3af.firebaseapp.com",
+  projectId: "tippliga-4b3af",
+  storageBucket: "tippliga-4b3af.firebasestorage.app",
+  messagingSenderId: "720359845241",
+  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+};
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("loginForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const resultEl = document.getElementById("result");
+    const loginForm = document.getElementById("login-form");
+    const loginResult = document.getElementById("login-result");
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
 
-        try {
-          await signInWithEmailAndPassword(auth, email, password);
-          resultEl.innerText = "Sikeres bejelentkezés";
-          window.location.href = "dashboard.html";
-        } catch (error) {
-          resultEl.innerText = "Hiba: " + error.message;
-        }
-      });
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        loginResult.innerText = "Sikeres bejelentkezés!";
+        window.location.href = "dashboard.html";
+      } catch (error) {
+        loginResult.innerText = "Hiba: " + error.message;
+      }
+    });
 
-      document.getElementById("toggleRegister").addEventListener("click", () => {
-        const regSection = document.getElementById("registerSection");
-        regSection.style.display = regSection.style.display === "none" ? "block" : "none";
-      });
+    const toggleBtn = document.getElementById("toggle-register");
+    const registerContainer = document.getElementById("register-container");
+    toggleBtn.addEventListener("click", () => {
+      registerContainer.style.display = registerContainer.style.display === "none" ? "block" : "none";
+    });
 
-      document.getElementById("registerForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const email = document.getElementById("regEmail").value.trim();
-        const password = document.getElementById("regPassword").value;
-        const password2 = document.getElementById("regPassword2").value;
-        const nickname = document.getElementById("regNickname").value.trim();
-        const resultEl = document.getElementById("registerResult");
+    const registerForm = document.getElementById("register-form");
+    const registerResult = document.getElementById("register-result");
+    registerForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nickname = document.getElementById("register-nickname").value.trim();
+      const email = document.getElementById("register-email").value;
+      const password = document.getElementById("register-password").value;
+      const confirmPassword = document.getElementById("register-password-confirm").value;
 
-        resultEl.style.color = "red";
-        resultEl.innerText = "Ellenőrzés folyamatban...";
+      if (password !== confirmPassword) {
+        registerResult.innerText = "Hiba: A jelszavak nem egyeznek.";
+        return;
+      }
 
-        try {
-          if (!nickname) return resultEl.innerText = "Adj meg egy becenevet.";
-          if (!email.includes("@")) return resultEl.innerText = "Érvényes email címet adj meg.";
-          if (password.length < 6) return resultEl.innerText = "A jelszónak legalább 6 karakteresnek kell lennie.";
-          if (password !== password2) return resultEl.innerText = "A két jelszó nem egyezik.";
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      const nickTaken = usersSnapshot.docs.some(doc => doc.data().nickname === nickname);
+      if (nickTaken) {
+        registerResult.innerText = "Hiba: Ez a becenév már foglalt.";
+        return;
+      }
 
-          const nickQuery = query(collection(db, "users"), where("nickname", "==", nickname));
-          const nickSnap = await getDocs(nickQuery);
-          if (!nickSnap.empty) return resultEl.innerText = "Ez a becenév már foglalt.";
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-          const emailQuery = query(collection(db, "users"), where("email", "==", email));
-          const emailSnap = await getDocs(emailQuery);
-          if (!emailSnap.empty) return resultEl.innerText = "Ez az email cím már regisztrálva van.";
-
-          const cred = await createUserWithEmailAndPassword(auth, email, password);
-          await setDoc(doc(db, "users", cred.user.uid), {
-            email,
-            nickname,
-            role: "user"
-          });
-
-          resultEl.style.color = "green";
-          resultEl.innerText = "Sikeres regisztráció! Átirányítás...";
-          window.location.href = "dashboard.html";
-
-        } catch (error) {
-          resultEl.innerText = "Hiba: " + error.message;
-        }
-      });
+        setTimeout(async () => {
+          try {
+            await setDoc(doc(db, "users", cred.user.uid), {
+              email,
+              nickname,
+              role: "user"
+            });
+            registerResult.style.color = "green";
+            registerResult.innerText = "Sikeres regisztráció! Átíirányítás...";
+            window.location.href = "dashboard.html";
+          } catch (err) {
+            registerResult.innerText = "Hiba: " + err.message;
+          }
+        }, 500);
+      } catch (error) {
+        registerResult.innerText = "Hiba: " + error.message;
+      }
     });
   </script>
 </head>
 <body>
-  <h2>Bejelentkezés</h2>
-  <form id="loginForm">
-    <label for="email">Email:</label>
-    <input type="email" id="email" required>
-
-    <label for="password">Jelszó:</label>
-    <input type="password" id="password" required>
-
-    <button type="submit">Bejelentkezés</button>
-    <p id="result"></p>
-  </form>
-
-  <button class="toggle-btn" id="toggleRegister">🔽 Regisztráció</button>
-
-  <div id="registerSection">
-    <h2>Regisztráció</h2>
-    <form id="registerForm">
-      <label for="regNickname">Becenév:</label>
-      <input type="text" id="regNickname" required>
-
-      <label for="regEmail">Email:</label>
-      <input type="email" id="regEmail" required>
-
-      <label for="regPassword">Jelszó:</label>
-      <input type="password" id="regPassword" required>
-
-      <label for="regPassword2">Jelszó újra:</label>
-      <input type="password" id="regPassword2" required>
-
-      <button type="submit">Regisztráció</button>
-      <p id="registerResult"></p>
+  <div class="container">
+    <h2>Bejelentkezés</h2>
+    <form id="login-form">
+      <label>Email:</label>
+      <input type="email" id="login-email" required>
+      <label>Jelszó:</label>
+      <input type="password" id="login-password" required>
+      <button type="submit">Bejelentkezés</button>
+      <p id="login-result"></p>
     </form>
+    <button id="toggle-register">🔽 Regisztráció</button>
+
+    <div id="register-container" style="display:none">
+      <h2>Regisztráció</h2>
+      <form id="register-form">
+        <label>Becenév:</label>
+        <input type="text" id="register-nickname" required>
+        <label>Email:</label>
+        <input type="email" id="register-email" required>
+        <label>Jelszó:</label>
+        <input type="password" id="register-password" required>
+        <label>Jelszó újra:</label>
+        <input type="password" id="register-password-confirm" required>
+        <button type="submit">Regisztráció</button>
+        <p id="register-result"></p>
+      </form>
+    </div>
   </div>
 </body>
 </html>
