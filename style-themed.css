@@ -1,0 +1,266 @@
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f7fa;
+  margin: 0;
+  padding: 20px;
+  color: #333;
+}
+
+h1, h2, h3 {
+  color: #2c3e50;
+}
+
+form, .match-card {
+  background-color: #ffffff;
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+input, select, button {
+  display: block;
+  margin-top: 5px;
+  margin-bottom: 10px;
+  padding: 8px;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+section {
+  margin-bottom: 40px;
+}
+
+#matchesList {
+  margin-top: 20px;
+}
+
+.match-card button {
+  width: auto;
+  margin-right: 10px;
+  display: inline-block;
+}
+
+.match-card input {
+  display: inline-block;
+  width: calc(33% - 10px);
+  margin-right: 10px;
+}
+
+ul#userList {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+
+/* === Témák csapatonként === */
+
+body.theme-debreceni-vsc {
+  background-color: #da1a32;
+  color: #ffffff;
+}
+body.theme-debreceni-vsc h1, body.theme-debreceni-vsc h2, body.theme-debreceni-vsc h3 {
+  color: #da1a32;
+}
+body.theme-debreceni-vsc button {
+  background-color: #da1a32;
+  color: white;
+}
+body.theme-debreceni-vsc button:hover {
+  background-color: #ffffff;
+  color: #da1a32;
+}
+
+body.theme-diosgyori-vtk {
+  background-color: #ffcccc;
+  color: #7a0000;
+}
+body.theme-diosgyori-vtk h1, body.theme-diosgyori-vtk h2, body.theme-diosgyori-vtk h3 {
+  color: #c00000;
+}
+body.theme-diosgyori-vtk button {
+  background-color: #c00000;
+  color: white;
+}
+body.theme-diosgyori-vtk button:hover {
+  background-color: #7a0000;
+  color: #c00000;
+}
+
+body.theme-ferencvaros {
+  background-color: #ffffff;
+  color: #006600;
+}
+body.theme-ferencvaros h1, body.theme-ferencvaros h2, body.theme-ferencvaros h3 {
+  color: #007e33;
+}
+body.theme-ferencvaros button {
+  background-color: #007e33;
+  color: white;
+}
+body.theme-ferencvaros button:hover {
+  background-color: #006600;
+  color: #007e33;
+}
+
+body.theme-eto-fc-gyor {
+  background-color: #e2f5e6;
+  color: #0f5132;
+}
+body.theme-eto-fc-gyor h1, body.theme-eto-fc-gyor h2, body.theme-eto-fc-gyor h3 {
+  color: #1c7c54;
+}
+body.theme-eto-fc-gyor button {
+  background-color: #1c7c54;
+  color: white;
+}
+body.theme-eto-fc-gyor button:hover {
+  background-color: #0f5132;
+  color: #1c7c54;
+}
+
+body.theme-kazincbarcikai-sc {
+  background-color: #f0f8ff;
+  color: #002147;
+}
+body.theme-kazincbarcikai-sc h1, body.theme-kazincbarcikai-sc h2, body.theme-kazincbarcikai-sc h3 {
+  color: #0066cc;
+}
+body.theme-kazincbarcikai-sc button {
+  background-color: #0066cc;
+  color: white;
+}
+body.theme-kazincbarcikai-sc button:hover {
+  background-color: #002147;
+  color: #0066cc;
+}
+
+body.theme-kisvarda-fc {
+  background-color: #fbeaea;
+  color: #a10000;
+}
+body.theme-kisvarda-fc h1, body.theme-kisvarda-fc h2, body.theme-kisvarda-fc h3 {
+  color: #cc0000;
+}
+body.theme-kisvarda-fc button {
+  background-color: #cc0000;
+  color: white;
+}
+body.theme-kisvarda-fc button:hover {
+  background-color: #a10000;
+  color: #cc0000;
+}
+
+body.theme-mtk-budapest {
+  background-color: #e8f4ff;
+  color: #003366;
+}
+body.theme-mtk-budapest h1, body.theme-mtk-budapest h2, body.theme-mtk-budapest h3 {
+  color: #0056b3;
+}
+body.theme-mtk-budapest button {
+  background-color: #0056b3;
+  color: white;
+}
+body.theme-mtk-budapest button:hover {
+  background-color: #003366;
+  color: #0056b3;
+}
+
+body.theme-nyiregyhaza-spartacus {
+  background-color: #1b2b50;
+  color: #ffffff;
+}
+body.theme-nyiregyhaza-spartacus h1, body.theme-nyiregyhaza-spartacus h2, body.theme-nyiregyhaza-spartacus h3 {
+  color: #b70000;
+}
+body.theme-nyiregyhaza-spartacus button {
+  background-color: #b70000;
+  color: white;
+}
+body.theme-nyiregyhaza-spartacus button:hover {
+  background-color: #ffffff;
+  color: #b70000;
+}
+
+body.theme-paksi-fc {
+  background-color: #e0f2e9;
+  color: #004d26;
+}
+body.theme-paksi-fc h1, body.theme-paksi-fc h2, body.theme-paksi-fc h3 {
+  color: #009933;
+}
+body.theme-paksi-fc button {
+  background-color: #009933;
+  color: white;
+}
+body.theme-paksi-fc button:hover {
+  background-color: #004d26;
+  color: #009933;
+}
+
+body.theme-puskas-akademia {
+  background-color: #f5f5dc;
+  color: #002147;
+}
+body.theme-puskas-akademia h1, body.theme-puskas-akademia h2, body.theme-puskas-akademia h3 {
+  color: #ffc72c;
+}
+body.theme-puskas-akademia button {
+  background-color: #ffc72c;
+  color: white;
+}
+body.theme-puskas-akademia button:hover {
+  background-color: #002147;
+  color: #ffc72c;
+}
+
+body.theme-ujpest-fc {
+  background-color: #f7f0ff;
+  color: #3f0071;
+}
+body.theme-ujpest-fc h1, body.theme-ujpest-fc h2, body.theme-ujpest-fc h3 {
+  color: #9d4edd;
+}
+body.theme-ujpest-fc button {
+  background-color: #9d4edd;
+  color: white;
+}
+body.theme-ujpest-fc button:hover {
+  background-color: #3f0071;
+  color: #9d4edd;
+}
+
+body.theme-zalaegerszegi-te-fc {
+  background-color: #e6f0ff;
+  color: #002366;
+}
+body.theme-zalaegerszegi-te-fc h1, body.theme-zalaegerszegi-te-fc h2, body.theme-zalaegerszegi-te-fc h3 {
+  color: #0047ab;
+}
+body.theme-zalaegerszegi-te-fc button {
+  background-color: #0047ab;
+  color: white;
+}
+body.theme-zalaegerszegi-te-fc button:hover {
+  background-color: #002366;
+  color: #0047ab;
+}

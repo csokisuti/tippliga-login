@@ -3,21 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
-  <style>
-    body.szpari-theme {
-      background-color: #1b2b50;
-      color: #ffffff;
-      font-family: 'Open Sans', sans-serif;
-    }
-    body.szpari-theme h1 {
-      color: #b70000;
-    }
-    body.szpari-theme nav a, 
-    body.szpari-theme nav button {
-      color: #ffffff;
-    }
-  </style>
+  <link rel="stylesheet" href="style-themed.css" />
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -68,12 +54,15 @@
         document.getElementById("adminLink").style.display = "inline";
       }
 
-      // 🎨 Szpari témaváltás
-      if (favoriteTeam === "Nyíregyháza Spartacus") {
-        document.body.classList.add("szpari-theme");
+      // 🎨 Csapatspecifikus téma osztály hozzáadása
+      if (favoriteTeam) {
+        const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-');
+        document.body.classList.add(themeClass);
       }
 
-      // 📊 Tabella megjelenítés
+      // 📊 NB1 tabella megjelenítés
       const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
       if (tableDoc.exists()) {
         const base64 = tableDoc.data().base64;
@@ -85,7 +74,7 @@
         document.getElementById("tableContainer").appendChild(img);
       }
 
-      // 📣 Szpari hírfolyam
+      // 📣 Szpari hírfolyam (csak Szpari esetén)
       if (favoriteTeam === "Nyíregyháza Spartacus") {
         const feedDiv = document.getElementById("nyiregyhazaFeedContainer");
         feedDiv.innerHTML = `
