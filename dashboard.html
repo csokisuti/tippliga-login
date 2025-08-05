@@ -10,9 +10,7 @@
     import {
       getFirestore,
       collection,
-      getDocs,
-      doc,
-      getDoc
+      getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -52,36 +50,39 @@
         document.getElementById("adminLink").style.display = "inline";
       }
 
-      const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
-      if (tableDoc.exists()) {
-        const base64 = tableDoc.data().base64;
-        const img = document.createElement("img");
-        img.src = `data:image/png;base64,${base64}`;
-        img.alt = "NB1 tabella";
-        img.style.maxWidth = "100%";
-        img.style.marginTop = "20px";
-        document.getElementById("tableContainer").appendChild(img);
-      }
-    });
+      // NB1 tabella betöltése TheSportsDB API-ból
+      const apiKey = "123"; // <-- IDE ÍRD A SAJÁT API KULCSODAT
+      const apiUrl = `https://www.thesportsdb.com/api/v1/json/${apiKey}/lookuptable.php?l=4690&s=2025-2026`;
 
-    document.getElementById("logout").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "login.html";
-      });
-    });
-  </script>
-</head>
-<body>
-  <h1>NB1 TippLiga</h1>
-  <p id="welcome"></p>
-  <nav>
-    <a href="matches.html">🔮 Meccsek és tippek</a> |
-    <a href="results.html">📋 Eredmények</a> |
-    <a href="leaderboard.html">🏆 Összpontszám</a> |
-    <a href="positions.html">📊 Szezon végi sorrend</a> |
-    <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin felület</a> |
-    <button id="logout">Kilépés</button>
-  </nav>
-  <div id="tableContainer"></div>
-</body>
-</html>
+      fetch(apiUrl)
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById("tableContainer");
+          const table = document.createElement("table");
+          table.style.width = "100%";
+          table.style.borderCollapse = "collapse";
+          table.style.marginTop = "20px";
+          table.innerHTML = `
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Csapat</th>
+                <th>M</th>
+                <th>Gy</th>
+                <th>D</th>
+                <th>V</th>
+                <th>RG</th>
+                <th>KG</th>
+                <th>Pont</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          `;
+
+          const tbody = table.querySelector("tbody");
+
+          data.table.forEach((team, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${index + 1}</td>
+              <td style="text-align:left;">${team.
