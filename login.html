@@ -2,12 +2,31 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8">
-  <title>Bejelentkezés</title>
+  <title>Bejelentkezés / Regisztráció</title>
   <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="login-container">
+    <h3>Bejelentkezés</h3>
+    <input type="email" id="email" placeholder="Email:">
+    <input type="password" id="password" placeholder="Jelszó:">
+    <button onclick="login()">Bejelentkezés</button>
+    <button onclick="toggleRegister()">⇩ Regisztráció</button>
+
+    <div id="register-section" style="margin-top: 20px;">
+      <h3>Regisztráció</h3>
+      <input type="text" id="nickname" placeholder="Becenév">
+      <input type="email" id="regEmail" placeholder="Email">
+      <input type="password" id="regPassword" placeholder="Jelszó">
+      <input type="password" id="regConfirmPassword" placeholder="Jelszó újra">
+      <button onclick="register()">Regisztráció</button>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
   apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -22,84 +41,60 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      const email = document.getElementById("loginEmail").value;
-      const password = document.getElementById("loginPassword").value;
-
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        window.location.href = "dashboard.html";
-      } catch (error) {
-        alert("Hibás bejelentkezési adatok.");
-      }
-    });
-
-    document.getElementById("registerToggle").addEventListener("click", () => {
-      const regSection = document.getElementById("registrationSection");
+    window.toggleRegister = function () {
+      const regSection = document.getElementById("register-section");
       regSection.style.display = regSection.style.display === "none" ? "block" : "none";
-    });
+    }
 
-    document.getElementById("registerBtn").addEventListener("click", async () => {
-      const nickname = document.getElementById("regNickname").value.trim();
+    window.register = async function () {
+      const nickname = document.getElementById("nickname").value.trim();
       const email = document.getElementById("regEmail").value.trim();
       const password = document.getElementById("regPassword").value;
-      const confirmPassword = document.getElementById("regPasswordConfirm").value;
-      const errorMsg = document.getElementById("registerError");
-
-      errorMsg.textContent = "";
+      const confirmPassword = document.getElementById("regConfirmPassword").value;
 
       if (!nickname || !email || !password || !confirmPassword) {
-        errorMsg.textContent = "Hiba: Minden mező kitöltése kötelező.";
+        alert("Minden mezőt ki kell tölteni.");
         return;
       }
 
       if (password !== confirmPassword) {
-        errorMsg.textContent = "Hiba: A jelszavak nem egyeznek.";
-        return;
-      }
-
-      const nickQuery = query(collection(db, "users"), where("nickname", "==", nickname));
-      const nickSnapshot = await getDocs(nickQuery);
-      if (!nickSnapshot.empty) {
-        errorMsg.textContent = "Hiba: Ez a becenév már foglalt.";
+        alert("A jelszavak nem egyeznek.");
         return;
       }
 
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const uid = userCredential.user.uid;
+        const user = userCredential.user;
 
-        await setDoc(doc(db, "users", uid), {
-          nickname: nickname,
+        await setDoc(doc(db, "users", nickname), {
           email: email,
+          nickname: nickname,
           role: "user"
         });
 
+        alert("Sikeres regisztráció!");
         window.location.href = "dashboard.html";
       } catch (error) {
-        errorMsg.textContent = "Hiba: " + error.message;
+        alert("Hiba: " + error.message);
       }
-    });
+    }
+
+    window.login = async function () {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        alert("Add meg az email címed és a jelszavad.");
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "dashboard.html";
+      } catch (error) {
+        alert("Hiba a bejelentkezéskor: " + error.message);
+      }
+    }
   </script>
-</head>
-<body>
-  <div class="container">
-    <h2>Bejelentkezés</h2>
-    <input type="email" id="loginEmail" placeholder="Email:"><br>
-    <input type="password" id="loginPassword" placeholder="Jelszó:"><br>
-    <button id="loginBtn">Bejelentkezés</button>
-
-    <button id="registerToggle">⬇ Regisztráció</button>
-
-    <div id="registrationSection" style="display:none;">
-      <h2>Regisztráció</h2>
-      <input type="text" id="regNickname" placeholder="Becenév:"><br>
-      <input type="email" id="regEmail" placeholder="Email:"><br>
-      <input type="password" id="regPassword" placeholder="Jelszó:"><br>
-      <input type="password" id="regPasswordConfirm" placeholder="Jelszó újra:"><br>
-      <button id="registerBtn">Regisztráció</button>
-      <p id="registerError" style="color:red;"></p>
-    </div>
-  </div>
 </body>
 </html>
