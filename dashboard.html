@@ -28,6 +28,21 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    const facebookLinks = {
+      "Ferencváros": "https://www.facebook.com/fradi.hu",
+      "Újpest FC": "https://www.facebook.com/ujpestfootballclub",
+      "Debreceni VSC": "https://www.facebook.com/dvscfoci",
+      "Nyíregyháza Spartacus": "https://www.facebook.com/NYSFC",
+      "Paksi FC": "https://www.facebook.com/paksifcofficialsite",
+      "Kazincbarcikai SC": "https://www.facebook.com/kolorcitykbsc",
+      "Puskás Akadémia": "https://www.facebook.com/PFLAhu",
+      "Kisvárda FC": "https://www.facebook.com/kisvardafc",
+      "Diósgyőri VTK": "https://www.facebook.com/DVTK1910",
+      "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc.hu",
+      "ETO FC Győr": "https://www.facebook.com/etofcgyor",
+      "MTK Budapest": "https://www.facebook.com/MTKBudapest"
+    };
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "login.html";
@@ -54,7 +69,6 @@
         document.getElementById("adminLink").style.display = "inline";
       }
 
-      // 🎨 Csapatspecifikus téma osztály hozzáadása
       if (favoriteTeam) {
         const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
           .replace(/[\u0300-\u036f]/g, '')
@@ -62,7 +76,6 @@
         document.body.classList.add(themeClass);
       }
 
-      // 📊 NB1 tabella megjelenítés
       const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
       if (tableDoc.exists()) {
         const base64 = tableDoc.data().base64;
@@ -72,6 +85,20 @@
         img.style.maxWidth = "100%";
         img.style.marginTop = "20px";
         document.getElementById("tableContainer").appendChild(img);
+      }
+
+      // Facebook feed beszúrása
+      const fbLink = facebookLinks[favoriteTeam];
+      if (fbLink) {
+        const fbDiv = document.createElement("div");
+        fbDiv.innerHTML = `
+          <iframe 
+            src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=500&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
+            width="500" height="500" style="border:none;overflow:hidden" scrolling="no" frameborder="0" 
+            allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share">
+          </iframe>
+        `;
+        document.getElementById("facebookFeedContainer").appendChild(fbDiv);
       }
     });
 
@@ -94,6 +121,8 @@
     <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin felület</a> |
     <button id="logout">Kilépés</button>
   </nav>
+
   <div id="tableContainer"></div>
+  <div id="facebookFeedContainer" style="margin-top: 40px;"></div>
 </body>
 </html>
