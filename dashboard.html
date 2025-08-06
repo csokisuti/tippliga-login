@@ -1,143 +1,134 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Dashboard</title>
-  <link rel="stylesheet" href="style-themed.css">
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script async defer crossorigin="anonymous" 
-    src="https://connect.facebook.net/hu_HU/sdk.js#xfbml=1&version=v19.0">
-  </script>
-</head>
-<body>
-  <header>
-    <h1>Üdvözöllek a Tippjátékban!</h1>
-    <button onclick="logout()">Kilépés</button>
-  </header>
+  <link rel="stylesheet" href="style-themed.css" />
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  <main>
-    <div class="content-container">
-      <div class="left-column">
-        <h2>NB I tabella</h2>
-        <div id="tableImageContainer"></div>
-      </div>
-      <div class="right-column">
-        <div id="teamLogoSection"></div>
-        <h2>Kedvenc csapatod hírfolyama</h2>
-        <div id="facebookFeedContainer"></div>
-      </div>
-    </div>
-  </main>
-
-  <script>
     const firebaseConfig = {
-  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain: "tippliga-4b3af.firebaseapp.com",
-  projectId: "tippliga-4b3af",
-  storageBucket: "tippliga-4b3af.firebasestorage.app",
-  messagingSenderId: "720359845241",
-  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-
-    const teamData = {
-      "Debreceni VSC": {
-        crest: "crest/crest-dvsc.png",
-        facebook: "https://www.facebook.com/dvscfoci/"
-      },
-      "Diósgyőri VTK": {
-        crest: "crest/crest-dvtk.png",
-        facebook: "https://www.facebook.com/DVTKOfficial/"
-      },
-      "Ferencváros": {
-        crest: "crest/crest-fradi.png",
-        facebook: "https://www.facebook.com/fradi.hu/"
-      },
-      "ETO FC Győr": {
-        crest: "crest/crest-gyor.png",
-        facebook: "https://www.facebook.com/EtoFCGyorOfficial/"
-      },
-      "Kazincbarcikai SC": {
-        crest: "crest/crest-kazincbarcika.png",
-        facebook: "https://www.facebook.com/KazincbarcikaiSC/"
-      },
-      "Kisvárda FC": {
-        crest: "crest/crest-kisvarda.png",
-        facebook: "https://www.facebook.com/Kisvardafc/"
-      },
-      "MTK Budapest": {
-        crest: "crest/crest-mtk.png",
-        facebook: "https://www.facebook.com/mtkbudapestofficial/"
-      },
-      "Nyíregyháza Spartacus": {
-        crest: "crest/crest-nyiregyhaza.png",
-        facebook: "https://www.facebook.com/NYSFC/"
-      },
-      "Paksi FC": {
-        crest: "crest/crest-paks.png",
-        facebook: "https://www.facebook.com/PaksiFootballClub/"
-      },
-      "Puskás Akadémia": {
-        crest: "crest/crest-puskas.png",
-        facebook: "https://www.facebook.com/puskasakademiafc/"
-      },
-      "Újpest FC": {
-        crest: "crest/crest-ujpest.png",
-        facebook: "https://www.facebook.com/ujpestfcofficial/"
-      },
-      "Zalaegerszegi TE FC": {
-        crest: "crest/crest-zte.png",
-        facebook: "https://www.facebook.com/ztefc.hu/"
-      }
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
 
-    auth.onAuthStateChanged(async user => {
-      if (user) {
-        const userDoc = await db.collection("users").doc(user.uid).get();
-        const userData = userDoc.data();
-        const favTeam = userData.favourite_team;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-        const team = teamData[favTeam];
-        if (team) {
-          document.getElementById("teamLogoSection").innerHTML =
-            `<img src="${team.crest}" alt="${favTeam} logo" class="team-logo">`;
-
-          const fbContainer = document.getElementById("facebookFeedContainer");
-          fbContainer.innerHTML = `
-            <div class="fb-page"
-                 data-href="${team.facebook}"
-                 data-tabs="timeline"
-                 data-width="500"
-                 data-small-header="false"
-                 data-adapt-container-width="true"
-                 data-hide-cover="false"
-                 data-show-facepile="true">
-            </div>`;
-          if (typeof FB !== "undefined") FB.XFBML.parse(fbContainer);
-        } else {
-          document.getElementById("facebookFeedContainer").textContent =
-            "Nem található Facebook-hírfolyam ehhez a csapathoz.";
-        }
-
-        if (userData.tableImage) {
-          document.getElementById("tableImageContainer").innerHTML =
-            `<img src="${userData.tableImage}" alt="NB I tabella" class="table-image">`;
-        }
-      } else {
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
         window.location.href = "login.html";
+        return;
+      }
+
+      const email = user.email;
+      let nickname = email;
+      let role = "user";
+      let favoriteTeam = "";
+
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      usersSnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.email === email) {
+          nickname = data.nickname;
+          role = data.role || "user";
+          favoriteTeam = data.favoriteTeam || "";
+        }
+      });
+
+      document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
+      if (role === "admin") {
+        document.getElementById("adminLink").style.display = "inline";
+      }
+
+      // 🎨 Csapatspecifikus téma osztály hozzáadása
+      if (favoriteTeam) {
+        const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-');
+        document.body.classList.add(themeClass);
+      }
+
+      // 📊 NB1 tabella megjelenítés
+      const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
+      if (tableDoc.exists()) {
+        const base64 = tableDoc.data().base64;
+        const img = document.createElement("img");
+        img.src = `data:image/png;base64,${base64}`;
+        img.alt = "NB1 tabella";
+        img.style.maxWidth = "100%";
+        img.style.marginTop = "20px";
+        document.getElementById("tableContainer").appendChild(img);
+      }
+
+      // 📣 Szpari hírfolyam (csak Szpari esetén)
+      if (favoriteTeam === "Nyíregyháza Spartacus") {
+        const feedDiv = document.getElementById("nyiregyhazaFeedContainer");
+        feedDiv.innerHTML = `
+          <h2>📣 Szpari hírek a Facebookról</h2>
+          <div class="fb-page" 
+               data-href="https://www.facebook.com/NYSFC/" 
+               data-tabs="timeline" 
+               data-width="500" 
+               data-height="" 
+               data-small-header="false" 
+               data-adapt-container-width="true" 
+               data-hide-cover="false" 
+               data-show-facepile="true">
+            <blockquote cite="https://www.facebook.com/NYSFC/" class="fb-xfbml-parse-ignore">
+              <a href="https://www.facebook.com/NYSFC/">Nyíregyháza Spartacus FC</a>
+            </blockquote>
+          </div>
+        `;
+
+        // Facebook SDK betöltés
+        if (!document.getElementById("fb-sdk")) {
+          const fbScript = document.createElement("script");
+          fbScript.id = "fb-sdk";
+          fbScript.async = true;
+          fbScript.defer = true;
+          fbScript.crossOrigin = "anonymous";
+          fbScript.src = "https://connect.facebook.net/hu_HU/sdk.js#xfbml=1&version=v19.0";
+          document.body.appendChild(fbScript);
+        } else {
+          if (window.FB) window.FB.XFBML.parse();
+        }
       }
     });
 
-    function logout() {
-      auth.signOut().then(() => {
+    document.getElementById("logout").addEventListener("click", () => {
+      signOut(auth).then(() => {
         window.location.href = "login.html";
       });
-    }
+    });
   </script>
+</head>
+<body>
+  <h1>NB1 TippLiga</h1>
+  <p id="welcome"></p>
+  <nav>
+    <a href="matches.html">🔮 Meccsek és tippek</a> |
+    <a href="results.html">📋 Eredmények</a> |
+    <a href="leaderboard.html">🏆 Összpontszám</a> |
+    <a href="positions.html">📊 Szezon végi sorrend</a> |
+    <a href="profile.html">👤 Profil</a> |
+    <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin felület</a> |
+    <button id="logout">Kilépés</button>
+  </nav>
+  <div id="tableContainer"></div>
+  <div id="nyiregyhazaFeedContainer" style="margin-top: 40px;"></div>
 </body>
 </html>
