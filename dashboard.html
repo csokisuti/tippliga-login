@@ -4,6 +4,38 @@
   <meta charset="UTF-8" />
   <title>Dashboard</title>
   <link rel="stylesheet" href="style-themed.css" />
+  <style>
+    #mainContent {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 40px;
+      margin-top: 30px;
+    }
+
+    #tableContainer img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    #facebookFeedContainer iframe {
+      border: none;
+      overflow: hidden;
+      max-width: 500px;
+    }
+
+    #tableContainer, #facebookFeedContainer {
+      flex: 1 1 400px;
+    }
+
+    @media (max-width: 1000px) {
+      #mainContent {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -82,19 +114,16 @@
         const img = document.createElement("img");
         img.src = `data:image/png;base64,${base64}`;
         img.alt = "NB1 tabella";
-        img.style.maxWidth = "100%";
-        img.style.marginTop = "20px";
         document.getElementById("tableContainer").appendChild(img);
       }
 
-      // Facebook feed beszúrása
       const fbLink = facebookLinks[favoriteTeam];
       if (fbLink) {
         const fbDiv = document.createElement("div");
         fbDiv.innerHTML = `
           <iframe 
             src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=500&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
-            width="500" height="500" style="border:none;overflow:hidden" scrolling="no" frameborder="0" 
+            width="500" height="500" scrolling="no" frameborder="0" 
             allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share">
           </iframe>
         `;
@@ -122,7 +151,9 @@
     <button id="logout">Kilépés</button>
   </nav>
 
-  <div id="tableContainer"></div>
-  <div id="facebookFeedContainer" style="margin-top: 40px;"></div>
+  <div id="mainContent">
+    <div id="tableContainer"></div>
+    <div id="facebookFeedContainer"></div>
+  </div>
 </body>
 </html>
