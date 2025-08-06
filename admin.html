@@ -4,153 +4,114 @@
   <meta charset="UTF-8">
   <title>Admin felület</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-themed.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Admin felület</h1>
+
+    <button onclick="window.location.href='dashboard.html'">Vissza a főoldalra</button>
+
+    <div class="collapsible-section">
+      <button class="collapsible">Meccsek kezelése</button>
+      <div class="content">
+        <div id="matchForm">
+          <h2>Új meccs hozzáadása</h2>
+          <select id="homeTeam"></select>
+          <select id="awayTeam"></select>
+          <input type="datetime-local" id="matchTime">
+          <input type="number" id="homeOdds" placeholder="Hazai odds">
+          <input type="number" id="drawOdds" placeholder="Döntetlen odds">
+          <input type="number" id="awayOdds" placeholder="Vendég odds">
+          <button onclick="addMatch()">Meccs hozzáadása</button>
+        </div>
+        <h2>Feltöltött meccsek</h2>
+        <div id="matchesContainer"></div>
+      </div>
+    </div>
+
+    <div class="collapsible-section">
+      <button class="collapsible">Felhasználók kezelése</button>
+      <div class="content">
+        <div>
+          <input type="email" id="newEmail" placeholder="Email">
+          <input type="password" id="newPassword" placeholder="Jelszó">
+          <input type="text" id="newNickname" placeholder="Becenév">
+          <button onclick="registerUser()">Felhasználó létrehozása</button>
+        </div>
+        <div id="usersList"></div>
+      </div>
+    </div>
+
+    <div class="collapsible-section">
+      <button class="collapsible">NB1 tabella (kép feltöltés)</button>
+      <div class="content">
+        <input type="file" id="tableImage" accept="image/*">
+        <button onclick="uploadImage()">Kép feltöltése</button>
+        <div id="uploadedImagePreview"></div>
+      </div>
+    </div>
+
+    <div class="collapsible-section">
+      <button class="collapsible">Eredmények rögzítése</button>
+      <div class="content">
+        <div id="resultsContainer"></div>
+      </div>
+    </div>
+
+    <div class="collapsible-section">
+      <button class="collapsible">Hivatalos szezon végi sorrend</button>
+      <div class="content">
+        <div id="finalPositionsContainer"></div>
+        <button onclick="saveFinalPositions()">Mentés</button>
+      </div>
+    </div>
+
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, setDoc
+      getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain: "tippliga-4b3af.firebaseapp.com",
-  projectId: "tippliga-4b3af",
-  storageBucket: "tippliga-4b3af.firebasestorage.app",
-  messagingSenderId: "720359845241",
-  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2Jo0fDDFjKkpZoMmhfI",
+      authDomain: "tippliga-2025.firebaseapp.com",
+      projectId: "tippliga-2025",
+      storageBucket: "tippliga-2025.appspot.com",
+      messagingSenderId: "710487818206",
+      appId: "1:710487818206:web:538b57c0e4cb6cdb0eb47f"
+    };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    const auth = getAuth();
+    const db = getFirestore();
 
-    const toggleBtn = document.getElementById('toggle-official-section');
-    const officialSection = document.getElementById('official-section');
-
-    toggleBtn.addEventListener('click', () => {
-      officialSection.classList.toggle('hidden');
-    });
-
-    const teamList = document.getElementById('official-team-list');
-    const saveBtn = document.getElementById('save-official-order');
-
-    const teams = [
-      "Debreceni VSC",
-      "Diósgyőri VTK",
-      "Ferencváros",
-      "ETO FC Győr",
-      "Kazincbarcikai SC",
-      "Kisvárda FC",
-      "MTK Budapest",
-      "Nyíregyháza Spartacus",
-      "Paksi FC",
-      "Puskás Akadémia",
-      "Újpest FC",
-      "Zalaegerszegi TE FC"
-    ];
-
-    function createDraggableList(listElement, items) {
-      listElement.innerHTML = "";
-      items.forEach(team => {
-        const item = document.createElement("li");
-        item.textContent = team;
-        item.setAttribute("draggable", true);
-        item.classList.add("draggable-item");
-        listElement.appendChild(item);
-      });
-
-      let dragged;
-
-      listElement.addEventListener("dragstart", (e) => {
-        dragged = e.target;
-        e.target.style.opacity = 0.5;
-      });
-
-      listElement.addEventListener("dragend", (e) => {
-        e.target.style.opacity = "";
-      });
-
-      listElement.addEventListener("dragover", (e) => {
-        e.preventDefault();
-      });
-
-      listElement.addEventListener("drop", (e) => {
-        e.preventDefault();
-        if (e.target.tagName === "LI" && e.target !== dragged) {
-          const draggedIndex = [...listElement.children].indexOf(dragged);
-          const targetIndex = [...listElement.children].indexOf(e.target);
-          if (draggedIndex < targetIndex) {
-            listElement.insertBefore(dragged, e.target.nextSibling);
-          } else {
-            listElement.insertBefore(dragged, e.target);
-          }
-        }
-      });
-    }
-
-    async function loadOfficialOrder() {
-      const docRef = doc(db, "finalStandings", "official");
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const ranking = docSnap.data().ranking;
-        createDraggableList(teamList, ranking);
-      } else {
-        createDraggableList(teamList, teams);
-      }
-    }
-
-    saveBtn.addEventListener("click", async () => {
-      const currentOrder = Array.from(teamList.children).map(li => li.textContent);
-      await setDoc(doc(db, "finalStandings", "official"), {
-        ranking: currentOrder
-      });
-      alert("Sorrend sikeresen elmentve!");
-    });
-
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        loadOfficialOrder();
-      } else {
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
         window.location.href = "login.html";
       }
     });
 
+    // A további működő logika, funkciók a külön JS fájlban vagy a meglévő scriptjeidben legyenek
   </script>
-  <style>
-    .hidden {
-      display: none;
-    }
-    .admin-section {
-      border: 1px solid #ccc;
-      padding: 1rem;
-      margin: 1rem 0;
-    }
-    .admin-section h2 {
-      margin-top: 0;
-    }
-    #official-team-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .draggable-item {
-      padding: 0.5rem;
-      margin-bottom: 0.3rem;
-      background-color: #f2f2f2;
-      border: 1px solid #ccc;
-      cursor: move;
-    }
-  </style>
-</head>
-<body>
-  <h1>Admin felület</h1>
 
-  <button id="toggle-official-section">📊 Hivatalos szezon végi sorrend kezelése</button>
-
-  <div id="official-section" class="admin-section hidden">
-    <h2>Szezon végi hivatalos sorrend</h2>
-    <ul id="official-team-list"></ul>
-    <button id="save-official-order">💾 Mentés</button>
-  </div>
+  <script src="admin-functions.js" type="module"></script>
+  <script>
+    const collapsibles = document.querySelectorAll(".collapsible");
+    collapsibles.forEach(button => {
+      button.addEventListener("click", function () {
+        this.classList.toggle("active");
+        const content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
+    });
+  </script>
 </body>
 </html>
