@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Admin felület</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -31,14 +31,6 @@
       "Puskás Akadémia", "Újpest FC", "Zalaegerszegi TE FC"
     ];
 
-    function parseOutcome(result) {
-      const [home, away] = result.split("-").map(x => parseInt(x.trim()));
-      if (isNaN(home) || isNaN(away)) return "";
-      if (home > away) return "1";
-      if (home < away) return "2";
-      return "X";
-    }
-
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         document.body.innerHTML = "<h2>⛔ Nincs jogosultságod az admin felülethez.</h2>";
@@ -60,77 +52,65 @@
       await loadResults();
       await loadFinalStandings();
     });
+
     function initUI() {
-      const formSection = document.createElement("section");
+      const html = `
+        <section>
+          <h2>Új meccs hozzáadása</h2>
+          <form id="matchForm">
+            <select id="homeTeam"><option value="">Hazai csapat</option>${teams.map(t => `<option value="${t}">${t}</option>`).join("")}</select><br>
+            <select id="awayTeam"><option value="">Vendég csapat</option>${teams.map(t => `<option value="${t}">${t}</option>`).join("")}</select><br>
+            <input type="datetime-local" id="startTime"><br>
+            <input id="roundId" placeholder="Forduló ID"><br>
+            <input id="odds1" placeholder="Odds 1" type="number" step="0.01"><br>
+            <input id="oddsX" placeholder="Odds X" type="number" step="0.01"><br>
+            <input id="odds2" placeholder="Odds 2" type="number" step="0.01"><br>
+            <button type="submit">Mentés</button>
+          </form>
+        </section>
 
-      const homeOptions = teams.map(team => `<option value="${team}">${team}</option>`).join('');
-      const awayOptions = teams.map(team => `<option value="${team}">${team}</option>`).join('');
+        <button onclick="toggleSection('matchesList')">📂 Feltöltött meccsek megjelenítése/elrejtése</button>
+        <div id="matchesList" style="display:none;"></div>
 
-      formSection.innerHTML = `
-        <h2>Új meccs hozzáadása</h2>
-        <form id="matchForm">
-          <select id="homeTeam" required><option value="">Hazai csapat</option>${homeOptions}</select><br>
-          <select id="awayTeam" required><option value="">Vendég csapat</option>${awayOptions}</select><br>
-          <input type="datetime-local" id="startTime" required><br>
-          <input placeholder="Forduló ID (pl. 1)" id="roundId" required><br>
-          <input type="number" step="0.01" placeholder="Odds 1" id="odds1" required><br>
-          <input type="number" step="0.01" placeholder="Odds X" id="oddsX" required><br>
-          <input type="number" step="0.01" placeholder="Odds 2" id="odds2" required><br>
-          <button type="submit">Mentés</button>
-        </form>
+        <section>
+          <h2>Meccseredmények kezelése</h2>
+          <div id="matchesNoResult"><h3>🟡 Eredmény nélküli meccsek</h3></div>
+          <div id="matchesWithResult"><h3>🟢 Rögzített eredmények</h3></div>
+        </section>
+
+        <section>
+          <h2>Új felhasználó hozzáadása</h2>
+          <form id="userForm">
+            <input id="nickname" placeholder="Becenév"><br>
+            <input id="email" placeholder="Email" type="email"><br>
+            <input id="password" placeholder="Jelszó" type="password"><br>
+            <select id="role">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select><br>
+            <button type="submit">Felhasználó létrehozása</button>
+          </form>
+          <ul id="userList"></ul>
+        </section>
+
+        <section>
+          <h2>NB1 tabella kép feltöltése</h2>
+          <input type="file" id="tableImageInput" accept="image/*">
+          <button id="uploadTableImage">Feltöltés</button><br><br>
+          <button onclick="window.location.href='dashboard.html'">⬅️ Vissza a dashboardra</button>
+        </section>
+
+        <section>
+          <button onclick="toggleSection('finalStandingsSection')">📉 Szezon végi hivatalos sorrend megjelenítése/elrejtése</button>
+          <div id="finalStandingsSection" style="display:none;">
+            <h2>Hivatalos szezon végi sorrend</h2>
+            <ul id="officialList" class="draggable-list"></ul>
+            <button id="saveOfficial">Mentés</button>
+          </div>
+        </section>
       `;
+      document.body.innerHTML = html;
 
-      const toggleButton = document.createElement("button");
-      toggleButton.textContent = "📂 Feltöltött meccsek megjelenítése/elrejtése";
-      toggleButton.onclick = () => {
-        const list = document.getElementById("matchesList");
-        list.style.display = list.style.display === "none" ? "block" : "none";
-      };
-
-      const matchesList = document.createElement("div");
-      matchesList.id = "matchesList";
-
-      const resultSection = document.createElement("section");
-      resultSection.innerHTML = `
-        <h2>Meccseredmények kezelése</h2>
-        <div id="matchesNoResult"><h3>🟡 Eredmény nélküli meccsek</h3></div>
-        <div id="matchesWithResult"><h3>🟢 Rögzített eredmények</h3></div>
-      `;
-
-      const userSection = document.createElement("section");
-      userSection.innerHTML = `
-        <h2>Új felhasználó hozzáadása</h2>
-        <form id="userForm">
-          <input type="text" placeholder="Becenév" id="nickname" required><br>
-          <input type="email" placeholder="Email" id="email" required><br>
-          <input type="password" placeholder="Jelszó" id="password" required><br>
-          <select id="role">
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select><br>
-          <button type="submit">Felhasználó létrehozása</button>
-        </form>
-        <h3>Jelenlegi felhasználók:</h3>
-        <ul id="userList"></ul>
-      `;
-
-      const finalStandingsSection = document.createElement("section");
-      finalStandingsSection.innerHTML = `
-        <h2>Szezon végi hivatalos sorrend</h2>
-        <button id="toggleStandings">📋 Sorrend megjelenítése/elrejtése</button>
-        <div id="standingsContainer" style="display:none;"></div>
-        <button id="saveStandings">💾 Mentés</button>
-      `;
-
-      const tableImageSection = document.createElement("section");
-      tableImageSection.innerHTML = `
-        <h2>NB1 tabella kép feltöltése</h2>
-        <input type="file" id="tableImageInput" accept="image/*">
-        <button id="uploadTableImage">Feltöltés</button><br><br>
-        <button onclick="window.location.href='dashboard.html'">⬅️ Vissza a dashboardra</button>
-      `;
-
-      document.body.append(formSection, toggleButton, matchesList, resultSection, userSection, finalStandingsSection, tableImageSection);
       document.getElementById("matchForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const startTime = Timestamp.fromDate(new Date(document.getElementById("startTime").value));
@@ -153,141 +133,179 @@
 
       document.getElementById("userForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const nickname = document.getElementById("nickname").value;
-        const role = document.getElementById("role").value;
-
-        try {
-          const cred = await createUserWithEmailAndPassword(auth, email, password);
-          await setDoc(doc(db, "users", cred.user.uid), {
-            email,
-            nickname,
-            role
-          });
-          alert("Felhasználó létrehozva!");
-          e.target.reset();
-          await loadUsers();
-        } catch (err) {
-          alert("Hiba: " + err.message);
-        }
+        const cred = await createUserWithEmailAndPassword(auth, email.value, password.value);
+        await setDoc(doc(db, "users", cred.user.uid), {
+          email: email.value,
+          nickname: nickname.value,
+          role: role.value
+        });
+        alert("Felhasználó létrehozva!");
+        e.target.reset();
+        await loadUsers();
       });
 
       document.getElementById("uploadTableImage").addEventListener("click", async () => {
-        const fileInput = document.getElementById("tableImageInput");
-        const file = fileInput.files[0];
+        const file = document.getElementById("tableImageInput").files[0];
         if (!file) return alert("Válassz ki egy képet!");
-
         const reader = new FileReader();
         reader.onload = async () => {
           const base64String = reader.result.split(',')[1];
           await setDoc(doc(db, "settings", "nbi_table_image"), { base64: base64String });
-          alert("Kép elmentve Firestore-ba!");
+          alert("Kép elmentve!");
         };
         reader.readAsDataURL(file);
       });
 
-      document.getElementById("toggleStandings").addEventListener("click", () => {
-        const container = document.getElementById("standingsContainer");
-        container.style.display = container.style.display === "none" ? "block" : "none";
-      });
-
-      document.getElementById("saveStandings").addEventListener("click", async () => {
-        const inputs = document.querySelectorAll(".standings-input");
-        const order = Array.from(inputs).map(input => input.value).filter(v => v);
-        await setDoc(doc(db, "finalStandings", "official"), { order });
-        alert("Sorrend elmentve!");
+      document.getElementById("saveOfficial").addEventListener("click", async () => {
+        const items = document.querySelectorAll("#officialList li");
+        const ordered = [...items].map(item => item.textContent);
+        await setDoc(doc(db, "finalStandings", "official"), {
+          positions: ordered
+        });
+        alert("Sorrend mentve!");
       });
     }
-    async function loadFinalStandings() {
-      const container = document.getElementById("standingsContainer");
-      container.innerHTML = "";
-      const docSnap = await getDoc(doc(db, "finalStandings", "official"));
-      const savedOrder = docSnap.exists() ? docSnap.data().order : [];
 
-      const list = document.createElement("ul");
-      list.className = "sortable-list";
-      teams.forEach(team => {
-        const li = document.createElement("li");
-        li.className = "sortable-item";
-        const input = document.createElement("input");
-        input.value = savedOrder.includes(team) ? team : "";
-        input.className = "standings-input";
-        list.appendChild(li).appendChild(input);
+    function toggleSection(id) {
+      const el = document.getElementById(id);
+      el.style.display = el.style.display === "none" ? "block" : "none";
+    }
+
+    async function loadMatches() {
+      const container = document.getElementById("matchesList");
+      container.innerHTML = "<h2>Feltöltött meccsek</h2>";
+      const snapshot = await getDocs(collection(db, "matches"));
+      snapshot.forEach((docSnap) => {
+        const d = docSnap.data();
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <input value="${d.homeTeam}" id="home-${docSnap.id}">
+          <input value="${d.awayTeam}" id="away-${docSnap.id}">
+          <input type="datetime-local" value="${new Date(d.startTime.toDate()).toISOString().slice(0,16)}" id="start-${docSnap.id}">
+          <input value="${d.roundId}" id="round-${docSnap.id}">
+          <input value="${d.odds["1"]}" id="odds1-${docSnap.id}">
+          <input value="${d.odds["X"]}" id="oddsX-${docSnap.id}">
+          <input value="${d.odds["2"]}" id="odds2-${docSnap.id}">
+          <button onclick="updateMatch('${docSnap.id}')">Mentés</button>
+          <button onclick="deleteMatch('${docSnap.id}')">Törlés</button>
+        `;
+        container.appendChild(div);
       });
-      container.appendChild(list);
+    }
+
+    async function loadUsers() {
+      const ul = document.getElementById("userList");
+      ul.innerHTML = "";
+      const snap = await getDocs(collection(db, "users"));
+      snap.forEach(docSnap => {
+        const u = docSnap.data();
+        const li = document.createElement("li");
+        li.textContent = `${u.nickname || u.email} (${u.role})`;
+        const btn = document.createElement("button");
+        btn.textContent = "Törlés";
+        btn.onclick = async () => {
+          if (confirm(`Törlöd: ${u.email}?`)) {
+            await deleteDoc(docSnap.ref);
+            await loadUsers();
+          }
+        };
+        li.appendChild(btn);
+        ul.appendChild(li);
+      });
+    }
+
+    function parseOutcome(r) {
+      const [h, a] = r.split("-").map(x => parseInt(x.trim()));
+      if (isNaN(h) || isNaN(a)) return "";
+      return h > a ? "1" : h < a ? "2" : "X";
     }
 
     async function loadResults() {
-      const snapshot = await getDocs(collection(db, "matches"));
-      const matches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const noResult = matches.filter(m => !m.result);
-      const withResult = matches.filter(m => m.result);
-
-      renderMatchGroup("matchesNoResult", noResult, false);
-      renderMatchGroup("matchesWithResult", withResult, true);
+      const noResult = document.getElementById("matchesNoResult");
+      const withResult = document.getElementById("matchesWithResult");
+      noResult.innerHTML = "<h3>🟡 Eredmény nélküli meccsek</h3>";
+      withResult.innerHTML = "<h3>🟢 Rögzített eredmények</h3>";
+      const snap = await getDocs(collection(db, "matches"));
+      const group = (arr, cond) => arr.filter(cond).reduce((acc, m) => {
+        const r = m.roundId || "Egyéb";
+        if (!acc[r]) acc[r] = [];
+        acc[r].push(m);
+        return acc;
+      }, {});
+      const data = [];
+      snap.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
+      const withRes = group(data, d => d.result);
+      const noRes = group(data, d => !d.result);
+      for (const [r, list] of Object.entries(noRes)) renderResults(noResult, r, list, false);
+      for (const [r, list] of Object.entries(withRes)) renderResults(withResult, r, list, true);
     }
 
-    function renderMatchGroup(containerId, matches, showResult) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = matches.map(match => `
-        <div class="match-entry">
-          <strong>${match.homeTeam} - ${match.awayTeam}</strong>
-          <input value="${match.result || ""}" id="res-${match.id}" placeholder="Pl. 2-1">
-          <button onclick="window.saveResult('${match.id}')">Mentés</button>
-        </div>
-      `).join("");
-    }
-
-    window.saveResult = async (matchId) => {
-      const input = document.getElementById("res-" + matchId);
-      const result = input.value;
-      const outcome = parseOutcome(result);
-      if (!outcome) return alert("Érvénytelen eredmény formátum");
-
-      await updateDoc(doc(db, "matches", matchId), { result, outcome });
-      await loadResults();
-    };
-
-    async function loadMatches() {
-      const snapshot = await getDocs(collection(db, "matches"));
-      const list = document.getElementById("matchesList");
-      list.innerHTML = "";
-
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
+    function renderResults(container, round, matches, hasResult) {
+      const title = document.createElement("h4");
+      title.textContent = `${round}. forduló`;
+      container.appendChild(title);
+      matches.forEach(m => {
         const div = document.createElement("div");
-        div.innerHTML = `
-          ${data.homeTeam} - ${data.awayTeam} | ${data.roundId} | ${data.startTime.toDate().toLocaleString()} |
-          Odds: 1(${data.odds["1"]}) X(${data.odds["X"]}) 2(${data.odds["2"]})
-          <button onclick="window.deleteMatch('${docSnap.id}')">🗑️</button>
-        `;
-        list.appendChild(div);
+        div.innerHTML = `<b>${m.homeTeam} - ${m.awayTeam}</b><br><small>${m.startTime.toDate().toLocaleString("hu-HU")}</small><br>`;
+        const input = document.createElement("input");
+        input.placeholder = "pl. 2-1";
+        input.value = m.result || "";
+        const btn = document.createElement("button");
+        btn.textContent = hasResult ? "Módosítás" : "Mentés";
+        btn.onclick = async () => {
+          const value = input.value.trim();
+          const out = parseOutcome(value);
+          if (!out) return alert("Hibás formátum!");
+          await updateDoc(doc(db, "matches", m.id), {
+            result: value,
+            outcome: out
+          });
+          await loadResults();
+        };
+        div.appendChild(input);
+        div.appendChild(btn);
+        container.appendChild(div);
       });
     }
 
-    window.deleteMatch = async (id) => {
-      if (confirm("Biztosan törlöd?")) {
-        await deleteDoc(doc(db, "matches", id));
-        await loadMatches();
-        await loadResults();
-      }
-    };
-
-    async function loadUsers() {
-      const snapshot = await getDocs(collection(db, "users"));
-      const list = document.getElementById("userList");
-      list.innerHTML = "";
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
+    async function loadFinalStandings() {
+      const ul = document.getElementById("officialList");
+      ul.innerHTML = "";
+      const snap = await getDoc(doc(db, "finalStandings", "official"));
+      const order = snap.exists() ? snap.data().positions : [...teams];
+      order.forEach(team => {
         const li = document.createElement("li");
-        li.textContent = `${data.nickname} (${data.role})`;
-        list.appendChild(li);
+        li.textContent = team;
+        li.draggable = true;
+        li.ondragstart = e => e.dataTransfer.setData("text/plain", team);
+        li.ondragover = e => e.preventDefault();
+        li.ondrop = e => {
+          e.preventDefault();
+          const from = e.dataTransfer.getData("text/plain");
+          const to = li.textContent;
+          const items = [...ul.children].map(li => li.textContent);
+          const fromIdx = items.indexOf(from);
+          const toIdx = items.indexOf(to);
+          items.splice(fromIdx, 1);
+          items.splice(toIdx, 0, from);
+          ul.innerHTML = "";
+          items.forEach(t => {
+            const newLi = document.createElement("li");
+            newLi.textContent = t;
+            newLi.draggable = true;
+            newLi.ondragstart = li.ondragstart;
+            newLi.ondragover = li.ondragover;
+            newLi.ondrop = li.ondrop;
+            ul.appendChild(newLi);
+          });
+        };
+        ul.appendChild(li);
       });
     }
+
+    window.updateMatch = updateMatch;
+    window.deleteMatch = deleteMatch;
   </script>
 </head>
-<body>
-  <h1>⚙️ Admin felület</h1>
-</body>
+<body></body>
 </html>
