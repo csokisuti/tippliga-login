@@ -1,182 +1,138 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Dashboard</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .logo-nickname {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo-nickname img {
-      height: 50px;
-    }
-
-    .logout-btn {
-      padding: 5px 10px;
-      font-weight: bold;
-    }
-
-    .tabella img {
-      max-width: 100%;
-      margin-top: 20px;
-    }
-
-    .fb-feed {
-      margin-top: 30px;
-    }
-
-    .fb-feed iframe {
-      width: 100%;
-      max-width: 500px;
-      height: 600px;
-      border: none;
-      overflow: hidden;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style-themed.css" />
 </head>
 <body>
-  <div class="header">
-    <div class="logo-nickname">
-      <img id="teamLogo" src="" alt="Csapat logó">
-      <div>
-        <h2 id="welcomeText">Üdvözöllek!</h2>
+  <div id="dashboard-container">
+    <h2 id="welcome"></h2>
+    <img id="team-logo" alt="Kedvenc csapat logója" style="height: 80px; margin-bottom: 20px;" />
+
+    <div id="menu">
+      <a href="matches.html">⚽ Meccsek és tippek</a>
+      <a href="results.html">📊 Korábbi meccsek</a>
+      <a href="leaderboard.html">🏆 Összesített pontszám</a>
+      <a href="profile.html">👤 Profil</a>
+      <a href="admin.html" id="admin-link" style="display: none;">🛠️ Admin</a>
+    </div>
+
+    <div id="main-content">
+      <div id="table-and-feed">
+        <div id="nb1-table-container"></div>
+        <div id="fb-feed-container"></div>
       </div>
     </div>
-    <button class="logout-btn" onclick="logout()">Kilépés</button>
   </div>
-
-  <div class="tabella">
-    <img id="nb1Table" src="" alt="NB1 Tabella" style="display: none;">
-  </div>
-
-  <div class="fb-feed" id="fbFeedContainer"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain: "tippliga-4b3af.firebaseapp.com",
-  projectId: "tippliga-4b3af",
-  storageBucket: "tippliga-4b3af.firebasestorage.app",
-  messagingSenderId: "720359845241",
-  appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2Jo-9OYO_BMM05Tb4DE",
+      authDomain: "tippliga.firebaseapp.com",
+      projectId: "tippliga",
+      storageBucket: "tippliga.appspot.com",
+      messagingSenderId: "86994673654",
+      appId: "1:86994673654:web:6a4b60381d40365d44c5b6"
+    };
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const fbPages = {
-      "Debreceni VSC": "https://www.facebook.com/DVSCFOFFICIAL",
-      "Diósgyőri VTK": "https://www.facebook.com/DiosgyoriVtk1910",
+    const crestMap = {
+      "Debreceni VSC": "dvsc",
+      "Diósgyőri VTK": "dvtk",
+      "Ferencváros": "fradi",
+      "ETO FC Győr": "gyor",
+      "Kazincbarcikai SC": "kazincbarcika",
+      "Kisvárda FC": "kisvarda",
+      "MTK Budapest": "mtk",
+      "Nyíregyháza Spartacus": "nyiregyhaza",
+      "Paksi FC": "paks",
+      "Puskás Akadémia": "puskas",
+      "Újpest FC": "ujpest",
+      "Zalaegerszegi TE FC": "zte"
+    };
+
+    const facebookPages = {
+      "Debreceni VSC": "https://www.facebook.com/debrecenidvsc",
+      "Diósgyőri VTK": "https://www.facebook.com/dvtk1910",
       "Ferencváros": "https://www.facebook.com/fradi.hu",
       "ETO FC Győr": "https://www.facebook.com/etofcgyor",
-      "Kazincbarcikai SC": "https://www.facebook.com/barcikaiSC",
-      "Kisvárda FC": "https://www.facebook.com/KisvardaFC",
-      "MTK Budapest": "https://www.facebook.com/mtkhungaria",
-      "Nyíregyháza Spartacus": "https://www.facebook.com/nyiregyhazaspartacusfc",
+      "Kazincbarcikai SC": "https://www.facebook.com/kazincbarcikaiSC",
+      "Kisvárda FC": "https://www.facebook.com/kisvardafc",
+      "MTK Budapest": "https://www.facebook.com/MTKBudapestLabdarugoZrt",
+      "Nyíregyháza Spartacus": "https://www.facebook.com/szparifc",
       "Paksi FC": "https://www.facebook.com/paksifcofficial",
       "Puskás Akadémia": "https://www.facebook.com/puskasakademia",
-      "Újpest FC": "https://www.facebook.com/ujpestfc.hu",
-      "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc.hu"
+      "Újpest FC": "https://www.facebook.com/ujpestfc",
+      "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc"
     };
 
-    const logoMap = {
-      "Debreceni VSC": "crest-dvsc.png",
-      "Diósgyőri VTK": "crest-dvtk.png",
-      "Ferencváros": "crest-fradi.png",
-      "ETO FC Győr": "crest-gyor.png",
-      "Kazincbarcikai SC": "crest-kazincbarcika.png",
-      "Kisvárda FC": "crest-kisvarda.png",
-      "MTK Budapest": "crest-mtk.png",
-      "Nyíregyháza Spartacus": "crest-nyiregyhaza.png",
-      "Paksi FC": "crest-paks.png",
-      "Puskás Akadémia": "crest-puskas.png",
-      "Újpest FC": "crest-ujpest.png",
-      "Zalaegerszegi TE FC": "crest-zte.png"
-    };
-
-    onAuthStateChanged(auth, async user => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const uid = user.uid;
-        const userDoc = await getDoc(doc(db, "users", uid));
-
+        const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          const nickname = userData.nickname || "Névtelen";
-          const team = userData.favoriteTeam;
+          const nickname = userData.nickname || "Felhasználó";
+          const favoriteTeam = userData.favoriteTeam || null;
+          const role = userData.role || "";
 
-          document.getElementById("welcomeText").textContent = `Üdvözöllek, ${nickname}!`;
+          document.getElementById("welcome").innerText = `Üdvözlünk, ${nickname}!`;
 
-          if (team && logoMap[team]) {
-            document.getElementById("teamLogo").src = `crest/${logoMap[team]}`;
-            document.getElementById("teamLogo").alt = team;
+          if (role === "admin") {
+            document.getElementById("admin-link").style.display = "inline-block";
           }
 
-          // FB Feed
-          const fbUrl = fbPages[team];
-          const fbFeedContainer = document.getElementById("fbFeedContainer");
-          if (fbUrl) {
-            fbFeedContainer.innerHTML = `
-              <iframe
-                src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbUrl)}&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
-                scrolling="no" frameborder="0" allowfullscreen="true"
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>
-            `;
-          } else {
-            fbFeedContainer.textContent = "Ehhez a csapathoz nem található Facebook oldal.";
+          if (favoriteTeam && crestMap[favoriteTeam]) {
+            const logoPath = `crest/crest-${crestMap[favoriteTeam]}.png`;
+            document.getElementById("team-logo").src = logoPath;
           }
 
-          // NB1 tabella kép betöltése
+          if (favoriteTeam && facebookPages[favoriteTeam]) {
+            const fbUrl = facebookPages[favoriteTeam];
+            const iframe = document.createElement("iframe");
+            iframe.src = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbUrl)}&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`;
+            iframe.width = "500";
+            iframe.height = "600";
+            iframe.style.border = "none";
+            iframe.style.overflow = "hidden";
+            iframe.scrolling = "no";
+            iframe.frameBorder = "0";
+            iframe.allow = "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share";
+            iframe.allowFullscreen = true;
+            document.getElementById("fb-feed-container").appendChild(iframe);
+          }
+
           const tableDoc = await getDoc(doc(db, "config", "nb1Table"));
           if (tableDoc.exists()) {
             const tableData = tableDoc.data();
             if (tableData.image) {
-              const tableImg = document.getElementById("nb1Table");
-              tableImg.src = tableData.image;
-              tableImg.style.display = "block";
+              const img = document.createElement("img");
+              img.src = tableData.image;
+              img.alt = "NB1 tabella";
+              img.style.maxWidth = "100%";
+              document.getElementById("nb1-table-container").appendChild(img);
+            } else {
+              document.getElementById("nb1-table-container").innerText = "Nincs elérhető NB1 tabella.";
             }
+          } else {
+            document.getElementById("nb1-table-container").innerText = "NB1 tabella nem található.";
           }
 
         } else {
-          alert("Felhasználói adat nem található.");
+          window.location.href = "login.html";
         }
-
       } else {
         window.location.href = "login.html";
       }
     });
-
-    function logout() {
-      signOut(auth).then(() => {
-        window.location.href = "login.html";
-      });
-    }
   </script>
 </body>
 </html>
