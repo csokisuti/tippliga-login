@@ -1,9 +1,32 @@
+
 <!DOCTYPE html>
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
   <title>NB1 TippLiga</title>
   <link rel="stylesheet" href="style-themed.css" />
+  <style>
+    .dashboard-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .dashboard-table, .dashboard-feed {
+      flex: 1;
+      min-width: 300px;
+    }
+    .team-logo {
+      max-height: 100px;
+      margin: 10px auto;
+      display: block;
+    }
+    .league-table-img {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -80,11 +103,12 @@
           const data = userSnap.data();
           const favTeam = data.favoriteTeam;
           const logoPath = `logos/${favTeam}.png`;
-          document.getElementById("teamLogoSection").innerHTML = `<img src="${logoPath}" alt="${favTeam} logo" class="team-logo">`;
+          document.getElementById("teamLogoSection").innerHTML =
+            `<img src="${logoPath}" alt="${favTeam} logo" class="team-logo">`;
 
           const pageName = facebookPages[favTeam];
-          if (pageName) {
-            const container = document.getElementById("facebookFeedContainer");
+          const container = document.getElementById("facebookFeedContainer");
+          if (pageName && container) {
             container.innerHTML = `
               <div class="fb-page" 
                 data-href="https://www.facebook.com/${pageName}" 
@@ -113,4 +137,3 @@
   </script>
 </body>
 </html>
-
