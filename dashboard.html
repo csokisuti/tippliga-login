@@ -73,40 +73,6 @@
         img.style.marginTop = "20px";
         document.getElementById("tableContainer").appendChild(img);
       }
-
-      // 📣 Szpari hírfolyam (csak Szpari esetén)
-      if (favoriteTeam === "Nyíregyháza Spartacus") {
-        const feedDiv = document.getElementById("nyiregyhazaFeedContainer");
-        feedDiv.innerHTML = `
-          <h2>📣 Szpari hírek a Facebookról</h2>
-          <div class="fb-page" 
-               data-href="https://www.facebook.com/NYSFC/" 
-               data-tabs="timeline" 
-               data-width="500" 
-               data-height="" 
-               data-small-header="false" 
-               data-adapt-container-width="true" 
-               data-hide-cover="false" 
-               data-show-facepile="true">
-            <blockquote cite="https://www.facebook.com/NYSFC/" class="fb-xfbml-parse-ignore">
-              <a href="https://www.facebook.com/NYSFC/">Nyíregyháza Spartacus FC</a>
-            </blockquote>
-          </div>
-        `;
-
-        // Facebook SDK betöltés
-        if (!document.getElementById("fb-sdk")) {
-          const fbScript = document.createElement("script");
-          fbScript.id = "fb-sdk";
-          fbScript.async = true;
-          fbScript.defer = true;
-          fbScript.crossOrigin = "anonymous";
-          fbScript.src = "https://connect.facebook.net/hu_HU/sdk.js#xfbml=1&version=v19.0";
-          document.body.appendChild(fbScript);
-        } else {
-          if (window.FB) window.FB.XFBML.parse();
-        }
-      }
     });
 
     document.getElementById("logout").addEventListener("click", () => {
@@ -129,6 +95,5 @@
     <button id="logout">Kilépés</button>
   </nav>
   <div id="tableContainer"></div>
-  <div id="nyiregyhazaFeedContainer" style="margin-top: 40px;"></div>
 </body>
 </html>
