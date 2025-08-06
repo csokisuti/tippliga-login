@@ -1,18 +1,82 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Dashboard</title>
-  <link rel="stylesheet" href="style-themed.css" />
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo-nickname {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-nickname img {
+      height: 50px;
+    }
+
+    .logout-btn {
+      padding: 5px 10px;
+      font-weight: bold;
+    }
+
+    .tabella img {
+      max-width: 100%;
+      margin-top: 20px;
+    }
+
+    .fb-feed {
+      margin-top: 30px;
+    }
+
+    .fb-feed iframe {
+      width: 100%;
+      max-width: 500px;
+      height: 600px;
+      border: none;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-nickname">
+      <img id="teamLogo" src="" alt="Csapat logó">
+      <div>
+        <h2 id="welcomeText">Üdvözöllek!</h2>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Kilépés</button>
+  </div>
+
+  <div class="tabella">
+    <img id="nb1Table" src="" alt="NB1 Tabella" style="display: none;">
+  </div>
+
+  <div class="fb-feed" id="fbFeedContainer"></div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore,
-      collection,
-      query,
-      where,
-      getDocs
+      doc,
+      getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -27,99 +91,92 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const teamLogoMap = {
-      "Debreceni VSC": "crest/crest-dvsc.png",
-      "Diósgyőri VTK": "crest/crest-dvtk.png",
-      "Ferencváros": "crest/crest-fradi.png",
-      "ETO FC Győr": "crest/crest-gyor.png",
-      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
-      "Kisvárda FC": "crest/crest-kisvarda.png",
-      "MTK Budapest": "crest/crest-mtk.png",
-      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
-      "Paksi FC": "crest/crest-paks.png",
-      "Puskás Akadémia": "crest/crest-puskas.png",
-      "Újpest FC": "crest/crest-ujpest.png",
-      "Zalaegerszegi TE FC": "crest/crest-zte.png"
-    };
-
-    const teamFacebookPages = {
+    const fbPages = {
       "Debreceni VSC": "https://www.facebook.com/DVSCFOFFICIAL",
-      "Diósgyőri VTK": "https://www.facebook.com/DVTK1910",
+      "Diósgyőri VTK": "https://www.facebook.com/DiosgyoriVtk1910",
       "Ferencváros": "https://www.facebook.com/fradi.hu",
       "ETO FC Győr": "https://www.facebook.com/etofcgyor",
-      "Kazincbarcikai SC": "https://www.facebook.com/KazincbarcikaiSC",
-      "Kisvárda FC": "https://www.facebook.com/kisvardafc",
-      "MTK Budapest": "https://www.facebook.com/mtkbudapest",
-      "Nyíregyháza Spartacus": "https://www.facebook.com/NYSFC",
+      "Kazincbarcikai SC": "https://www.facebook.com/barcikaiSC",
+      "Kisvárda FC": "https://www.facebook.com/KisvardaFC",
+      "MTK Budapest": "https://www.facebook.com/mtkhungaria",
+      "Nyíregyháza Spartacus": "https://www.facebook.com/nyiregyhazaspartacusfc",
       "Paksi FC": "https://www.facebook.com/paksifcofficial",
       "Puskás Akadémia": "https://www.facebook.com/puskasakademia",
-      "Újpest FC": "https://www.facebook.com/ujpestfc",
-      "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc"
+      "Újpest FC": "https://www.facebook.com/ujpestfc.hu",
+      "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc.hu"
     };
 
-    onAuthStateChanged(auth, async (user) => {
+    const logoMap = {
+      "Debreceni VSC": "crest-dvsc.png",
+      "Diósgyőri VTK": "crest-dvtk.png",
+      "Ferencváros": "crest-fradi.png",
+      "ETO FC Győr": "crest-gyor.png",
+      "Kazincbarcikai SC": "crest-kazincbarcika.png",
+      "Kisvárda FC": "crest-kisvarda.png",
+      "MTK Budapest": "crest-mtk.png",
+      "Nyíregyháza Spartacus": "crest-nyiregyhaza.png",
+      "Paksi FC": "crest-paks.png",
+      "Puskás Akadémia": "crest-puskas.png",
+      "Újpest FC": "crest-ujpest.png",
+      "Zalaegerszegi TE FC": "crest-zte.png"
+    };
+
+    onAuthStateChanged(auth, async user => {
       if (user) {
-        const email = user.email;
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("email", "==", email));
-        const querySnapshot = await getDocs(q);
+        const uid = user.uid;
+        const userDoc = await getDoc(doc(db, "users", uid));
 
-        if (!querySnapshot.empty) {
-          const userData = querySnapshot.docs[0].data();
-          const nickname = userData.nickname || "";
-          const favoriteTeam = userData.favoriteTeam || "";
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const nickname = userData.nickname || "Névtelen";
+          const team = userData.favoriteTeam;
 
-          document.getElementById("welcomeUser").textContent = `Üdvözöllek, ${nickname}!`;
+          document.getElementById("welcomeText").textContent = `Üdvözöllek, ${nickname}!`;
 
-          const logoPath = teamLogoMap[favoriteTeam];
-          if (logoPath) {
-            document.getElementById("teamLogo").src = logoPath;
-            document.getElementById("teamLogo").alt = favoriteTeam;
-            document.getElementById("teamLogo").style.display = "inline-block";
+          if (team && logoMap[team]) {
+            document.getElementById("teamLogo").src = `crest/${logoMap[team]}`;
+            document.getElementById("teamLogo").alt = team;
           }
 
-          const fbPage = teamFacebookPages[favoriteTeam];
-          if (fbPage) {
-            const iframe = document.createElement("iframe");
-            iframe.src = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbPage)}&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId`;
-            iframe.width = "500";
-            iframe.height = "600";
-            iframe.style.border = "none";
-            iframe.style.overflow = "hidden";
-            iframe.scrolling = "no";
-            iframe.frameBorder = "0";
-            iframe.allowFullscreen = true;
-            iframe.allow = "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share";
-            document.getElementById("facebookFeedContainer").appendChild(iframe);
+          // FB Feed
+          const fbUrl = fbPages[team];
+          const fbFeedContainer = document.getElementById("fbFeedContainer");
+          if (fbUrl) {
+            fbFeedContainer.innerHTML = `
+              <iframe
+                src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbUrl)}&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
+                scrolling="no" frameborder="0" allowfullscreen="true"
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>
+            `;
+          } else {
+            fbFeedContainer.textContent = "Ehhez a csapathoz nem található Facebook oldal.";
           }
+
+          // NB1 tabella kép betöltése
+          const tableDoc = await getDoc(doc(db, "config", "nb1Table"));
+          if (tableDoc.exists()) {
+            const tableData = tableDoc.data();
+            if (tableData.image) {
+              const tableImg = document.getElementById("nb1Table");
+              tableImg.src = tableData.image;
+              tableImg.style.display = "block";
+            }
+          }
+
         } else {
-          document.getElementById("welcomeUser").textContent = "Felhasználó nem található.";
+          alert("Felhasználói adat nem található.");
         }
+
       } else {
         window.location.href = "login.html";
       }
     });
 
-    document.getElementById("logoutButton").addEventListener("click", async () => {
-      await signOut(auth);
-      window.location.href = "login.html";
-    });
+    function logout() {
+      signOut(auth).then(() => {
+        window.location.href = "login.html";
+      });
+    }
   </script>
-</head>
-<body>
-  <div class="dashboard-header">
-    <h1 id="welcomeUser">Betöltés...</h1>
-    <img id="teamLogo" src="" alt="" style="display:none; height: 50px; vertical-align: middle;" />
-    <button id="logoutButton">Kilépés</button>
-  </div>
-
-  <div class="dashboard-content">
-    <div class="dashboard-left">
-      <img src="tabella.png" alt="NB1 Tabella" style="width: 100%; max-width: 500px;" />
-    </div>
-    <div class="dashboard-right">
-      <div id="facebookFeedContainer"></div>
-    </div>
-  </div>
 </body>
 </html>
