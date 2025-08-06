@@ -6,6 +6,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <button onclick="window.location.href='dashboard.html'">🏠 Vissza a főoldalra</button>
+
   <h1>Profilom</h1>
   <div id="profileContainer">
     <p><strong>Email:</strong> <span id="emailDisplay"></span></p>
@@ -30,9 +32,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore, doc, getDoc, updateDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
