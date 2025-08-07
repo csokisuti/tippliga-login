@@ -87,7 +87,12 @@
       matchesSnap.forEach(doc => matches[doc.id] = { id: doc.id, ...doc.data() });
 
       const users = {};
-      usersSnap.forEach(doc => users[doc.id] = doc.data().nickname || "Ismeretlen");
+      usersSnap.forEach(doc => {
+  const data = doc.data();
+  if (data.email) {
+    users[data.email] = data.nickname || "Ismeretlen";
+  }
+});
 
       const rounds = {};
 
@@ -110,8 +115,8 @@
         const point = (oddsValue || 0) * (tip.isDouble ? 2 : 1);
 
         rounds[roundId][match.id].tips.push({
-          userId: tip.userId,
-          nickname: users[tip.userId] || "Ismeretlen",
+          user: tip.user,
+          nickname: users[tip.user] || "Ismeretlen",
           tip: tip.tip,
           isDouble: tip.isDouble,
           correct: isCorrect,
