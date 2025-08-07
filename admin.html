@@ -134,18 +134,18 @@
 
       const tableImageSection = document.createElement("section");
       tableImageSection.innerHTML = `
-        <h2>NB1 tabella kép feltöltése</h2>
-        <input type="file" id="tableImageInput" accept="image/*">
-        <button id="uploadTableImage">Feltöltés</button><br><br>
-        <button onclick="window.location.href='dashboard.html'">⬅️ Vissza a dashboardra</button>
-      `;
-<hr>
-
+        tableImageSection.innerHTML = `
+  <h2>NB1 tabella kép feltöltése</h2>
+  <input type="file" id="tableImageInput" accept="image/*">
+  <button id="uploadTableImage">Feltöltés</button><br><br>
+  <button onclick="window.location.href='dashboard.html'">⬅️ Vissza a dashboardra</button>
+  <hr>
   <h2>📊 Hivatalos szezon végi sorrend</h2>
   <button id="toggleOrder">📂 Sorrend szerkesztése/elrejtése</button>
   <ul id="sortableList" class="sortable" style="display:none;"></ul>
   <button id="saveOrderBtn" style="display:none;">💾 Mentés</button>
 `;
+
 
       document.body.append(formSection, toggleButton, matchesList, resultSection, userSection, tableImageSection);
       document.getElementById("matchForm").addEventListener("submit", async (e) => {
