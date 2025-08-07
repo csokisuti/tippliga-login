@@ -4,7 +4,27 @@
   <meta charset="UTF-8">
   <title>Admin felület</title>
   <link rel="stylesheet" href="style.css">
-  <script type="module">
+
+<style>
+  .sortable {
+    list-style: none;
+    padding: 0;
+  }
+
+  .sortable li {
+    padding: 10px;
+    margin: 5px 0;
+    background-color: #f2f2f2;
+    border: 1px solid #ccc;
+    cursor: grab;
+  }
+
+  .sortable li.dragging {
+    opacity: 0.5;
+  }
+</style>
+  
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
@@ -119,6 +139,13 @@
         <button id="uploadTableImage">Feltöltés</button><br><br>
         <button onclick="window.location.href='dashboard.html'">⬅️ Vissza a dashboardra</button>
       `;
+<hr>
+
+  <h2>📊 Hivatalos szezon végi sorrend</h2>
+  <button id="toggleOrder">📂 Sorrend szerkesztése/elrejtése</button>
+  <ul id="sortableList" class="sortable" style="display:none;"></ul>
+  <button id="saveOrderBtn" style="display:none;">💾 Mentés</button>
+`;
 
       document.body.append(formSection, toggleButton, matchesList, resultSection, userSection, tableImageSection);
       document.getElementById("matchForm").addEventListener("submit", async (e) => {
@@ -318,6 +345,79 @@
 
     window.updateMatch = updateMatch;
     window.deleteMatch = deleteMatch;
+// 🟦 HIVATALOS SZEZON VÉGI SORREND – finalStandings/official
+
+const finalStandingsRef = doc(db, "finalStandings", "official");
+const sortableList = document.getElementById("sortableList");
+const toggleOrderBtn = document.getElementById("toggleOrder");
+const saveOrderBtn = document.getElementById("saveOrderBtn");
+
+let draggedItem = null;
+
+function renderOfficialOrder(list) {
+  sortableList.innerHTML = "";
+  list.forEach((team, index) => {
+    const li = document.createElement("li");
+    li.textContent = `${index + 1}. ${team}`;
+    li.draggable = true;
+
+    li.addEventListener("dragstart", () => {
+      draggedItem = li;
+      li.classList.add("dragging");
+    });
+
+    li.addEventListener("dragend", () => {
+      draggedItem = null;
+      li.classList.remove("dragging");
+    });
+
+    li.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const bounding = li.getBoundingClientRect();
+      const offset = bounding.y + (bounding.height / 2);
+      const after = (e.clientY - offset) > 0;
+      const parent = li.parentNode;
+      if (after) {
+        parent.insertBefore(draggedItem, li.nextSibling);
+      } else {
+        parent.insertBefore(draggedItem, li);
+      }
+    });
+
+    sortableList.appendChild(li);
+  });
+}
+
+// 🔁 Betöltés Firestore-ból
+getDoc(finalStandingsRef).then((docSnap) => {
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    if (Array.isArray(data.teams)) {
+      renderOfficialOrder(data.teams);
+    } else {
+      renderOfficialOrder(teams); // fallback
+    }
+  } else {
+    renderOfficialOrder(teams); // első alkalom
+  }
+});
+
+// 💾 Mentés gomb
+saveOrderBtn.addEventListener("click", async () => {
+  const updatedOrder = Array.from(sortableList.children).map((li) =>
+    li.textContent.replace(/^\d+\.\s*/, "")
+  );
+  await setDoc(finalStandingsRef, { teams: updatedOrder });
+  alert("Sorrend elmentve.");
+});
+
+// 📂 Megjelenítés/elrejtés gomb
+toggleOrderBtn.addEventListener("click", () => {
+  const visible = sortableList.style.display === "block";
+  sortableList.style.display = visible ? "none" : "block";
+  saveOrderBtn.style.display = visible ? "none" : "inline-block";
+});
+
   </script>
 </head>
 <body></body>
