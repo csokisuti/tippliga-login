@@ -86,15 +86,14 @@
       let role = "user";
       let favoriteTeam = "";
 
-      const userRef = doc(db, "users", email);
-const userSnap = await getDoc(userRef);
-if (userSnap.exists()) {
-  const data = userSnap.data();
-  nickname = data.nickname;
-  role = data.role || "user";
-  favoriteTeam = data.favoriteTeam || "";
-}
-
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      usersSnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.email === email) {
+          nickname = data.nickname;
+          role = data.role || "user";
+          favoriteTeam = data.favoriteTeam || "";
+        }
       });
 
       document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
