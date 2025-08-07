@@ -62,7 +62,7 @@
         return;
       }
 
-      const docRef = doc(db, "users", user.uid);
+      const docRef = doc(db, "users", user.email);
       const userSnap = await getDoc(docRef);
       const data = userSnap.data();
 
