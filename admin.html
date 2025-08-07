@@ -260,7 +260,11 @@
         const updatedOrder = Array.from(sortableList.children).map((li) =>
           li.textContent.replace(/^\d+\.\s*/, "")
         );
-        await setDoc(finalStandingsRef, { teams: updatedOrder });
+        await setDoc(finalStandingsRef, {
+  teams: updatedOrder,
+  positions: updatedOrder.map((team, i) => ({ team, position: i + 1 }))
+});
+
         alert("Sorrend elmentve.");
       });
 
