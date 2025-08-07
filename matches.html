@@ -74,13 +74,26 @@
     });
 
     async function fetchUserTips() {
-      const tipsSnapshot = await db.collection("tips").where("user", "==", auth.currentUser.email).get();
-      userTips = {};
-      tipsSnapshot.forEach((doc) => {
-        const data = doc.data();
-        userTips[data.matchId] = { tip: data.tip, isDouble: data.isDouble, id: doc.id, roundId: data.roundId };
-      });
-    }
+  try {
+    const tipsSnapshot = await db.collection("tips")
+      .where("user", "==", auth.currentUser.email)
+      .get();
+
+    userTips = {};
+    tipsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      userTips[data.matchId] = {
+        tip: data.tip,
+        isDouble: data.isDouble,
+        id: doc.id,
+        roundId: data.roundId
+      };
+    });
+  } catch (error) {
+    console.error("Hiba a tippek lekérésekor:", error);
+  }
+}
+
 
     function loadMatches() {
       db.collection("matches").orderBy("startTime").onSnapshot(async (querySnapshot) => {
