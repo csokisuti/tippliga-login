@@ -29,6 +29,12 @@
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth as getTempAuth,
+  initializeAuth,
+  browserLocalPersistence,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -174,12 +180,20 @@
         const role = document.getElementById("role").value;
 
         try {
-          const cred = await createUserWithEmailAndPassword(auth, email, password);
-          await setDoc(doc(db, "users", cred.user.uid), {
-            email,
-            nickname,
-            role
-          });
+          import { getAuth as getTempAuth, initializeAuth, browserLocalPersistence, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const tempApp = initializeApp(firebaseConfig, "TempApp");
+const tempAuth = getTempAuth(tempApp);
+await initializeAuth(tempApp, { persistence: browserLocalPersistence });
+
+const cred = await createUserWithEmailAndPassword(tempAuth, email, password);
+await setDoc(doc(db, "users", email), {
+  email,
+  nickname,
+  role
+});
+await signOut(tempAuth);
+
           alert("Felhasználó létrehozva!");
           e.target.reset();
           await loadUsers();
