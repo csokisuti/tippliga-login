@@ -213,7 +213,7 @@
         sortableList.innerHTML = "";
         list.forEach((team, index) => {
           const li = document.createElement("li");
-          li.textContent = `${index + 1}. ${team}`;
+          li.textContent = team;
           li.draggable = true;
 
           li.addEventListener("dragstart", () => {
