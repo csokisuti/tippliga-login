@@ -24,7 +24,7 @@
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
@@ -116,18 +116,7 @@
 
       const userSection = document.createElement("section");
       userSection.innerHTML = `
-        <h2>Új felhasználó hozzáadása</h2>
-        <form id="userForm">
-          <input type="text" placeholder="Becenév" id="nickname" required><br>
-          <input type="email" placeholder="Email" id="email" required><br>
-          <input type="password" placeholder="Jelszó" id="password" required><br>
-          <select id="role">
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select><br>
-          <button type="submit">Felhasználó létrehozása</button>
-        </form>
-        <h3>Jelenlegi felhasználók:</h3>
+        <h2>Felhasználók kezelése</h2>
         <ul id="userList"></ul>
       `;
 
@@ -166,40 +155,6 @@
         await loadResults();
       });
 
-      document.getElementById("userForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const nickname = document.getElementById("nickname").value;
-        const role = document.getElementById("role").value;
-
-        try {
-          const adminEmail = auth.currentUser.email;
-const adminPassword = prompt("Új felhasználó létrejött. Kérlek, add meg újra az admin jelszavadat:");
-
-try {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
-  await setDoc(doc(db, "users", email), {
-    email,
-    nickname,
-    role
-  });
-  alert("Felhasználó létrehozva!");
-
-  // Visszajelentkezés adminként
-  await auth.signOut();
-  await auth.signInWithEmailAndPassword(adminEmail, adminPassword);
-  e.target.reset();
-  await loadUsers();
-} catch (err) {
-  alert("Hiba: " + err.message);
-}
-
-        } catch (err) {
-          alert("Hiba: " + err.message);
-        }
-      });
-
       document.getElementById("uploadTableImage").addEventListener("click", async () => {
         const fileInput = document.getElementById("tableImageInput");
         const file = fileInput.files[0];
@@ -214,7 +169,6 @@ try {
         reader.readAsDataURL(file);
       });
 
-      // Szezon végi sorrend kezelés
       const finalStandingsRef = doc(db, "finalStandings", "official");
       const sortableList = document.getElementById("sortableList");
       const toggleOrderBtn = document.getElementById("toggleOrder");
@@ -223,7 +177,7 @@ try {
 
       function renderOfficialOrder(list) {
         sortableList.innerHTML = "";
-        list.forEach((team, index) => {
+        list.forEach((team) => {
           const li = document.createElement("li");
           li.textContent = team;
           li.draggable = true;
@@ -273,10 +227,9 @@ try {
           li.textContent.replace(/^\d+\.\s*/, "")
         );
         await setDoc(finalStandingsRef, {
-  teams: updatedOrder,
-  positions: updatedOrder.map((team, i) => ({ team, position: i + 1 }))
-});
-
+          teams: updatedOrder,
+          positions: updatedOrder.map((team, i) => ({ team, position: i + 1 }))
+        });
         alert("Sorrend elmentve.");
       });
 
@@ -285,6 +238,56 @@ try {
         sortableList.style.display = visible ? "none" : "block";
         saveOrderBtn.style.display = visible ? "none" : "inline-block";
       });
+    }
+
+    async function loadMatches() {
+      const container = document.getElementById("matchesList");
+      container.innerHTML = "<h2>Feltöltött meccsek</h2>";
+      const snapshot = await getDocs(collection(db, "matches"));
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "match-card";
+        div.innerHTML = `
+          <input value="${data.homeTeam}" id="home-${docSnap.id}">
+          <input value="${data.awayTeam}" id="away-${docSnap.id}">
+          <input type="datetime-local" value="${new Date(data.startTime.toDate()).toISOString().slice(0,16)}" id="start-${docSnap.id}">
+          <input value="${data.roundId}" id="round-${docSnap.id}">
+          <input value="${data.odds["1"]}" id="odds1-${docSnap.id}">
+          <input value="${data.odds["X"]}" id="oddsX-${docSnap.id}">
+          <input value="${data.odds["2"]}" id="odds2-${docSnap.id}">
+          <button onclick="updateMatch('${docSnap.id}')">Mentés</button>
+          <button onclick="deleteMatch('${docSnap.id}')">Törlés</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function updateMatch(id) {
+      const ref = doc(db, "matches", id);
+      await updateDoc(ref, {
+        homeTeam: document.getElementById(`home-${id}`).value,
+        awayTeam: document.getElementById(`away-${id}`).value,
+        startTime: Timestamp.fromDate(new Date(document.getElementById(`start-${id}`).value)),
+        roundId: document.getElementById(`round-${id}`).value,
+        odds: {
+          "1": parseFloat(document.getElementById(`odds1-${id}`).value),
+          "X": parseFloat(document.getElementById(`oddsX-${id}`).value),
+          "2": parseFloat(document.getElementById(`odds2-${id}`).value)
+        }
+      });
+      alert("Mentve");
+      await loadMatches();
+      await loadResults();
+    }
+
+    async function deleteMatch(id) {
+      if (confirm("Biztos törölni akarod?")) {
+        await deleteDoc(doc(db, "matches", id));
+        await loadMatches();
+        await loadResults();
+      }
     }
 
     async function loadResults() {
@@ -355,56 +358,6 @@ try {
       });
     }
 
-    async function loadMatches() {
-      const container = document.getElementById("matchesList");
-      container.innerHTML = "<h2>Feltöltött meccsek</h2>";
-      const snapshot = await getDocs(collection(db, "matches"));
-
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const div = document.createElement("div");
-        div.className = "match-card";
-        div.innerHTML = `
-          <input value="${data.homeTeam}" id="home-${docSnap.id}">
-          <input value="${data.awayTeam}" id="away-${docSnap.id}">
-          <input type="datetime-local" value="${new Date(data.startTime.toDate()).toISOString().slice(0,16)}" id="start-${docSnap.id}">
-          <input value="${data.roundId}" id="round-${docSnap.id}">
-          <input value="${data.odds["1"]}" id="odds1-${docSnap.id}">
-          <input value="${data.odds["X"]}" id="oddsX-${docSnap.id}">
-          <input value="${data.odds["2"]}" id="odds2-${docSnap.id}">
-          <button onclick="updateMatch('${docSnap.id}')">Mentés</button>
-          <button onclick="deleteMatch('${docSnap.id}')">Törlés</button>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    async function updateMatch(id) {
-      const ref = doc(db, "matches", id);
-      await updateDoc(ref, {
-        homeTeam: document.getElementById(`home-${id}`).value,
-        awayTeam: document.getElementById(`away-${id}`).value,
-        startTime: Timestamp.fromDate(new Date(document.getElementById(`start-${id}`).value)),
-        roundId: document.getElementById(`round-${id}`).value,
-        odds: {
-          "1": parseFloat(document.getElementById(`odds1-${id}`).value),
-          "X": parseFloat(document.getElementById(`oddsX-${id}`).value),
-          "2": parseFloat(document.getElementById(`odds2-${id}`).value)
-        }
-      });
-      alert("Mentve");
-      await loadMatches();
-      await loadResults();
-    }
-
-    async function deleteMatch(id) {
-      if (confirm("Biztos törölni akarod?")) {
-        await deleteDoc(doc(db, "matches", id));
-        await loadMatches();
-        await loadResults();
-      }
-    }
-
     async function loadUsers() {
       const list = document.getElementById("userList");
       list.innerHTML = "";
@@ -412,16 +365,36 @@ try {
       usersSnap.forEach((docSnap) => {
         const user = docSnap.data();
         const li = document.createElement("li");
-        li.textContent = `${user.nickname || user.email} (${user.role})`;
-        const btn = document.createElement("button");
-        btn.textContent = "Törlés";
-        btn.onclick = async () => {
+
+        const nickname = user.nickname || user.email;
+        li.innerHTML = `
+          ${nickname} (${user.email})<br>
+          <select>
+            <option value="user" ${user.role === "user" ? "selected" : ""}>User</option>
+            <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
+          </select>
+          <button class="save-role">Mentés</button>
+          <button class="delete-user">Törlés</button>
+        `;
+
+        const select = li.querySelector("select");
+        const saveBtn = li.querySelector(".save-role");
+        const deleteBtn = li.querySelector(".delete-user");
+
+        saveBtn.onclick = async () => {
+          await updateDoc(doc(db, "users", user.email), {
+            role: select.value
+          });
+          alert("Szerepkör frissítve.");
+        };
+
+        deleteBtn.onclick = async () => {
           if (confirm(`Törlöd: ${user.email}? Ez nem törli a belépési fiókot, csak a Firestore-ból.`)) {
-            await deleteDoc(docSnap.ref);
+            await deleteDoc(doc(db, "users", user.email));
             await loadUsers();
           }
         };
-        li.appendChild(btn);
+
         list.appendChild(li);
       });
     }
@@ -432,3 +405,4 @@ try {
 </head>
 <body></body>
 </html>
+
