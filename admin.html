@@ -29,12 +29,6 @@
       getFirestore, collection, addDoc, getDocs, Timestamp,
       doc, updateDoc, deleteDoc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import {
-  getAuth as getTempAuth,
-  initializeAuth,
-  browserLocalPersistence,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -180,23 +174,27 @@ import {
         const role = document.getElementById("role").value;
 
         try {
-          import { getAuth as getTempAuth, initializeAuth, browserLocalPersistence, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+          const adminEmail = auth.currentUser.email;
+const adminPassword = prompt("Új felhasználó létrejött. Kérlek, add meg újra az admin jelszavadat:");
 
-const tempApp = initializeApp(firebaseConfig, "TempApp");
-const tempAuth = getTempAuth(tempApp);
-await initializeAuth(tempApp, { persistence: browserLocalPersistence });
+try {
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  await setDoc(doc(db, "users", email), {
+    email,
+    nickname,
+    role
+  });
+  alert("Felhasználó létrehozva!");
 
-const cred = await createUserWithEmailAndPassword(tempAuth, email, password);
-await setDoc(doc(db, "users", email), {
-  email,
-  nickname,
-  role
-});
-await signOut(tempAuth);
+  // Visszajelentkezés adminként
+  await auth.signOut();
+  await auth.signInWithEmailAndPassword(adminEmail, adminPassword);
+  e.target.reset();
+  await loadUsers();
+} catch (err) {
+  alert("Hiba: " + err.message);
+}
 
-          alert("Felhasználó létrehozva!");
-          e.target.reset();
-          await loadUsers();
         } catch (err) {
           alert("Hiba: " + err.message);
         }
