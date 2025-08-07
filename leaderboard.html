@@ -97,7 +97,7 @@
         const roundId = tip.roundId;
         allRounds.add(roundId);
 
-        const nickname = users[tip.userId] || "Ismeretlen";
+        const nickname = users[tip.user] || "Ismeretlen";
         if (!playerPoints[nickname]) playerPoints[nickname] = { total: 0 };
         if (!playerPoints[nickname][roundId]) playerPoints[nickname][roundId] = 0;
 
