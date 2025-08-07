@@ -73,65 +73,67 @@
       "MTK Budapest": "https://www.facebook.com/MTKBudapest"
     };
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
-      }
+    document.addEventListener("DOMContentLoaded", () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          window.location.href = "login.html";
+          return;
+        }
 
-      const email = user.email;
-      let nickname = email;
-      let role = "user";
-      let favoriteTeam = "";
+        const email = user.email;
+        let nickname = email;
+        let role = "user";
+        let favoriteTeam = "";
 
-      const userRef = doc(db, "users", email);
-      const userSnap = await getDoc(userRef);
+        const userRef = doc(db, "users", email);
+        const userSnap = await getDoc(userRef);
 
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        nickname = data.nickname || email;
-        role = data.role || "user";
-        favoriteTeam = data.favoriteTeam || "";
-      }
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          nickname = data.nickname || email;
+          role = data.role || "user";
+          favoriteTeam = data.favoriteTeam || "";
+        }
 
-      document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
-      if (role === "admin") {
-        document.getElementById("adminLink").style.display = "inline";
-      }
+        document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
+        if (role === "admin") {
+          document.getElementById("adminLink").style.display = "inline";
+        }
 
-      if (favoriteTeam) {
-        const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]+/g, '-');
-        document.body.classList.add(themeClass);
-      }
+        if (favoriteTeam) {
+          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-');
+          document.body.classList.add(themeClass);
+        }
 
-      const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
-      if (tableDoc.exists()) {
-        const base64 = tableDoc.data().base64;
-        const img = document.createElement("img");
-        img.src = `data:image/png;base64,${base64}`;
-        img.alt = "NB1 tabella";
-        document.getElementById("tableContainer").appendChild(img);
-      }
+        const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
+        if (tableDoc.exists()) {
+          const base64 = tableDoc.data().base64;
+          const img = document.createElement("img");
+          img.src = `data:image/png;base64,${base64}`;
+          img.alt = "NB1 tabella";
+          document.getElementById("tableContainer").appendChild(img);
+        }
 
-      const fbLink = facebookLinks[favoriteTeam];
-      if (fbLink) {
-        const fbDiv = document.createElement("div");
-        fbDiv.innerHTML = `
-          <iframe 
-            src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=500&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
-            width="500" height="500" scrolling="no" frameborder="0" 
-            allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share">
-          </iframe>
-        `;
-        document.getElementById("facebookFeedContainer").appendChild(fbDiv);
-      }
-    });
+        const fbLink = facebookLinks[favoriteTeam];
+        if (fbLink) {
+          const fbDiv = document.createElement("div");
+          fbDiv.innerHTML = `
+            <iframe 
+              src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=500&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
+              width="500" height="500" scrolling="no" frameborder="0" 
+              allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share">
+            </iframe>
+          `;
+          document.getElementById("facebookFeedContainer").appendChild(fbDiv);
+        }
+      });
 
-    document.getElementById("logout").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "login.html";
+      document.getElementById("logout").addEventListener("click", () => {
+        signOut(auth).then(() => {
+          window.location.href = "login.html";
+        });
       });
     });
   </script>
