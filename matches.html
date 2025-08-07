@@ -211,7 +211,7 @@
                 userTips[match.id].isDouble = isDouble;
               } else {
                 const newDoc = await tipRef.add({
-                  userId: currentUserId,
+                  user: auth.currentUser.email,
                   matchId: match.id,
                   tip: selected,
                   isDouble,
