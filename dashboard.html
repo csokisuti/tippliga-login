@@ -3,54 +3,90 @@
 <head>
   <meta charset="UTF-8" />
   <title>Dashboard</title>
-  <link rel="stylesheet" href="style-themed.css" />
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <script src="loader.js" defer></script>
-
   <style>
     :root{
       --bg:#f5f7fb; --card:#fff; --line:#e6eaf1; --text:#0f172a; --muted:#64748b;
+      --accent:#3b82f6; --ok:#16a34a; --warn:#b45309;
     }
-    *{box-sizing:border-box}
-    body{ margin:0; padding:24px; background:var(--bg); color:var(--text);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial }
+    *{ box-sizing:border-box }
+    body{
+      margin:0; padding:24px; background:var(--bg); color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
+    }
 
+    /* fejléc + nav */
     h1{ margin:0 0 6px; font-size:22px }
-    nav{ margin:10px 0 16px }
-    nav a{ text-decoration:none; color:#0f172a }
-    nav a:hover{ text-decoration:underline }
-    .muted{ color:var(--muted) }
+    #welcome{ margin:0 0 12px; color:var(--muted) }
+    nav{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:0 0 18px }
+    nav a{ text-decoration:none; color:#111; background:#eef2ff; border:1px solid var(--line); padding:8px 10px; border-radius:10px }
+    nav a:hover{ background:#e5e7eb }
+    nav button{ border:0; background:#ef4444; color:#fff; padding:8px 12px; border-radius:10px; cursor:pointer }
 
-    #mainContent{
-      display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start;
-      gap: 24px; margin-top: 10px;
-    }
-    .card{
-      background:var(--card); border:1px solid var(--line); border-radius:12px;
-      box-shadow:0 6px 18px rgba(15,23,42,.06); padding:14px;
-    }
-    #tableContainer img{ max-width:100%; height:auto; display:block }
-    #facebookFeedContainer iframe{ border:0; overflow:hidden; max-width:500px }
-    #tableContainer, #facebookFeedContainer{ flex:1 1 400px; }
-
-    @media (max-width: 1000px){
-      #mainContent{ flex-direction:column; align-items:stretch; }
-      #facebookFeedContainer, #tableContainer{ width:100% }
-    }
-
-    /* kis piros badge a Meccstippek linkhez */
+    /* badge a Meccstippekhez */
     .pill-badge{
       display:inline-flex; align-items:center; justify-content:center;
       min-width:18px; height:18px; padding:0 6px; margin-left:6px;
-      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700;
-      line-height:1; vertical-align:middle;
+      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1;
     }
     .pill-badge[hidden]{ display:none !important; }
 
-    /* gyorselérés doboz */
-    .quick { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 16px }
-    .quick a{ padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; color:#111; text-decoration:none }
-    .quick a:hover{ background:#f7f8fc }
+    /* fő tartalom kártyákban */
+    .wrap{ display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap }
+    .card{
+      background:var(--card); border:1px solid var(--line); border-radius:12px;
+      box-shadow:0 6px 18px rgba(15,23,42,.05);
+      padding:12px;
+    }
+    .card header{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 4px 10px }
+    .muted{ color:var(--muted) }
+
+    /* bal: tabella */
+    #tableCard{ flex:1 1 520px; min-width:320px }
+    #tableContainer img{ max-width:100%; height:auto; display:block; border-radius:10px }
+
+    /* jobb: FB feed */
+    #fbCard{ flex:1 1 520px; min-width:320px }
+    .fb-frame-wrap{
+      border-radius:10px; overflow:hidden; /* << keret/görgető eltűnik */
+      border:1px solid var(--line);
+    }
+    .fb-frame{
+      width:100%; height:540px; border:0; overflow:hidden;
+      display:block; background:#fff;
+    }
+
+    /* ----- mini chat (jobb alsó sarok) ----- */
+    .chat-fab{
+      position:fixed; right:18px; bottom:18px; z-index:60;
+      width:48px; height:48px; border-radius:50%;
+      background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 8px 20px rgba(59,130,246,.35); cursor:pointer; border:0;
+    }
+    .chat-panel{
+      position:fixed; right:18px; bottom:78px; z-index:60;
+      width:320px; max-height:60vh; background:var(--card); border:1px solid var(--line); border-radius:12px;
+      box-shadow:0 16px 36px rgba(15,23,42,.2); display:none; overflow:hidden;
+    }
+    .chat-panel.open{ display:flex; flex-direction:column }
+    .chat-head{ padding:10px 12px; background:#f7f9fd; border-bottom:1px solid var(--line); font-weight:700; display:flex; align-items:center; justify-content:space-between }
+    .chat-list{ padding:10px 12px; overflow:auto; flex:1; }
+    .msg{ margin:8px 0; }
+    .msg .meta{ font-size:11px; color:var(--muted) }
+    .msg .bubble{
+      display:inline-block; background:#f1f5ff; border:1px solid var(--line); border-radius:10px; padding:8px 10px; max-width:90%;
+      white-space:pre-wrap; word-break:break-word;
+    }
+    .mine .bubble{ background:#e6f7ff; border-color:#cfe8ff }
+    .chat-send{ padding:10px; border-top:1px solid var(--line); display:flex; gap:8px }
+    .chat-send input{ flex:1; padding:8px 10px; border:1px solid var(--line); border-radius:10px }
+    .chat-send button{ border:0; background:var(--accent); color:#fff; padding:8px 12px; border-radius:10px; cursor:pointer }
+    .chat-empty{ color:var(--muted); text-align:center; padding:12px 0 }
+
+    @media (max-width: 980px){
+      .chat-panel{ width:92vw; right:4vw }
+    }
   </style>
 
   <script type="module">
@@ -59,8 +95,8 @@
     import {
       getFirestore,
       doc, getDoc,
-      collection, getDocs,
-      query, where
+      collection, getDocs, addDoc,
+      query, where, orderBy, limit, serverTimestamp, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -91,135 +127,148 @@
       "MTK Budapest": "https://www.facebook.com/MTKBudapest"
     };
 
+    let currentEmail = null;
+    let currentNick = null;
+
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-          window.location.href = "login.html";
-          return;
-        }
+        if (!user) { window.location.href = "login.html"; return; }
 
-        const email = user.email;
-        let nickname = email;
+        currentEmail = user.email;
         let role = "user";
         let favoriteTeam = "";
 
-        // Felhasználói adatok
-        const userRef = doc(db, "users", email);
+        const userRef = doc(db, "users", currentEmail);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const data = userSnap.data();
-          nickname = data.nickname || email;
+          currentNick = data.nickname || currentEmail;
           role = data.role || "user";
           favoriteTeam = data.favoriteTeam || "";
+        } else {
+          currentNick = currentEmail;
         }
 
-        document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
-        if (role === "admin") {
-          document.getElementById("adminLink").style.display = "inline";
+        document.getElementById("welcome").textContent = `Üdv, ${currentNick}!`;
+        if (role === "admin") document.getElementById("adminLink").style.display = "inline";
+
+        // Tabella
+        const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
+        if (tableDoc.exists()) {
+          const base64 = tableDoc.data().base64;
+          const img = document.createElement("img");
+          img.src = `data:image/png;base64,${base64}`;
+          img.alt = "NB1 tabella";
+          document.getElementById("tableContainer").appendChild(img);
+        } else {
+          document.getElementById("tableContainer").innerHTML = "<div class='muted'>Még nincs feltöltött tabella.</div>";
         }
 
-        if (favoriteTeam) {
-          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
+        // Facebook – eltüntetett keret/scroll
+        const params = new URLSearchParams(window.location.search);
+        const nofb = params.get("nofb") === "1";
+        const fbLink = facebookLinks[favoriteTeam];
+
+        if (!nofb && fbLink) {
+          const fbWrap = document.getElementById("fbWrap");
+          fbWrap.innerHTML = `
+            <iframe class="fb-frame"
+              src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=520&height=540&small_header=true&adapt_container_width=true&hide_cover=true&show_facepile=false"
+              scrolling="no" frameborder="0" allow="encrypted-media; picture-in-picture; web-share" allowfullscreen="true">
+            </iframe>`;
+        } else {
+          document.getElementById("fbWrap").innerHTML = "<div class='muted'>Facebook-idővonal kikapcsolva.</div>";
         }
 
-        // ⬅️ FONTOS: a loader itt azonnal eltűnik, nem vár a Facebookra
-        if (window.hideLoader) { try { hideLoader(); } catch(e){} }
-
-        // Tabella kép
-        try{
-          const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
-          if (tableDoc.exists()) {
-            const base64 = tableDoc.data().base64;
-            const img = document.createElement("img");
-            img.src = `data:image/png;base64,${base64}`;
-            img.alt = "NB1 tabella";
-            document.getElementById("tableContainer").appendChild(img);
-          }
-        }catch(e){ console.warn("Tabella betöltés hiba:", e); }
-
-        // “Meccstippek” badge – hány jövőbeli meccsre nincs még tipped
+        // Tipp badge (mennyi közelgő meccsre nincs tipped)
         try{
           const now = new Date();
-          const upcomingSnap = await getDocs(
-            query(collection(db, "matches"), where("startTime", ">=", now))
-          );
-          const upcoming = upcomingSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const myTipsSnap = await getDocs(
-            query(collection(db, "tips"), where("user", "==", email))
-          );
-          const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
-          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-
+          const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now)));
+          const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+          const myTipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentEmail)));
+          const tipped = new Set(myTipsSnap.docs.map(d => d.data().matchId));
+          const pending = upcoming.filter(m => !tipped.has(m.id)).length;
           const badge = document.getElementById("tipsBadge");
-          if (pending > 0){
-            badge.textContent = pending;
-            badge.hidden = false;
-            badge.title = `${pending} közelgő meccsre még nincs tipped`;
-          }else{
-            badge.hidden = true;
-          }
-        }catch(e){
-          console.warn("Badge számítás hiba:", e);
-        }
+          if (pending>0){ badge.hidden=false; badge.textContent=pending; badge.title=`${pending} közelgő meccsre nincs tipped`; }
+        }catch(e){ console.warn("Badge:", e) }
 
-        // Facebook feed (opcionális, fallbackkel)
-        try{
-          const params = new URLSearchParams(location.search);
-          const nofb   = params.has('nofb'); // ?nofb → teljesen kikapcsolja
-          const fbLink = facebookLinks[favoriteTeam];
+        // Chat indítása
+        initChat();
 
-          if (!nofb && fbLink) {
-            const mount = document.getElementById("facebookFeedContainer");
-            const card  = document.createElement("div");
-            card.className = "card";
-            const title   = document.createElement("div");
-            title.className = "muted";
-            title.textContent = "Kedvenc csapat – Facebook idővonal";
-            card.appendChild(title);
-
-            const iframe = document.createElement("iframe");
-            iframe.loading = "lazy";
-            iframe.width   = "500";
-            iframe.height  = "500";
-            iframe.scrolling   = "no";
-            iframe.frameBorder = "0";
-            iframe.allow  = "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share";
-            iframe.src =
-              "https://www.facebook.com/plugins/page.php?href=" +
-              encodeURIComponent(fbLink) +
-              "&tabs=timeline&width=500&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId";
-
-            let done = false;
-            const fallback = document.createElement("div");
-            fallback.className = "muted";
-            fallback.style.marginTop = "8px";
-            fallback.innerHTML =
-              `Ha a feed nem jelenik meg, valószínűleg egy blokkoló bővítmény miatt van. 
-               <a href="${fbLink}" target="_blank" rel="noopener">Megnyitás Facebookon →</a>`;
-            fallback.style.display = "none";
-
-            iframe.onload  = () => { done = true; };
-            iframe.onerror = () => { done = true; fallback.style.display = "block"; };
-
-            // 2 mp után, ha még nincs onload, mutassunk fallbacket (nem blokkolunk)
-            setTimeout(() => { if (!done) fallback.style.display = "block"; }, 2000);
-
-            card.appendChild(iframe);
-            card.appendChild(fallback);
-            mount.appendChild(card);
-          }
-        }catch(e){
-          console.warn("Facebook feed hiba:", e);
-        }
+        if (window.hideLoader) hideLoader();
       });
 
       document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => { window.location.href = "login.html"; });
+        signOut(auth).then(()=> window.location.href="login.html");
+      });
+
+      // Chat UI toggle
+      document.getElementById("chatFab").addEventListener("click", ()=>{
+        document.getElementById("chatPanel").classList.toggle("open");
+        if (document.getElementById("chatPanel").classList.contains("open")){
+          setTimeout(()=> scrollChatBottom(), 100);
+        }
       });
     });
+
+    // -------- Mini Chat (Firestore: chatMessages) --------
+    let unsubChat = null;
+
+    function scrollChatBottom(){
+      const list = document.getElementById("chatList");
+      list.scrollTop = list.scrollHeight;
+    }
+
+    async function initChat(){
+      const list = document.getElementById("chatList");
+      list.innerHTML = "<div class='chat-empty'>Csatlakozás a chathez…</div>";
+
+      // realtime
+      const q = query(collection(db,"chatMessages"), orderBy("ts","asc"), limit(100));
+      unsubChat = onSnapshot(q, (snap)=>{
+        list.innerHTML = "";
+        if (snap.empty){
+          list.innerHTML = "<div class='chat-empty'>Még nincs üzenet. Légy te az első! 🙂</div>";
+        } else {
+          snap.forEach(docu=>{
+            const m = docu.data();
+            const you = (m.userEmail === currentEmail);
+            const row = document.createElement("div");
+            row.className = "msg"+(you?" mine":"");
+            const time = m.ts?.toDate ? m.ts.toDate().toLocaleString("hu-HU",{hour:"2-digit",minute:"2-digit"}) : "";
+            row.innerHTML = `
+              <div class="meta">${m.nickname || m.userEmail || "Ismeretlen"} • ${time}</div>
+              <div class="bubble">${(m.text||"").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>`;
+            list.appendChild(row);
+          });
+        }
+        scrollChatBottom();
+      });
+
+      // küldés
+      document.getElementById("chatSendBtn").addEventListener("click", sendChat);
+      document.getElementById("chatInput").addEventListener("keydown", (e)=>{
+        if (e.key === "Enter"){ e.preventDefault(); sendChat(); }
+      });
+    }
+
+    async function sendChat(){
+      const inp = document.getElementById("chatInput");
+      const text = (inp.value||"").trim();
+      if (!text) return;
+      try{
+        await addDoc(collection(db,"chatMessages"), {
+          userEmail: currentEmail,
+          nickname: currentNick || currentEmail,
+          text,
+          ts: serverTimestamp()
+        });
+        inp.value = "";
+        scrollChatBottom();
+      }catch(e){
+        alert("Üzenetküldési hiba: "+(e?.message||e));
+      }
+    }
   </script>
 </head>
 <body>
@@ -227,27 +276,41 @@
   <p id="welcome" class="muted"></p>
 
   <nav>
-    <a href="matches.html" id="matchesLink">🔮 Meccstippek
-      <span id="tipsBadge" class="pill-badge" hidden></span>
-    </a> |
-    <a href="positions.html">📊 Szezon végi sorrend tipp</a> |
-    <a href="results.html">📋 Eredmények</a> |
-    <a href="leaderboard.html">🏆 Összpontszám</a> |
-    <a href="profile.html">👤 Profil</a> |
-    <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin felület</a> |
+    <a href="matches.html">🔮 Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></a>
+    <a href="results.html">📋 Eredmények</a>
+    <a href="leaderboard.html">🏆 Összpontszám</a>
+    <a href="positions.html">📊 Szezon végi sorrend tipp</a>
+    <a href="profile.html">👤 Profil</a>
+    <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin felület</a>
     <button id="logout">Kilépés</button>
   </nav>
 
-  <div class="quick">
-    <a href="matches.html">Meccstippek</a>
-    <a href="results.html">Eredmények</a>
-    <a href="leaderboard.html">Toplista</a>
-    <a href="positions.html">Szezon végi sorrend</a>
+  <div class="wrap">
+    <section id="tableCard" class="card">
+      <header><strong>Tabella</strong></header>
+      <div id="tableContainer"></div>
+    </section>
+
+    <section id="fbCard" class="card">
+      <header><strong>Kedvenc csapat – Facebook idővonal</strong> <span class="muted">(keret nélkül)</span></header>
+      <div class="fb-frame-wrap" id="fbWrap"></div>
+    </section>
   </div>
 
-  <div id="mainContent">
-    <div id="tableContainer" class="card"></div>
-    <div id="facebookFeedContainer"></div>
+  <!-- Mini chat -->
+  <button id="chatFab" class="chat-fab" title="Megnyitás">
+    💬
+  </button>
+  <div id="chatPanel" class="chat-panel" aria-live="polite">
+    <div class="chat-head">
+      <div>Közösségi chat</div>
+      <button style="border:0;background:transparent;cursor:pointer" onclick="document.getElementById('chatPanel').classList.remove('open')">✕</button>
+    </div>
+    <div id="chatList" class="chat-list"></div>
+    <div class="chat-send">
+      <input id="chatInput" placeholder="Írj üzenetet… (Enter küldi)" />
+      <button id="chatSendBtn">Küld</button>
+    </div>
   </div>
 </body>
 </html>
