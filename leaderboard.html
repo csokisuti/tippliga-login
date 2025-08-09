@@ -27,6 +27,8 @@
     .left{ position: sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
     .left .cell{ background:#fff; }
     .round-cell{ min-width:70px; text-align:right; }
+    .round-link{ display:block; text-decoration:none; color:inherit; }
+    .round-link:hover{ text-decoration:underline; }
     .top { background:#fff8e1 !important; font-weight:700; }
     .legend { font-size:12px; color:var(--muted); margin:8px 12px 12px; }
   </style>
@@ -111,7 +113,7 @@
         rankingByEmail[d.id] = ranking;
       });
 
-      // 2) Pontszámok (alap + fordulók), roundId a MECCSBŐL
+      // 2) Pontszámok (alap + fordulók)
       const player = {}; // nick -> {base, perRound: Map(round->sum)}
       const allRounds = new Set();
 
@@ -149,12 +151,11 @@
       const rows = Object.entries(player).map(([nick, obj])=>{
         const ranking = rankingByEmail[obj.email] || [];
         const bonusPct = officialTeams.length ? calcBonusPct(officialTeams, ranking) : 0;
-        const bonusPts = Math.round(obj.base * (bonusPct/100));
+        const bonusPts = Math.round(obj.base * (bonusPct/100)); // egészre kerekítve
         const total = obj.base + bonusPts;
         return { nick, base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total };
       });
 
-      // ha nincs senki, üzenet
       if (!rows.length){
         mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>";
         return;
@@ -163,11 +164,10 @@
       // Rendezés összesen szerint
       rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
 
-      // fordulók növekvő listája → majd megfordítjuk (legutóbbi legyen az oszlopok mellett)
+      // fordulók növekvő → majd megfordítjuk (legutóbbi legyen közvetlenül a fő oszlopok mellett)
       const roundsAsc = Array.from(allRounds).sort((a,b)=>parseInt(a)-parseInt(b));
       const roundsDesc = roundsAsc.slice().reverse();
 
-      // gomb logika
       function build(){
         const toShow = showAll ? roundsDesc : roundsDesc.slice(0,5); // utolsó 5
         rangeLabel.textContent = showAll
@@ -191,7 +191,10 @@
             <div class="cell left num">Alap pont</div>
           </div>`;
 
-        const rightHeader = toShow.map(r=>`<div class="cell round-cell">F${r}</div>`).join('');
+        // jobb fejléc: kattintható fordulók → results.html?round=N
+        const rightHeader = toShow
+          .map(r=>`<div class="cell round-cell"><a class="round-link" href="results.html?round=${encodeURIComponent(r)}">F${r}</a></div>`)
+          .join('');
 
         const container = document.createElement('div');
         container.className = 'table-wrap';
@@ -219,7 +222,7 @@
           </div>
         `;
 
-        // jobb oldal – látható fordulók jobbról balra: a gridet egyszerűen a toShow sorrendjével építjük
+        // jobb oldal – látható fordulók jobbról balra
         const right = document.createElement('div');
         right.style.overflow = 'auto';
         right.style.flex = '1';
@@ -230,7 +233,10 @@
               const cells = toShow.map((rid, idx)=>{
                 const val = r.perRound[rid]||0;
                 const isTop = val === maxPerRound[idx];
-                return `<div class="cell round-cell num ${isTop?'top':''}">${fmt(val)}${isTop?' ⭐':''}</div>`;
+                // cella maga is link a results.html?round=N oldalra
+                return `<div class="cell round-cell num ${isTop?'top':''}">
+                          <a class="round-link" href="results.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
+                        </div>`;
               }).join('');
               return `<div class="row row-bg">${cells}</div>`;
             }).join('')}
