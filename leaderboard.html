@@ -2,51 +2,60 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
-  <title>Toplista</title>
+  <title>🏆 Toplista</title>
   <link rel="stylesheet" href="style.css">
   <style>
     :root{
-      --bg:#f5f7fb; --card:#fff; --line:#e8ecf2; --text:#0f172a; --muted:#64748b;
+      --bg:#f5f7fb; --card:#fff; --line:#e6eaf1; --text:#0f172a; --muted:#64748b;
+      --accent:#3b82f6;
     }
-    * { box-sizing: border-box; }
-    body{ margin:0; padding:20px; background:var(--bg); font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial; color:var(--text); }
-    h1{ margin:0 0 8px; font-size:22px; }
-    .muted{ color:var(--muted); margin-bottom:10px; }
+    *{ box-sizing:border-box }
+    body{
+      margin:0; padding:24px; background:var(--bg); color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
+    }
+    /* Vissza gomb */
+    .back-btn{
+      display:inline-block; text-decoration:none;
+      background:#e5e7eb; color:#111;
+      padding:8px 12px; border-radius:10px;
+      border:1px solid var(--line);
+    }
+    h1{ margin:16px 0 6px; font-size:22px; }
+    .muted{ color:var(--muted); margin-bottom:12px; }
+
     .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-size:14px; }
-    .card{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(15,23,42,.06); }
-    .subhdr{ background:#fafbfd; border-bottom:1px solid var(--line); padding:8px 12px; display:flex; gap:12px; align-items:center; }
+
+    /* Kártya */
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .legend{ font-size:12px; color:var(--muted); padding:8px 12px 12px; }
+
+    /* Táblázat */
+    .table-wrap{ display:flex; }
     .grid{ display:grid; }
     .hdr, .row{ display:contents; }
     .cell{ padding:10px 12px; border-bottom:1px solid var(--line); background:#fff; }
     .hdr .cell{ font-weight:700; background:#f7f8fc; }
+    .row-bg:nth-child(even) .cell{ background:#fcfdff; }
+
+    /* Bal, fix rész */
+    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
+    .left .cell{ background:#fff; }
     .rank{ text-align:right; color:var(--muted); white-space:nowrap; }
     .num{ text-align:right; white-space:nowrap; }
     .total{ font-weight:800; }
-    .table-wrap{ display:flex; }
-    .row-bg:nth-child(even) .cell{ background:#fcfdff; }
-    .left{ position: sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
-    .left .cell{ background:#fff; }
+
+    /* Fordulók */
     .round-cell{ min-width:70px; text-align:right; }
-    .round-link{ display:block; text-decoration:none; color:inherit; }
+    .round-link{ display:block; color:inherit; text-decoration:none; }
     .round-link:hover{ text-decoration:underline; }
-    .top { background:#fff8e1 !important; font-weight:700; }
-    .legend { font-size:12px; color:var(--muted); margin:8px 12px 12px; }
+    .top{ background:#fff8e1 !important; font-weight:700; }
+
+    @media (max-width: 900px){
+      .left{ min-width:640px; max-width:640px; }
+    }
   </style>
-</head>
-<body>
-  <a href="dashboard.html" class="back-btn">← Vissza a főoldalra</a>
-  <h1>🏆 Toplista – Összesített és fordulónkénti pontok</h1>
-  <div class="muted">Szezon végi bónusz: minden pontos helyezés +1% (max 12%). A szín a % szerint skálázódik (0→12 = piros→zöld). A fordulók jobbról balra: legutóbbi a fő oszlopok mellett.</div>
-
-  <div class="card">
-    <div class="subhdr">
-      <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
-      <span id="rangeLabel" class="muted">Alap: az utolsó 5 forduló látszik</span>
-    </div>
-    <div id="tableMount"></div>
-    <div class="legend">⭐ = adott forduló legmagasabb pontja</div>
-  </div>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -69,16 +78,13 @@
     const rangeLabel = document.getElementById('rangeLabel');
     const toggleBtn = document.getElementById('toggleAll');
 
-    // helper: 0..12% → szín (piros→zöld)
-    function bonusHue(pct){
+    // 0..12% → HSL (piros→zöld)
+    function pctColor(pct){
       const p = Math.max(0, Math.min(12, pct));
-      return (p/12)*120; // 0..120
+      const hue = (p/12)*120; // 0..120
+      return `hsl(${hue}deg,85%,40%)`;
     }
-    function pctColorStyle(pct){
-      const hue = bonusHue(pct);
-      return `color:hsl(${hue}deg,85%,40%)`;
-    }
-    const fmt = (n)=> (Number(n)||0).toFixed(2);
+    const fmt = n => (Number(n)||0).toFixed(2);
 
     let showAll = false;
 
@@ -88,7 +94,7 @@
         return;
       }
 
-      // 1) Adatok
+      // adatok
       const [matchesSnap, tipsSnap, usersSnap, officialSnap, standingsTipsSnap] = await Promise.all([
         getDocs(collection(db, "matches")),
         getDocs(collection(db, "tips")),
@@ -101,11 +107,11 @@
       matchesSnap.forEach(d => matches[d.id] = { id:d.id, ...d.data() });
 
       const usersMap = {};
-      usersSnap.forEach(d => { const u = d.data(); if (u.email) usersMap[u.email] = u.nickname || "Ismeretlen"; });
+      usersSnap.forEach(d => { const u = d.data(); if (u.email) usersMap[u.email] = u.nickname || u.email; });
 
       const officialTeams = (officialSnap.exists() && Array.isArray(officialSnap.data().teams)) ? officialSnap.data().teams : [];
 
-      // jatekos -> saját szezon végi tipp
+      // email -> ranking
       const rankingByEmail = {};
       standingsTipsSnap.forEach(d => {
         const data = d.data();
@@ -113,8 +119,8 @@
         rankingByEmail[d.id] = ranking;
       });
 
-      // 2) Pontszámok (alap + fordulók)
-      const player = {}; // nick -> {base, perRound: Map(round->sum)}
+      // pontok + fordulók
+      const player = {}; // nick -> {base, perRound, email}
       const allRounds = new Set();
 
       tipsSnap.forEach(t => {
@@ -130,20 +136,18 @@
         const oddsValue = match.odds[tip.tip];
         const pts = isCorrect ? (oddsValue || 0) * (tip.isDouble ? 2 : 1) : 0;
 
-        const nick = usersMap[tip.user] || "Ismeretlen";
-        if (!player[nick]) player[nick] = { base:0, perRound:{} , email: tip.user };
+        const nick = usersMap[tip.user] || tip.user;
+        if (!player[nick]) player[nick] = { base:0, perRound:{}, email: tip.user };
         player[nick].base += pts;
         player[nick].perRound[roundId] = (player[nick].perRound[roundId]||0) + pts;
       });
 
-      // 3) Bónusz% számítás (pontos pozíció egyezés)
-      function calcBonusPct(officialTeams=[], ranking=[]){
-        const TOTAL = 12;
-        let correct = 0;
+      // bónusz%
+      function calcBonusPct(official=[], ranking=[]){
+        const TOTAL=12; let correct=0;
         for(let i=0;i<TOTAL;i++){
-          const o = officialTeams[i];
-          const r = ranking[i];
-          if (o && r && o === r) correct++;
+          const o=official[i], r=ranking[i];
+          if (o && r && o===r) correct++;
         }
         return correct; // 1 hely = 1%
       }
@@ -151,7 +155,7 @@
       const rows = Object.entries(player).map(([nick, obj])=>{
         const ranking = rankingByEmail[obj.email] || [];
         const bonusPct = officialTeams.length ? calcBonusPct(officialTeams, ranking) : 0;
-        const bonusPts = Math.round(obj.base * (bonusPct/100)); // egészre kerekítve
+        const bonusPts = Math.round(obj.base * (bonusPct/100));
         const total = obj.base + bonusPts;
         return { nick, base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total };
       });
@@ -161,27 +165,25 @@
         return;
       }
 
-      // Rendezés összesen szerint
       rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
 
-      // fordulók növekvő → majd megfordítjuk (legutóbbi legyen közvetlenül a fő oszlopok mellett)
-      const roundsAsc = Array.from(allRounds).sort((a,b)=>parseInt(a)-parseInt(b));
-      const roundsDesc = roundsAsc.slice().reverse();
+      const roundsAsc = Array.from(allRounds).sort((a,b)=> (parseInt(a)||0)-(parseInt(b)||0));
+      const roundsDesc = roundsAsc.slice().reverse(); // legutóbbi legyen legközelebb a fő oszlopokhoz
 
       function build(){
-        const toShow = showAll ? roundsDesc : roundsDesc.slice(0,5); // utolsó 5
+        const toShow = showAll ? roundsDesc : roundsDesc.slice(0,5);
         rangeLabel.textContent = showAll
-          ? "Teljes nézet: minden forduló látszik (jobbról balra: legutóbbi→régebbi)"
-          : `Csak az utolsó ${toShow.length} forduló látszik (jobbról balra: ${toShow[0]} → …)`;
+          ? "Teljes nézet: minden forduló látszik (balról jobbra: legutóbbi → régebbi)"
+          : `Csak az utolsó ${toShow.length} forduló látszik (balról jobbra: ${toShow[0]} → …)`;
 
-        // max per round (csak a látható tartományon belül)
+        // max per látható forduló
         const maxPerRound = toShow.map(r=>{
           let m = -Infinity;
           rows.forEach(row => { m = Math.max(m, row.perRound[r]||0); });
           return m;
         });
 
-        // fejlécek (bal fix rész a kért sorrendben)
+        // bal, fix rész – kért oszlopsorrend
         const leftHeader = `
           <div class="hdr">
             <div class="cell left rank">Hely</div>
@@ -191,7 +193,6 @@
             <div class="cell left num">Alap pont</div>
           </div>`;
 
-        // jobb fejléc: kattintható fordulók → results.html?round=N
         const rightHeader = toShow
           .map(r=>`<div class="cell round-cell"><a class="round-link" href="results.html?round=${encodeURIComponent(r)}">F${r}</a></div>`)
           .join('');
@@ -199,13 +200,12 @@
         const container = document.createElement('div');
         container.className = 'table-wrap';
 
-        // bal oldal
         const left = document.createElement('div');
         left.className = 'left';
-        left.style.minWidth = '700px';
-        left.style.maxWidth = '700px';
+        left.style.minWidth = '720px';
+        left.style.maxWidth = '720px';
         left.innerHTML = `
-          <div class="grid" style="grid-template-columns: 70px 1.6fr 140px 180px 140px;">
+          <div class="grid" style="grid-template-columns:70px 1.6fr 140px 180px 140px;">
             ${leftHeader}
             ${rows.map((r,i)=>`
               <div class="row row-bg">
@@ -214,7 +214,7 @@
                 <div class="cell left num total">${fmt(r.total)}</div>
                 <div class="cell left num">
                   +${r.bonusPts}
-                  <span style="${pctColorStyle(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
+                  <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
                 </div>
                 <div class="cell left num">${fmt(r.base)}</div>
               </div>
@@ -222,7 +222,6 @@
           </div>
         `;
 
-        // jobb oldal – látható fordulók jobbról balra
         const right = document.createElement('div');
         right.style.overflow = 'auto';
         right.style.flex = '1';
@@ -233,7 +232,6 @@
               const cells = toShow.map((rid, idx)=>{
                 const val = r.perRound[rid]||0;
                 const isTop = val === maxPerRound[idx];
-                // cella maga is link a results.html?round=N oldalra
                 return `<div class="cell round-cell num ${isTop?'top':''}">
                           <a class="round-link" href="results.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
                         </div>`;
@@ -247,6 +245,7 @@
         container.appendChild(left);
         container.appendChild(right);
         mount.appendChild(container);
+        if (window.hideLoader) hideLoader();
       }
 
       toggleBtn.addEventListener('click', ()=>{
@@ -258,5 +257,19 @@
       build();
     });
   </script>
+</head>
+<body>
+  <a href="dashboard.html" class="back-btn">← Vissza a főoldalra</a>
+  <h1>🏆 Összesített ranglista</h1>
+  <div class="muted">Szezon végi bónusz: minden pontos helyezés +1% (max 12%). A bónusz **színe** a %-t követi (0→piros, 12→zöld). A fordulók balról jobbra: legutóbbi → régebbi.</div>
+
+  <div class="card">
+    <div class="subhdr">
+      <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
+      <span id="rangeLabel" class="muted">Alap: az utolsó 5 forduló látszik</span>
+    </div>
+    <div id="tableMount"></div>
+    <div class="legend">⭐ = adott forduló legmagasabb pontja</div>
+  </div>
 </body>
 </html>
