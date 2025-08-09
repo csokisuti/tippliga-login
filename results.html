@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>Eredmények</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="loader.js" defer></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
     h1, h2 { margin-top: 30px; }
@@ -379,6 +381,7 @@
         const active = document.getElementById("round_" + selected);
         if (active) active.classList.remove("hidden");
       });
+hideLoader();
     });
   </script>
 </body>
