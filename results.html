@@ -4,19 +4,18 @@
   <meta charset="UTF-8" />
   <title>Eredmények</title>
 
-  <!-- Firebase (modular) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
-      getFirestore, collection, getDocs, query, where, orderBy
+      getFirestore, collection, getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // ---- UI elemek / stílus ugyanaz a hangulat, mint matches/positions ----
+    /* ====== UI / stílus (matches/positions hangulat) ====== */
     const css = `
       :root{
         --bg:#f5f7fb; --card:#fff; --line:#e6eaf1; --text:#0f172a; --muted:#64748b;
-        --chip:#eef2ff;
+        --chip:#eef2ff; --ok:#16a34a; --warn:#b45309;
       }
       *{ box-sizing:border-box }
       body{ margin:0; padding:24px; background:var(--bg); color:var(--text);
@@ -27,7 +26,7 @@
       h1{ margin:16px 0 12px; font-size:22px; text-align:center; color:#1f2a44 }
       .page-muted{ color:var(--muted); margin:10px 0 18px; text-align:center }
 
-      .controls{ max-width:1100px; margin:0 auto 10px; display:flex; gap:10px; align-items:center; }
+      .controls{ max-width:1100px; margin:0 auto 10px; display:flex; gap:10px; align-items:center; justify-content:center }
       .controls label{ color:var(--muted) }
       select{ padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; }
 
@@ -36,6 +35,10 @@
       .subhdr{ padding:10px 14px; border-bottom:1px solid var(--line);
                background:#f7f9fd; font-weight:700; display:flex; align-items:center; gap:10px; }
       .subhdr small{ font-weight:400; color:var(--muted) }
+
+      .summary{ padding:10px 14px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:8px; }
+      .sum-chip{ background:var(--chip); border:1px solid var(--line); border-radius:999px; padding:6px 10px; font-size:13px }
+      .sum-chip b{ font-weight:800 }
 
       .match{ padding:12px 14px; border-bottom:1px solid var(--line); background:#fff; }
       .match:nth-child(even){ background:#fcfdff; }
@@ -50,10 +53,11 @@
       .tip.wrong{ background:#fdecec }
       .tip b{ font-weight:700 }
       .kicker{ color:var(--muted); font-size:12px }
+      .hidden-info{ color:var(--warn); font-size:13px; margin-top:6px }
       .empty{ padding:12px 14px; color:var(--muted) }
     `;
     const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
-    // ----------------------------------------------------------------------
+    /* ======================================================= */
 
     // Firebase config
     const firebaseConfig = {
@@ -87,47 +91,45 @@
     const roundSelect = document.getElementById("roundSelect");
     const mount = document.getElementById("resultsContainer");
 
-    // URL param: ?round=N
     const urlParams = new URLSearchParams(location.search);
-    const desiredRoundParam = urlParams.get("round"); // string (pl. "3")
+    const desiredRoundParam = urlParams.get("round");
 
-    // Adat cache-ek
-    let matches = [];                 // {id, homeTeam, awayTeam, odds, outcome, result, roundId, startTime}
-    let tipsByMatch = {};             // matchId -> [tip objects]
-    let nickByEmail = {};             // email -> nickname
-    let allRoundsAsc = [];            // ["1","2","3",...]
+    let matches = [];
+    let tipsByMatch = {};
+    let nickByEmail = {};
+    let allRoundsAsc = [];
+    let currentUserEmail = null;
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         mount.innerHTML = `<div class="empty">Jelentkezz be az eredmények megtekintéséhez.</div>`;
         return;
       }
+      currentUserEmail = user.email;
 
       try{
-        // 1) users → becenevek
+        // users → becenevek
         const usersSnap = await getDocs(collection(db, "users"));
         usersSnap.forEach(d => {
           const u = d.data();
           if (u?.email) nickByEmail[u.email] = u.nickname || u.email;
         });
 
-        // 2) matches → minden meccs
+        // matches
         const matchesSnap = await getDocs(collection(db, "matches"));
         matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
 
-        // gyűjtsd a fordulókat a roundId alapján (ez a te sémád)
         const set = new Set();
         matches.forEach(m => { if (m.roundId) set.add(String(m.roundId)); });
         allRoundsAsc = Array.from(set).sort((a,b)=> parseInt(a)-parseInt(b));
 
-        // ha még nincs forduló, nincs mit mutatni
         if (!allRoundsAsc.length){
           mount.innerHTML = `<div class="empty">Még nincsenek eredmények.</div>`;
           if (window.hideLoader) hideLoader();
           return;
         }
 
-        // 3) tips → csoportosítva matchId szerint
+        // tips
         tipsByMatch = {};
         const tipsSnap = await getDocs(collection(db, "tips"));
         tipsSnap.forEach(d => {
@@ -137,7 +139,7 @@
           tipsByMatch[t.matchId].push({ id:d.id, ...t });
         });
 
-        // 4) round select feltöltése
+        // round select
         roundSelect.innerHTML = "";
         allRoundsAsc.forEach(r => {
           const o = document.createElement("option");
@@ -145,7 +147,6 @@
           roundSelect.appendChild(o);
         });
 
-        // előválasztás: ?round=N ha létezik, különben a legutóbbi
         const lastRound = allRoundsAsc[allRoundsAsc.length-1];
         const startRound = (desiredRoundParam && allRoundsAsc.includes(String(desiredRoundParam)))
           ? String(desiredRoundParam)
@@ -163,6 +164,8 @@
       }
     });
 
+    function fmt(n){ return (Number(n)||0).toFixed(2); }
+
     async function renderRound(roundId){
       mount.innerHTML = "";
 
@@ -173,7 +176,7 @@
       sub.innerHTML = `📅 ${roundId}. forduló <small>Válts a fenti listában másik fordulóra</small>`;
       card.appendChild(sub);
 
-      // szűrés + idő szerinti rendezés
+      // forduló meccsei időrendben
       const list = matches
         .filter(m => String(m.roundId) === String(roundId))
         .sort((a,b)=>{
@@ -183,14 +186,57 @@
         });
 
       if (!list.length){
-        const empty = document.createElement("div");
-        empty.className = "empty";
-        empty.textContent = "Ehhez a fordulóhoz még nincs meccs.";
-        card.appendChild(empty);
+        card.appendChild(divEmpty("Ehhez a fordulóhoz még nincs meccs."));
         mount.appendChild(card);
         return;
       }
 
+      /* ======= PONTÖSSZESÍTŐ (csak a lezárt meccsek alapján) ======= */
+      const summary = {};         // nick -> pont
+      const breakdown = {};       // nick -> [ "Home–Away: tip → +x.xx pont", ... ]
+      const now = new Date();
+
+      list.forEach(m => {
+        const mTips = tipsByMatch[m.id] || [];
+        const outcomeKnown = !!m.outcome; // csak akkor számoljon pontot, ha van outcome
+
+        if (!outcomeKnown) return; // még tart / nincs eredmény → nem számoljuk
+
+        mTips.forEach(t => {
+          const correct = t.tip === m.outcome;
+          const mult = t.isDouble ? 2 : 1;
+          const oddsForPick = m.odds?.[t.tip];
+          const pts = (correct && oddsForPick) ? (Number(oddsForPick) * mult) : 0;
+
+          const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
+          if (!summary[nick]) { summary[nick] = 0; breakdown[nick] = []; }
+          summary[nick] += pts;
+          breakdown[nick].push(`${m.homeTeam}–${m.awayTeam}: ${t.tip} → ${fmt(pts)} pont`);
+        });
+      });
+
+      const summaryDiv = document.createElement("div");
+      summaryDiv.className = "summary";
+      if (Object.keys(summary).length){
+        // rendezzük pont szerint
+        const ordered = Object.entries(summary).sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
+        ordered.forEach(([nick, pts]) => {
+          const chip = document.createElement("span");
+          chip.className = "sum-chip";
+          chip.title = (breakdown[nick]||[]).join("\n");
+          chip.innerHTML = `<b>${nick}</b>: ${fmt(pts)}`;
+          summaryDiv.appendChild(chip);
+        });
+      } else {
+        const none = document.createElement("span");
+        none.className = "kicker";
+        none.textContent = "Még nincs lezárt meccs ebben a fordulóban.";
+        summaryDiv.appendChild(none);
+      }
+      card.appendChild(summaryDiv);
+      /* ============================================================= */
+
+      // meccsek listája
       list.forEach(m => {
         const div = document.createElement("div");
         div.className = "match";
@@ -220,32 +266,46 @@
         const tipsWrap = document.createElement("div");
         tipsWrap.className = "tips";
 
-        const tips = tipsByMatch[m.id] || [];
-        if (!tips.length){
-          const none = document.createElement("div");
-          none.className = "kicker";
-          none.textContent = "Ehhez a meccshez még nincs leadott tipp.";
-          tipsWrap.appendChild(none);
+        const mTips = tipsByMatch[m.id] || [];
+        const hasStarted = ko && ko <= now;
+
+        if (!mTips.length){
+          tipsWrap.appendChild(kicker("Ehhez a meccshez még nincs leadott tipp."));
         } else {
-          tips.forEach(t => {
-            const correct = m.outcome && t.tip === m.outcome;
-            const mult = t.isDouble ? 2 : 1;
-            const oddsForPick = m.odds?.[t.tip];
-            const pts = correct && oddsForPick ? (Number(oddsForPick) * mult) : 0;
+          if (!hasStarted){
+            // Még nem kezdődött: tippek rejtve – kivéve a sajátot
+            tipsWrap.appendChild(hiddenInfo("A tippek a kezdésig nem nyilvánosak."));
+            // saját tipp megmutatása
+            mTips
+              .filter(t => t.user === currentUserEmail)
+              .forEach(t => {
+                const row = document.createElement("div");
+                row.className = "tip";
+                row.innerHTML = `<b>Saját tipped</b>: ${t.tip}${t.isDouble ? ' <span class="kicker">(dupla)</span>' : ''}`;
+                tipsWrap.appendChild(row);
+              });
+          } else {
+            // Kezdés után: tippek láthatók + pontszám, ha már outcome ismert
+            mTips.forEach(t => {
+              const correct = m.outcome && t.tip === m.outcome;
+              const mult = t.isDouble ? 2 : 1;
+              const oddsForPick = m.odds?.[t.tip];
+              const pts = (correct && oddsForPick) ? (Number(oddsForPick) * mult) : 0;
 
-            const row = document.createElement("div");
-            row.className = "tip";
-            if (correct) row.classList.add("correct");
-            else if (m.result) row.classList.add("wrong");
+              const row = document.createElement("div");
+              row.className = "tip";
+              if (correct) row.classList.add("correct");
+              else if (m.result) row.classList.add("wrong");
 
-            const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
-            row.innerHTML = `
-              <b>${nick}</b>: ${t.tip}
-              ${t.isDouble ? ' <span class="kicker">(dupla)</span>' : ''}
-              ${m.result ? ` – Pont: <b>${pts.toFixed(2)}</b>` : ''}
-            `;
-            tipsWrap.appendChild(row);
-          });
+              const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
+              row.innerHTML = `
+                <b>${nick}</b>: ${t.tip}
+                ${t.isDouble ? ' <span class="kicker">(dupla)</span>' : ''}
+                ${m.result ? ` – Pont: <b>${fmt(pts)}</b>` : ''}
+              `;
+              tipsWrap.appendChild(row);
+            });
+          }
         }
 
         div.appendChild(tipsWrap);
@@ -254,14 +314,33 @@
 
       mount.appendChild(card);
     }
+
+    function divEmpty(text){
+      const d = document.createElement("div");
+      d.className = "empty";
+      d.textContent = text;
+      return d;
+    }
+    function kicker(text){
+      const d = document.createElement("div");
+      d.className = "kicker";
+      d.textContent = text;
+      return d;
+    }
+    function hiddenInfo(text){
+      const d = document.createElement("div");
+      d.className = "hidden-info";
+      d.textContent = text;
+      return d;
+    }
   </script>
 </head>
 <body>
   <a href="dashboard.html" class="back-btn">← Vissza a főoldalra</a>
   <h1>Eredmények</h1>
-  <div class="page-muted">Itt látod a kiválasztott forduló meccseit, a leadott tippeket és a pontokat.</div>
+  <div class="page-muted">Válassz fordulót, nézd meg a meccseket és a pontokat. A még el nem kezdett meccsek tippei a kezdésig rejtve maradnak (a sajátodat látod).</div>
 
-  <div class="controls" style="justify-content:center">
+  <div class="controls">
     <label for="roundSelect">Válassz fordulót:</label>
     <select id="roundSelect"></select>
   </div>
