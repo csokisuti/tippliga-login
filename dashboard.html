@@ -16,35 +16,32 @@
       margin-top: 30px;
     }
 
-    #tableContainer img {
-      max-width: 100%;
-      height: auto;
-    }
-
-    #facebookFeedContainer iframe {
-      border: none;
-      overflow: hidden;
-      max-width: 500px;
-    }
-
-    #tableContainer, #facebookFeedContainer {
-      flex: 1 1 400px;
-    }
+    #tableContainer img { max-width: 100%; height: auto; }
+    #facebookFeedContainer iframe { border: none; overflow: hidden; max-width: 500px; }
+    #tableContainer, #facebookFeedContainer { flex: 1 1 400px; }
 
     @media (max-width: 1000px) {
-      #mainContent {
-        flex-direction: column;
-        align-items: center;
-      }
+      #mainContent { flex-direction: column; align-items: center; }
     }
+
+    /* ——— ÚJ: kis piros badge a Meccstippek linkhez ——— */
+    .pill-badge{
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:18px; height:18px; padding:0 6px; margin-left:6px;
+      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700;
+      line-height:1; vertical-align:middle;
+    }
+    .pill-badge[hidden]{ display:none !important; }
   </style>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore,
-      doc,
-      getDoc
+      doc, getDoc,
+      collection, getDocs,
+      query, where
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -87,9 +84,9 @@
         let role = "user";
         let favoriteTeam = "";
 
+        // Felhasználói adatok (név, szerep, kedvenc csapat)
         const userRef = doc(db, "users", email);
         const userSnap = await getDoc(userRef);
-
         if (userSnap.exists()) {
           const data = userSnap.data();
           nickname = data.nickname || email;
@@ -109,6 +106,7 @@
           document.body.classList.add(themeClass);
         }
 
+        // Tabella kép
         const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
         if (tableDoc.exists()) {
           const base64 = tableDoc.data().base64;
@@ -118,6 +116,7 @@
           document.getElementById("tableContainer").appendChild(img);
         }
 
+        // Facebook feed a kedvenc csapatról
         const fbLink = facebookLinks[favoriteTeam];
         if (fbLink) {
           const fbDiv = document.createElement("div");
@@ -126,12 +125,45 @@
               src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=500&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
               width="500" height="500" scrolling="no" frameborder="0" 
               allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share">
-            </iframe>
-          `;
+            </iframe>`;
           document.getElementById("facebookFeedContainer").appendChild(fbDiv);
         }
-if (window.hideLoader) hideLoader();
+
+        // ——— ÚJ: “Meccstippek” badge – hány jövőbeli meccsre nincs még tipped ———
+        try{
+          const now = new Date();
+
+          // 1) Jövőbeli meccsek
+          const upcomingSnap = await getDocs(
+            query(collection(db, "matches"), where("startTime", ">=", now))
+          );
+          const upcoming = upcomingSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+          // 2) Saját tippek (minden meccsre, majd matchId alapján szűrünk)
+          const myTipsSnap = await getDocs(
+            query(collection(db, "tips"), where("user", "==", email))
+          );
+          const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
+
+          // 3) Függő tippek száma = jövőbeli meccsek – ahol nincs saját tipp
+          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+
+          const badge = document.getElementById("tipsBadge");
+          if (pending > 0){
+            badge.textContent = pending;
+            badge.hidden = false;
+            badge.title = `${pending} közelgő meccsre még nincs tipped`;
+          }else{
+            badge.hidden = true;
+          }
+        }catch(e){
+          // ha bármi gáz van, ne dőljön el az oldal
+          console.warn("Badge számítás hiba:", e);
+        }
+
+        if (window.hideLoader) hideLoader();
       });
+
       document.getElementById("logout").addEventListener("click", () => {
         signOut(auth).then(() => {
           window.location.href = "login.html";
@@ -143,8 +175,11 @@ if (window.hideLoader) hideLoader();
 <body>
   <h1>NB1 TippLiga</h1>
   <p id="welcome"></p>
+
   <nav>
-    <a href="matches.html">🔮 Meccstippek</a> |
+    <a href="matches.html" id="matchesLink">🔮 Meccstippek
+      <span id="tipsBadge" class="pill-badge" hidden></span>
+    </a> |
     <a href="positions.html">📊 Szezon végi sorrend tipp</a> |
     <a href="results.html">📋 Eredmények</a> |
     <a href="leaderboard.html">🏆 Összpontszám</a> |
@@ -159,3 +194,4 @@ if (window.hideLoader) hideLoader();
   </div>
 </body>
 </html>
+
