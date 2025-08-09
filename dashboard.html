@@ -4,41 +4,26 @@
   <meta charset="UTF-8" />
   <title>Dashboard</title>
 
-  <!-- FONTOS: előbb az általános, UTÁNA a themed hogy a themed nyerjen -->
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="style-themed.css">
+  <!-- Cache-busting: frissíts nyugodtan a v= szám emelésével -->
+  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style-themed.css?v=3">
 
   <script src="loader.js" defer></script>
 
   <style>
     /* Elrendezés */
     #mainContent {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 40px;
-      margin-top: 30px;
+      display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+      gap: 40px; margin-top: 30px;
     }
-
     #tableContainer img { max-width: 100%; height: auto; }
 
     /* FB feed – doboz NÉLKÜL */
     #facebookFeedContainer { flex: 1 1 400px; }
-    #facebookFeedContainer .fb-wrap {
-      background: transparent;
-      border: 0;
-      box-shadow: none;
-      padding: 0;
-    }
+    #facebookFeedContainer .fb-wrap { background: transparent; border: 0; box-shadow: none; padding: 0; }
     #facebookFeedContainer iframe {
-      display: block;
-      border: none;
-      max-width: 500px;
-      width: 500px;
-      height: 500px;
+      display: block; border: none; max-width: 500px; width: 500px; height: 500px;
     }
-
     #tableContainer { flex: 1 1 400px; }
 
     @media (max-width: 1000px) {
@@ -54,6 +39,45 @@
       font-size:12px; font-weight:700; line-height:1; vertical-align:middle;
     }
     .pill-badge[hidden]{ display:none !important; }
+
+    /* Mini chat widget */
+    .chat-fab{
+      position: fixed; right: 20px; bottom: 20px; z-index: 9999;
+      background: var(--accent, #3b82f6); color:#fff; border:0; border-radius:999px;
+      width: 52px; height: 52px; cursor:pointer; font-size:22px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.18);
+    }
+    .chat-panel{
+      position: fixed; right: 20px; bottom: 84px; z-index: 9999;
+      width: 320px; max-height: 420px; display:none; flex-direction: column;
+      background:#fff; border:1px solid #e6eaf1; border-radius:14px; overflow:hidden;
+      box-shadow: 0 10px 24px rgba(0,0,0,.18);
+    }
+    .chat-panel.open{ display:flex; }
+    .chat-head{
+      background:#f7f9fd; border-bottom:1px solid #e6eaf1; padding:10px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      color:#0f172a; font-weight:700;
+    }
+    .chat-body{
+      padding:10px; overflow:auto; flex:1; background:#fff;
+      display:flex; flex-direction:column-reverse;
+    }
+    .msg{ margin:6px 0; }
+    .msg .who{ font-size:12px; color:#64748b; }
+    .msg .text{ background:#f1f5f9; border-radius:10px; padding:8px 10px; display:inline-block; }
+    .msg.me .text{ background:#e6f4ff; }
+    .chat-input{
+      display:flex; gap:8px; padding:10px; border-top:1px solid #e6eaf1; background:#fff;
+    }
+    .chat-input input{
+      flex:1; border:1px solid #e6eaf1; border-radius:10px; padding:8px 10px;
+      font:inherit;
+    }
+    .chat-input button{
+      background: var(--accent, #3b82f6); color:#fff; border:0; border-radius:10px; padding:8px 12px;
+      cursor:pointer;
+    }
   </style>
 
   <script type="module">
@@ -62,8 +86,9 @@
     import {
       getFirestore,
       doc, getDoc,
-      collection, getDocs,
-      query, where
+      collection, getDocs, addDoc,
+      query, where, orderBy, limit, onSnapshot,
+      serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -94,15 +119,14 @@
       "MTK Budapest": "https://www.facebook.com/MTKBudapest"
     };
 
+    let currentEmail = "", currentNick = "";
+
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-          window.location.href = "login.html";
-          return;
-        }
+        if (!user) { window.location.href = "login.html"; return; }
 
-        const email = user.email;
-        let nickname = email;
+        const email = user.email; currentEmail = email;
+        let nickname = email; currentNick = nickname;
         let role = "user";
         let favoriteTeam = "";
 
@@ -114,6 +138,7 @@
           nickname = data.nickname || email;
           role = data.role || "user";
           favoriteTeam = data.favoriteTeam || "";
+          currentNick = nickname;
         }
 
         // Üdv + admin link
@@ -123,8 +148,7 @@
         // Téma osztály a body-n
         if (favoriteTeam) {
           const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]+/g, '-');
+            .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
           document.body.classList.add(themeClass);
         }
 
@@ -140,7 +164,7 @@
           }
         }catch(e){ console.warn(e); }
 
-        // FB feed – DOBOZ nélkül, normál fejléc beállítás
+        // FB feed – doboz nélkül
         const fbLink = facebookLinks[favoriteTeam];
         if (fbLink) {
           const fbDiv = document.createElement("div");
@@ -164,15 +188,12 @@
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
 
           const badge = document.getElementById("tipsBadge");
-          if (pending > 0){
-            badge.textContent = pending;
-            badge.hidden = false;
-            badge.title = `${pending} közelgő meccsre még nincs tipped`;
-          }else{
-            badge.hidden = true;
-          }
+          if (pending > 0){ badge.textContent = pending; badge.hidden = false; badge.title = `${pending} közelgő meccsre még nincs tipped`; }
+          else { badge.hidden = true; }
         }catch(e){ console.warn("Badge:", e); }
 
+        // ——— CHAT: feliratkozás és küldés ———
+        initChat();
         if (window.hideLoader) hideLoader();
       });
 
@@ -180,6 +201,64 @@
         signOut(auth).then(() => window.location.href = "login.html");
       });
     });
+
+    function initChat(){
+      const fab = document.getElementById('chatFab');
+      const panel = document.getElementById('chatPanel');
+      const list = document.getElementById('chatList');
+      const input = document.getElementById('chatInput');
+      const send = document.getElementById('chatSend');
+      const closeBtn = document.getElementById('chatClose');
+
+      fab.onclick = () => panel.classList.toggle('open');
+      closeBtn.onclick = () => panel.classList.remove('open');
+
+      // Üzenetek figyelése (legutóbbi 50, legfrissebbek alul)
+      const q = query(
+        collection(db, "chat"),
+        orderBy("createdAt", "desc"),
+        limit(50)
+      );
+      onSnapshot(q, (snap) => {
+        list.innerHTML = "";
+        snap.forEach(docSnap => {
+          const m = docSnap.data();
+          const div = document.createElement('div');
+          div.className = 'msg' + (m.user === currentEmail ? ' me' : '');
+          const who = document.createElement('div');
+          who.className = 'who';
+          who.textContent = m.nickname || m.user || 'Ismeretlen';
+          const txt = document.createElement('div');
+          txt.className = 'text';
+          txt.textContent = m.text || '';
+          div.appendChild(who);
+          div.appendChild(txt);
+          list.appendChild(div);
+        });
+      });
+
+      async function sendMsg(){
+        const text = (input.value || "").trim();
+        if (!text) return;
+        input.value = "";
+        try{
+          await addDoc(collection(db, "chat"), {
+            text,
+            user: currentEmail,
+            nickname: currentNick || currentEmail,
+            createdAt: serverTimestamp()
+          });
+        }catch(e){
+          console.warn("Chat send error:", e);
+          alert("Nem sikerült elküldeni az üzenetet.");
+        }
+      }
+
+      send.onclick = sendMsg;
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+      });
+    }
   </script>
 </head>
 <body>
@@ -201,6 +280,20 @@
   <div id="mainContent">
     <div id="tableContainer"></div>
     <div id="facebookFeedContainer"></div>
+  </div>
+
+  <!-- Mini chat -->
+  <button id="chatFab" class="chat-fab" title="Chat">💬</button>
+  <div id="chatPanel" class="chat-panel">
+    <div class="chat-head">
+      <span>Közös chat</span>
+      <button id="chatClose" style="background:transparent; border:0; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <div id="chatList" class="chat-body"></div>
+    <div class="chat-input">
+      <input id="chatInput" placeholder="Írj üzenetet…" />
+      <button id="chatSend">Küldés</button>
+    </div>
   </div>
 </body>
 </html>
