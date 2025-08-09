@@ -9,7 +9,7 @@
   <style>
     :root{
       --bg:#f5f7fb; --card:#fff; --line:#e6eaf1; --text:#0f172a; --muted:#64748b;
-      --accent:#3b82f6;
+      --accent:#3b82f6; --danger:#ef4444;
     }
     *{ box-sizing:border-box }
     body{
@@ -18,31 +18,34 @@
       font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
     }
 
-    /* fejléc + nav */
-    h1{ margin:0 0 6px; font-size:22px; }
+    /* Header + nav */
+    h1{ margin:0 0 4px; font-size:22px; display:flex; align-items:center; gap:10px; }
     .muted{ color:var(--muted); }
-    nav{ margin:12px 0 18px; }
-    nav a{ text-decoration:none; color:inherit; }
-    nav a:hover{ text-decoration:underline; }
-    nav .sep{ color:#cbd5e1; margin:0 6px; }
+    nav{ margin:10px 0 18px; display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; }
+    .nav-link{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:10px; text-decoration:none; color:inherit;
+      border:1px solid var(--line); background:#fff;
+    }
+    .nav-link:hover{ background:#f7f9fd; }
+    .nav-icon{ width:18px; height:18px; display:inline-block; }
 
-    /* jelvény a Meccstippekhez */
     .pill-badge{
       display:inline-flex; align-items:center; justify-content:center;
-      min-width:18px; height:18px; padding:0 6px; margin-left:6px;
-      border-radius:999px; background:#ef4444; color:#fff;
+      min-width:18px; height:18px; padding:0 6px; margin-left:4px;
+      border-radius:999px; background:var(--danger); color:#fff;
       font-size:12px; font-weight:700; line-height:1; vertical-align:middle;
     }
     .pill-badge[hidden]{ display:none !important; }
 
-    /* kártyák */
+    .btn{ border:0; background:var(--accent); color:#fff; padding:8px 12px; border-radius:10px; cursor:pointer; }
+
+    /* Layout cards */
     .grid{
       display:grid; gap:20px;
       grid-template-columns: 1.2fr 1fr;
     }
-    @media (max-width: 1000px){
-      .grid{ grid-template-columns: 1fr; }
-    }
+    @media (max-width: 1000px){ .grid{ grid-template-columns: 1fr; } }
     .card{
       background:var(--card); border:1px solid var(--line); border-radius:12px;
       box-shadow:0 6px 18px rgba(15,23,42,.05); overflow:hidden;
@@ -52,23 +55,35 @@
       font-weight:700; display:flex; align-items:center; justify-content:space-between;
     }
     .card .body{ padding:14px; }
-
-    /* tabella kép és fb iframe */
     .table-img{ max-width:100%; height:auto; display:block }
     .fb-wrap iframe{ border:0; width:100%; height:520px; }
 
-    /* gyors csempék */
-    .tiles{ display:grid; gap:12px; grid-template-columns: repeat(3, 1fr); }
-    .tile{
-      border:1px solid var(--line); border-radius:10px; padding:10px 12px;
-      display:flex; align-items:center; justify-content:space-between; background:#fff;
+    /* Rules modal */
+    .modal-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.4);
+      display:none; align-items:center; justify-content:center; z-index:1000;
     }
-    .tile .title{ font-weight:700 }
-    .tile .desc{ font-size:12px; color:var(--muted) }
-    .btn{
-      border:0; background:var(--accent); color:#fff;
-      padding:8px 12px; border-radius:10px; cursor:pointer;
+    .modal{ background:#fff; width:min(800px, 92vw); border-radius:12px; overflow:hidden; border:1px solid var(--line); }
+    .modal header{ padding:12px 16px; background:#f7f9fd; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+    .modal .content{ padding:14px 16px; max-height:70vh; overflow:auto; }
+    .icon-btn{ border:1px solid var(--line); background:#fff; border-radius:10px; padding:6px 10px; cursor:pointer; }
+    .rules-trigger{ margin-left:auto; display:inline-flex; gap:6px; align-items:center; }
+
+    /* Mini chat (floating) */
+    .chat-wrap{
+      position:fixed; right:16px; bottom:16px; z-index:999;
+      width:320px;
     }
+    .chat-card{
+      background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;
+      box-shadow:0 6px 18px rgba(15,23,42,.15);
+    }
+    .chat-head{ padding:8px 12px; background:#f7f9fd; border-bottom:1px solid var(--line); font-weight:700; display:flex; justify-content:space-between; align-items:center; }
+    .chat-body{ height:300px; overflow:auto; padding:10px 12px; }
+    .chat-msg{ margin:6px 0; }
+    .chat-msg .meta{ font-size:11px; color:var(--muted); }
+    .chat-input{ display:flex; gap:8px; padding:10px; border-top:1px solid var(--line); background:#fff; }
+    .chat-input input{ flex:1; border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
   </style>
 
   <script type="module">
@@ -76,9 +91,8 @@
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore,
-      doc, getDoc,
-      collection, getDocs,
-      query, where
+      doc, getDoc, setDoc, addDoc,
+      collection, getDocs, query, where, orderBy, limit, serverTimestamp, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -109,6 +123,9 @@
       "MTK Budapest": "https://www.facebook.com/MTKBudapest"
     };
 
+    let CURRENT_USER_EMAIL = "";
+    let CURRENT_NICK = "";
+
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
         if (!user) {
@@ -117,26 +134,28 @@
         }
 
         const email = user.email;
-        let nickname = email;
-        let role = "user";
-        let favoriteTeam = "";
+        CURRENT_USER_EMAIL = email;
 
         // Felhasználói adatok
         const userRef = doc(db, "users", email);
         const userSnap = await getDoc(userRef);
+        let role = "user";
+        let favoriteTeam = "";
         if (userSnap.exists()) {
           const data = userSnap.data();
-          nickname = data.nickname || email;
+          CURRENT_NICK = data.nickname || email;
           role = data.role || "user";
           favoriteTeam = data.favoriteTeam || "";
+        } else {
+          CURRENT_NICK = email;
         }
 
-        document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
+        document.getElementById("welcome").textContent = `Üdv, ${CURRENT_NICK}!`;
         if (role === "admin") {
           document.getElementById("adminLink").style.display = "inline";
         }
 
-        // Kedvenc csapat témázás
+        // Téma a kedvenc csapat szerint
         if (favoriteTeam) {
           const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
             .replace(/[\u0300-\u036f]/g, '')
@@ -144,7 +163,7 @@
           document.body.classList.add(themeClass);
         }
 
-        // Tabella kép (Firestore: settings/nbi_table_image.base64)
+        // Tabella kép
         const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
         if (tableDoc.exists()) {
           const base64 = tableDoc.data().base64;
@@ -155,7 +174,7 @@
           document.getElementById("tableMount").appendChild(img);
         }
 
-        // Facebook feed a kedvenc csapathoz
+        // Facebook feed (kedvenc csapat)
         const fbLink = facebookLinks[favoriteTeam];
         if (fbLink) {
           const fbDiv = document.createElement("div");
@@ -168,7 +187,6 @@
             </iframe>`;
           document.getElementById("fbMount").appendChild(fbDiv);
         } else {
-          // ha nincs kedvenc, adjunk tippet
           document.getElementById("fbMount").innerHTML =
             `<div class="muted">Válassz kedvenc csapatot a Profil oldalon, és itt megjelenik a Facebook hírfolyamuk.</div>`;
         }
@@ -176,7 +194,6 @@
         // Meccstippek badge – jövőbeli meccsekre nincs még tipped
         try{
           const now = new Date();
-
           const upcomingSnap = await getDocs(
             query(collection(db, "matches"), where("startTime", ">=", now))
           );
@@ -188,7 +205,6 @@
           const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
 
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-
           const badge = document.getElementById("tipsBadge");
           if (pending > 0){
             badge.textContent = pending;
@@ -200,6 +216,56 @@
         }catch(e){
           console.warn("Badge számítás hiba:", e);
         }
+
+        // Szabályok modál open/close
+        document.getElementById("rulesOpen").addEventListener("click", ()=> {
+          document.getElementById("rulesModal").style.display = "flex";
+        });
+        document.getElementById("rulesClose").addEventListener("click", ()=> {
+          document.getElementById("rulesModal").style.display = "none";
+        });
+        document.getElementById("rulesBackdrop").addEventListener("click", (e)=> {
+          if (e.target.id === "rulesBackdrop") document.getElementById("rulesModal").style.display = "none";
+        });
+
+        // Mini chat – realtime
+        const chatList = document.getElementById("chatList");
+        const unsub = onSnapshot(
+          query(collection(db, "chatMessages"), orderBy("ts", "asc"), limit(50)),
+          (snap)=>{
+            chatList.innerHTML = "";
+            snap.forEach(docu=>{
+              const m = docu.data();
+              const li = document.createElement("div");
+              li.className = "chat-msg";
+              const when = m.ts?.toDate ? m.ts.toDate().toLocaleString("hu-HU") : "";
+              li.innerHTML = `
+                <div><strong>${m.nick || m.user || 'ismeretlen'}</strong></div>
+                <div>${(m.text||'').replace(/</g,'&lt;')}</div>
+                <div class="meta">${when}</div>`;
+              chatList.appendChild(li);
+              chatList.scrollTop = chatList.scrollHeight;
+            });
+          }
+        );
+
+        // Chat küldés
+        document.getElementById("chatSend").addEventListener("click", async ()=>{
+          const input = document.getElementById("chatInput");
+          const text = input.value.trim();
+          if (!text) return;
+          try{
+            await addDoc(collection(db, "chatMessages"), {
+              user: CURRENT_USER_EMAIL,
+              nick: CURRENT_NICK,
+              text,
+              ts: serverTimestamp()
+            });
+            input.value = "";
+          }catch(e){
+            alert("Nem sikerült elküldeni: " + (e?.message||e));
+          }
+        });
 
         if (window.hideLoader) hideLoader();
       });
@@ -213,65 +279,134 @@
   </script>
 </head>
 <body>
-  <h1>NB1 TippLiga</h1>
+  <h1>
+    NB1 TippLiga
+    <span class="rules-trigger">
+      <button id="rulesOpen" class="icon-btn" title="Szabályok">
+        <!-- question-mark-circle -->
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-width="1.6" d="M12 17h.01M12 13.5c0-1.657 3-1.5 3-4a3 3 0 10-6 0" />
+          <circle stroke-width="1.6" cx="12" cy="12" r="9"/>
+        </svg>
+        Szabályok
+      </button>
+    </span>
+  </h1>
   <p id="welcome" class="muted"></p>
 
   <nav>
-    <a href="matches.html" id="matchesLink">🔮 Meccstippek
+    <a href="matches.html" class="nav-link">
+      <!-- crystal-ball-ish / calendar -->
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="3" y="4" width="18" height="18" rx="2" stroke-width="1.6"/>
+        <path d="M16 2v4M8 2v4M3 10h18" stroke-width="1.6"/>
+      </svg>
+      Meccstippek
       <span id="tipsBadge" class="pill-badge" hidden></span>
-    </a><span class="sep">|</span>
-    <a href="positions.html">📊 Szezon végi sorrend tipp</a><span class="sep">|</span>
-    <a href="results.html">📋 Eredmények</a><span class="sep">|</span>
-    <a href="leaderboard.html">🏆 Összpontszám</a><span class="sep">|</span>
-    <a href="profile.html">👤 Profil</a><span class="sep">|</span>
-    <a href="admin.html" id="adminLink" style="display:none;">⚙️ Admin felület</a><span class="sep">|</span>
+    </a>
+
+    <a href="positions.html" class="nav-link">
+      <!-- chart-bars -->
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M4 20V9m6 11V4m6 16v-7" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      Szezon végi sorrend
+    </a>
+
+    <a href="results.html" class="nav-link">
+      <!-- list-bullet -->
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="5" cy="7" r="1.6"/><circle cx="5" cy="12" r="1.6"/><circle cx="5" cy="17" r="1.6"/>
+        <path d="M9 7h11M9 12h11M9 17h11" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      Eredmények
+    </a>
+
+    <a href="leaderboard.html" class="nav-link">
+      <!-- trophy -->
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M8 21h8M9 17h6a3 3 0 003-3V4H6v10a3 3 0 003 3z" stroke-width="1.6"/>
+        <path d="M18 6h2a2 2 0 010 4h-2M6 6H4a2 2 0 000 4h2" stroke-width="1.6"/>
+      </svg>
+      Összpontszám
+    </a>
+
+    <a href="profile.html" class="nav-link">
+      <!-- user -->
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="12" cy="8" r="3.2" stroke-width="1.6"/>
+        <path d="M4 20a8 8 0 0116 0" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      Profil
+    </a>
+
+    <a href="admin.html" id="adminLink" class="nav-link" style="display:none;">
+      <!-- cog -->
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" stroke-width="1.6"/>
+        <path d="M19.4 15a7.97 7.97 0 00.1-2l2-1.2-1.6-2.8-2.2.6a7.8 7.8 0 00-1.7-1l-.3-2.3h-3.2l-.3 2.3a7.8 7.8 0 00-1.7 1l-2.2-.6L2.5 11.8l2 1.2a8 8 0 00.1 2l-2 1.2 1.6 2.8 2.2-.6c.5.4 1.1.7 1.7 1l.3 2.3h3.2l.3-2.3c.6-.3 1.2-.6 1.7-1l2.2.6 1.6-2.8-2-1.2z" stroke-width="1.2"/>
+      </svg>
+      Admin
+    </a>
+
     <button id="logout" class="btn">Kilépés</button>
   </nav>
 
   <div class="grid">
-    <!-- Bal: Gyors elérés + Tabella -->
+    <!-- Bal: NB I tabella -->
     <section class="card">
-      <header>
-        Gyors elérés
-      </header>
-      <div class="body">
-        <div class="tiles">
-          <div class="tile">
-            <div>
-              <div class="title">Meccstippek</div>
-              <div class="desc">Add le a következő forduló tippjeit</div>
-            </div>
-            <a href="matches.html" class="btn">Megnyitás</a>
-          </div>
-          <div class="tile">
-            <div>
-              <div class="title">Eredmények</div>
-              <div class="desc">Fordulók, pontok, részletek</div>
-            </div>
-            <a href="results.html" class="btn">Megnyitás</a>
-          </div>
-          <div class="tile">
-            <div>
-              <div class="title">Toplista</div>
-              <div class="desc">Összpontszám + bónusz</div>
-            </div>
-            <a href="leaderboard.html" class="btn">Megnyitás</a>
-          </div>
-        </div>
-      </div>
       <header>NB I tabella</header>
       <div class="body" id="tableMount"></div>
     </section>
 
     <!-- Jobb: Kedvenc csapat hírfolyam -->
     <section class="card">
-      <header>
-        Kedvenc csapat hírfolyam
-      </header>
+      <header>Kedvenc csapat hírfolyam</header>
       <div class="body" id="fbMount">
         <div class="muted">Betöltés…</div>
       </div>
     </section>
+  </div>
+
+  <!-- Rules modal -->
+  <div id="rulesModal" class="modal-backdrop" style="display:none;" aria-hidden="true">
+    <div class="modal">
+      <header>
+        <div>Szabályok</div>
+        <button id="rulesClose" class="icon-btn">Bezár</button>
+      </header>
+      <div class="content">
+        <h3>Alapok</h3>
+        <ul>
+          <li>Meccs tipp: 1 / X / 2. Találat esetén pont = meccs odds × (dupla esetén ×2).</li>
+          <li>Dupla pont: fordulónként 1 meccsre, a forduló első meccsének kezdetéig állítható.</li>
+          <li>Szezon végi bónusz: a végső tabellára adott tippnél minden pontos pozíció +1% (max +12%), ami az egész szezonra szerzett pontokra kerül rá.</li>
+        </ul>
+        <h3>Határidők & láthatóság</h3>
+        <ul>
+          <li>A még el nem kezdett meccsek tippjei nem publikusak mások számára.</li>
+          <li>A pozíciós sorrend tippelés admin által zárható időponttal vagy manuálisan.</li>
+        </ul>
+        <p class="muted" style="margin-top:10px">Ha bármi nem egyértelmű, írj a jobb alsó sarokban lévő chatbe! 👋</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini chat -->
+  <div class="chat-wrap">
+    <div class="chat-card">
+      <div class="chat-head">
+        Ligacset
+        <small class="muted" style="font-weight:400">max 50 üzenet</small>
+      </div>
+      <div id="chatList" class="chat-body">
+        <!-- realtime render -->
+      </div>
+      <div class="chat-input">
+        <input id="chatInput" placeholder="Írj üzenetet…" />
+        <button id="chatSend" class="btn">Küldés</button>
+      </div>
+    </div>
   </div>
 </body>
 </html>
