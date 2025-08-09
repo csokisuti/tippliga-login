@@ -130,8 +130,8 @@
           `;
           document.getElementById("facebookFeedContainer").appendChild(fbDiv);
         }
+if (window.hideLoader) hideLoader();
       });
-hideLoader();
       document.getElementById("logout").addEventListener("click", () => {
         signOut(auth).then(() => {
           window.location.href = "login.html";
