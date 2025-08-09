@@ -5,22 +5,18 @@
   <title>Admin felület</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .sortable {
-      list-style: none;
-      padding: 0;
-    }
-
-    .sortable li {
-      padding: 10px;
-      margin: 5px 0;
-      background-color: #f2f2f2;
-      border: 1px solid #ccc;
-      cursor: grab;
-    }
-
-    .sortable li.dragging {
-      opacity: 0.5;
-    }
+    .sortable { list-style:none; padding:0; }
+    .sortable li { padding:10px; margin:5px 0; background:#f2f2f2; border:1px solid #ccc; cursor:grab; }
+    .sortable li.dragging { opacity:.5; }
+    .card { border:1px solid #e6eaf1; background:#fff; border-radius:12px; padding:12px; margin:12px 0; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .muted { color:#64748b; font-size:14px; }
+    input[type="datetime-local"]{ padding:6px 8px; }
+    button{ padding:8px 12px; border-radius:8px; border:1px solid #e6eaf1; cursor:pointer; }
+    .btn-primary{ background:#3b82f6; color:#fff; border-color:#3b82f6; }
+    .btn-danger{ background:#ef4444; color:#fff; border-color:#ef4444; }
+    .ok{ color:#16a34a; font-weight:700; }
+    .warn{ color:#b45309; font-weight:700; }
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -43,9 +39,9 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const teams = [
-      "Debreceni VSC", "Diósgyőri VTK", "Ferencváros", "ETO FC Győr", "Kazincbarcikai SC",
-      "Kisvárda FC", "MTK Budapest", "Nyíregyháza Spartacus", "Paksi FC",
-      "Puskás Akadémia", "Újpest FC", "Zalaegerszegi TE FC"
+      "Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr","Kazincbarcikai SC",
+      "Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus","Paksi FC",
+      "Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"
     ];
 
     function parseOutcome(result) {
@@ -57,10 +53,7 @@
     }
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        document.body.innerHTML = "<h2>⛔ Nincs jogosultságod az admin felülethez.</h2>";
-        return;
-      }
+      if (!user) { document.body.innerHTML = "<h2>⛔ Nincs jogosultságod az admin felülethez.</h2>"; return; }
 
       const docRef = doc(db, "users", user.email);
       const userSnap = await getDoc(docRef);
@@ -75,6 +68,7 @@
       await loadMatches();
       await loadUsers();
       await loadResults();
+      await loadPositionsLock();  // <<< új
     });
 
     function initUI() {
@@ -85,15 +79,17 @@
 
       formSection.innerHTML = `
         <h2>Új meccs hozzáadása</h2>
-        <form id="matchForm">
-          <select id="homeTeam" required><option value="">Hazai csapat</option>${homeOptions}</select><br>
-          <select id="awayTeam" required><option value="">Vendég csapat</option>${awayOptions}</select><br>
-          <input type="datetime-local" id="startTime" required><br>
-          <input placeholder="Forduló ID (pl. 1)" id="roundId" required><br>
-          <input type="number" step="0.01" placeholder="Odds 1" id="odds1" required><br>
-          <input type="number" step="0.01" placeholder="Odds X" id="oddsX" required><br>
-          <input type="number" step="0.01" placeholder="Odds 2" id="odds2" required><br>
-          <button type="submit">Mentés</button>
+        <form id="matchForm" class="card">
+          <div class="row">
+            <select id="homeTeam" required><option value="">Hazai csapat</option>${homeOptions}</select>
+            <select id="awayTeam" required><option value="">Vendég csapat</option>${awayOptions}</select>
+            <input type="datetime-local" id="startTime" required>
+            <input placeholder="Forduló ID (pl. 1)" id="roundId" required>
+            <input type="number" step="0.01" placeholder="Odds 1" id="odds1" required>
+            <input type="number" step="0.01" placeholder="Odds X" id="oddsX" required>
+            <input type="number" step="0.01" placeholder="Odds 2" id="odds2" required>
+            <button type="submit" class="btn-primary">Mentés</button>
+          </div>
         </form>
       `;
 
@@ -110,27 +106,49 @@
       const resultSection = document.createElement("section");
       resultSection.innerHTML = `
         <h2>Meccseredmények kezelése</h2>
-        <div id="matchesNoResult"><h3>🟡 Eredmény nélküli meccsek</h3></div>
-        <div id="matchesWithResult"><h3>🟢 Rögzített eredmények</h3></div>
+        <div id="matchesNoResult" class="card"><h3>🟡 Eredmény nélküli meccsek</h3></div>
+        <div id="matchesWithResult" class="card"><h3>🟢 Rögzített eredmények</h3></div>
       `;
 
       const userSection = document.createElement("section");
       userSection.innerHTML = `
         <h2>Felhasználók kezelése</h2>
-        <ul id="userList"></ul>
+        <ul id="userList" class="card" style="margin-top:8px;"></ul>
       `;
 
       const tableImageSection = document.createElement("section");
       tableImageSection.innerHTML = `
         <h2>NB1 tabella kép feltöltése</h2>
-        <input type="file" id="tableImageInput" accept="image/*">
-        <button id="uploadTableImage">Feltöltés</button><br><br>
-        <button onclick="window.location.href='dashboard.html'">⬅️ Vissza a dashboardra</button>
-        <hr>
-        <h2>📊 Hivatalos szezon végi sorrend</h2>
-        <button id="toggleOrder">📂 Sorrend szerkesztése/elrejtése</button>
-        <ul id="sortableList" class="sortable" style="display:none;"></ul>
-        <button id="saveOrderBtn" style="display:none;">💾 Mentés</button>
+        <div class="card">
+          <input type="file" id="tableImageInput" accept="image/*">
+          <button id="uploadTableImage" class="btn-primary">Feltöltés</button>
+          <div style="margin-top:10px"><button onclick="window.location.href='dashboard.html'">⬅️ Vissza a dashboardra</button></div>
+        </div>
+
+        <h2 style="margin-top:18px;">📊 Hivatalos szezon végi sorrend</h2>
+        <div class="card">
+          <button id="toggleOrder">📂 Sorrend szerkesztése/elrejtése</button>
+          <ul id="sortableList" class="sortable" style="display:none; margin-top:10px;"></ul>
+          <button id="saveOrderBtn" style="display:none;" class="btn-primary">💾 Mentés</button>
+        </div>
+
+        <h2 style="margin-top:18px;">🔒 Pozíciós tipp lezárás</h2>
+        <div class="card" id="lockCard">
+          <div class="muted">Itt szabályozhatod, mikortól ne lehessen módosítani a <strong>Szezon végi pozíciós sorrend</strong> tippet (positions.html).</div>
+          <div class="row" style="margin-top:8px">
+            <label><input type="checkbox" id="lockNow"> Azonnali lezárás</label>
+            <span class="muted">vagy</span>
+            <label>Automatikus zárás időpontja: <input type="datetime-local" id="lockUntil"></label>
+          </div>
+          <div class="row">
+            <input type="text" id="lockMessage" placeholder="Opcionális üzenet a játékosoknak" style="flex:1; padding:6px 8px;">
+          </div>
+          <div class="row">
+            <button id="saveLock" class="btn-primary">Lezárás beállítása</button>
+            <button id="clearLock" class="btn-danger">Lezárás feloldása</button>
+            <span id="lockStatus" class="muted"></span>
+          </div>
+        </div>
       `;
 
       document.body.append(formSection, toggleButton, matchesList, resultSection, userSection, tableImageSection);
@@ -169,6 +187,7 @@
         reader.readAsDataURL(file);
       });
 
+      // --- Hivatalos sorrend (drag & drop) ---
       const finalStandingsRef = doc(db, "finalStandings", "official");
       const sortableList = document.getElementById("sortableList");
       const toggleOrderBtn = document.getElementById("toggleOrder");
@@ -182,27 +201,16 @@
           li.textContent = team;
           li.draggable = true;
 
-          li.addEventListener("dragstart", () => {
-            draggedItem = li;
-            li.classList.add("dragging");
-          });
-
-          li.addEventListener("dragend", () => {
-            draggedItem = null;
-            li.classList.remove("dragging");
-          });
-
+          li.addEventListener("dragstart", () => { draggedItem = li; li.classList.add("dragging"); });
+          li.addEventListener("dragend", () => { draggedItem = null; li.classList.remove("dragging"); });
           li.addEventListener("dragover", (e) => {
             e.preventDefault();
             const bounding = li.getBoundingClientRect();
             const offset = bounding.y + (bounding.height / 2);
             const after = (e.clientY - offset) > 0;
             const parent = li.parentNode;
-            if (after) {
-              parent.insertBefore(draggedItem, li.nextSibling);
-            } else {
-              parent.insertBefore(draggedItem, li);
-            }
+            if (after) parent.insertBefore(draggedItem, li.nextSibling);
+            else parent.insertBefore(draggedItem, li);
           });
 
           sortableList.appendChild(li);
@@ -212,20 +220,15 @@
       getDoc(finalStandingsRef).then((docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (Array.isArray(data.teams)) {
-            renderOfficialOrder(data.teams);
-          } else {
-            renderOfficialOrder(teams);
-          }
+          if (Array.isArray(data.teams)) renderOfficialOrder(data.teams);
+          else renderOfficialOrder(teams);
         } else {
           renderOfficialOrder(teams);
         }
       });
 
       saveOrderBtn.addEventListener("click", async () => {
-        const updatedOrder = Array.from(sortableList.children).map((li) =>
-          li.textContent.replace(/^\d+\.\s*/, "")
-        );
+        const updatedOrder = Array.from(sortableList.children).map((li) => li.textContent.replace(/^\d+\.\s*/, ""));
         await setDoc(finalStandingsRef, {
           teams: updatedOrder,
           positions: updatedOrder.map((team, i) => ({ team, position: i + 1 }))
@@ -238,6 +241,10 @@
         sortableList.style.display = visible ? "none" : "block";
         saveOrderBtn.style.display = visible ? "none" : "inline-block";
       });
+
+      // --- Pozíciós tipp lezárás UI események ---
+      document.getElementById("saveLock").addEventListener("click", saveLock);
+      document.getElementById("clearLock").addEventListener("click", clearLock);
     }
 
     async function loadMatches() {
@@ -248,17 +255,19 @@
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
         const div = document.createElement("div");
-        div.className = "match-card";
+        div.className = "card";
         div.innerHTML = `
-          <input value="${data.homeTeam}" id="home-${docSnap.id}">
-          <input value="${data.awayTeam}" id="away-${docSnap.id}">
-          <input type="datetime-local" value="${new Date(data.startTime.toDate()).toISOString().slice(0,16)}" id="start-${docSnap.id}">
-          <input value="${data.roundId}" id="round-${docSnap.id}">
-          <input value="${data.odds["1"]}" id="odds1-${docSnap.id}">
-          <input value="${data.odds["X"]}" id="oddsX-${docSnap.id}">
-          <input value="${data.odds["2"]}" id="odds2-${docSnap.id}">
-          <button onclick="updateMatch('${docSnap.id}')">Mentés</button>
-          <button onclick="deleteMatch('${docSnap.id}')">Törlés</button>
+          <div class="row">
+            <input value="${data.homeTeam}" id="home-${docSnap.id}">
+            <input value="${data.awayTeam}" id="away-${docSnap.id}">
+            <input type="datetime-local" value="${new Date(data.startTime.toDate()).toISOString().slice(0,16)}" id="start-${docSnap.id}">
+            <input value="${data.roundId}" id="round-${docSnap.id}">
+            <input value="${data.odds["1"]}" id="odds1-${docSnap.id}">
+            <input value="${data.odds["X"]}" id="oddsX-${docSnap.id}">
+            <input value="${data.odds["2"]}" id="odds2-${docSnap.id}">
+            <button class="btn-primary" onclick="updateMatch('${docSnap.id}')">Mentés</button>
+            <button class="btn-danger" onclick="deleteMatch('${docSnap.id}')">Törlés</button>
+          </div>
         `;
         container.appendChild(div);
       });
@@ -326,9 +335,7 @@
 
         grouped[roundId].forEach(match => {
           const div = document.createElement("div");
-          div.style.border = "1px solid #ccc";
-          div.style.padding = "8px";
-          div.style.marginBottom = "5px";
+          div.className = "card";
           const formatted = match.startTime?.toDate?.().toLocaleString("hu-HU") || "";
           div.innerHTML = `<strong>${match.homeTeam} - ${match.awayTeam}</strong><br>Kezdés: ${formatted}<br>`;
 
@@ -338,16 +345,14 @@
           input.style.width = "60px";
 
           const saveBtn = document.createElement("button");
+          saveBtn.className = "btn-primary";
           saveBtn.textContent = hasResult ? "Módosítás" : "Mentés";
 
           saveBtn.onclick = async () => {
             const value = input.value.trim();
             const outcome = parseOutcome(value);
             if (!outcome) return alert("Hibás formátum. Használj pl. 3-1 vagy 1-1.");
-            await updateDoc(doc(db, "matches", match.id), {
-              result: value,
-              outcome: outcome
-            });
+            await updateDoc(doc(db, "matches", match.id), { result: value, outcome });
             await loadResults();
           };
 
@@ -365,7 +370,6 @@
       usersSnap.forEach((docSnap) => {
         const user = docSnap.data();
         const li = document.createElement("li");
-
         const nickname = user.nickname || user.email;
         li.innerHTML = `
           ${nickname} (${user.email})<br>
@@ -373,8 +377,8 @@
             <option value="user" ${user.role === "user" ? "selected" : ""}>User</option>
             <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
           </select>
-          <button class="save-role">Mentés</button>
-          <button class="delete-user">Törlés</button>
+          <button class="btn-primary save-role">Mentés</button>
+          <button class="btn-danger delete-user">Törlés</button>
         `;
 
         const select = li.querySelector("select");
@@ -382,9 +386,7 @@
         const deleteBtn = li.querySelector(".delete-user");
 
         saveBtn.onclick = async () => {
-          await updateDoc(doc(db, "users", user.email), {
-            role: select.value
-          });
+          await updateDoc(doc(db, "users", user.email), { role: select.value });
           alert("Szerepkör frissítve.");
         };
 
@@ -399,10 +401,64 @@
       });
     }
 
+    // === Pozíciós tipp LEZÁRÁS (settings/positionsLock) ===
+    async function loadPositionsLock(){
+      const status = document.getElementById('lockStatus');
+      const snap = await getDoc(doc(db, "settings", "positionsLock"));
+      if (!snap.exists()){
+        status.textContent = "Jelenleg nyitva.";
+        status.className = "muted";
+        return;
+      }
+      const data = snap.data()||{};
+      const isLocked = !!data.isLocked;
+      const until = data.lockUntil?.toDate?.() || null;
+      const msg = data.message || "";
+      const now = new Date();
+      const timeLocked = until && now >= until;
+
+      if (isLocked || timeLocked){
+        status.textContent = `ZÁRVA ${timeLocked && until ? `(határidő: ${until.toLocaleString("hu-HU")})` : "(azonnali zárás)"}` + (msg?` – ${msg}`:"");
+        status.className = "warn";
+      }else{
+        status.textContent = "Jelenleg nyitva.";
+        status.className = "ok";
+      }
+    }
+
+    async function saveLock(){
+      const lockNow = document.getElementById('lockNow').checked;
+      const untilStr = document.getElementById('lockUntil').value;
+      const message = document.getElementById('lockMessage').value.trim();
+
+      let lockDoc = { isLocked: !!lockNow, message: message || "" };
+      if (untilStr){
+        const dt = new Date(untilStr);
+        if (isNaN(+dt)) return alert("Hibás dátum/idő.");
+        lockDoc.lockUntil = Timestamp.fromDate(dt);
+      } else {
+        lockDoc.lockUntil = null;
+      }
+
+      await setDoc(doc(db, "settings", "positionsLock"), lockDoc);
+      alert("Lezárás beállítva.");
+      await loadPositionsLock();
+    }
+
+    async function clearLock(){
+      await setDoc(doc(db, "settings", "positionsLock"), {
+        isLocked:false,
+        lockUntil:null,
+        message:""
+      });
+      alert("Lezárás feloldva.");
+      await loadPositionsLock();
+    }
+
+    // export a böngészőnek
     window.updateMatch = updateMatch;
     window.deleteMatch = deleteMatch;
   </script>
 </head>
 <body></body>
 </html>
-
