@@ -1,236 +1,45 @@
-/* Alap stílusok */
+/* Alap (fallback) */
+:root{
+  --accent:#3b82f6;
+  --bg-soft:#f5f7fb;
+  --text:#0f172a;
+}
 body {
-  font-family: sans-serif;
-  margin: 20px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   background-color: white;
-  color: black;
+  color: var(--text);
 }
 
-nav a, button {
-  text-decoration: none;
-  padding: 5px 10px;
-  margin: 5px;
-  border-radius: 5px;
-  display: inline-block;
-}
-
+/* Általános akcentus-használat */
+nav a { color: var(--accent); }
+nav a:hover { text-decoration: underline; }
 button {
   cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  padding: 6px 12px;
+  border-radius: 10px;
 }
+button:hover { filter: brightness(0.95); }
 
-/* === Témák csapatonként === */
-body.theme-debreceni-vsc {
-  background-color: #ffe6e9;
-  color: #8b0000;
-}
-body.theme-debreceni-vsc h1,
-body.theme-debreceni-vsc h2,
-body.theme-debreceni-vsc h3 {
-  color: #da1a32;
-}
-body.theme-debreceni-vsc button {
-  background-color: #da1a32;
-  color: white;
-}
-body.theme-debreceni-vsc button:hover {
-  background-color: #8b0000;
-  color: #da1a32;
-}
+/* === Témák – mindegyik beállít saját --accent + háttereket === */
+body.theme-debreceni-vsc      { --accent:#da1a32; background-color:#ffe6e9; color:#8b0000; }
+body.theme-diosgyori-vtk      { --accent:#c00000; background-color:#fff0f0; color:#7a0000; }
+body.theme-ferencvaros        { --accent:#007e33; background-color:#e6ffe6; color:#003300; }
+body.theme-eto-fc-gyor        { --accent:#1c7c54; background-color:#e2f5e6; color:#0f5132; }
+body.theme-kazincbarcikai-sc  { --accent:#0066cc; background-color:#f0f8ff; color:#002147; }
+body.theme-kisvarda-fc        { --accent:#cc0000; background-color:#fbeaea; color:#7a0000; }
+body.theme-mtk-budapest       { --accent:#0056b3; background-color:#e8f4ff; color:#003366; }
+body.theme-nyiregyhaza-spartacus { --accent:#c02e3b; background-color:#f8e9eb; color:#5a0a0a; }
+body.theme-paksi-fc           { --accent:#009933; background-color:#e0f2e9; color:#004d26; }
+body.theme-puskas-akademia    { --accent:#ffc72c; background-color:#f5f5dc; color:#002147; }
+body.theme-ujpest-fc          { --accent:#9d4edd; background-color:#f7f0ff; color:#3f0071; }
+body.theme-zalaegerszegi-te-fc{ --accent:#0047ab; background-color:#e6f0ff; color:#002366; }
 
-body.theme-diosgyori-vtk {
-  background-color: #fff0f0;
-  color: #7a0000;
-}
-body.theme-diosgyori-vtk h1,
-body.theme-diosgyori-vtk h2,
-body.theme-diosgyori-vtk h3 {
-  color: #c00000;
-}
-body.theme-diosgyori-vtk button {
-  background-color: #c00000;
-  color: white;
-}
-body.theme-diosgyori-vtk button:hover {
-  background-color: #7a0000;
-  color: #c00000;
-}
+/* Heading színek igazítása az accenthez */
+body[class^="theme-"] h1,
+body[class^="theme-"] h2,
+body[class^="theme-"] h3 { color: var(--accent); }
 
-body.theme-ferencvaros {
-  background-color: #e6ffe6;
-  color: #003300;
-}
-body.theme-ferencvaros h1,
-body.theme-ferencvaros h2,
-body.theme-ferencvaros h3 {
-  color: #007e33;
-}
-body.theme-ferencvaros button {
-  background-color: #007e33;
-  color: white;
-}
-body.theme-ferencvaros button:hover {
-  background-color: #003300;
-  color: #007e33;
-}
-
-body.theme-eto-fc-gyor {
-  background-color: #e2f5e6;
-  color: #0f5132;
-}
-body.theme-eto-fc-gyor h1,
-body.theme-eto-fc-gyor h2,
-body.theme-eto-fc-gyor h3 {
-  color: #1c7c54;
-}
-body.theme-eto-fc-gyor button {
-  background-color: #1c7c54;
-  color: white;
-}
-body.theme-eto-fc-gyor button:hover {
-  background-color: #0f5132;
-  color: #1c7c54;
-}
-
-body.theme-kazincbarcikai-sc {
-  background-color: #f0f8ff;
-  color: #002147;
-}
-body.theme-kazincbarcikai-sc h1,
-body.theme-kazincbarcikai-sc h2,
-body.theme-kazincbarcikai-sc h3 {
-  color: #0066cc;
-}
-body.theme-kazincbarcikai-sc button {
-  background-color: #0066cc;
-  color: white;
-}
-body.theme-kazincbarcikai-sc button:hover {
-  background-color: #002147;
-  color: #0066cc;
-}
-
-body.theme-kisvarda-fc {
-  background-color: #fbeaea;
-  color: #7a0000;
-}
-body.theme-kisvarda-fc h1,
-body.theme-kisvarda-fc h2,
-body.theme-kisvarda-fc h3 {
-  color: #cc0000;
-}
-body.theme-kisvarda-fc button {
-  background-color: #cc0000;
-  color: white;
-}
-body.theme-kisvarda-fc button:hover {
-  background-color: #7a0000;
-  color: #cc0000;
-}
-
-body.theme-mtk-budapest {
-  background-color: #e8f4ff;
-  color: #003366;
-}
-body.theme-mtk-budapest h1,
-body.theme-mtk-budapest h2,
-body.theme-mtk-budapest h3 {
-  color: #0056b3;
-}
-body.theme-mtk-budapest button {
-  background-color: #0056b3;
-  color: white;
-}
-body.theme-mtk-budapest button:hover {
-  background-color: #003366;
-  color: #0056b3;
-}
-
-body.theme-nyiregyhaza-spartacus {
-  background-color: #f8e9eb;
-  color: #5a0a0a;
-}
-body.theme-nyiregyhaza-spartacus h1,
-body.theme-nyiregyhaza-spartacus h2,
-body.theme-nyiregyhaza-spartacus h3 {
-  color: #c02e3b;
-}
-body.theme-nyiregyhaza-spartacus button {
-  background-color: #c02e3b;
-  color: white;
-}
-body.theme-nyiregyhaza-spartacus button:hover {
-  background-color: #5a0a0a;
-  color: #c02e3b;
-}
-
-body.theme-paksi-fc {
-  background-color: #e0f2e9;
-  color: #004d26;
-}
-body.theme-paksi-fc h1,
-body.theme-paksi-fc h2,
-body.theme-paksi-fc h3 {
-  color: #009933;
-}
-body.theme-paksi-fc button {
-  background-color: #009933;
-  color: white;
-}
-body.theme-paksi-fc button:hover {
-  background-color: #004d26;
-  color: #009933;
-}
-
-body.theme-puskas-akademia {
-  background-color: #f5f5dc;
-  color: #002147;
-}
-body.theme-puskas-akademia h1,
-body.theme-puskas-akademia h2,
-body.theme-puskas-akademia h3 {
-  color: #ffc72c;
-}
-body.theme-puskas-akademia button {
-  background-color: #ffc72c;
-  color: #002147;
-}
-body.theme-puskas-akademia button:hover {
-  background-color: #002147;
-  color: #ffc72c;
-}
-
-body.theme-ujpest-fc {
-  background-color: #f7f0ff;
-  color: #3f0071;
-}
-body.theme-ujpest-fc h1,
-body.theme-ujpest-fc h2,
-body.theme-ujpest-fc h3 {
-  color: #9d4edd;
-}
-body.theme-ujpest-fc button {
-  background-color: #9d4edd;
-  color: white;
-}
-body.theme-ujpest-fc button:hover {
-  background-color: #3f0071;
-  color: #9d4edd;
-}
-
-body.theme-zalaegerszegi-te-fc {
-  background-color: #e6f0ff;
-  color: #002366;
-}
-body.theme-zalaegerszegi-te-fc h1,
-body.theme-zalaegerszegi-te-fc h2,
-body.theme-zalaegerszegi-te-fc h3 {
-  color: #0047ab;
-}
-body.theme-zalaegerszegi-te-fc button {
-  background-color: #0047ab;
-  color: white;
-}
-body.theme-zalaegerszegi-te-fc button:hover {
-  background-color: #002366;
-  color: #0047ab;
-}
+/* Nav link, gombok színe már az --accent változót kapja fel (fent) */
