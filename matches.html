@@ -3,30 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <title>Meccsek és Tippelés</title>
+
+  <!-- Firebase (compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+  <script src="loader.js" defer></script>
+
   <style>
-    .team-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 1.1em;
+    :root{
+      --bg:#f5f7fb; --card:#fff; --line:#e6eaf1; --text:#0f172a; --muted:#64748b;
+      --accent:#3b82f6; --ok:#16a34a;
     }
-    .crest {
-      height: 28px;
-      width: 28px;
-      object-fit: contain;
+    * { box-sizing: border-box; }
+    body{
+      margin:0; padding:24px;
+      background:var(--bg); color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
     }
-    .dupla-lezart {
-      color: #888;
-      font-size: 0.9em;
-      margin-left: 5px;
+
+    .back-btn{
+      display:inline-block; text-decoration:none;
+      background:#e5e7eb; color:#111;
+      padding:8px 12px; border-radius:10px;
+      border:1px solid var(--line);
+    }
+
+    h1{ margin:16px 0 12px; font-size:22px; }
+    .page-muted{ color:var(--muted); margin-bottom:16px; }
+
+    .round-card{
+      background:var(--card); border:1px solid var(--line); border-radius:12px;
+      box-shadow:0 6px 18px rgba(15,23,42,.05);
+      margin:18px auto; max-width:1100px; overflow:hidden;
+    }
+    .round-head{
+      padding:10px 14px; border-bottom:1px solid var(--line);
+      background:#f7f9fd; font-weight:700; display:flex; align-items:center; gap:10px;
+    }
+    .round-head small{ font-weight:400; color:var(--muted); }
+
+    .match-row{
+      display:grid;
+      grid-template-columns: 1.8fr 1fr 1fr 1.2fr;
+      gap:10px; align-items:center;
+      padding:12px 14px; border-bottom:1px solid var(--line);
+      background:#fff;
+    }
+    .match-row:last-child{ border-bottom:0; }
+    .match-row:nth-child(even){ background:#fcfdff; }
+
+    .teams{ display:flex; align-items:center; gap:10px; min-width:0; }
+    .crest{ width:26px; height:26px; object-fit:contain }
+    .kickoff{ color:var(--muted); font-size:12px; }
+
+    select, button, label{ font:inherit; }
+    select{
+      width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff;
+    }
+
+    .double-wrap{ display:flex; align-items:center; gap:8px; }
+    .dupla-lezart{ color:#888; font-size:12px; }
+
+    .btn{
+      border:0; background:var(--accent); color:#fff;
+      padding:8px 12px; border-radius:10px; cursor:pointer;
+    }
+    .btn[disabled]{ opacity:.5; cursor:not-allowed; }
+
+    .round-footer{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 14px; border-top:1px solid var(--line); background:#fafcff;
+    }
+    .status{ font-size:13px; }
+    .status.ok{ color:var(--ok); }
+    .status.muted{ color:var(--muted); }
+
+    @media (max-width: 900px){
+      .match-row{ grid-template-columns: 1.6fr 1fr 1fr; }
+      .status-col{ grid-column: 1 / -1; }
     }
   </style>
 </head>
 <body>
-  <h1>Meccsek és Tippelés</h1>
+  <a href="dashboard.html" class="back-btn">← Vissza a főoldalra</a>
+  <h1>Meccsek és tippelés</h1>
+  <div class="page-muted">
+    Itt adhatod le a tippjeidet. A “Dupla pont” az adott forduló első meccsének kezdetéig állítható, és fordulónként pontosan egy meccsre érvényes.
+  </div>
+
   <div id="matchesContainer"></div>
 
   <script>
@@ -44,7 +111,6 @@
     const auth = firebase.auth();
 
     const matchesContainer = document.getElementById("matchesContainer");
-    let currentUserId = null;
     let userTips = {};
 
     const crestMap = {
@@ -63,201 +129,239 @@
     };
 
     auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        currentUserId = user.uid;
-        await fetchUserTips();
-        loadMatches();
-      } else {
-        alert("Nincs bejelentkezve!");
-        window.location.href = "login.html";
-      }
+      if (!user) { window.location.href = "login.html"; return; }
+      await fetchUserTips();
+      loadMatches();
     });
 
     async function fetchUserTips() {
-  try {
-    const tipsSnapshot = await db.collection("tips")
-      .where("user", "==", auth.currentUser.email)
-      .get();
-
-    userTips = {};
-    tipsSnapshot.forEach((doc) => {
-      const data = doc.data();
-      userTips[data.matchId] = {
-        tip: data.tip,
-        isDouble: data.isDouble,
-        id: doc.id,
-        roundId: data.roundId
-      };
-    });
-  } catch (error) {
-    console.error("Hiba a tippek lekérésekor:", error);
-  }
-}
-
+      const tipsSnapshot = await db.collection("tips")
+        .where("user", "==", auth.currentUser.email)
+        .get();
+      userTips = {};
+      tipsSnapshot.forEach(doc => {
+        const d = doc.data();
+        userTips[d.matchId] = { id: doc.id, tip: d.tip, isDouble: d.isDouble, roundId: d.roundId };
+      });
+    }
 
     function loadMatches() {
-      db.collection("matches").orderBy("startTime").onSnapshot(async (querySnapshot) => {
+      db.collection("matches").orderBy("startTime").onSnapshot(async (qs) => {
         await fetchUserTips();
-        const matchesByRound = {};
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const roundId = data.roundId || "Egyéb";
-
-          if (!matchesByRound[roundId]) {
-            matchesByRound[roundId] = [];
-          }
-
-          matchesByRound[roundId].push({ id: doc.id, ...data });
+        const byRound = {};
+        qs.forEach(doc => {
+          const d = doc.data();
+          const r = d.roundId || "Egyéb";
+          (byRound[r] ||= []).push({ id: doc.id, ...d });
         });
 
         matchesContainer.innerHTML = "";
         const now = new Date();
 
-        const sortedRounds = Object.keys(matchesByRound).sort((a, b) => {
-          const numA = parseInt(a.replace(/\D/g, '')) || 0;
-          const numB = parseInt(b.replace(/\D/g, '')) || 0;
-          return numA - numB;
+        const sortedRounds = Object.keys(byRound).sort((a,b)=>{
+          const na = parseInt(a)||0, nb = parseInt(b)||0;
+          return na-nb;
         });
 
-        sortedRounds.forEach((roundId) => {
-          const matches = matchesByRound[roundId];
+        for (const roundId of sortedRounds) {
+          const list = byRound[roundId];
 
-          const allStarted = matches.every(m => m.startTime?.toDate?.() <= now);
-          if (allStarted) return; // ne jelenjen meg ha minden meccs elkezdődött
+          // ha a forduló ÖSSZES meccse elkezdődött, ne mutassuk
+          const allStarted = list.every(m => m.startTime?.toDate?.() <= now);
+          if (allStarted) continue;
 
-          const roundHeader = document.createElement("h2");
-          roundHeader.textContent = `${roundId.replace(/\D*(\d+)/, "$1")}. forduló`;
-          matchesContainer.appendChild(roundHeader);
+          const card = document.createElement("div");
+          card.className = "round-card";
 
-          const roundStartTime = matches.reduce((earliest, m) => {
-            const time = m.startTime?.toDate?.();
-            return (!earliest || time < earliest) ? time : earliest;
+          // fej
+          const head = document.createElement("div");
+          head.className = "round-head";
+          const roundStart = list.reduce((earliest,m)=>{
+            const t = m.startTime?.toDate?.(); return (!earliest||t<earliest)?t:earliest;
           }, null);
-          const roundStarted = roundStartTime && roundStartTime <= now;
+          const roundStarted = roundStart && roundStart <= now;
+          head.innerHTML = `🏁 ${roundId}. forduló <small>${roundStart? roundStart.toLocaleString("hu-HU"):""}</small>`;
+          card.appendChild(head);
 
-          matches.forEach((match) => {
-            const matchDiv = document.createElement("div");
-            matchDiv.style.border = "1px solid #ccc";
-            matchDiv.style.padding = "10px";
-            matchDiv.style.marginBottom = "10px";
+          // a kártyán belüli referenciák a mentéshez
+          const rowRefs = []; // {match, select, checkbox, started, existing}
+          const groupName = `double-${roundId}`; // rádió-szerű viselkedéshez
 
-            const startTime = match.startTime?.toDate?.();
-            const formattedTime = startTime ? startTime.toLocaleString("hu-HU") : "Invalid Date";
-            const hasStarted = startTime && startTime <= now;
+          // sorok
+          list.forEach(match => {
+            const row = document.createElement("div");
+            row.className = "match-row";
+
+            const start = match.startTime?.toDate?.();
+            const hasStarted = start && start <= now;
 
             const homeCrest = crestMap[match.homeTeam] || "";
             const awayCrest = crestMap[match.awayTeam] || "";
 
-            matchDiv.innerHTML = `
-              <div class="team-row">
-                <img src="${homeCrest}" class="crest">
-                <strong>${match.homeTeam}</strong> vs
+            // 1) csapatok + kezdés
+            const teamsCell = document.createElement("div");
+            teamsCell.innerHTML = `
+              <div class="teams">
+                <img src="${homeCrest}" class="crest" alt="">
+                <strong>${match.homeTeam}</strong>
+                <span>vs</span>
                 <strong>${match.awayTeam}</strong>
-                <img src="${awayCrest}" class="crest">
+                <img src="${awayCrest}" class="crest" alt="">
               </div>
-              Kezdés: ${formattedTime}<br/>
+              <div class="kickoff">Kezdés: ${start? start.toLocaleString("hu-HU") : "-"}</div>
             `;
+            row.appendChild(teamsCell);
 
-            const existingTip = userTips[match.id];
+            // 2) tipp select
+            const existing = userTips[match.id];
             const odds1 = match.odds?.["1"] ?? "-";
             const oddsX = match.odds?.["X"] ?? "-";
             const odds2 = match.odds?.["2"] ?? "-";
 
+            const pickCell = document.createElement("div");
             const select = document.createElement("select");
             select.innerHTML = `
-              <option value="">Válassz</option>
+              <option value="">Válassz tippet</option>
               <option value="1">1 (odds: ${odds1})</option>
               <option value="X">X (odds: ${oddsX})</option>
               <option value="2">2 (odds: ${odds2})</option>
             `;
-            if (existingTip) select.value = existingTip.tip;
+            if (existing) select.value = existing.tip;
             if (hasStarted) select.disabled = true;
+            pickCell.appendChild(select);
+            row.appendChild(pickCell);
 
+            // 3) dupla (rádió-szerű egyediséggel a fordulón belül)
+            const doubleCell = document.createElement("div");
+            doubleCell.className = "double-wrap";
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
-            checkbox.checked = existingTip?.isDouble || false;
+            checkbox.dataset.group = groupName;
+            checkbox.checked = existing?.isDouble || false;
             if (roundStarted) checkbox.disabled = true;
 
-            const duplaInfo = document.createElement("span");
-            if (roundStarted) duplaInfo.className = "dupla-lezart";
-            if (roundStarted) duplaInfo.textContent = "(duplázás lezárva)";
-
-            const saveBtn = document.createElement("button");
-            saveBtn.textContent = "Tipp mentése";
-            if (hasStarted) saveBtn.disabled = true;
-
-            const status = document.createElement("div");
-            if (existingTip) {
-              status.innerHTML = `✅ Tippeltél: ${existingTip.tip} ${existingTip.isDouble ? "(dupla)" : ""}`;
-              status.style.color = "green";
-            }
-
-            saveBtn.onclick = async () => {
-              const selected = select.value;
-              const isDouble = checkbox.checked;
-
-              if (!selected) {
-                alert("Kérlek válassz egy tippet.");
-                return;
-              }
-
-              const tipRef = db.collection("tips");
-              const existing = userTips[match.id];
-
-              if (isDouble) {
-                const oldDouble = Object.entries(userTips).find(
-                  ([, tip]) => tip.roundId === match.roundId && tip.isDouble && tip.id !== existing?.id
-                );
-                if (oldDouble) {
-                  await tipRef.doc(oldDouble[1].id).update({ isDouble: false });
-                  userTips[oldDouble[0]].isDouble = false;
-                }
-              }
-
-              if (existing) {
-                await tipRef.doc(existing.id).update({
-                  tip: selected,
-                  isDouble,
-                });
-                userTips[match.id].tip = selected;
-                userTips[match.id].isDouble = isDouble;
-              } else {
-                const newDoc = await tipRef.add({
-                  user: auth.currentUser.email,
-                  matchId: match.id,
-                  tip: selected,
-                  isDouble,
-                  roundId: match.roundId,
-                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                });
-                userTips[match.id] = {
-                  id: newDoc.id,
-                  tip: selected,
-                  isDouble,
-                  roundId: match.roundId,
-                };
-              }
-
-              loadMatches();
-            };
-
-            matchDiv.appendChild(select);
-            matchDiv.appendChild(document.createElement("br"));
+            // ha bepipálod, a fordulón belüli többit kikapcsolja
+            checkbox.addEventListener("change", (e)=>{
+              if (!e.target.checked) return;
+              document
+                .querySelectorAll(`input[type="checkbox"][data-group="${groupName}"]`)
+                .forEach(cb => { if (cb!==checkbox) cb.checked = false; });
+            });
 
             const label = document.createElement("label");
             label.textContent = "Dupla pont";
-            matchDiv.appendChild(checkbox);
-            matchDiv.appendChild(label);
-            matchDiv.appendChild(duplaInfo);
-            matchDiv.appendChild(document.createElement("br"));
 
-            matchDiv.appendChild(saveBtn);
-            matchDiv.appendChild(status);
+            const duplaInfo = document.createElement("span");
+            if (roundStarted) { duplaInfo.className="dupla-lezart"; duplaInfo.textContent="(duplázás lezárva)"; }
 
-            matchesContainer.appendChild(matchDiv);
+            doubleCell.appendChild(checkbox);
+            doubleCell.appendChild(label);
+            doubleCell.appendChild(duplaInfo);
+            row.appendChild(doubleCell);
+
+            // 4) státusz
+            const status = document.createElement("div");
+            status.className = "status status-col " + (existing? "ok":"muted");
+            status.textContent = existing
+              ? `✅ Tippeltél: ${existing.tip}${existing.isDouble ? " (dupla)" : ""}`
+              : "Még nincs tipped.";
+            row.appendChild(status);
+
+            rowRefs.push({ match, select, checkbox, started: hasStarted, existing });
+            card.appendChild(row);
           });
-        });
+
+          // lábléc – forduló mentése
+          const footer = document.createElement("div");
+          footer.className = "round-footer";
+          const info = document.createElement("div");
+          info.className = "status muted";
+          info.textContent = "Válassz tippet(eket), majd mentsd el.";
+          const saveRoundBtn = document.createElement("button");
+          saveRoundBtn.className = "btn";
+          saveRoundBtn.textContent = "Forduló mentése";
+          footer.appendChild(info);
+          footer.appendChild(saveRoundBtn);
+          card.appendChild(footer);
+
+          // mentés: csak a még el nem kezdett meccsekre és csak a kiválasztott tippeket menti
+          saveRoundBtn.addEventListener("click", async ()=>{
+            saveRoundBtn.disabled = true;
+            info.textContent = "Mentés folyamatban…";
+
+            try{
+              // kiválasztott dupla (ha a fordulóban bárki be van jelölve)
+              const chosenDouble = rowRefs.find(r => r.checkbox.checked);
+              const chosenDoubleMatchId = chosenDouble ? chosenDouble.match.id : null;
+
+              const tipRef = db.collection("tips");
+
+              // ha most máshova jelöltünk duplát, szedd le a régi duplát ugyanebből a fordulóból
+              if (chosenDoubleMatchId){
+                const old = Object.entries(userTips).find(([mid, t]) =>
+                  t.roundId === roundId && t.isDouble && mid !== chosenDoubleMatchId
+                );
+                if (old){
+                  await tipRef.doc(old[1].id).update({ isDouble:false });
+                  userTips[old[0]].isDouble = false;
+                }
+              }
+
+              // végigmegyünk a sorokon
+              for (const r of rowRefs){
+                if (r.started) continue; // már elindult meccs: kihagyjuk
+
+                const selected = r.select.value;
+                const makeDouble = (r.match.id === chosenDoubleMatchId) && !roundStarted;
+
+                // nincs kiválasztott tipp → semmit nem csinálunk (nem törlünk)
+                if (!selected){
+                  // ha korábban dupla volt és most másra jelölted → itt is levehetjük a duplát
+                  if (r.existing?.id && r.existing.isDouble && chosenDoubleMatchId && r.match.id !== chosenDoubleMatchId){
+                    await tipRef.doc(r.existing.id).update({ isDouble:false });
+                    userTips[r.match.id].isDouble = false;
+                  }
+                  continue;
+                }
+
+                if (r.existing?.id){
+                  await tipRef.doc(r.existing.id).update({
+                    tip: selected,
+                    isDouble: !!makeDouble
+                  });
+                  userTips[r.match.id].tip = selected;
+                  userTips[r.match.id].isDouble = !!makeDouble;
+                } else {
+                  const newDoc = await tipRef.add({
+                    user: auth.currentUser.email,
+                    matchId: r.match.id,
+                    tip: selected,
+                    isDouble: !!makeDouble,
+                    roundId: roundId,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                  });
+                  userTips[r.match.id] = {
+                    id: newDoc.id, tip: selected, isDouble: !!makeDouble, roundId
+                  };
+                }
+              }
+
+              info.className = "status ok";
+              info.textContent = "Sikeresen mentve.";
+              loadMatches(); // frissítsük a státuszokat
+            } catch(err){
+              console.error(err);
+              info.className = "status";
+              info.textContent = "Hiba történt mentés közben.";
+            } finally {
+              saveRoundBtn.disabled = false;
+            }
+          });
+
+          matchesContainer.appendChild(card);
+        }
+
+        if (window.hideLoader) hideLoader();
       });
     }
   </script>
