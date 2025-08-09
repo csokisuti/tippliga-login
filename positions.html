@@ -38,10 +38,19 @@
       border:1px solid #fed7aa;
       padding:10px 12px;
       border-radius:10px;
-      margin:0 0 14px;
+      margin:0 0 10px;
       font-weight:600;
     }
     .locked .lock-banner{ display:block; }
+
+    /* Lock info (lezárási dátum) */
+    .lock-info{
+      display:none;
+      color:var(--muted);
+      margin:0 0 14px;
+      font-weight:500;
+    }
+    .lock-info.show{ display:block; }
 
     /* Kétpaneles elrendezés */
     .wrap{
@@ -115,11 +124,11 @@
   <div class="page-muted">Fogd-és-vidd módszerrel húzd a csapatokat a helyezésekhez. Mentés után később bármikor visszatölthető — kivéve ha az admin lezárta a tippelést.</div>
 
   <div id="lockBanner" class="lock-banner">⚠️ A pozíciós tippelés le van zárva. Sorrendet most nem lehet módosítani.</div>
+  <div id="lockInfo" class="lock-info"></div>
 
   <div class="wrap">
     <aside class="panel teams" id="team-list">
       <h3>Csapatok</h3>
-      <!-- ide renderelünk -->
     </aside>
 
     <section class="panel table" id="table">
@@ -130,7 +139,7 @@
           <button id="save" class="btn">Mentés</button>
         </div>
       </header>
-      <div class="positions" id="positions"><!-- ide renderelünk --></div>
+      <div class="positions" id="positions"></div>
     </section>
   </div>
 
@@ -172,6 +181,7 @@
     const saveBtn = document.getElementById("save");
     const resetBtn = document.getElementById("resetBtn");
     const lockBanner = document.getElementById("lockBanner");
+    const lockInfo = document.getElementById("lockInfo");
     let IS_LOCKED = false;
 
     function setLockedUI(locked, msg){
@@ -192,19 +202,41 @@
     async function fetchLockState(){
       try{
         const snap = await getDoc(doc(db, "settings", "positionsLock"));
-        if (!snap.exists()) return setLockedUI(false);
+        if (!snap.exists()){
+          // nincs beállítás → nincs lock, nincs dátum
+          setLockedUI(false);
+          lockInfo.classList.remove('show');
+          lockInfo.textContent = "";
+          return;
+        }
         const data = snap.data() || {};
         const isLocked = !!data.isLocked;
         const untilTs = data.lockUntil;
         const msg = data.message || "";
         let timeLocked = false;
+        let dateText = "";
+
         if (untilTs && typeof untilTs.toDate === 'function'){
-          timeLocked = new Date() >= untilTs.toDate();
+          const untilDate = untilTs.toDate();
+          dateText = `⏳ Lezárás időpontja: ${untilDate.toLocaleString("hu-HU")}`;
+          timeLocked = new Date() >= untilDate;
         }
+
+        // dátum kijelzése (akkor is, ha még nincs lezárva)
+        if (dateText){
+          lockInfo.textContent = dateText;
+          lockInfo.classList.add('show');
+        } else {
+          lockInfo.classList.remove('show');
+          lockInfo.textContent = "";
+        }
+
         setLockedUI(isLocked || timeLocked, msg);
       }catch(e){
         console.warn("Lock lekérés hiba:", e?.message||e);
         setLockedUI(false);
+        lockInfo.classList.remove('show');
+        lockInfo.textContent = "";
       }
     }
 
@@ -335,7 +367,7 @@
         return;
       }
 
-      await fetchLockState();        // lock állapot betöltése elsőnek
+      await fetchLockState();        // lock állapot + határidő betöltése
       renderPositions();
       await loadFromFirebase(user);
       setupDragAndDrop();
