@@ -2,263 +2,302 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8">
-  <title>NB1 Tipp - Pozíciós sorrend</title>
-  <link rel="stylesheet" href="style.css">
+  <title>NB1 Tipp – Pozíciós sorrend</title>
   <link rel="stylesheet" href="style.css">
   <script src="loader.js" defer></script>
   <style>
-    body {
-      font-family: sans-serif;
-      display: flex;
-      gap: 40px;
-      padding: 30px;
-      background: #f2f2f2;
+    :root{
+      --bg:#f5f7fb; --card:#fff; --line:#e6eaf1; --text:#0f172a; --muted:#64748b;
+      --accent:#3b82f6; --ok:#16a34a;
     }
-    .teams, .table {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
+    * { box-sizing: border-box; }
+    body{
+      margin:0; padding:24px;
+      background:var(--bg); color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
+      display:block;
     }
-    .teams {
-      width: 250px;
-      max-height: 90vh;
-      overflow-y: auto;
-      position: sticky;
-      top: 20px;
+
+    /* Vissza gomb */
+    .back-btn{
+      display:inline-block; text-decoration:none;
+      background:#e5e7eb; color:#111;
+      padding:8px 12px; border-radius:10px;
+      border:1px solid var(--line);
+      margin-bottom:10px;
     }
-    .team {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      margin-bottom: 8px;
-      background-color: #fafafa;
-      cursor: grab;
+
+    h1{ margin:16px 0 12px; font-size:22px; }
+    .page-muted{ color:var(--muted); margin-bottom:16px; }
+
+    /* Kétpaneles elrendezés */
+    .wrap{
+      display:flex; gap:24px; align-items:flex-start;
     }
-    .team img {
-      width: 30px;
-      height: 30px;
+    .panel{
+      background:var(--card); border:1px solid var(--line); border-radius:12px;
+      box-shadow:0 6px 18px rgba(15,23,42,.05);
     }
-    .table {
-      flex: 1;
+
+    /* Bal oldal – csapatok */
+    .teams{
+      width:300px; max-height:80vh; overflow:auto; position:sticky; top:20px;
+      padding:14px;
     }
-    .position {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      background: #fff;
-      min-height: 50px;
+    .teams h3{ margin:0 0 10px; font-size:16px; }
+    .team{
+      display:flex; align-items:center; gap:10px;
+      padding:8px; border:1px solid var(--line); border-radius:8px;
+      margin-bottom:8px; background:#fafafa; cursor:grab;
     }
-    .position-number {
-      font-weight: bold;
-      width: 30px;
+    .team img{ width:26px; height:26px; object-fit:contain }
+
+    /* Jobb oldal – táblázat */
+    .table{
+      flex:1; overflow:hidden;
     }
-    .dropzone {
-      flex: 1;
-      min-height: 40px;
-      border: 1px dashed #ccc;
-      margin-left: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: start;
-      padding: 5px;
-      background-color: #f9f9f9;
+    .table header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 14px; border-bottom:1px solid var(--line); background:#f7f9fd;
     }
-    .dropzone.over {
-      border-color: #007bff;
-      background-color: #e0f0ff;
+    .controls{ display:flex; gap:10px; }
+    .btn{
+      border:0; background:var(--accent); color:#fff;
+      padding:8px 12px; border-radius:10px; cursor:pointer;
     }
-    #save {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-weight: bold;
+    .btn-secondary{
+      border:1px solid var(--line); background:#e5e7eb; color:#111;
+      padding:8px 12px; border-radius:10px; cursor:pointer;
+    }
+
+    .positions{
+      padding:8px 0;
+    }
+    .position{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 14px; border-bottom:1px solid var(--line); background:#fff;
+      min-height:58px;
+    }
+    .position-number{
+      font-weight:700; width:34px; text-align:right; color:#334155;
+    }
+    .dropzone{
+      flex:1; min-height:40px; border:1px dashed #cbd5e1; border-radius:8px;
+      padding:6px; display:flex; align-items:center; gap:8px; background:#f9fafb;
+    }
+    .dropzone.over{ border-color:#3b82f6; background:#e0f2fe; }
+
+    @media (max-width:980px){
+      .wrap{ flex-direction:column; }
+      .teams{ position:static; width:100%; max-height:none; }
     }
   </style>
 </head>
 <body>
-  <div class="teams" id="team-list"></div>
-  <div class="table" id="table">
-    <h3>Helyezések</h3>
-    <div id="positions"></div>
-    <button id="save">Mentés</button>
+  <a href="dashboard.html" class="back-btn">← Vissza a főoldalra</a>
+  <h1>Szezon végi pozíciós sorrend</h1>
+  <div class="page-muted">Fogd-és-vidd módszerrel húzd a csapatokat a helyezésekhez. Mentés után később bármikor visszatölthető.</div>
+
+  <div class="wrap">
+    <aside class="panel teams" id="team-list">
+      <h3>Csapatok</h3>
+      <!-- ide renderelünk -->
+    </aside>
+
+    <section class="panel table" id="table">
+      <header>
+        <strong>Helyezések</strong>
+        <div class="controls">
+          <button id="resetBtn" class="btn-secondary">Törlés</button>
+          <button id="save" class="btn">Mentés</button>
+        </div>
+      </header>
+      <div class="positions" id="positions"><!-- ide renderelünk --></div>
+    </section>
   </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const firebaseConfig = {
-        apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-        authDomain: "tippliga-4b3af.firebaseapp.com",
-        projectId: "tippliga-4b3af",
-        storageBucket: "tippliga-4b3af.appspot.com",
-        messagingSenderId: "720359845241",
-        appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-      };
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
 
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-      const teams = [
-        { name: "Debreceni VSC", logo: "crest/crest-dvsc.png" },
-        { name: "Diósgyőri VTK", logo: "crest/crest-dvtk.png" },
-        { name: "Ferencváros", logo: "crest/crest-fradi.png" },
-        { name: "ETO FC Győr", logo: "crest/crest-gyor.png" },
-        { name: "Kazincbarcikai SC", logo: "crest/crest-kazincbarcika.png" },
-        { name: "Kisvárda FC", logo: "crest/crest-kisvarda.png" },
-        { name: "MTK Budapest", logo: "crest/crest-mtk.png" },
-        { name: "Nyíregyháza Spartacus", logo: "crest/crest-nyiregyhaza.png" },
-        { name: "Paksi FC", logo: "crest/crest-paks.png" },
-        { name: "Puskás Akadémia", logo: "crest/crest-puskas.png" },
-        { name: "Újpest FC", logo: "crest/crest-ujpest.png" },
-        { name: "Zalaegerszegi TE FC", logo: "crest/crest-zte.png" }
-      ];
+    const teams = [
+      { name: "Debreceni VSC", logo: "crest/crest-dvsc.png" },
+      { name: "Diósgyőri VTK", logo: "crest/crest-dvtk.png" },
+      { name: "Ferencváros", logo: "crest/crest-fradi.png" },
+      { name: "ETO FC Győr", logo: "crest/crest-gyor.png" },
+      { name: "Kazincbarcikai SC", logo: "crest/crest-kazincbarcika.png" },
+      { name: "Kisvárda FC", logo: "crest/crest-kisvarda.png" },
+      { name: "MTK Budapest", logo: "crest/crest-mtk.png" },
+      { name: "Nyíregyháza Spartacus", logo: "crest/crest-nyiregyhaza.png" },
+      { name: "Paksi FC", logo: "crest/crest-paks.png" },
+      { name: "Puskás Akadémia", logo: "crest/crest-puskas.png" },
+      { name: "Újpest FC", logo: "crest/crest-ujpest.png" },
+      { name: "Zalaegerszegi TE FC", logo: "crest/crest-zte.png" }
+    ];
 
-      const teamList = document.getElementById("team-list");
-      const positions = document.getElementById("positions");
+    const teamList = document.getElementById("team-list");
+    const positions = document.getElementById("positions");
+    const saveBtn = document.getElementById("save");
+    const resetBtn = document.getElementById("resetBtn");
 
-      function createTeamElement(team) {
-        const div = document.createElement("div");
-        div.classList.add("team");
-        div.setAttribute("draggable", "true");
-        div.dataset.name = team.name;
-        div.innerHTML = `<img src="${team.logo}" alt=""><span>${team.name}</span>`;
-        return div;
-      }
+    function createTeamElement(team) {
+      const div = document.createElement("div");
+      div.classList.add("team");
+      div.setAttribute("draggable", "true");
+      div.dataset.name = team.name;
+      div.innerHTML = `<img src="${team.logo}" alt=""><span>${team.name}</span>`;
+      return div;
+    }
 
-      function renderTeamList() {
-        teamList.innerHTML = "";
-        const usedNames = Array.from(document.querySelectorAll(".dropzone .team")).map(t => t.dataset.name);
-        teams.forEach(team => {
-          if (!usedNames.includes(team.name)) {
-            const el = createTeamElement(team);
-            teamList.appendChild(el);
-          }
-        });
-      }
-
-      function renderPositions() {
-        positions.innerHTML = "";
-        for (let i = 1; i <= 12; i++) {
-          const row = document.createElement("div");
-          row.classList.add("position");
-          row.innerHTML = `
-            <div class="position-number">${i}.</div>
-            <div class="dropzone" data-pos="${i}" id="pos-${i}"></div>
-          `;
-          positions.appendChild(row);
+    function renderTeamList() {
+      // töröljük a listából a már elhelyezett csapatokat
+      const usedNames = Array.from(document.querySelectorAll(".dropzone .team")).map(t => t.dataset.name);
+      // fejléc megtartása
+      const existingHeader = teamList.querySelector("h3");
+      teamList.innerHTML = "";
+      teamList.appendChild(existingHeader);
+      teams.forEach(team => {
+        if (!usedNames.includes(team.name)) {
+          teamList.appendChild(createTeamElement(team));
         }
-      }
-
-      function setupDragAndDrop() {
-        document.addEventListener("dragstart", e => {
-          if (e.target.classList.contains("team")) {
-            e.dataTransfer.setData("text/plain", e.target.dataset.name);
-            const parentZone = e.target.parentElement.closest(".dropzone");
-            e.dataTransfer.setData("source", parentZone ? parentZone.id : "team-list");
-          }
-        });
-
-        document.querySelectorAll(".dropzone").forEach(zone => {
-          zone.addEventListener("dragover", e => {
-            e.preventDefault();
-            zone.classList.add("over");
-          });
-          zone.addEventListener("dragleave", () => {
-            zone.classList.remove("over");
-          });
-          zone.addEventListener("drop", e => {
-            e.preventDefault();
-            zone.classList.remove("over");
-
-            const teamName = e.dataTransfer.getData("text/plain");
-            const sourceId = e.dataTransfer.getData("source");
-            const draggedEl = document.querySelector(`.team[data-name="${teamName}"]`);
-
-            const currentInZone = zone.firstChild;
-
-            if (currentInZone && currentInZone !== draggedEl) {
-              const sourceZone = sourceId !== "team-list" ? document.getElementById(sourceId) : null;
-              zone.innerHTML = "";
-              if (sourceZone) {
-                sourceZone.innerHTML = "";
-                sourceZone.appendChild(currentInZone);
-              } else {
-                teamList.appendChild(currentInZone);
-              }
-            } else if (sourceId === "team-list") {
-              teamList.removeChild(draggedEl);
-            } else {
-              const prevZone = document.getElementById(sourceId);
-              if (prevZone && prevZone !== zone) prevZone.innerHTML = "";
-            }
-
-            zone.innerHTML = "";
-            zone.appendChild(draggedEl);
-            renderTeamList();
-          });
-        });
-      }
-
-      async function saveToFirebase(user) {
-        const ranking = [];
-        document.querySelectorAll(".dropzone").forEach(zone => {
-          if (zone.children.length) {
-            ranking.push(zone.firstChild.dataset.name);
-          } else {
-            ranking.push(null);
-          }
-        });
-        await setDoc(doc(db, "standingsTips", user.email), {
-          user: user.email,
-          ranking
-        });
-        alert("Mentve!");
-      }
-
-      async function loadFromFirebase(user) {
-        const docSnap = await getDoc(doc(db, "standingsTips", user.email));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.ranking && Array.isArray(data.ranking)) {
-            data.ranking.forEach((teamName, index) => {
-              if (teamName) {
-                const team = teams.find(t => t.name === teamName);
-                if (team) {
-                  const el = createTeamElement(team);
-                  const zone = document.querySelector(`.dropzone[data-pos="${index + 1}"]`);
-                  zone.innerHTML = "";
-                  zone.appendChild(el);
-                }
-              }
-            });
-          }
-        }
-        renderTeamList();
-      }
-
-      onAuthStateChanged(auth, async user => {
-        if (!user) {
-          alert("Bejelentkezés szükséges");
-          window.location.href = "login.html";
-          return;
-        }
-
-        renderPositions();
-        await loadFromFirebase(user);
-        setupDragAndDrop();
-
-        document.getElementById("save").addEventListener("click", () => {
-          saveToFirebase(user);
-        });
-hideLoader();
       });
+    }
+
+    function renderPositions() {
+      positions.innerHTML = "";
+      for (let i = 1; i <= 12; i++) {
+        const row = document.createElement("div");
+        row.classList.add("position");
+        row.innerHTML = `
+          <div class="position-number">${i}.</div>
+          <div class="dropzone" data-pos="${i}" id="pos-${i}"></div>
+        `;
+        positions.appendChild(row);
+      }
+    }
+
+    function setupDragAndDrop() {
+      document.addEventListener("dragstart", e => {
+        if (e.target.classList.contains("team")) {
+          e.dataTransfer.setData("text/plain", e.target.dataset.name);
+          const parentZone = e.target.parentElement.closest(".dropzone");
+          e.dataTransfer.setData("source", parentZone ? parentZone.id : "team-list");
+        }
+      });
+
+      document.querySelectorAll(".dropzone").forEach(zone => {
+        zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("over"); });
+        zone.addEventListener("dragleave", () => { zone.classList.remove("over"); });
+        zone.addEventListener("drop", e => {
+          e.preventDefault(); zone.classList.remove("over");
+          const teamName = e.dataTransfer.getData("text/plain");
+          const sourceId = e.dataTransfer.getData("source");
+          const draggedEl = document.querySelector(`.team[data-name="${teamName}"]`);
+
+          const currentInZone = zone.firstChild;
+          if (currentInZone && currentInZone !== draggedEl) {
+            const sourceZone = sourceId !== "team-list" ? document.getElementById(sourceId) : null;
+            zone.innerHTML = "";
+            if (sourceZone) {
+              sourceZone.innerHTML = "";
+              sourceZone.appendChild(currentInZone);
+            } else {
+              teamList.appendChild(currentInZone);
+            }
+          } else if (sourceId === "team-list") {
+            teamList.removeChild(draggedEl);
+          } else {
+            const prevZone = document.getElementById(sourceId);
+            if (prevZone && prevZone !== zone) prevZone.innerHTML = "";
+          }
+
+          zone.innerHTML = "";
+          zone.appendChild(draggedEl);
+          renderTeamList();
+        });
+      });
+    }
+
+    async function saveToFirebase(user) {
+      const ranking = [];
+      document.querySelectorAll(".dropzone").forEach(zone => {
+        ranking.push(zone.children.length ? zone.firstChild.dataset.name : null);
+      });
+      await setDoc(doc(db, "standingsTips", user.email), {
+        user: user.email,
+        ranking
+      });
+      alert("Mentve!");
+    }
+
+    async function loadFromFirebase(user) {
+      const docSnap = await getDoc(doc(db, "standingsTips", user.email));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.ranking && Array.isArray(data.ranking)) {
+          data.ranking.forEach((teamName, index) => {
+            if (teamName) {
+              const team = teams.find(t => t.name === teamName);
+              if (team) {
+                const el = createTeamElement(team);
+                const zone = document.querySelector(`.dropzone[data-pos="${index + 1}"]`);
+                zone.innerHTML = "";
+                zone.appendChild(el);
+              }
+            }
+          });
+        }
+      }
+      renderTeamList();
+    }
+
+    function resetUI() {
+      // ürítsük a dropzone-okat
+      document.querySelectorAll(".dropzone").forEach(z => z.innerHTML = "");
+      // töltsük vissza a csapatlistát
+      renderTeamList();
+    }
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        alert("Bejelentkezés szükséges");
+        window.location.href = "login.html";
+        return;
+      }
+
+      renderPositions();
+      await loadFromFirebase(user);
+      setupDragAndDrop();
+
+      saveBtn.addEventListener("click", () => saveToFirebase(user));
+
+      resetBtn.addEventListener("click", async () => {
+        const ok = confirm("Biztosan törlöd a sorrendet? A mentett verzió is törlődni fog.");
+        if (!ok) return;
+        try{
+          await deleteDoc(doc(db, "standingsTips", user.email));
+        }catch(e){
+          // ha még nem volt mentve, ez nem hiba
+          console.warn("Törlés (Firestore) figyelmeztetés:", e?.message || e);
+        }
+        resetUI();
+      });
+
+      if (window.hideLoader) hideLoader();
     });
   </script>
 </body>
