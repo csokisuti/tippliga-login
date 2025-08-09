@@ -1,171 +1,271 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Eredmények</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .back-button {
-      display: inline-block;
-      padding: 10px 15px;
-      margin-bottom: 20px;
-      background-color: #007bff;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-    }
-    .back-button:hover {
-      background-color: #0056b3;
-    }
-    select {
-      padding: 8px;
-      font-size: 16px;
-      margin-bottom: 20px;
-    }
-    .match {
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      box-shadow: 0 0 5px #ccc;
-    }
-    .team-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 1.1em;
-    }
-    .crest {
-      width: 24px;
-      height: 24px;
-    }
-    .tip {
-      margin-left: 20px;
-      padding: 8px;
-      border-radius: 6px;
-      background: #eef;
-      margin-top: 5px;
-    }
-    .correct {
-      background: #d4edda;
-    }
-    .incorrect {
-      background: #f8d7da;
-    }
-    .bold {
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-  <a href="dashboard.html" class="back-button">⬅ Vissza a főoldalra</a>
-  <h1>Eredmények</h1>
 
-  <label for="roundSelect">Válassz fordulót:</label>
-  <select id="roundSelect"></select>
-
-  <div id="matchesContainer"></div>
-
+  <!-- Firebase (modular) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getFirestore, collection, getDocs, query, where, orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    // ---- UI elemek / stílus ugyanaz a hangulat, mint matches/positions ----
+    const css = `
+      :root{
+        --bg:#f5f7fb; --card:#fff; --line:#e6eaf1; --text:#0f172a; --muted:#64748b;
+        --chip:#eef2ff;
+      }
+      *{ box-sizing:border-box }
+      body{ margin:0; padding:24px; background:var(--bg); color:var(--text);
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial; }
+
+      .back-btn{ display:inline-block; text-decoration:none; background:#e5e7eb; color:#111;
+                 padding:8px 12px; border-radius:10px; border:1px solid var(--line); }
+      h1{ margin:16px 0 12px; font-size:22px; text-align:center; color:#1f2a44 }
+      .page-muted{ color:var(--muted); margin:10px 0 18px; text-align:center }
+
+      .controls{ max-width:1100px; margin:0 auto 10px; display:flex; gap:10px; align-items:center; }
+      .controls label{ color:var(--muted) }
+      select{ padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+
+      .card{ background:var(--card); border:1px solid var(--line); border-radius:12px;
+             box-shadow:0 6px 18px rgba(15,23,42,.05); margin:18px auto; max-width:1100px; overflow:hidden; }
+      .subhdr{ padding:10px 14px; border-bottom:1px solid var(--line);
+               background:#f7f9fd; font-weight:700; display:flex; align-items:center; gap:10px; }
+      .subhdr small{ font-weight:400; color:var(--muted) }
+
+      .match{ padding:12px 14px; border-bottom:1px solid var(--line); background:#fff; }
+      .match:nth-child(even){ background:#fcfdff; }
+      .team-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:15px }
+      .crest{ width:22px; height:22px; object-fit:contain }
+      .meta{ color:var(--muted); font-size:12px; margin-top:4px }
+
+      .odds{ font-size:12px; background:var(--chip); border-radius:999px; padding:3px 8px; }
+      .tips{ margin-top:8px; display:flex; flex-direction:column; gap:6px }
+      .tip{ padding:8px 10px; border-radius:8px; background:#eef; }
+      .tip.correct{ background:#ecfdf5 }
+      .tip.wrong{ background:#fdecec }
+      .tip b{ font-weight:700 }
+      .kicker{ color:var(--muted); font-size:12px }
+      .empty{ padding:12px 14px; color:var(--muted) }
+    `;
+    const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
+    // ----------------------------------------------------------------------
+
+    // Firebase config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const roundSelect = document.getElementById('roundSelect');
-    const matchesContainer = document.getElementById('matchesContainer');
+    const crestMap = {
+      "Debreceni VSC": "crest/crest-dvsc.png",
+      "Diósgyőri VTK": "crest/crest-dvtk.png",
+      "Ferencváros": "crest/crest-fradi.png",
+      "ETO FC Győr": "crest/crest-gyor.png",
+      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
+      "Kisvárda FC": "crest/crest-kisvarda.png",
+      "MTK Budapest": "crest/crest-mtk.png",
+      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
+      "Paksi FC": "crest/crest-paks.png",
+      "Puskás Akadémia": "crest/crest-puskas.png",
+      "Újpest FC": "crest/crest-ujpest.png",
+      "Zalaegerszegi TE FC": "crest/crest-zte.png"
+    };
 
-    function getQueryParam(param) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(param);
-    }
+    const roundSelect = document.getElementById("roundSelect");
+    const mount = document.getElementById("resultsContainer");
 
-    async function loadRounds() {
-      const matchesSnap = await getDocs(collection(db, "matches"));
-      const rounds = [...new Set(matchesSnap.docs.map(doc => doc.data().round))].sort((a, b) => a - b);
-      roundSelect.innerHTML = rounds.map(r => `<option value="${r}">${r}. forduló</option>`).join("");
-      const roundFromParam = getQueryParam("round");
-      if (roundFromParam && rounds.includes(parseInt(roundFromParam))) {
-        roundSelect.value = roundFromParam;
+    // URL param: ?round=N
+    const urlParams = new URLSearchParams(location.search);
+    const desiredRoundParam = urlParams.get("round"); // string (pl. "3")
+
+    // Adat cache-ek
+    let matches = [];                 // {id, homeTeam, awayTeam, odds, outcome, result, roundId, startTime}
+    let tipsByMatch = {};             // matchId -> [tip objects]
+    let nickByEmail = {};             // email -> nickname
+    let allRoundsAsc = [];            // ["1","2","3",...]
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        mount.innerHTML = `<div class="empty">Jelentkezz be az eredmények megtekintéséhez.</div>`;
+        return;
       }
-      loadMatches(roundSelect.value);
-    }
 
-    async function loadMatches(round) {
-      matchesContainer.innerHTML = "";
-      const matchesQ = query(collection(db, "matches"), where("round", "==", parseInt(round)), orderBy("date"));
-      const matchesSnap = await getDocs(matchesQ);
-
-      for (const matchDoc of matchesSnap.docs) {
-        const match = matchDoc.data();
-        const tipsQ = query(collection(db, "tips"), where("matchId", "==", matchDoc.id));
-        const tipsSnap = await getDocs(tipsQ);
-
-        const matchDiv = document.createElement("div");
-        matchDiv.className = "match";
-
-        matchDiv.innerHTML = `
-          <div class="team-row">
-            <img src="crest/${match.homeCrest}" class="crest">
-            <span>${match.homeTeam}</span>
-            <strong> vs </strong>
-            <span>${match.awayTeam}</span>
-            <img src="crest/${match.awayCrest}" class="crest">
-          </div>
-          <div>Eredmény: <span class="bold">${match.result || "-"}</span></div>
-          <div>Odds: 1 (${match.odds1}) X (${match.oddsX}) 2 (${match.odds2})</div>
-          <div>Kezdés: ${new Date(match.date.seconds * 1000).toLocaleString()}</div>
-        `;
-
-        tipsSnap.forEach(tipDoc => {
-          const tip = tipDoc.data();
-          let tipClass = "";
-          if (match.outcome) {
-            tipClass = tip.prediction === match.outcome ? "correct" : "incorrect";
-          }
-          const tipDiv = document.createElement("div");
-          tipDiv.className = `tip ${tipClass}`;
-          tipDiv.textContent = `${tip.userNickname}: ${tip.prediction} (${tip.multiplier}x)`;
-          matchDiv.appendChild(tipDiv);
+      try{
+        // 1) users → becenevek
+        const usersSnap = await getDocs(collection(db, "users"));
+        usersSnap.forEach(d => {
+          const u = d.data();
+          if (u?.email) nickByEmail[u.email] = u.nickname || u.email;
         });
 
-        matchesContainer.appendChild(matchDiv);
+        // 2) matches → minden meccs
+        const matchesSnap = await getDocs(collection(db, "matches"));
+        matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+        // gyűjtsd a fordulókat a roundId alapján (ez a te sémád)
+        const set = new Set();
+        matches.forEach(m => { if (m.roundId) set.add(String(m.roundId)); });
+        allRoundsAsc = Array.from(set).sort((a,b)=> parseInt(a)-parseInt(b));
+
+        // ha még nincs forduló, nincs mit mutatni
+        if (!allRoundsAsc.length){
+          mount.innerHTML = `<div class="empty">Még nincsenek eredmények.</div>`;
+          if (window.hideLoader) hideLoader();
+          return;
+        }
+
+        // 3) tips → csoportosítva matchId szerint
+        tipsByMatch = {};
+        const tipsSnap = await getDocs(collection(db, "tips"));
+        tipsSnap.forEach(d => {
+          const t = d.data();
+          if (!t?.matchId) return;
+          if (!tipsByMatch[t.matchId]) tipsByMatch[t.matchId] = [];
+          tipsByMatch[t.matchId].push({ id:d.id, ...t });
+        });
+
+        // 4) round select feltöltése
+        roundSelect.innerHTML = "";
+        allRoundsAsc.forEach(r => {
+          const o = document.createElement("option");
+          o.value = r; o.textContent = `${r}. forduló`;
+          roundSelect.appendChild(o);
+        });
+
+        // előválasztás: ?round=N ha létezik, különben a legutóbbi
+        const lastRound = allRoundsAsc[allRoundsAsc.length-1];
+        const startRound = (desiredRoundParam && allRoundsAsc.includes(String(desiredRoundParam)))
+          ? String(desiredRoundParam)
+          : lastRound;
+
+        roundSelect.value = startRound;
+        await renderRound(startRound);
+
+        roundSelect.addEventListener("change", () => renderRound(roundSelect.value));
+      }catch(e){
+        console.error(e);
+        mount.innerHTML = `<div class="empty">Hiba történt az adatok betöltése közben.</div>`;
+      }finally{
+        if (window.hideLoader) hideLoader();
       }
+    });
+
+    async function renderRound(roundId){
+      mount.innerHTML = "";
+
+      const card = document.createElement("div");
+      card.className = "card";
+      const sub = document.createElement("div");
+      sub.className = "subhdr";
+      sub.innerHTML = `📅 ${roundId}. forduló <small>Válts a fenti listában másik fordulóra</small>`;
+      card.appendChild(sub);
+
+      // szűrés + idő szerinti rendezés
+      const list = matches
+        .filter(m => String(m.roundId) === String(roundId))
+        .sort((a,b)=>{
+          const ta = a.startTime?.toDate?.() || 0;
+          const tb = b.startTime?.toDate?.() || 0;
+          return ta - tb;
+        });
+
+      if (!list.length){
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "Ehhez a fordulóhoz még nincs meccs.";
+        card.appendChild(empty);
+        mount.appendChild(card);
+        return;
+      }
+
+      list.forEach(m => {
+        const div = document.createElement("div");
+        div.className = "match";
+
+        const crestHome = crestMap[m.homeTeam] || "";
+        const crestAway = crestMap[m.awayTeam] || "";
+        const ko = m.startTime?.toDate?.();
+        const koStr = ko ? ko.toLocaleString("hu-HU") : "";
+
+        const odds1 = m.odds?.["1"] ?? "-";
+        const oddsX = m.odds?.["X"] ?? "-";
+        const odds2 = m.odds?.["2"] ?? "-";
+
+        div.innerHTML = `
+          <div class="team-row">
+            <img src="${crestHome}" class="crest" alt="">
+            <strong>${m.homeTeam}</strong> vs
+            <strong>${m.awayTeam}</strong>
+            <img src="${crestAway}" class="crest" alt="">
+            <span class="odds">1: ${odds1} • X: ${oddsX} • 2: ${odds2}</span>
+          </div>
+          <div class="meta">
+            Kezdés: ${koStr || "-"} • Eredmény: ${m.result || "-"} • Kimenetel: <b>${m.outcome || "-"}</b>
+          </div>
+        `;
+
+        const tipsWrap = document.createElement("div");
+        tipsWrap.className = "tips";
+
+        const tips = tipsByMatch[m.id] || [];
+        if (!tips.length){
+          const none = document.createElement("div");
+          none.className = "kicker";
+          none.textContent = "Ehhez a meccshez még nincs leadott tipp.";
+          tipsWrap.appendChild(none);
+        } else {
+          tips.forEach(t => {
+            const correct = m.outcome && t.tip === m.outcome;
+            const mult = t.isDouble ? 2 : 1;
+            const oddsForPick = m.odds?.[t.tip];
+            const pts = correct && oddsForPick ? (Number(oddsForPick) * mult) : 0;
+
+            const row = document.createElement("div");
+            row.className = "tip";
+            if (correct) row.classList.add("correct");
+            else if (m.result) row.classList.add("wrong");
+
+            const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
+            row.innerHTML = `
+              <b>${nick}</b>: ${t.tip}
+              ${t.isDouble ? ' <span class="kicker">(dupla)</span>' : ''}
+              ${m.result ? ` – Pont: <b>${pts.toFixed(2)}</b>` : ''}
+            `;
+            tipsWrap.appendChild(row);
+          });
+        }
+
+        div.appendChild(tipsWrap);
+        card.appendChild(div);
+      });
+
+      mount.appendChild(card);
     }
-
-    roundSelect.addEventListener("change", () => {
-      loadMatches(roundSelect.value);
-    });
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loadRounds();
-      } else {
-        matchesContainer.innerHTML = "<p>Jelentkezz be az eredmények megtekintéséhez.</p>";
-      }
-    });
   </script>
+</head>
+<body>
+  <a href="dashboard.html" class="back-btn">← Vissza a főoldalra</a>
+  <h1>Eredmények</h1>
+  <div class="page-muted">Itt látod a kiválasztott forduló meccseit, a leadott tippeket és a pontokat.</div>
+
+  <div class="controls" style="justify-content:center">
+    <label for="roundSelect">Válassz fordulót:</label>
+    <select id="roundSelect"></select>
+  </div>
+
+  <div id="resultsContainer"></div>
 </body>
 </html>
