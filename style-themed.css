@@ -1,16 +1,24 @@
-/* Alap (fallback) */
+/* ===== Alap (fallback) ===== */
 :root{
   --accent:#3b82f6;
   --bg-soft:#f5f7fb;
   --text:#0f172a;
+
+  /* kártyákhoz deriváltak */
+  --accent-weak: rgba(59,130,246,.15);
+  --accent-strong: rgba(59,130,246,.25);
+  --card:#fff;
+  --line:#e6eaf1;
 }
+
 body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-  background-color: white;
+  background: var(--bg-soft);
   color: var(--text);
 }
 
 /* Általános akcentus-használat */
+a { color: inherit; }
 nav a { color: var(--accent); }
 nav a:hover { text-decoration: underline; }
 button {
@@ -18,28 +26,101 @@ button {
   background: var(--accent);
   color: #fff;
   border: 0;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 10px;
 }
-button:hover { filter: brightness(0.95); }
+button:hover { filter: brightness(0.96); }
 
-/* === Témák – mindegyik beállít saját --accent + háttereket === */
-body.theme-debreceni-vsc      { --accent:#da1a32; background-color:#ffe6e9; color:#8b0000; }
-body.theme-diosgyori-vtk      { --accent:#c00000; background-color:#fff0f0; color:#7a0000; }
-body.theme-ferencvaros        { --accent:#007e33; background-color:#e6ffe6; color:#003300; }
-body.theme-eto-fc-gyor        { --accent:#1c7c54; background-color:#e2f5e6; color:#0f5132; }
-body.theme-kazincbarcikai-sc  { --accent:#0066cc; background-color:#f0f8ff; color:#002147; }
-body.theme-kisvarda-fc        { --accent:#cc0000; background-color:#fbeaea; color:#7a0000; }
-body.theme-mtk-budapest       { --accent:#0056b3; background-color:#e8f4ff; color:#003366; }
-body.theme-nyiregyhaza-spartacus { --accent:#c02e3b; background-color:#f8e9eb; color:#5a0a0a; }
-body.theme-paksi-fc           { --accent:#009933; background-color:#e0f2e9; color:#004d26; }
-body.theme-puskas-akademia    { --accent:#ffc72c; background-color:#f5f5dc; color:#002147; }
-body.theme-ujpest-fc          { --accent:#9d4edd; background-color:#f7f0ff; color:#3f0071; }
-body.theme-zalaegerszegi-te-fc{ --accent:#0047ab; background-color:#e6f0ff; color:#002366; }
+/* ===== TÉMÁK – mindegyik beállít saját --accent + háttér ===== */
+body.theme-debreceni-vsc      { --accent:#da1a32; --bg-soft:#ffecee; --text:#251015; }
+body.theme-diosgyori-vtk      { --accent:#c00000; --bg-soft:#fff1f1; --text:#241010; }
+body.theme-ferencvaros        { --accent:#0a7d44; --bg-soft:#eaf7ef; --text:#0d2419; }
+body.theme-eto-fc-gyor        { --accent:#1c7c54; --bg-soft:#e8f6ef; --text:#0e221a; }
+body.theme-kazincbarcikai-sc  { --accent:#0066cc; --bg-soft:#eef6ff; --text:#0e1b2e; }
+body.theme-kisvarda-fc        { --accent:#cc0000; --bg-soft:#fdecec; --text:#2a1010; }
+body.theme-mtk-budapest       { --accent:#0056b3; --bg-soft:#e9f2ff; --text:#0e1a2b; }
+body.theme-nyiregyhaza-spartacus { --accent:#c02e3b; --bg-soft:#faeef0; --text:#221114; }
+body.theme-paksi-fc           { --accent:#009933; --bg-soft:#e9f6ef; --text:#0f2318; }
+body.theme-puskas-akademia    { --accent:#ffc72c; --bg-soft:#fff9e8; --text:#1d1602; }
+body.theme-ujpest-fc          { --accent:#9d4edd; --bg-soft:#f6f0fb; --text:#1b1024; }
+body.theme-zalaegerszegi-te-fc{ --accent:#0047ab; --bg-soft:#eaf1ff; --text:#0c1a33; }
 
-/* Heading színek igazítása az accenthez */
+/* derivált árnyalatok az aktuális accentből (egyszerű, opacity-alapú) */
+body[class^="theme-"]{
+  --accent-weak: color-mix(in oklab, var(--accent) 20%, white);
+  --accent-strong: color-mix(in oklab, var(--accent) 30%, white);
+}
+
+/* Címsorok igazítása az accenthez */
 body[class^="theme-"] h1,
 body[class^="theme-"] h2,
 body[class^="theme-"] h3 { color: var(--accent); }
 
-/* Nav link, gombok színe már az --accent változót kapja fel (fent) */
+/* ===== Kártyás menü (dashboard) ===== */
+.nav-grid{
+  display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap:14px; margin:10px 0 24px;
+}
+.nav-card{
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:14px; text-decoration:none;
+  background: var(--card);
+  border:1px solid var(--line);
+  box-shadow:0 6px 18px rgba(15,23,42,.06);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+}
+.nav-card:hover{
+  transform: translateY(-2px);
+  box-shadow:0 10px 24px rgba(15,23,42,.10);
+  border-color: var(--accent);
+}
+.nav-card .icon-wrap{
+  width:40px; height:40px; border-radius:12px;
+  display:grid; place-items:center;
+  background: var(--accent-weak); color: var(--accent);
+  flex: 0 0 40px;
+}
+.nav-card .text{
+  display:flex; flex-direction:column; gap:2px;
+}
+.nav-card .title{ font-weight:800; color: var(--text); }
+.nav-card .desc{ font-size:12px; color: #64748b; }
+
+/* Badge a meccstippekhez */
+.pill-badge{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:18px; height:18px; padding:0 6px; margin-left:6px;
+  border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700;
+  line-height:1; vertical-align:middle;
+}
+.pill-badge[hidden]{ display:none !important; }
+
+/* ===== Fejléc & címer ===== */
+.header{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  margin-bottom:8px;
+}
+.header-left{ display:flex; align-items:center; gap:12px; }
+.fav-crest{
+  width:42px; height:42px; object-fit:contain; border-radius:8px;
+  background: var(--accent-weak);
+  padding:6px; border:1px solid var(--accent-strong);
+}
+.welcome{ color:#64748b; margin:0 0 8px; }
+
+/* ===== Tartalom kártyák ===== */
+.card{
+  background: var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(15,23,42,.06);
+  padding:14px;
+}
+.card h3{ margin:0 0 10px; color: var(--text); }
+
+/* Facebook / tabella wrap – keret nélkül */
+.fb-wrap iframe{
+  border:0 !important; outline:0 !important;
+  width:100%; max-width:560px; height:540px;
+}
+.table-wrap img{ max-width:100%; height:auto; display:block; }
