@@ -21,351 +21,73 @@
       .content-grid{ grid-template-columns: 1fr; }
     }
 
-    /* === Lebegő chat === */
+    /* Facebook feed keret nélkül */
+    .fb-wrap iframe{
+      width:100%; max-width:100%;
+      height:540px; border:0; overflow:hidden;
+      display:block; border-radius:12px;
+    }
+
+    /* ===== Lebegő chat ===== */
     .chat-fab{
-      position: fixed; right: 20px; bottom: 20px;
-      display:flex; align-items:center; gap:8px;
-      background: var(--accent, #3b82f6); color:#fff;
-      padding:10px 14px; border-radius:999px; cursor:pointer;
-      box-shadow: 0 8px 22px rgba(0,0,0,.18);
-      z-index: 1000; user-select:none;
+      position: fixed; right: 22px; bottom: 22px;
+      width: 52px; height: 52px; border-radius: 50%;
+      display:flex; align-items:center; justify-content:center;
+      background: var(--accent, #3b82f6); color:#fff; border:0; cursor:pointer;
+      box-shadow: 0 6px 18px rgba(15,23,42,.18);
+      z-index: 2147483647 !important;
     }
-    .chat-fab:hover{ filter: brightness(.95); }
-    .chat-badge{
-      display:inline-flex; align-items:center; justify-content:center;
-      min-width:18px; height:18px; padding:0 6px;
-      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700;
-    }
-    .chat-badge[hidden]{ display:none !important; }
+    .chat-fab svg{ pointer-events:none; }
 
     .chat-panel{
-      position: fixed; right: 20px; bottom: 74px;
-      width: min(380px, calc(100vw - 40px));
-      background:#fff; border:1px solid #e6eaf1; border-radius:12px;
-      box-shadow: 0 10px 28px rgba(15,23,42,.18);
-      display:flex; flex-direction:column; overflow:hidden; z-index:1000;
+      position: fixed; right: 22px; bottom: 90px;
+      width: 420px; max-width: calc(100vw - 32px);
+      background:#fff; border:1px solid #e6eaf1; border-radius:14px;
+      box-shadow: 0 20px 40px rgba(15,23,42,.18);
+      display:none; flex-direction:column; overflow:hidden;
+      z-index: 2147483647 !important;
     }
-    .chat-header{
+    .chat-panel.open{ display:flex; }
+
+    .chat-head{
       display:flex; align-items:center; justify-content:space-between;
-      padding:10px 12px; background:#f7f9fd; border-bottom:1px solid #e6eaf1;
-      font-weight:700;
+      padding:10px 12px; border-bottom:1px solid #e6eaf1; background:#f7f9fd;
     }
-    .chat-close{ background:transparent; color:#111; border:0; cursor:pointer; padding:6px 8px; border-radius:8px; }
-    .chat-close:hover{ background:#e7eaf3; }
+    .chat-head .title{ font-weight:700; color:#0f172a; }
+    .chat-close{
+      background:transparent; border:0; cursor:pointer; padding:6px;
+      color:#334155; border-radius:8px;
+    }
+    .chat-close:hover{ background:#eef2ff; }
 
     .chat-list{
-      max-height: 340px; overflow:auto; padding:10px 10px 0 10px; background:#fff;
+      height: 360px; overflow:auto;
+      background:#fff;
     }
     .chat-item{
-      display:flex; align-items:flex-start; gap:10px; padding:8px 6px; border-bottom:1px solid #f0f2f7;
+      padding:10px 12px; border-bottom:1px solid #f1f3f8;
+      display:flex; gap:8px; align-items:flex-start;
     }
-    .chat-item:last-child{ border-bottom:0; }
-    .chat-nick{ font-weight:700; color:#0f172a; margin-right:6px; }
-    .chat-meta{ color:#64748b; font-size:12px; }
-    .chat-text{ white-space:pre-wrap; word-break:break-word; }
-    .chat-actions{ margin-left:auto; }
-    .chat-del{
-      border:0; background:#fee2e2; color:#991b1b; border-radius:8px; cursor:pointer;
-      padding:4px 6px; font-size:12px;
-    }
-    .chat-del:hover{ filter:brightness(.95); }
+    .chat-item .nick{ font-weight:700; color:var(--accent, #3b82f6); }
+    .chat-item .msg{ color:#0f172a; }
+    .chat-item .time{ color:#94a3b8; font-size:12px; }
 
+    /* INPUT láthatóság/méret fix */
     .chat-input{
       display:flex; gap:8px; padding:10px; border-top:1px solid #e6eaf1; background:#fafbfe;
     }
     .chat-input input{
-      flex:1; border:1px solid #e1e5ee; border-radius:10px; padding:10px; font:inherit;
+      flex:1; box-sizing:border-box; height:40px;
+      padding:10px 12px; border:1px solid #dfe3ea; border-radius:10px;
+      background:#fff; color:#0f172a; caret-color: var(--accent, #3b82f6);
+      font-size:14px; line-height:1.2;
     }
+    .chat-input input::placeholder{ color:#94a3b8; }
     .chat-input button{
-      border:0; background:var(--accent, #3b82f6); color:#fff; border-radius:10px; padding:10px 12px; cursor:pointer;
+      height:40px; border:0; background:var(--accent, #3b82f6); color:#fff;
+      border-radius:10px; padding:0 14px; cursor:pointer;
     }
-    .chat-input button[disabled]{ opacity:.6; cursor:not-allowed; }
   </style>
-
-  <script type="module">
-    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      doc, getDoc,
-      collection, getDocs, addDoc, deleteDoc,
-      query, where, orderBy, limit, onSnapshot, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-      authDomain: "tippliga-4b3af.firebaseapp.com",
-      projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.appspot.com",
-      messagingSenderId: "720359845241",
-      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-    };
-
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    const crestMap = {
-      "Ferencváros": "crest/crest-fradi.png",
-      "Újpest FC": "crest/crest-ujpest.png",
-      "Debreceni VSC": "crest/crest-dvsc.png",
-      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
-      "Paksi FC": "crest/crest-paks.png",
-      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
-      "Puskás Akadémia": "crest/crest-puskas.png",
-      "Kisvárda FC": "crest/crest-kisvarda.png",
-      "Diósgyőri VTK": "crest/crest-dvtk.png",
-      "Zalaegerszegi TE FC": "crest/crest-zte.png",
-      "ETO FC Győr": "crest/crest-gyor.png",
-      "MTK Budapest": "crest/crest-mtk.png"
-    };
-
-    const facebookLinks = {
-      "Ferencváros": "https://www.facebook.com/fradi.hu",
-      "Újpest FC": "https://www.facebook.com/ujpestfootballclub",
-      "Debreceni VSC": "https://www.facebook.com/dvscfoci",
-      "Nyíregyháza Spartacus": "https://www.facebook.com/NYSFC",
-      "Paksi FC": "https://www.facebook.com/paksifcofficialsite",
-      "Kazincbarcikai SC": "https://www.facebook.com/kolorcitykbsc",
-      "Puskás Akadémia": "https://www.facebook.com/PFLAhu",
-      "Kisvárda FC": "https://www.facebook.com/kisvardafc",
-      "Diósgyőri VTK": "https://www.facebook.com/DVTK1910",
-      "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc.hu",
-      "ETO FC Győr": "https://www.facebook.com/etofcgyor",
-      "MTK Budapest": "https://www.facebook.com/MTKBudapest"
-    };
-
-    document.addEventListener("DOMContentLoaded", () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-          window.location.href = "login.html";
-          return;
-        }
-
-        const email = user.email;
-        let nickname = email;
-        let role = "user";
-        let favoriteTeam = "";
-
-        // Felhasználói adatok
-        const userRef = doc(db, "users", email);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          nickname = data.nickname || email;
-          role = data.role || "user";
-          favoriteTeam = data.favoriteTeam || "";
-        }
-
-        // Fejléc
-        document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
-        if (role === "admin") {
-          document.getElementById("adminLink").style.display = "inline";
-        }
-
-        // Téma + címer
-        if (favoriteTeam) {
-          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
-
-          const crest = crestMap[favoriteTeam];
-          if (crest) {
-            const img = document.getElementById("favCrest");
-            img.src = crest;
-            img.alt = favoriteTeam;
-            img.hidden = false;
-          }
-        }
-
-        // NAV kártyák: meccstippek badge (függő tippek száma)
-        try{
-          const now = new Date();
-
-          // jövőbeli meccsek
-          const upcomingSnap = await getDocs(
-            query(collection(db, "matches"), where("startTime", ">=", now))
-          );
-          const upcoming = upcomingSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-          // saját tippek
-          const myTipsSnap = await getDocs(
-            query(collection(db, "tips"), where("user", "==", email))
-          );
-          const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
-
-          // függő tippek
-          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-
-          const badge = document.getElementById("tipsBadge");
-          if (pending > 0){
-            badge.textContent = pending;
-            badge.hidden = false;
-            badge.title = `${pending} közelgő meccsre még nincs tipped`;
-          } else {
-            badge.hidden = true;
-          }
-        }catch(e){
-          console.warn("Badge számítás hiba:", e);
-        }
-
-        // Tabella kép
-        try {
-          const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
-          if (tableDoc.exists()) {
-            const base64 = tableDoc.data().base64;
-            const img = document.createElement("img");
-            img.src = `data:image/png;base64,${base64}`;
-            img.alt = "NB I tabella";
-            document.getElementById("tableContainer").appendChild(img);
-          }
-        } catch(e){ console.warn(e); }
-
-        // Facebook feed (keret nélkül)
-        try {
-          const fbLink = facebookLinks[favoriteTeam];
-          if (fbLink) {
-            const fbDiv = document.createElement("div");
-            fbDiv.className = "fb-wrap";
-            fbDiv.innerHTML = `
-              <iframe 
-                src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=560&height=540&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
-                scrolling="no" frameborder="0" allowfullscreen="true"
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
-            document.getElementById("facebookFeedContainer").appendChild(fbDiv);
-          }
-        } catch(e){ console.warn(e); }
-
-        /* ===== Lebegő chat ===== */
-        const chatFab = document.getElementById('chatFab');
-        const chatBadge = document.getElementById('chatBadge');
-        const chatPanel = document.getElementById('chatPanel');
-        const chatList = document.getElementById('chatList');
-        const chatInput = document.getElementById('chatInput');
-        const chatSend = document.getElementById('chatSend');
-        const chatClose = document.getElementById('chatClose');
-
-        let panelOpen = false;
-        let lastSeenTs = Date.now(); // amikor megnyílik, erre frissítjük
-        let unseenCount = 0;
-
-        function fmtTime(ts){
-          try{
-            return ts?.toDate ? ts.toDate().toLocaleString('hu-HU') : new Date(ts).toLocaleString('hu-HU');
-          }catch{ return ''; }
-        }
-
-        function renderMsg(docSnap){
-          const d = docSnap.data();
-          const li = document.createElement('div');
-          li.className = 'chat-item';
-
-          const who = document.createElement('div');
-          who.innerHTML = `<span class="chat-nick">${d.nick || 'Ismeretlen'}</span> <span class="chat-meta">${fmtTime(d.ts)}</span>`;
-
-          const body = document.createElement('div');
-          body.className = 'chat-text';
-          body.textContent = d.text || '';
-
-          li.appendChild(who);
-          li.appendChild(body);
-
-          if (role === 'admin'){
-            const act = document.createElement('div');
-            act.className = 'chat-actions';
-            const btn = document.createElement('button');
-            btn.className = 'chat-del';
-            btn.textContent = 'Törlés';
-            btn.onclick = async () => {
-              try{
-                await deleteDoc(doc(db, 'chatMessages', docSnap.id));
-              }catch(e){ console.warn(e); }
-            };
-            act.appendChild(btn);
-            li.appendChild(act);
-          }
-          return li;
-        }
-
-        // Realtime feliratkozás
-        const q = query(collection(db, 'chatMessages'), orderBy('ts', 'asc'), limit(200));
-        onSnapshot(q, (snap)=>{
-          chatList.innerHTML = '';
-          snap.forEach(s => chatList.appendChild(renderMsg(s)));
-
-          // ha zárva van a panel és jött új másik felhasználótól származó msg, számláljuk
-          const latest = snap.docs[snap.docs.length-1];
-          if (!panelOpen && latest){
-            const d = latest.data();
-            const t = d.ts?.toMillis ? d.ts.toMillis() : Date.now();
-            if (d.uid !== auth.currentUser.uid && t > lastSeenTs){
-              unseenCount++;
-              chatBadge.textContent = unseenCount;
-              chatBadge.hidden = unseenCount <= 0;
-            }
-          }
-
-          // ha nyitva, görgess az aljára
-          if (panelOpen){
-            chatList.scrollTop = chatList.scrollHeight;
-          }
-        });
-
-        function openChat(){
-          panelOpen = true;
-          chatPanel.hidden = false;
-          unseenCount = 0;
-          chatBadge.hidden = true;
-          lastSeenTs = Date.now();
-          setTimeout(()=>{ chatList.scrollTop = chatList.scrollHeight; }, 0);
-        }
-        function closeChat(){
-          panelOpen = false;
-          chatPanel.hidden = true;
-          lastSeenTs = Date.now();
-        }
-
-        chatFab.addEventListener('click', openChat);
-        chatClose.addEventListener('click', closeChat);
-
-        chatSend.addEventListener('click', async ()=>{
-          const text = (chatInput.value || '').trim();
-          if (!text) return;
-          chatSend.disabled = true;
-          try{
-            await addDoc(collection(db, 'chatMessages'), {
-              uid: auth.currentUser.uid,
-              nick: nickname || 'Ismeretlen',
-              text,
-              ts: serverTimestamp()
-            });
-            chatInput.value = '';
-            chatList.scrollTop = chatList.scrollHeight;
-          }catch(e){
-            console.warn(e);
-            alert('Nem sikerült elküldeni az üzenetet.');
-          }finally{
-            chatSend.disabled = false;
-          }
-        });
-        chatInput.addEventListener('keydown', (e)=>{
-          if (e.key === 'Enter' && !e.shiftKey){
-            e.preventDefault();
-            chatSend.click();
-          }
-        });
-
-        if (window.hideLoader) hideLoader();
-      });
-
-      document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => {
-          window.location.href = "login.html";
-        });
-      });
-    });
-  </script>
 </head>
 <body>
   <div class="layout">
@@ -421,7 +143,7 @@
       <a class="nav-card" href="leaderboard.html">
         <div class="icon-wrap" aria-hidden="true">
           <!-- trophy -->
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1-3V5H4v1Zm16-1h-3v1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1-3V5H4v1Zm16-1h-3v1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Összpontszám</span>
@@ -466,19 +188,234 @@
     </div>
   </div>
 
-  <!-- Lebegő chat UI -->
-  <div id="chatFab" class="chat-fab" title="Közösségi chat megnyitása">💬 <span id="chatBadge" class="chat-badge" hidden>0</span></div>
+  <!-- Lebegő chat -->
+  <button class="chat-fab" id="chatFab" title="Közösségi chat">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2Z"/></svg>
+  </button>
 
-  <div id="chatPanel" class="chat-panel" hidden>
-    <div class="chat-header">
-      <span>Közösségi chat</span>
-      <button id="chatClose" class="chat-close">✕</button>
+  <section class="chat-panel" id="chatPanel">
+    <div class="chat-head">
+      <span class="title">Közösségi chat</span>
+      <button class="chat-close" id="chatClose" aria-label="Bezárás">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3 1.4 1.4Z"/></svg>
+      </button>
     </div>
-    <div id="chatList" class="chat-list"></div>
+    <div class="chat-list" id="chatList"></div>
     <div class="chat-input">
-      <input id="chatInput" type="text" placeholder="Írj üzenetet… (Enter küld)" maxlength="1000">
+      <input id="chatMsg" type="text" placeholder="Írj üzenetet…">
       <button id="chatSend">Küldés</button>
     </div>
-  </div>
+  </section>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, collection, getDocs, query, where,
+      addDoc, serverTimestamp, orderBy, limit, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const crestMap = {
+      "Ferencváros": "crest/crest-fradi.png",
+      "Újpest FC": "crest/crest-ujpest.png",
+      "Debreceni VSC": "crest/crest-dvsc.png",
+      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
+      "Paksi FC": "crest/crest-paks.png",
+      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
+      "Puskás Akadémia": "crest/crest-puskas.png",
+      "Kisvárda FC": "crest/crest-kisvarda.png",
+      "Diósgyőri VTK": "crest/crest-dvtk.png",
+      "Zalaegerszegi TE FC": "crest/crest-zte.png",
+      "ETO FC Győr": "crest/crest-gyor.png",
+      "MTK Budapest": "crest/crest-mtk.png"
+    };
+
+    const facebookLinks = {
+      "Ferencváros": "https://www.facebook.com/fradi.hu",
+      "Újpest FC": "https://www.facebook.com/ujpestfootballclub",
+      "Debreceni VSC": "https://www.facebook.com/dvscfoci",
+      "Nyíregyháza Spartacus": "https://www.facebook.com/NYSFC",
+      "Paksi FC": "https://www.facebook.com/paksifcofficialsite",
+      "Kazincbarcikai SC": "https://www.facebook.com/kolorcitykbsc",
+      "Puskás Akadémia": "https://www.facebook.com/PFLAhu",
+      "Kisvárda FC": "https://www.facebook.com/kisvardafc",
+      "Diósgyőri VTK": "https://www.facebook.com/DVTK1910",
+      "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc.hu",
+      "ETO FC Győr": "https://www.facebook.com/etofcgyor",
+      "MTK Budapest": "https://www.facebook.com/MTKBudapest"
+    };
+
+    const chatFab   = document.getElementById("chatFab");
+    const chatPanel = document.getElementById("chatPanel");
+    const chatClose = document.getElementById("chatClose");
+    const chatList  = document.getElementById("chatList");
+    const chatMsg   = document.getElementById("chatMsg");
+    const chatSend  = document.getElementById("chatSend");
+    let panelOpen = false;
+    let currentNick = "Ismeretlen";
+
+    function openChat(){
+      chatPanel.classList.add("open");
+      panelOpen = true;
+      setTimeout(()=> chatList.scrollTop = chatList.scrollHeight, 50);
+    }
+    function closeChat(){
+      chatPanel.classList.remove("open");
+      panelOpen = false;
+    }
+    // Toggle a buborékon
+    chatFab.addEventListener('click', ()=>{ panelOpen ? closeChat() : openChat(); });
+    // X gomb
+    chatClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeChat(); });
+
+    // Üzenet küldés
+    async function sendMessage(){
+      const text = chatMsg.value.trim();
+      if (!text) return;
+      chatSend.disabled = true;
+      try{
+        await addDoc(collection(db, "chatMessages"), {
+          text,
+          nick: currentNick,   // csak a nick, email NEM megy
+          ts: serverTimestamp()
+        });
+        chatMsg.value = "";
+        setTimeout(()=> chatList.scrollTop = chatList.scrollHeight, 80);
+      }catch(err){ console.warn(err); }
+      finally{ chatSend.disabled = false; }
+    }
+    chatSend.addEventListener("click", sendMessage);
+    chatMsg.addEventListener("keydown", (e)=>{ if (e.key === "Enter") sendMessage(); });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          window.location.href = "login.html";
+          return;
+        }
+
+        const email = user.email;
+        let nickname = email;
+        let role = "user";
+        let favoriteTeam = "";
+
+        // Felhasználó adatai (nickname, role, team)
+        try{
+          const userRef = doc(db, "users", email);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            nickname = data.nickname || email;
+            role = data.role || "user";
+            favoriteTeam = data.favoriteTeam || "";
+          }
+        }catch(e){ console.warn(e); }
+
+        currentNick = nickname || "Ismeretlen";
+
+        // Fejléc
+        document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
+        if (role === "admin") document.getElementById("adminLink").style.display = "inline";
+
+        // Téma + címer
+        if (favoriteTeam) {
+          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+          document.body.classList.add(themeClass);
+
+          const crest = crestMap[favoriteTeam];
+          if (crest) {
+            const img = document.getElementById("favCrest");
+            img.src = crest; img.alt = favoriteTeam; img.hidden = false;
+          }
+        }
+
+        // NAV kártyák: függő tippek badge
+        try{
+          const now = new Date();
+          const upcomingSnap = await getDocs(query(collection(db, "matches"), where("startTime", ">=", now)));
+          const upcoming = upcomingSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const myTipsSnap = await getDocs(query(collection(db, "tips"), where("user", "==", email)));
+          const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
+          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+          const badge = document.getElementById("tipsBadge");
+          if (pending > 0){ badge.textContent = pending; badge.hidden = false; badge.title = `${pending} közelgő meccsre még nincs tipped`; }
+        }catch(e){ console.warn("Badge számítás hiba:", e); }
+
+        // Tabella kép
+        try {
+          const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
+          if (tableDoc.exists()) {
+            const base64 = tableDoc.data().base64;
+            const img = document.createElement("img");
+            img.src = `data:image/png;base64,${base64}`;
+            img.alt = "NB I tabella";
+            document.getElementById("tableContainer").appendChild(img);
+          }
+        } catch(e){ console.warn(e); }
+
+        // Facebook feed (keret nélkül)
+        try {
+          const fbLink = facebookLinks[favoriteTeam];
+          if (fbLink) {
+            const fbDiv = document.createElement("div");
+            fbDiv.className = "fb-wrap";
+            fbDiv.innerHTML = `
+              <iframe 
+                src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=560&height=540&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
+                scrolling="no" frameborder="0" allowfullscreen="true"
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
+            document.getElementById("facebookFeedContainer").appendChild(fbDiv);
+          }
+        } catch(e){ console.warn(e); }
+
+        // Chat stream (legutóbbi 100)
+        try{
+          const qRef = query(
+            collection(db, "chatMessages"),
+            orderBy("ts", "asc"),
+            limit(100)
+          );
+          onSnapshot(qRef, snap => {
+            chatList.innerHTML = "";
+            snap.forEach(d => {
+              const m = d.data();
+              const t = m.ts?.toDate ? m.ts.toDate() : null;
+              const time = t ? t.toLocaleString("hu-HU") : "";
+              const row = document.createElement("div");
+              row.className = "chat-item";
+              row.innerHTML = `
+                <div>
+                  <div class="nick">${m.nick || "Ismeretlen"}</div>
+                  <div class="msg">${(m.text || "").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
+                  <div class="time">${time}</div>
+                </div>`;
+              chatList.appendChild(row);
+            });
+            chatList.scrollTop = chatList.scrollHeight;
+          });
+        }catch(e){ console.warn(e); }
+
+        if (window.hideLoader) hideLoader();
+      });
+
+      document.getElementById("logout").addEventListener("click", () => {
+        signOut(auth).then(() => { window.location.href = "login.html"; });
+      });
+    });
+  </script>
 </body>
 </html>
