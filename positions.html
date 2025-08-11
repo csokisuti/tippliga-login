@@ -50,6 +50,14 @@
     .save-state{ font-size:12px; color:#16a34a; display:none; }
     .save-state.show{ display:inline-flex; }
 
+    details.cmp{ padding:12px; }
+    details.cmp summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px; font-weight:800; }
+    .hit-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:24px; padding:0 8px; border-radius:999px; background:color-mix(in oklab, var(--accent,#3b82f6) 40%, white); color:var(--accent,#3b82f6); }
+    .cmp-table{ width:100%; border-collapse:collapse; margin-top:10px; }
+    .cmp-table th, .cmp-table td{ border:1px solid var(--line,#e6eaf1); padding:8px; text-align:left; }
+    .row-ok{ background:#e9fbe9; }
+    .row-miss{ background:#fff1f2; }
+
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -128,6 +136,7 @@
     let chatLastSeen = null;
 
     let placed = Array(12).fill("");
+    let official = Array(12).fill("");
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -168,7 +177,19 @@
           }
         }catch(e){}
 
+        try{
+          const offDoc = await getDoc(doc(db,"finalStandings","official"));
+          if (offDoc.exists()){
+            const order = Array.isArray(offDoc.data().order) ? offDoc.data().order : [];
+            official = Array(12).fill("");
+            for (let i=0;i<12;i++){ if (order[i] && TEAMS.includes(order[i])) official[i]=order[i]; }
+          } else {
+            official = Array(12).fill("");
+          }
+        }catch(e){ official = Array(12).fill(""); }
+
         renderAll();
+        renderComparison();
         initChat(userRef);
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
@@ -226,6 +247,7 @@
             placed[fromIdx] = "";
             renderAll();
             autoSave();
+            renderComparison();
           }
         }
       });
@@ -288,6 +310,7 @@
             }
             renderAll();
             autoSave();
+            renderComparison();
           } else if (data.type==="slot"){
             const fromIdx = parseInt(data.index,10);
             if (fromIdx===targetIdx) return;
@@ -297,6 +320,7 @@
             placed[fromIdx] = b;
             renderAll();
             autoSave();
+            renderComparison();
           }
         });
 
@@ -327,6 +351,41 @@
         saved.classList.add("show");
         setTimeout(()=>saved.classList.remove("show"), 1200);
       }catch(e){}
+    }
+
+    function renderComparison(){
+      const sum = document.getElementById("cmpSummary");
+      const tableWrap = document.getElementById("cmpTableWrap");
+      const tbl = document.getElementById("cmpTable");
+      tbl.innerHTML = "";
+      if (!official.filter(Boolean).length){
+        sum.innerHTML = `Összevetés – találatok <span class="hit-badge">–</span>`;
+        tableWrap.innerHTML = `<div style="padding:8px 0; color:#64748b; font-size:14px;">Az admin még nem állította be a hivatalos sorrendet.</div>`;
+        return;
+      }
+
+      let hits = 0;
+      const trHead = document.createElement("tr");
+      trHead.innerHTML = `<th>#</th><th>Hivatalos</th><th>Saját</th><th>Státusz</th>`;
+      tbl.appendChild(trHead);
+
+      for (let i=0;i<12;i++){
+        const off = official[i] || "";
+        const mine = placed[i] || "";
+        const ok = off && mine && off===mine;
+        if (ok) hits++;
+        const tr = document.createElement("tr");
+        tr.className = ok ? "row-ok" : "row-miss";
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td>${off || "–"}</td>
+          <td>${mine || "–"}</td>
+          <td>${ok ? "✓" : "✕"}</td>
+        `;
+        tbl.appendChild(tr);
+      }
+
+      sum.innerHTML = `Összevetés – találatok <span class="hit-badge">${hits}/12</span>`;
     }
 
     function initChat(userRef){
@@ -446,96 +505,4 @@
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
         </div>
-        <div class="text">
-          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
-          <span class="desc">Közelgő meccsek & tippek</span>
-        </div>
-      </a>
-
-      <a class="nav-card" href="positions.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Szezon végi sorrend</span>
-          <span class="desc">12 csapat – húzd a helyekre</span>
-        </div>
-      </a>
-
-      <a class="nav-card" href="results.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Eredmények</span>
-          <span class="desc">Fordulónkénti bontás</span>
-        </div>
-      </a>
-
-      <a class="nav-card" href="leaderboard.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1-3V5H4v1Zm16-1h-3v1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Összpontszám</span>
-          <span class="desc">Toplista & bónusz</span>
-        </div>
-      </a>
-
-      <a class="nav-card" href="profile.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Profil</span>
-          <span class="desc">Beállítások & kedvenc csapat</span>
-        </div>
-      </a>
-
-      <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Admin</span>
-          <span class="desc">Szezon-zár & beállítások</span>
-        </div>
-      </a>
-    </nav>
-
-    <div class="content-grid">
-      <section class="card">
-        <h3>Csapatlista</h3>
-        <div id="pool" class="pool"></div>
-        <div class="save-row">
-          <span id="saveState" class="save-state">Mentve</span>
-        </div>
-      </section>
-
-      <section class="card">
-        <h3>Helyezések</h3>
-        <div id="slots" class="slots"></div>
-      </section>
-    </div>
-  </div>
-
-  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
-    </svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
-  </button>
-
-  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
-    <div class="chat-head">
-      <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" aria-label="Bezárás">✕</button>
-    </div>
-    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
-    <div id="chatComposer">
-      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
-      <button id="chatSendBtn">Küldés</button>
-    </div>
-  </section>
-</body>
-</html>
+        <div class=
