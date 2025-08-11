@@ -167,6 +167,20 @@
     // Forduló mező: 'round' vagy 'roundId'
     function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
 
+    // Hivatalos sorrend bármely sémából
+    function officialArrayFrom(data){
+      if (!data) return [];
+      if (Array.isArray(data.order)) return data.order;
+      if (Array.isArray(data.teams)) return data.teams;
+      if (Array.isArray(data.positions)) {
+        return data.positions
+          .slice()
+          .sort((a,b)=>(a.position||0)-(b.position||0))
+          .map(x=>x.team);
+      }
+      return [];
+    }
+
     /* ---------------- Állapot ---------------- */
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -575,15 +589,14 @@
           tipsByMatch.get(tip.matchId).push(tip);
         }
 
-        // Hivatalos sorrend realtime
+        // Hivatalos sorrend realtime (bármely séma)
         onSnapshot(doc(db,"finalStandings","official"), (offDoc)=>{
-          if (offDoc.exists()){
-            const arr = Array.isArray(offDoc.data().order) ? offDoc.data().order : [];
-            officialOrder = Array(12).fill("");
-            for (let i=0;i<12;i++){ if (arr[i]) officialOrder[i]=arr[i]; }
-          } else {
-            officialOrder = Array(12).fill("");
-          }
+          const d = offDoc.exists() ? offDoc.data() : {};
+          const arr = officialArrayFrom(d);
+
+          officialOrder = Array(12).fill("");
+          for (let i=0;i<12;i++){ officialOrder[i] = arr[i] || ""; }
+
           refreshBonusCard();
         });
 
