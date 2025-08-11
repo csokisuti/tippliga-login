@@ -50,32 +50,6 @@
     .save-state{ font-size:12px; color:#16a34a; display:none; }
     .save-state.show{ display:inline-flex; }
 
-    details.cmp{ padding:12px; }
-    details.cmp summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px; font-weight:800; }
-    .hit-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:24px; padding:0 8px; border-radius:999px; background:color-mix(in oklab, var(--accent,#3b82f6) 40%, white); color:var(--accent,#3b82f6); }
-    .cmp-table{ width:100%; border-collapse:collapse; margin-top:10px; }
-    .cmp-table th, .cmp-table td{ border:1px solid var(--line,#e6eaf1); padding:8px; text-align:left; }
-    .row-ok{ background:#e9fbe9; }
-    .row-miss{ background:#fff1f2; }
-
-    /* Közösségi tippek (összehasonlítás mindenkivel) */
-    .community-toolbar{ display:flex; gap:10px; align-items:center; padding:10px 12px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    .field{ display:flex; gap:8px; align-items:center; }
-    .input{ height:36px; padding:6px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); }
-    .select{ height:36px; padding:6px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); background:#fff; }
-
-    .community{ padding:12px; display:flex; flex-direction:column; gap:10px; }
-    details.user{ border:1px solid var(--line,#e6eaf1); border-radius:12px; background:#fff; overflow:hidden; }
-    details.user[open]{ box-shadow:0 6px 18px rgba(15,23,42,.06); }
-    details.user summary{ list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; cursor:pointer; background:#f7f9fd; }
-    .user-left{ display:flex; align-items:center; gap:10px; }
-    .user-nick{ font-weight:800; }
-    .user-meta{ color:#64748b; font-size:12px; }
-    .user-right{ display:flex; align-items:center; gap:12px; }
-    .pct{ color:#16a34a; font-weight:700; }
-    .user-inner{ padding:12px; }
-    .user-inner .cmp-table{ margin:0; }
-
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -86,7 +60,7 @@
     #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
     #chatClose:hover{ filter:brightness(0.95); }
     .chat-list{ overflow:auto; padding:8px 10px; }
-    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
+    .chat-empty{ color:var(--muted,#64748b); font-size:13px; padding:8px 10px; }
     .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
     .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
@@ -154,10 +128,6 @@
     let chatLastSeen = null;
 
     let placed = Array(12).fill("");
-    let official = Array(12).fill("");
-
-    // Közösségi tippek cache
-    let community = []; // {email, nick, order:string[], updatedAt?:Timestamp}
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -189,7 +159,6 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
         }
 
-        // Saját tipp beolvasása
         try{
           const tipDoc = await getDoc(doc(db,"standingsTips", currentUserEmail));
           if (tipDoc.exists()){
@@ -199,35 +168,7 @@
           }
         }catch(e){}
 
-        // Hivatalos sorrend (real-time)
-        onSnapshot(doc(db,"finalStandings","official"), (offDoc)=>{
-          if (offDoc.exists()){
-            const order = Array.isArray(offDoc.data().order) ? offDoc.data().order : [];
-            official = Array(12).fill("");
-            for (let i=0;i<12;i++){ if (order[i] && TEAMS.includes(order[i])) official[i]=order[i]; }
-          } else {
-            official = Array(12).fill("");
-          }
-          renderComparison();
-          renderCommunity(); // frissítjük a közösségi listát is
-        });
-
-        // Közösségi tippek (real-time)
-        onSnapshot(collection(db,"standingsTips"), (snap)=>{
-          community = snap.docs.map(d=>{
-            const data = d.data() || {};
-            return {
-              email: data.email || d.id,
-              nick: data.nick || data.email || d.id,
-              order: Array.isArray(data.order) ? data.order.slice(0,12) : Array(12).fill(""),
-              updatedAt: data.updatedAt
-            };
-          });
-          renderCommunity();
-        });
-
         renderAll();
-        renderComparison();
         initChat(userRef);
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
@@ -235,13 +176,6 @@
 
       document.getElementById("logout").addEventListener("click", () => {
         signOut(auth).then(() => window.location.href = "login.html");
-      });
-
-      // Közösségi toolbar események
-      document.addEventListener("input", (e)=>{
-        if (e.target && (e.target.id === "commFilter" || e.target.id === "commSort")){
-          renderCommunity();
-        }
       });
     });
 
@@ -292,7 +226,6 @@
             placed[fromIdx] = "";
             renderAll();
             autoSave();
-            renderComparison();
           }
         }
       });
@@ -355,7 +288,6 @@
             }
             renderAll();
             autoSave();
-            renderComparison();
           } else if (data.type==="slot"){
             const fromIdx = parseInt(data.index,10);
             if (fromIdx===targetIdx) return;
@@ -365,7 +297,6 @@
             placed[fromIdx] = b;
             renderAll();
             autoSave();
-            renderComparison();
           }
         });
 
@@ -397,171 +328,6 @@
         setTimeout(()=>saved.classList.remove("show"), 1200);
       }catch(e){}
     }
-
-    function renderComparison(){
-      const sum = document.getElementById("cmpSummary");
-      const tableWrap = document.getElementById("cmpTableWrap");
-      const tbl = document.getElementById("cmpTable");
-      tbl.innerHTML = "";
-      if (!official.filter(Boolean).length){
-        sum.innerHTML = `Összevetés – találatok <span class="hit-badge">–</span>`;
-        tableWrap.innerHTML = `<div style="padding:8px 0; color:#64748b; font-size:14px;">Az admin még nem állította be a hivatalos sorrendet.</div>`;
-        return;
-      }
-
-      let hits = 0;
-      const trHead = document.createElement("tr");
-      trHead.innerHTML = `<th>#</th><th>Hivatalos</th><th>Saját</th><th>Státusz</th>`;
-      tbl.appendChild(trHead);
-
-      for (let i=0;i<12;i++){
-        const off = official[i] || "";
-        const mine = placed[i] || "";
-        const ok = off && mine && off===mine;
-        if (ok) hits++;
-        const tr = document.createElement("tr");
-        tr.className = ok ? "row-ok" : "row-miss";
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td>${off || "–"}</td>
-          <td>${mine || "–"}</td>
-          <td>${ok ? "✓" : "✕"}</td>
-        `;
-        tbl.appendChild(tr);
-      }
-
-      sum.innerHTML = `Összevetés – találatok <span class="hit-badge">${hits}/12</span> <span class="user-meta">(+${hits}%)</span>`;
-    }
-
-    /* ---------- KÖZÖSSÉGI TIPPEK, MINDENKI ---------- */
-
-    function calcHits(order, officialOrder){
-      let h = 0;
-      for (let i=0;i<12;i++){
-        if (order[i] && officialOrder[i] && order[i] === officialOrder[i]) h++;
-      }
-      return h;
-    }
-
-    function renderCommunity(){
-      const wrap = document.getElementById("communityWrap");
-      const info = document.getElementById("communityInfo");
-      const filterVal = (document.getElementById("commFilter")?.value || "").toLowerCase().trim();
-      const sortVal = document.getElementById("commSort")?.value || "hitsDesc";
-
-      wrap.innerHTML = "";
-
-      if (!official.filter(Boolean).length){
-        info.textContent = "A hivatalos sorrend még nincs beállítva — amint megvan, itt mindenki tippje összevetve megjelenik.";
-        return;
-      } else {
-        info.textContent = "";
-      }
-
-      let rows = community.map(u=>{
-        const order = normalizeOrder(u.order);
-        const hits = calcHits(order, official);
-        return {
-          email: u.email,
-          nick: u.nick || u.email,
-          order,
-          hits,
-          pctBonus: hits, // minden egyezés +1%
-          updatedAt: u.updatedAt
-        };
-      });
-
-      // Szűrés
-      if (filterVal){
-        rows = rows.filter(r =>
-          (r.nick || "").toLowerCase().includes(filterVal) ||
-          (r.email || "").toLowerCase().includes(filterVal)
-        );
-      }
-
-      // Rendezés
-      rows.sort((a,b)=>{
-        if (sortVal === "name") return (a.nick||"").localeCompare(b.nick||"");
-        if (sortVal === "updated") {
-          const at = a.updatedAt?.toMillis?.() || 0;
-          const bt = b.updatedAt?.toMillis?.() || 0;
-          return bt - at;
-        }
-        // hitsDesc default
-        if (b.hits !== a.hits) return b.hits - a.hits;
-        return (a.nick||"").localeCompare(b.nick||"");
-      });
-
-      if (rows.length === 0){
-        wrap.innerHTML = `<div style="color:#64748b; font-size:14px;">Nincs találat a szűrésre.</div>`;
-        return;
-      }
-
-      for (const r of rows){
-        const det = document.createElement("details");
-        det.className = "user";
-
-        const sum = document.createElement("summary");
-        const left = document.createElement("div");
-        left.className = "user-left";
-        left.innerHTML = `<div class="user-nick">${escapeHtml(r.nick)}</div><div class="user-meta">${escapeHtml(r.email)}</div>`;
-
-        const right = document.createElement("div");
-        right.className = "user-right";
-        right.innerHTML = `
-          <span class="hit-badge">${r.hits}/12</span>
-          <span class="pct">+${r.pctBonus}%</span>
-          <span class="user-meta">${r.updatedAt ? "frissítve: " + fmtTime(r.updatedAt) : ""}</span>
-        `;
-
-        sum.appendChild(left);
-        sum.appendChild(right);
-        det.appendChild(sum);
-
-        const inner = document.createElement("div");
-        inner.className = "user-inner";
-        inner.appendChild(buildCmpTable(r.order, official));
-        det.appendChild(inner);
-
-        wrap.appendChild(det);
-      }
-    }
-
-    function normalizeOrder(arr){
-      const out = Array(12).fill("");
-      for (let i=0;i<12;i++){
-        const v = arr && arr[i];
-        out[i] = (v && TEAMS.includes(v)) ? v : "";
-      }
-      return out;
-    }
-
-    function buildCmpTable(order, off){
-      const table = document.createElement("table");
-      table.className = "cmp-table";
-      const head = document.createElement("tr");
-      head.innerHTML = `<th>#</th><th>Hivatalos</th><th>Tipp</th><th>Státusz</th>`;
-      table.appendChild(head);
-      for (let i=0;i<12;i++){
-        const ok = order[i] && off[i] && order[i]===off[i];
-        const tr = document.createElement("tr");
-        tr.className = ok ? "row-ok" : "row-miss";
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td>${off[i] || "–"}</td>
-          <td>${order[i] || "–"}</td>
-          <td>${ok ? "✓" : "✕"}</td>
-        `;
-        table.appendChild(tr);
-      }
-      return table;
-    }
-
-    function escapeHtml(s){
-      return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
-
-    /* ---------- CHAT ---------- */
 
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
@@ -648,7 +414,6 @@
       async function markSeen(){
         try{
           await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
-          lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
         }catch(e){}
@@ -750,32 +515,6 @@
       <section class="card">
         <h3>Helyezések</h3>
         <div id="slots" class="slots"></div>
-        <details class="cmp" open>
-          <summary id="cmpSummary">Összevetés – találatok <span class="hit-badge">–</span></summary>
-          <div id="cmpTableWrap">
-            <table id="cmpTable" class="cmp-table"></table>
-          </div>
-        </details>
-      </section>
-
-      <!-- Közösségi tippek – mindenkinek a tippje összevetve -->
-      <section class="card" style="grid-column: 1 / -1;">
-        <h3>Közösségi tippek (összevetés a hivatalossal)</h3>
-        <div class="community-toolbar">
-          <div class="field">
-            <input id="commFilter" class="input" type="text" placeholder="Szűrés névre/emailre…" />
-          </div>
-          <div class="field">
-            <label for="commSort" style="font-size:14px; color:#64748b;">Rendezés:</label>
-            <select id="commSort" class="select">
-              <option value="hitsDesc">Találat (csökkenő)</option>
-              <option value="name">Név (A–Z)</option>
-              <option value="updated">Frissítés ideje</option>
-            </select>
-          </div>
-          <div id="communityInfo" class="user-meta" style="margin-left:auto;"></div>
-        </div>
-        <div id="communityWrap" class="community"></div>
       </section>
     </div>
   </div>
