@@ -42,6 +42,7 @@
     .chat-panel{
       position: fixed; right: 22px; bottom: 90px;
       width: 420px; max-width: calc(100vw - 32px);
+      max-height: 70vh;
       background:#fff; border:1px solid #e6eaf1; border-radius:14px;
       box-shadow: 0 20px 40px rgba(15,23,42,.18);
       display:none; flex-direction:column; overflow:hidden;
@@ -50,19 +51,20 @@
     .chat-panel.open{ display:flex; }
 
     .chat-head{
+      position: sticky; top:0;
       display:flex; align-items:center; justify-content:space-between;
+      gap:8px;
       padding:10px 12px; border-bottom:1px solid #e6eaf1; background:#f7f9fd;
     }
     .chat-head .title{ font-weight:700; color:#0f172a; }
     .chat-close{
       background:transparent; border:0; cursor:pointer; padding:6px;
-      color:#334155; border-radius:8px;
+      color:#334155; border-radius:8px; flex:0 0 auto;
     }
     .chat-close:hover{ background:#eef2ff; }
 
     .chat-list{
-      height: 360px; overflow:auto;
-      background:#fff;
+      flex:1 1 auto; overflow:auto; background:#fff;
     }
     .chat-item{
       padding:10px 12px; border-bottom:1px solid #f1f3f8;
@@ -72,20 +74,20 @@
     .chat-item .msg{ color:#0f172a; }
     .chat-item .time{ color:#94a3b8; font-size:12px; }
 
-    /* INPUT láthatóság/méret fix */
+    /* INPUT láthatóság/méret fix (kényszerített színek, magasság) */
     .chat-input{
       display:flex; gap:8px; padding:10px; border-top:1px solid #e6eaf1; background:#fafbfe;
     }
-    .chat-input input{
+    .chat-panel .chat-input input{
       flex:1; box-sizing:border-box; height:40px;
       padding:10px 12px; border:1px solid #dfe3ea; border-radius:10px;
-      background:#fff; color:#0f172a; caret-color: var(--accent, #3b82f6);
-      font-size:14px; line-height:1.2;
+      background:#fff !important; color:#0f172a !important; caret-color: var(--accent, #3b82f6);
+      font-size:14px; line-height:1.2; outline:none;
     }
     .chat-input input::placeholder{ color:#94a3b8; }
     .chat-input button{
       height:40px; border:0; background:var(--accent, #3b82f6); color:#fff;
-      border-radius:10px; padding:0 14px; cursor:pointer;
+      border-radius:10px; padding:0 14px; cursor:pointer; flex:0 0 auto;
     }
   </style>
 </head>
@@ -276,12 +278,9 @@
       chatPanel.classList.remove("open");
       panelOpen = false;
     }
-    // Toggle a buborékon
     chatFab.addEventListener('click', ()=>{ panelOpen ? closeChat() : openChat(); });
-    // X gomb
     chatClose.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); closeChat(); });
 
-    // Üzenet küldés
     async function sendMessage(){
       const text = chatMsg.value.trim();
       if (!text) return;
@@ -312,7 +311,6 @@
         let role = "user";
         let favoriteTeam = "";
 
-        // Felhasználó adatai (nickname, role, team)
         try{
           const userRef = doc(db, "users", email);
           const userSnap = await getDoc(userRef);
@@ -326,11 +324,9 @@
 
         currentNick = nickname || "Ismeretlen";
 
-        // Fejléc
         document.getElementById("welcome").textContent = `Üdv, ${nickname}!`;
         if (role === "admin") document.getElementById("adminLink").style.display = "inline";
 
-        // Téma + címer
         if (favoriteTeam) {
           const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
             .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
@@ -343,7 +339,7 @@
           }
         }
 
-        // NAV kártyák: függő tippek badge
+        /* Badge a meccstippekhez */
         try{
           const now = new Date();
           const upcomingSnap = await getDocs(query(collection(db, "matches"), where("startTime", ">=", now)));
@@ -355,7 +351,7 @@
           if (pending > 0){ badge.textContent = pending; badge.hidden = false; badge.title = `${pending} közelgő meccsre még nincs tipped`; }
         }catch(e){ console.warn("Badge számítás hiba:", e); }
 
-        // Tabella kép
+        /* Tabella */
         try {
           const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
           if (tableDoc.exists()) {
@@ -367,7 +363,7 @@
           }
         } catch(e){ console.warn(e); }
 
-        // Facebook feed (keret nélkül)
+        /* Facebook feed */
         try {
           const fbLink = facebookLinks[favoriteTeam];
           if (fbLink) {
@@ -382,7 +378,7 @@
           }
         } catch(e){ console.warn(e); }
 
-        // Chat stream (legutóbbi 100)
+        /* Chat stream (legutóbbi 100) */
         try{
           const qRef = query(
             collection(db, "chatMessages"),
