@@ -68,7 +68,7 @@
       await loadMatches();
       await loadUsers();
       await loadResults();
-      await loadPositionsLock();  // <<< új
+      await loadPositionsLock();
     });
 
     function initUI() {
@@ -102,12 +102,19 @@
 
       const matchesList = document.createElement("div");
       matchesList.id = "matchesList";
+      matchesList.style.display = "none";
 
       const resultSection = document.createElement("section");
       resultSection.innerHTML = `
         <h2>Meccseredmények kezelése</h2>
-        <div id="matchesNoResult" class="card"><h3>🟡 Eredmény nélküli meccsek</h3></div>
-        <div id="matchesWithResult" class="card"><h3>🟢 Rögzített eredmények</h3></div>
+        <div id="matchesNoResult" class="card">
+          <h3>🟡 Eredmény nélküli meccsek</h3>
+          <div id="noResultContent"></div>
+        </div>
+        <div id="matchesWithResult" class="card">
+          <h3 id="withResultHeader" style="cursor:pointer">🟢 Rögzített eredmények</h3>
+          <div id="withResultContent" style="display:none;"></div>
+        </div>
       `;
 
       const userSection = document.createElement("section");
@@ -187,7 +194,6 @@
         reader.readAsDataURL(file);
       });
 
-      // --- Hivatalos sorrend (drag & drop) ---
       const finalStandingsRef = doc(db, "finalStandings", "official");
       const sortableList = document.getElementById("sortableList");
       const toggleOrderBtn = document.getElementById("toggleOrder");
@@ -242,9 +248,14 @@
         saveOrderBtn.style.display = visible ? "none" : "inline-block";
       });
 
-      // --- Pozíciós tipp lezárás UI események ---
       document.getElementById("saveLock").addEventListener("click", saveLock);
       document.getElementById("clearLock").addEventListener("click", clearLock);
+
+      const withResultHeader = document.getElementById("withResultHeader");
+      withResultHeader.onclick = () => {
+        const c = document.getElementById("withResultContent");
+        c.style.display = c.style.display === "none" ? "block" : "none";
+      };
     }
 
     async function loadMatches() {
@@ -300,10 +311,10 @@
     }
 
     async function loadResults() {
-      const noResultContainer = document.getElementById("matchesNoResult");
-      const withResultContainer = document.getElementById("matchesWithResult");
-      noResultContainer.innerHTML = "<h3>🟡 Eredmény nélküli meccsek</h3>";
-      withResultContainer.innerHTML = "<h3>🟢 Rögzített eredmények</h3>";
+      const noResultContent = document.getElementById("noResultContent");
+      const withResultContent = document.getElementById("withResultContent");
+      noResultContent.innerHTML = "";
+      withResultContent.innerHTML = "";
 
       const snapshot = await getDocs(collection(db, "matches"));
       const noResult = [];
@@ -316,8 +327,8 @@
         else noResult.push(match);
       });
 
-      renderMatchGroup(noResult, noResultContainer, false);
-      renderMatchGroup(withResult, withResultContainer, true);
+      renderMatchGroup(noResult, noResultContent, false);
+      renderMatchGroup(withResult, withResultContent, true);
     }
 
     function renderMatchGroup(matches, container, hasResult) {
@@ -401,7 +412,6 @@
       });
     }
 
-    // === Pozíciós tipp LEZÁRÁS (settings/positionsLock) ===
     async function loadPositionsLock(){
       const status = document.getElementById('lockStatus');
       const snap = await getDoc(doc(db, "settings", "positionsLock"));
@@ -418,7 +428,7 @@
       const timeLocked = until && now >= until;
 
       if (isLocked || timeLocked){
-        status.textContent = `ZÁRVA ${timeLocked && until ? `(határidő: ${until.toLocaleString("hu-HU")})` : "(azonnali zárás)"}` + (msg?` – ${msg}`:"");
+        status.textContent = `ZÁRVA ${timeLocked && until ? `(határidő: ${until.toLocaleString("hu-HU")})` : "(azonnali zárás)"}${msg?` – ${msg}`:""}`;
         status.className = "warn";
       }else{
         status.textContent = "Jelenleg nyitva.";
@@ -455,7 +465,6 @@
       await loadPositionsLock();
     }
 
-    // export a böngészőnek
     window.updateMatch = updateMatch;
     window.deleteMatch = deleteMatch;
   </script>
