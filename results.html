@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>NB1 TippLiga – Eredmények</title>
 
-  <!-- Egységes stílus/téma + loader -->
   <link rel="stylesheet" href="style-themed.css" />
   <link rel="stylesheet" href="style.css">
   <script src="loader.js" defer></script>
@@ -36,11 +35,10 @@
 
     /* Oldaltartalom */
     .content-grid{ display:grid; grid-template-columns: 1fr; gap:16px; }
-
     .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
 
-    /* Bónusz kártya + modál (összevetés mindenkivel) */
+    /* Bónusz kártya + modál */
     .bonus-wrap{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px; }
     .bonus-muted{ color:#64748b; font-size:12px }
     .bonus-title{ font-size:20px; font-weight:800 }
@@ -87,7 +85,7 @@
     .hidden-info{ color:#b45309; font-size:13px; margin-top:6px }
     .empty{ padding:12px 14px; color:#64748b }
 
-    /* Chat FAB/panel – egységes */
+    /* Chat – egységes */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -98,7 +96,7 @@
     #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
     #chatClose:hover{ filter:brightness(0.95); }
     .chat-list{ overflow:auto; padding:8px 10px; }
-    .chat-empty{ color:var(--muted,#64748b); font-size:13px; padding:8px 10px; }
+    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
     .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
     .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
@@ -162,7 +160,7 @@
       return undefined;
     }
 
-    // Tip mezők: támogatjuk a 'choice' vs 'tip', és 'double' vs 'isDouble' duót
+    // Tip mezők: 'choice' vs 'tip', és 'double' vs 'isDouble'
     function tipChoice(t){ return t.choice ?? t.tip ?? ""; }
     function tipDouble(t){ return !!(t.double ?? t.isDouble); }
 
@@ -180,119 +178,10 @@
     let tipsByMatch = new Map();      // matchId -> [{...tipp}]
     let nickByEmail = {};             // email -> nick
     let roundsAsc = [];               // elérhető fordulók
-    let officialOrder = Array(12).fill(""); // finalStandings/official.order
+    let officialOrder = Array(12).fill("");
 
-    /* ---------------- Init / auth ---------------- */
-    document.addEventListener("DOMContentLoaded", () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "login.html"; return; }
-        currentUserEmail = user.email;
-
-        // felhasználó
-        const userRef = doc(db, "users", currentUserEmail);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const d = userSnap.data();
-          currentUserNick = d.nickname || currentUserEmail;
-          currentUserRole = d.role || "user";
-          favoriteTeam = d.favoriteTeam || "";
-          chatLastSeen = d.chatLastSeen || null;
-        } else {
-          currentUserNick = currentUserEmail;
-          currentUserRole = "user";
-          favoriteTeam = "";
-          chatLastSeen = null;
-        }
-        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
-
-        if (favoriteTeam) {
-          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
-          const crest = crestMap[favoriteTeam];
-          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
-        }
-
-        // Becenevek
-        const usersSnap = await getDocs(collection(db, "users"));
-        usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
-
-        // Meccsek
-        const matchesSnap = await getDocs(collection(db, "matches"));
-        matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-
-        const roundSet = new Set();
-        matches.forEach(m => { const r = matchRound(m); if (r) roundSet.add(r); });
-        roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
-
-        // Tippek (legfrissebb per user-meccs)
-        tipsByMatch.clear();
-        const tipsSnap = await getDocs(collection(db, "tips"));
-        const latest = new Map(); // key: user|match -> tip
-        tipsSnap.forEach(d => {
-          const t = d.data(); if (!t?.matchId || !t?.user) return;
-          const k = t.user + "|" + t.matchId;
-          const cur = latest.get(k);
-          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
-          const ts = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
-          if (!cur || ts >= curTs) latest.set(k, { id:d.id, ...t });
-        });
-        for (const tip of latest.values()){
-          if (!tipsByMatch.has(tip.matchId)) tipsByMatch.set(tip.matchId, []);
-          tipsByMatch.get(tip.matchId).push(tip);
-        }
-
-        // Hivatalos sorrend + közösségi összevetés realtime
-        onSnapshot(doc(db,"finalStandings","official"), (offDoc)=>{
-          if (offDoc.exists()){
-            const arr = Array.isArray(offDoc.data().order) ? offDoc.data().order : [];
-            officialOrder = Array(12).fill("");
-            for (let i=0;i<12;i++){ if (arr[i]) officialOrder[i]=arr[i]; }
-          } else {
-            officialOrder = Array(12).fill("");
-          }
-          refreshBonusCard(); // frissítjük a kártyát, ha változik
-        });
-
-        // Közösségi tippek realtime a modálhoz
-        onSnapshot(collection(db,"standingsTips"), snap=>{
-          communityTips = snap.docs.map(d=>{
-            const data = d.data() || {};
-            const order = Array.isArray(data.order) ? data.order.slice(0,12) : Array(12).fill("");
-            return { email: data.email || d.id, nick: data.nick || data.email || d.id, order, updatedAt: data.updatedAt };
-          });
-          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
-          refreshBonusCard(); // ha a saját tipp változott, kártya is változhat
-        });
-
-        buildRoundsUI();
-        await renderRound(roundsAsc[roundsAsc.length-1] || "");
-        updatePendingBadge();
-        initChat(userRef);
-
-        if (window.hideLoader) hideLoader();
-      });
-
-      document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login.html");
-      });
-    });
-
-    /* ---------------- Nav „függő tippek” badge ---------------- */
-    function updatePendingBadge(){
-      getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
-        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
-          const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
-          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-          const badge = document.getElementById("tipsBadge");
-          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
-        });
-      });
-    }
-
-    /* ---------------- Bónusz – kártya + modál ---------------- */
-    let communityTips = []; // {email,nick,order,updatedAt}
+    // Bónusz/közösségi
+    let communityTips = [];           // {email,nick,order,updatedAt}
     let bonusOverlayOpen = false;
 
     function calcBonus(order, official){
@@ -415,7 +304,7 @@
         return;
       }
 
-      // Összegző chippek (csak lezárt, outcome-os meccsekből)
+      // Összegző chippek (lezárt meccsekből)
       const summary = {};  // nick -> pont
       const breakdown = {};
       const now = new Date();
@@ -617,6 +506,121 @@
         }catch(e){}
       }
     }
+
+    /* ---------------- INIT ---------------- */
+    document.addEventListener("DOMContentLoaded", () => {
+      // Modál gombok – ugyanebben a modulban!
+      const bonusOverlayEl = document.getElementById("bonusOverlay");
+      document.getElementById("bonusDetailsBtn").addEventListener("click", openBonusModal);
+      document.getElementById("bonusClose").addEventListener("click", closeBonusModal);
+      bonusOverlayEl.addEventListener("click", (e)=> { if (e.target === bonusOverlayEl) closeBonusModal(); });
+      document.getElementById("userSearch").addEventListener("input", (e)=> renderUsersList(e.target.value));
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "login.html"; return; }
+        currentUserEmail = user.email;
+
+        // felhasználó
+        const userRef = doc(db, "users", currentUserEmail);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const d = userSnap.data();
+          currentUserNick = d.nickname || currentUserEmail;
+          currentUserRole = d.role || "user";
+          favoriteTeam = d.favoriteTeam || "";
+          chatLastSeen = d.chatLastSeen || null;
+        } else {
+          currentUserNick = currentUserEmail;
+          currentUserRole = "user";
+          favoriteTeam = "";
+          chatLastSeen = null;
+        }
+        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
+        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
+
+        if (favoriteTeam) {
+          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+          document.body.classList.add(themeClass);
+          const crest = crestMap[favoriteTeam];
+          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
+        }
+
+        // Becenevek
+        const usersSnap = await getDocs(collection(db, "users"));
+        usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
+
+        // Meccsek
+        const matchesSnap = await getDocs(collection(db, "matches"));
+        matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+        const roundSet = new Set();
+        matches.forEach(m => { const r = matchRound(m); if (r) roundSet.add(r); });
+        roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
+        buildRoundsUI();
+
+        // Tippek (legfrissebb per user-meccs)
+        tipsByMatch.clear();
+        const tipsSnap = await getDocs(collection(db, "tips"));
+        const latest = new Map(); // key: user|match -> tip
+        tipsSnap.forEach(d => {
+          const t = d.data(); if (!t?.matchId || !t?.user) return;
+          const k = t.user + "|" + t.matchId;
+          const cur = latest.get(k);
+          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
+          const ts = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
+          if (!cur || ts >= curTs) latest.set(k, { id:d.id, ...t });
+        });
+        for (const tip of latest.values()){
+          if (!tipsByMatch.has(tip.matchId)) tipsByMatch.set(tip.matchId, []);
+          tipsByMatch.get(tip.matchId).push(tip);
+        }
+
+        // Hivatalos sorrend realtime
+        onSnapshot(doc(db,"finalStandings","official"), (offDoc)=>{
+          if (offDoc.exists()){
+            const arr = Array.isArray(offDoc.data().order) ? offDoc.data().order : [];
+            officialOrder = Array(12).fill("");
+            for (let i=0;i<12;i++){ if (arr[i]) officialOrder[i]=arr[i]; }
+          } else {
+            officialOrder = Array(12).fill("");
+          }
+          refreshBonusCard();
+        });
+
+        // Közösségi tippek realtime
+        onSnapshot(collection(db,"standingsTips"), snap=>{
+          communityTips = snap.docs.map(d=>{
+            const data = d.data() || {};
+            const order = Array.isArray(data.order) ? data.order.slice(0,12) : Array(12).fill("");
+            return { email: data.email || d.id, nick: data.nick || data.email || d.id, order, updatedAt: data.updatedAt };
+          });
+          refreshBonusCard();
+        });
+
+        await renderRound(roundsAsc[roundsAsc.length-1] || "");
+        updatePendingBadge();
+        initChat(userRef);
+
+        if (window.hideLoader) hideLoader();
+      });
+
+      document.getElementById("logout").addEventListener("click", () => {
+        signOut(auth).then(() => window.location.href = "login.html");
+      });
+    });
+
+    /* ---------------- Nav „függő tippek” badge ---------------- */
+    function updatePendingBadge(){
+      getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+        getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+          const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
+          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+          const badge = document.getElementById("tipsBadge");
+          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+        });
+      });
+    }
   </script>
 </head>
 <body>
@@ -772,14 +776,5 @@
       </section>
     </div>
   </div>
-
-  <script type="module">
-    // Modál vezérlés
-    const bonusOverlay = document.getElementById("bonusOverlay");
-    document.getElementById("bonusDetailsBtn").addEventListener("click", ()=> openBonusModal());
-    document.getElementById("bonusClose").addEventListener("click", ()=> closeBonusModal());
-    bonusOverlay.addEventListener("click", e => { if (e.target === bonusOverlay) closeBonusModal(); });
-    document.getElementById("userSearch").addEventListener("input", (e)=> renderUsersList(e.target.value));
-  </script>
 </body>
 </html>
