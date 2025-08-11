@@ -337,10 +337,12 @@
         scrollBottom();
         try{
           await addDoc(collection(db,'chatMessages'), {
-            text: backup,
-            nick: currentUserNick || 'Ismeretlen',
-            ts: serverTimestamp()
-          });
+  email: currentUserEmail,                 // ← EZ KELL A RULES-HOZ
+  text: backup,
+  nick: currentUserNick || 'Ismeretlen',
+  ts: serverTimestamp()
+});
+
           // siker
         }catch(e){
           console.warn('Chat send failed:', e);
