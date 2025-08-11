@@ -4,13 +4,11 @@
   <meta charset="UTF-8" />
   <title>NB1 TippLiga</title>
 
-  <!-- Témázás + általános stílusok -->
   <link rel="stylesheet" href="style-themed.css" />
   <link rel="stylesheet" href="style.css">
   <script src="loader.js" defer></script>
 
   <style>
-    /* ====== Layout ====== */
     .layout{
       display:flex; flex-direction:column; gap:16px;
       max-width:1200px; margin:0 auto; padding:20px;
@@ -22,7 +20,6 @@
       .content-grid{ grid-template-columns: 1fr; }
     }
 
-    /* ====== Kártyás fejléc + nav ====== */
     .header{ display:flex; align-items:center; justify-content:space-between; }
     .header-left{ display:flex; align-items:center; gap:12px; }
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
@@ -69,12 +66,10 @@
     }
     .pill-badge[hidden]{ display:none !important; }
 
-    /* Facebook feed – keret nélkül, rugalmas */
     .fb-wrap iframe{
       width:100%; height:540px; border:0; overflow:hidden;
     }
 
-    /* ====== Lebegő chat (badge + kisebb gombok) ====== */
     .chat-fab{
       position:fixed; right:22px; bottom:22px; z-index:999;
       width:52px; height:52px; border-radius:999px; border:0;
@@ -136,6 +131,17 @@
       min-width:90px; padding:8px 12px; border-radius:10px;
       background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer;
     }
+
+    .btn-accent{
+      min-height:40px; padding:10px 14px; border-radius:10px;
+      background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
+      font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+      box-shadow:0 6px 18px rgba(15,23,42,.08);
+    }
+    .btn-accent:hover{ filter:brightness(.95); }
+    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
+    .btn-crest{ width:18px; height:18px; border-radius:4px; background:#fff; object-fit:contain; display:none; }
+    .btn-accent.has-crest .btn-crest{ display:inline-block; }
   </style>
 
   <script type="module">
@@ -199,7 +205,7 @@
     let currentUserNick = "";
     let currentUserRole = "user";
     let favoriteTeam = "";
-    let chatLastSeen = null; // Firestore Timestamp vagy null
+    let chatLastSeen = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -207,7 +213,6 @@
 
         currentUserEmail = user.email;
 
-        // Felhasználói adatok (nick, role, kedvenc csapat, chatLastSeen)
         const userRef = doc(db, "users", currentUserEmail);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
@@ -223,13 +228,11 @@
           chatLastSeen = null;
         }
 
-        // Fejléc + admin link
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
         if (currentUserRole === "admin") {
           document.getElementById("adminLink").style.display = "flex";
         }
 
-        // Téma + címer
         if (favoriteTeam) {
           const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
             .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
@@ -238,10 +241,17 @@
           if (crest) {
             const img = document.getElementById("favCrest");
             img.src = crest; img.alt = favoriteTeam; img.hidden = false;
+
+            const logoutBtn = document.getElementById("logout");
+            const logoutCrest = document.getElementById("logoutCrest");
+            if (logoutCrest) {
+              logoutCrest.src = crest;
+              logoutCrest.alt = favoriteTeam;
+              logoutBtn.classList.add("has-crest");
+            }
           }
         }
 
-        // Jövőbeli meccsek → meccstippek badge
         try{
           const now = new Date();
           const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now)));
@@ -253,7 +263,6 @@
           if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
         }catch(e){ console.warn(e); }
 
-        // Tabella kép
         try {
           const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
           if (tableDoc.exists()) {
@@ -265,7 +274,6 @@
           }
         } catch(e){ console.warn(e); }
 
-        // Facebook feed
         try {
           const fbLink = facebookLinks[favoriteTeam];
           if (fbLink) {
@@ -280,7 +288,6 @@
           }
         } catch(e){ console.warn(e); }
 
-        // ===== Chat init =====
         initChat(userRef);
 
         if (window.hideLoader) hideLoader();
@@ -291,7 +298,6 @@
       });
     });
 
-    // ===== Chat (unread + delete) =====
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -307,12 +313,10 @@
       fab.addEventListener('click', toggle);
       closeBtn.addEventListener('click', close);
 
-      // Olvasatlanok számlálása (lastSeen alapján)
       let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
 
       const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
       onSnapshot(qAll, snap => {
-        // lista render + admin/saját törlés gomb
         listEl.innerHTML = '';
         if (snap.empty){
           const empty = document.createElement('div');
@@ -349,7 +353,6 @@
             listEl.appendChild(row);
           });
 
-          // badge frissítése
           if (!panel.classList.contains('open') && unread > 0){
             fab.classList.add('has-unread');
             fabBadge.textContent = unread > 99 ? '99+' : String(unread);
@@ -358,12 +361,10 @@
             fabBadge.textContent = '';
           }
 
-          // auto scroll a végére
           setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
         }
       }, err => console.warn('chat snapshot error:', err));
 
-      // Küldés
       sendBtn.addEventListener('click', async ()=>{
         const txt = (inputEl.value || '').trim();
         if (!txt){ inputEl.focus(); return; }
@@ -376,7 +377,6 @@
             text: backup,
             ts: serverTimestamp()
           });
-          // küldés után jelöljük olvasottnak (ha nyitva van)
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
           console.warn('Chat send failed:', e);
@@ -387,11 +387,9 @@
         if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
       });
 
-      // lastSeen frissítés
       async function markSeen(){
         try{
           await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
-          // lokál frissítés: vegyük a mostani időt becslésnek
           lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
@@ -402,7 +400,6 @@
 </head>
 <body>
   <div class="layout">
-    <!-- Fejléc -->
     <div class="header">
       <div class="header-left">
         <img id="favCrest" class="fav-crest" alt="" hidden>
@@ -412,15 +409,16 @@
         </div>
       </div>
       <div>
-        <button id="logout">Kilépés</button>
+        <button id="logout" class="btn-accent">
+          <img id="logoutCrest" class="btn-crest" alt="">
+          Kilépés
+        </button>
       </div>
     </div>
 
-    <!-- Kártyás fő navigáció -->
     <nav class="nav-grid">
       <a class="nav-card" href="matches.html">
         <div class="icon-wrap" aria-hidden="true">
-          <!-- soccer ball -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
         </div>
         <div class="text">
@@ -431,7 +429,6 @@
 
       <a class="nav-card" href="positions.html">
         <div class="icon-wrap" aria-hidden="true">
-          <!-- podium -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
         <div class="text">
@@ -442,7 +439,6 @@
 
       <a class="nav-card" href="results.html">
         <div class="icon-wrap" aria-hidden="true">
-          <!-- clipboard list -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Zm0 4h3v2H6v-2Z"/></svg>
         </div>
         <div class="text">
@@ -453,7 +449,6 @@
 
       <a class="nav-card" href="leaderboard.html">
         <div class="icon-wrap" aria-hidden="true">
-          <!-- trophy -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1-3V5H4v1Zm16-1h-3v1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
         </div>
         <div class="text">
@@ -464,7 +459,6 @@
 
       <a class="nav-card" href="profile.html">
         <div class="icon-wrap" aria-hidden="true">
-          <!-- user -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
         </div>
         <div class="text">
@@ -475,7 +469,6 @@
 
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <!-- settings -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
@@ -485,7 +478,6 @@
       </a>
     </nav>
 
-    <!-- Tartalomkártyák -->
     <div class="content-grid">
       <section class="card table-wrap">
         <h3>NB I tabella</h3>
@@ -499,7 +491,6 @@
     </div>
   </div>
 
-  <!-- Lebegő chat gomb -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
@@ -507,7 +498,6 @@
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
-  <!-- Lebegő chat panel -->
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
     <div class="chat-head">
       <div class="chat-title">Közösségi chat</div>
