@@ -140,8 +140,7 @@
     }
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
-    .btn-crest{ width:18px; height:18px; border-radius:4px; background:#fff; object-fit:contain; display:none; }
-    .btn-accent.has-crest .btn-crest{ display:inline-block; }
+    .btn-icon{ width:18px; height:18px; display:inline-block; }
   </style>
 
   <script type="module">
@@ -149,7 +148,7 @@
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore,
-      doc, getDoc, setDoc, updateDoc,
+      doc, getDoc, setDoc,
       collection, getDocs, addDoc, deleteDoc, serverTimestamp,
       query, where, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -237,18 +236,11 @@
           const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
             .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
           document.body.classList.add(themeClass);
+
           const crest = crestMap[favoriteTeam];
           if (crest) {
             const img = document.getElementById("favCrest");
             img.src = crest; img.alt = favoriteTeam; img.hidden = false;
-
-            const logoutBtn = document.getElementById("logout");
-            const logoutCrest = document.getElementById("logoutCrest");
-            if (logoutCrest) {
-              logoutCrest.src = crest;
-              logoutCrest.alt = favoriteTeam;
-              logoutBtn.classList.add("has-crest");
-            }
           }
         }
 
@@ -409,8 +401,10 @@
         </div>
       </div>
       <div>
-        <button id="logout" class="btn-accent">
-          <img id="logoutCrest" class="btn-crest" alt="">
+        <button id="logout" class="btn-accent" aria-label="Kilépés">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+          </svg>
           Kilépés
         </button>
       </div>
