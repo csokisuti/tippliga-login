@@ -1,556 +1,188 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="utf-8"/>
-  <title>NB1 TippLiga – Szezon végi sorrend</title>
-
-  <link rel="stylesheet" href="style-themed.css"/>
-  <link rel="stylesheet" href="style.css"/>
-  <script src="loader.js" defer></script>
-
+  <meta charset="UTF-8">
+  <title>Szezon végi sorrend</title>
+  <link rel="stylesheet" href="style.css">
   <style>
-    .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
-    .content-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-    @media (max-width:1000px){ .content-grid{ grid-template-columns: 1fr; } }
-
-    .header{ display:flex; align-items:center; justify-content:space-between; }
-    .header-left{ display:flex; align-items:center; gap:12px; }
-    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
-    .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
-
-    /* Egységes 6 oszlopos nav-grid (kisebb kijelzőn tördelve) */
-    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
-    @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
-    @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
-    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
-    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
-    .nav-card .title{ font-weight:800; }
-    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
-    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
-    .pill-badge[hidden]{ display:none !important; }
-
-    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
-    .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
-
-    .pool{ padding:12px; display:flex; flex-wrap:wrap; gap:10px; align-content:flex-start; min-height:120px; }
-    .team-chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:grab; user-select:none; }
-    .team-chip:active{ cursor:grabbing; }
-    .crest{ width:22px; height:22px; object-fit:contain; border-radius:4px; background:#fff; border:1px solid var(--line,#e6eaf1); }
-
-    .slots{ padding:12px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-    @media (max-width:700px){ .slots{ grid-template-columns: 1fr; } }
-    .slot{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border:1px dashed var(--line,#e6eaf1); border-radius:12px; background:#fafbff; min-height:52px; }
-    .slot.dragover{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 40%, white); outline-offset:2px; }
-    .slot-left{ display:flex; align-items:center; gap:10px; }
-    .pos-num{ width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:color-mix(in oklab, var(--accent,#3b82f6) 20%, white); color:var(--accent,#3b82f6); font-weight:800; }
-    .slot-chip{ display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:grab; user-select:none; }
-    .slot-empty{ color:#94a3b8; font-size:13px; }
-
-    .save-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    .save-state{ font-size:12px; color:#16a34a; display:none; }
-    .save-state.show{ display:inline-flex; }
-
-    /* Chat */
-    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
-    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
-    .chat-fab.has-unread .fab-badge{ display:inline-block; }
-    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
-    .chat-panel.open{ display:flex; }
-    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
-    .chat-title{ font-weight:800; }
-    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
-    #chatClose:hover{ filter:brightness(0.95); }
-    .chat-list{ overflow:auto; padding:8px 10px; }
-    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
-    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
-    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
-    .msg .text{ white-space:pre-wrap; word-break:break-word; }
-    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
-    .msg:hover .del{ display:inline-block; }
-
-    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
-    #chatInput::placeholder{ color:#6b7280; }
-    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f2f2f2; }
+    header { background: #333; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { margin: 0; font-size: 1.2em; }
+    .logout-btn {
+      background-color: #ff4d4d;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      color: white;
+      font-size: 0.9em;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .logout-btn:hover {
+      background-color: #e60000;
+    }
+    main { padding: 20px; }
+    .team-list { list-style: none; padding: 0; }
+    .team-item { background: white; padding: 10px; margin-bottom: 5px; border-radius: 5px; cursor: grab; display: flex; align-items: center; gap: 10px; }
+    .team-item img { width: 30px; height: 30px; }
+    nav.nav-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      padding: 10px;
+      background: white;
+    }
+    a.nav-card {
+      text-decoration: none;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 0 5px #ccc;
+      color: black;
+    }
+    a.nav-card:hover {
+      background: #f0f0f0;
+    }
+    .nav-card .title { font-weight: bold; margin-top: 5px; }
+    @media (max-width: 1100px) {
+      nav.nav-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 700px) {
+      nav.nav-grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
+</head>
+<body>
+  <header>
+    <h1>Szezon végi sorrend</h1>
+    <button class="logout-btn" id="logout">Kilépés</button>
+  </header>
+
+  <nav class="nav-grid">
+    <a href="dashboard.html" class="nav-card">
+      <span class="emoji">🏠</span>
+      <span class="title">Főoldal</span>
+    </a>
+    <a href="matches.html" class="nav-card">
+      <span class="emoji">⚽</span>
+      <span class="title">Meccstippek</span>
+    </a>
+    <a href="positions.html" class="nav-card">
+      <span class="emoji">📊</span>
+      <span class="title">Szezon végi sorrend</span>
+    </a>
+    <a href="results.html" class="nav-card">
+      <span class="emoji">📋</span>
+      <span class="title">Eredmények</span>
+    </a>
+    <a href="leaderboard.html" class="nav-card">
+      <span class="emoji">🏆</span>
+      <span class="title">Összpontszám</span>
+    </a>
+    <a href="profile.html" class="nav-card">
+      <span class="emoji">👤</span>
+      <span class="title">Profil</span>
+    </a>
+  </nav>
+
+  <main>
+    <ul id="teamList" class="team-list"></ul>
+    <button id="saveOrder">Sorrend mentése</button>
+  </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      doc, getDoc, setDoc,
-      collection, getDocs, serverTimestamp,
-      query, where, orderBy, onSnapshot
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-      authDomain: "tippliga-4b3af.firebaseapp.com",
-      projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.appspot.com",
-      messagingSenderId: "720359845241",
-      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const TEAMS = [
-      "Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr","Kazincbarcikai SC","Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus","Paksi FC","Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"
+    const teamList = document.getElementById("teamList");
+    const saveBtn = document.getElementById("saveOrder");
+
+    const teams = [
+      "Debreceni VSC", "Diósgyőri VTK", "Ferencváros", "ETO FC Győr", "Kazincbarcikai SC",
+      "Kisvárda FC", "MTK Budapest", "Nyíregyháza Spartacus", "Paksi FC", "Puskás Akadémia",
+      "Újpest FC", "Zalaegerszegi TE FC"
     ];
-    const crestMap = {
-      "Ferencváros": "crest/crest-fradi.png",
-      "Újpest FC": "crest/crest-ujpest.png",
-      "Debreceni VSC": "crest/crest-dvsc.png",
-      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
-      "Paksi FC": "crest/crest-paks.png",
-      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
-      "Puskás Akadémia": "crest/crest-puskas.png",
-      "Kisvárda FC": "crest/crest-kisvarda.png",
-      "Diósgyőri VTK": "crest/crest-dvtk.png",
-      "Zalaegerszegi TE FC": "crest/crest-zte.png",
-      "ETO FC Győr": "crest/crest-gyor.png",
-      "MTK Budapest": "crest/crest-mtk.png"
-    };
-    function crestFor(team){ return crestMap[team] || ""; }
-    function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
 
-    let currentUserEmail = "";
-    let currentUserNick = "";
-    let currentUserRole = "user";
-    let favoriteTeam = "";
-    let chatLastSeen = null;
+    function renderTeams(order) {
+      teamList.innerHTML = "";
+      order.forEach(team => {
+        const li = document.createElement("li");
+        li.classList.add("team-item");
+        li.draggable = true;
+        const imgName = team.toLowerCase().replace(/ /g, "").replace(/ő/g, "o").replace(/ű/g, "u");
+        li.innerHTML = `<img src="crest/crest-${imgName}.png" alt="${team}"><span>${team}</span>`;
+        teamList.appendChild(li);
+      });
+    }
 
-    let placed = Array(12).fill("");
+    function enableDragAndDrop() {
+      let dragged;
+      teamList.addEventListener("dragstart", e => {
+        dragged = e.target;
+        e.target.style.opacity = 0.5;
+      });
+      teamList.addEventListener("dragend", e => {
+        e.target.style.opacity = "";
+      });
+      teamList.addEventListener("dragover", e => {
+        e.preventDefault();
+      });
+      teamList.addEventListener("drop", e => {
+        e.preventDefault();
+        if (e.target.tagName === "SPAN" || e.target.tagName === "IMG") {
+          e.target = e.target.parentNode;
+        }
+        if (e.target.classList.contains("team-item") && e.target !== dragged) {
+          const draggedIndex = [...teamList.children].indexOf(dragged);
+          const targetIndex = [...teamList.children].indexOf(e.target);
+          teamList.insertBefore(dragged, targetIndex > draggedIndex ? e.target.nextSibling : e.target);
+        }
+      });
+    }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "login.html"; return; }
-        currentUserEmail = user.email;
-
-        const userRef = doc(db, "users", currentUserEmail);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const d = userSnap.data();
-          currentUserNick = d.nickname || currentUserEmail;
-          currentUserRole = d.role || "user";
-          favoriteTeam = d.favoriteTeam || "";
-          chatLastSeen = d.chatLastSeen || null;
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        const docRef = doc(db, "finalStandings", "official");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          renderTeams(docSnap.data().order);
         } else {
-          currentUserNick = currentUserEmail;
-          currentUserRole = "user";
-          favoriteTeam = "";
-          chatLastSeen = null;
+          renderTeams(teams);
         }
-
-        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
-
-        if (favoriteTeam) {
-          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
-          const crest = crestMap[favoriteTeam];
-          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
-        }
-
-        // Saját tippsorrend beolvasása
-        try{
-          const tipDoc = await getDoc(doc(db,"standingsTips", currentUserEmail));
-          if (tipDoc.exists()){
-            const order = Array.isArray(tipDoc.data().order) ? tipDoc.data().order : [];
-            placed = Array(12).fill("");
-            for (let i=0;i<12;i++){ if (order[i] && TEAMS.includes(order[i])) placed[i]=order[i]; }
-          }
-        }catch(e){ console.warn(e); }
-
-        renderAll();
-        initChat(userRef);
-        updatePendingBadge();
-        if (window.hideLoader) hideLoader();
-      });
-
-      document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login.html");
-      });
+        enableDragAndDrop();
+        saveBtn.addEventListener("click", async () => {
+          const newOrder = [...teamList.children].map(li => li.querySelector("span").textContent);
+          await setDoc(docRef, { order: newOrder });
+          alert("Sorrend mentve!");
+        });
+      } else {
+        alert("Nincs bejelentkezve!");
+        window.location.href = "login.html";
+      }
     });
 
-    function updatePendingBadge(){
-      getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
-        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
-          const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
-          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-          const badge = document.getElementById("tipsBadge");
-          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
-        });
+    document.getElementById("logout").addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "login.html";
       });
-    }
-
-    function renderAll(){
-      renderPool();
-      renderSlots();
-    }
-
-    function poolTeams(){
-      const inSlots = new Set(placed.filter(Boolean));
-      return TEAMS.filter(t => !inSlots.has(t));
-    }
-
-    function renderPool(){
-      const pool = document.getElementById("pool");
-      pool.innerHTML = "";
-      for (const team of poolTeams()){
-        const chip = document.createElement("div");
-        chip.className = "team-chip";
-        chip.draggable = true;
-        chip.dataset.team = team;
-        chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
-        chip.addEventListener("dragstart", e=>{
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", JSON.stringify({type:"team", team, from:"pool"}));
-        });
-        pool.appendChild(chip);
-      }
-      pool.addEventListener("dragover", e=>{ e.preventDefault(); });
-      pool.addEventListener("drop", e=>{
-        e.preventDefault();
-        const data = safeParse(e.dataTransfer.getData("text/plain"));
-        if (data && data.type==="slot"){
-          const fromIdx = data.index;
-          if (placed[fromIdx]){
-            placed[fromIdx] = "";
-            renderAll();
-            autoSave();
-          }
-        }
-      });
-    }
-
-    function renderSlots(){
-      const wrap = document.getElementById("slots");
-      wrap.innerHTML = "";
-      for (let i=0;i<12;i++){
-        const slot = document.createElement("div");
-        slot.className = "slot";
-        slot.dataset.index = String(i);
-
-        const left = document.createElement("div");
-        left.className = "slot-left";
-        left.innerHTML = `<div class="pos-num">${i+1}</div>`;
-        slot.appendChild(left);
-
-        const right = document.createElement("div");
-        right.className = "slot-right";
-        slot.appendChild(right);
-
-        const team = placed[i] || "";
-        if (team){
-          const chip = document.createElement("div");
-          chip.className = "slot-chip";
-          chip.draggable = true;
-          chip.dataset.team = team;
-          chip.dataset.slot = String(i);
-          chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
-          chip.addEventListener("dragstart", e=>{
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", JSON.stringify({type:"slot", index:i, team}));
-          });
-          left.appendChild(chip);
-        } else {
-          const empty = document.createElement("div");
-          empty.className = "slot-empty";
-          empty.textContent = "Húzd ide a csapatot";
-          left.appendChild(empty);
-        }
-
-        slot.addEventListener("dragover", e=>{ e.preventDefault(); slot.classList.add("dragover"); });
-        slot.addEventListener("dragleave", ()=>{ slot.classList.remove("dragover"); });
-        slot.addEventListener("drop", e=>{
-          e.preventDefault();
-          slot.classList.remove("dragover");
-          const data = safeParse(e.dataTransfer.getData("text/plain"));
-          if (!data) return;
-          const targetIdx = parseInt(slot.dataset.index,10);
-          if (data.type==="team" && data.from==="pool"){
-            const teamName = data.team;
-            const existingIdx = placed.findIndex(x=>x===teamName);
-            if (existingIdx>=0) placed[existingIdx] = "";
-            const prevTeam = placed[targetIdx] || "";
-            placed[targetIdx] = teamName;
-            if (prevTeam){
-              const firstEmpty = placed.findIndex(x=>x==="");
-              if (firstEmpty>=0){ placed[firstEmpty] = prevTeam; } else { placed[targetIdx] = teamName; }
-            }
-            renderAll();
-            autoSave();
-          } else if (data.type==="slot"){
-            const fromIdx = parseInt(data.index,10);
-            if (fromIdx===targetIdx) return;
-            const a = placed[fromIdx] || "";
-            const b = placed[targetIdx] || "";
-            placed[targetIdx] = a;
-            placed[fromIdx] = b;
-            renderAll();
-            autoSave();
-          }
-        });
-
-        wrap.appendChild(slot);
-      }
-    }
-
-    function safeParse(s){
-      try{ return JSON.parse(s); }catch{ return null; }
-    }
-
-    let saveTimer = null;
-    function autoSave(){
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(saveNow, 300);
-    }
-
-    async function saveNow(){
-      const saved = document.getElementById("saveState");
-      try{
-        const order = placed.map(x=>x||"");
-        await setDoc(doc(db,"standingsTips", currentUserEmail), {
-          email: currentUserEmail,
-          nick: currentUserNick || currentUserEmail,
-          order: order,
-          updatedAt: serverTimestamp()
-        }, { merge:true });
-        saved.classList.add("show");
-        setTimeout(()=>saved.classList.remove("show"), 1200);
-      }catch(e){ console.warn(e); }
-    }
-
-    /* ========= Chat ========= */
-    function initChat(userRef){
-      const fab = document.getElementById('chatToggle');
-      const fabBadge = document.getElementById('chatFabBadge');
-      const panel = document.getElementById('chatPanel');
-      const closeBtn = document.getElementById('chatClose');
-      const listEl = document.getElementById('chatMessages');
-      const inputEl = document.getElementById('chatInput');
-      const sendBtn = document.getElementById('chatSendBtn');
-
-      function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
-      function close(){ panel.classList.remove('open'); }
-      function toggle(){ panel.classList.contains('open') ? close() : open(); }
-      fab.addEventListener('click', toggle);
-      closeBtn.addEventListener('click', close);
-
-      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
-
-      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
-        listEl.innerHTML = '';
-        if (snap.empty){
-          const empty = document.createElement('div');
-          empty.className = 'chat-empty';
-          empty.textContent = 'Még nincs üzenet. Légy te az első!';
-          listEl.appendChild(empty);
-        } else {
-          let unread = 0;
-          snap.forEach(docu=>{
-            const d = docu.data();
-            const tsMs = d.ts?.toMillis?.() || 0;
-            if (tsMs > lastSeenMs) unread++;
-
-            const row = document.createElement('div');
-            row.className = 'msg';
-            row.innerHTML = `
-              <div style="flex:1 1 auto">
-                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
-                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-              </div>
-            `;
-            const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
-            if (canDelete){
-              const del = document.createElement('button');
-              del.className = 'del';
-              del.textContent = 'Törlés';
-              del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){} });
-              row.appendChild(del);
-            }
-            listEl.appendChild(row);
-          });
-
-          if (!panel.classList.contains('open') && unread > 0){
-            fab.classList.add('has-unread');
-            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
-          } else {
-            fab.classList.remove('has-unread');
-            fabBadge.textContent = '';
-          }
-
-          setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
-        }
-      });
-
-      sendBtn.addEventListener('click', async ()=>{
-        const txt = (inputEl.value || '').trim();
-        if (!txt){ inputEl.focus(); return; }
-        const backup = txt;
-        inputEl.value = '';
-        try{
-          await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
-          if (panel.classList.contains('open')) await markSeen();
-        }catch(e){
-          console.warn('Chat send failed:', e);
-          inputEl.value = backup; inputEl.focus();
-        }
-      });
-      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
-
-      async function markSeen(){
-        try{
-          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
-          lastSeenMs = Date.now();
-          fab.classList.remove('has-unread');
-          fabBadge.textContent = '';
-        }catch(e){}
-      }
-    }
+    });
   </script>
-</head>
-<body>
-  <div class="layout">
-    <div class="header">
-      <div class="header-left">
-        <img id="favCrest" class="fav-crest" alt="" hidden>
-        <div>
-          <h1>NB1 TippLiga</h1>
-          <p id="welcome" class="welcome"></p>
-        </div>
-      </div>
-      <div>
-        <button id="logout" class="btn-accent" aria-label="Kilépés">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
-          </svg>
-          Kilépés
-        </button>
-      </div>
-    </div>
-
-    <nav class="nav-grid">
-      <!-- Főoldal -->
-      <a class="nav-card" href="dashboard.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Főoldal</span>
-          <span class="desc">Tabella, hírek, kedvencek</span>
-        </div>
-      </a>
-
-      <!-- Meccstippek -->
-      <a class="nav-card" href="matches.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
-          <span class="desc">Közelgő meccsek & tippek</span>
-        </div>
-      </a>
-
-      <!-- Szezon végi sorrend -->
-      <a class="nav-card" href="positions.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Szezon végi sorrend</span>
-          <span class="desc">12 csapat – húzd a helyekre</span>
-        </div>
-      </a>
-
-      <!-- Eredmények -->
-      <a class="nav-card" href="results.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Eredmények</span>
-          <span class="desc">Fordulónkénti bontás</span>
-        </div>
-      </a>
-
-      <!-- Összpontszám -->
-      <a class="nav-card" href="leaderboard.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Összpontszám</span>
-          <span class="desc">Toplista & bónusz</span>
-        </div>
-      </a>
-
-      <!-- Profil -->
-      <a class="nav-card" href="profile.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Profil</span>
-          <span class="desc">Beállítások & kedvenc csapat</span>
-        </div>
-      </a>
-
-      <!-- Admin -->
-      <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Admin</span>
-          <span class="desc">Szezon-zár & beállítások</span>
-        </div>
-      </a>
-    </nav>
-
-    <div class="content-grid">
-      <section class="card">
-        <h3>Csapatlista</h3>
-        <div id="pool" class="pool"></div>
-        <div class="save-row">
-          <span id="saveState" class="save-state">Mentve</span>
-        </div>
-      </section>
-
-      <section class="card">
-        <h3>Helyezések</h3>
-        <div id="slots" class="slots"></div>
-      </section>
-    </div>
-  </div>
-
-  <!-- Chat FAB -->
-  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
-    </svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
-  </button>
-
-  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
-    <div class="chat-head">
-      <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" aria-label="Bezárás">✕</button>
-    </div>
-    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
-    <div id="chatComposer">
-      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
-      <button id="chatSendBtn">Küldés</button>
-    </div>
-  </section>
 </body>
 </html>
