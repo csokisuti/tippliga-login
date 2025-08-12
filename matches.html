@@ -37,7 +37,7 @@
     .crest{ width:28px; height:28px; object-fit:contain; border-radius:6px; background:#fff; border:1px solid var(--line,#e6eaf1); }
     .vs{ font-weight:700; color:#475569; }
     .meta{ color:#64748b; font-size:12px; }
-    .odds{ display:flex; gap:10px; font-size:12px; color:#475569; }
+    .odds{ display:flex; gap:10px; font-size:12px; color:#475569; flex-wrap:wrap; }
     .ctl{ display:flex; align-items:center; gap:10px; }
     .select{ padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); }
     .double-wrap{ display:flex; align-items:center; gap:6px; }
@@ -54,7 +54,7 @@
     #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
     #chatClose:hover{ filter:brightness(0.95); }
     .chat-list{ overflow:auto; padding:8px 10px; }
-    .chat-empty{ color:var(--muted,#64748b); font-size:13px; padding:8px 10px; }
+    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
     .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
     .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
@@ -65,11 +65,6 @@
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
-
-    .btn-accent{ min-height:40px; padding:10px 14px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(15,23,42,.08); }
-    .btn-accent:hover{ filter:brightness(.95); }
-    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
-    .btn-icon{ width:18px; height:18px; display:inline-block; }
   </style>
 
   <script type="module">
@@ -109,9 +104,21 @@
       "ETO FC Győr": "crest/crest-gyor.png",
       "MTK Budapest": "crest/crest-mtk.png"
     };
-
     function crestFor(team){ return crestMap[team] || ""; }
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
+
+    // ==== ÚJ: robusztus segédfüggvények, mint a results oldalon ====
+    // Odds: támogatjuk az {odds:{"1", "X", "2"}} és az odds1/oddsX/odds2 sémát is
+    function getOdds(m, key){
+      if (m?.odds && (key in m.odds)) return m.odds[key];
+      if (key==="1") return m.odds1 ?? m["odds1"];
+      if (key==="X") return m.oddsX ?? m["oddsX"];
+      if (key==="2") return m.odds2 ?? m["odds2"];
+      return undefined;
+    }
+    // Forduló mező: 'round' vagy 'roundId'
+    function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
+    // ===============================================================
 
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -202,7 +209,10 @@
         const tip = myTipsByMatch.get(m.id) || {};
         const curChoice = tip.choice || "";
         const isDouble = !!tip.double;
-        const round = m.round ?? "";
+
+        const roundStr = matchRound(m);                   // <-- robusztus forduló
+        const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2"); // <-- robusztus odds
+        const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
 
         const row = document.createElement("div");
         row.className = "match";
@@ -214,8 +224,8 @@
             <span class="vs">vs</span>
             <div class="team"><img class="crest" src="${crestFor(m.awayTeam)||''}" alt=""> <span>${m.awayTeam||''}</span></div>
           </div>
-          <div class="meta">${fmtTime(m.startTime)} • Forduló: ${round!==""?round:"–"}</div>
-          <div class="odds">Odds: 1: ${m.odds1 ?? "-"} • X: ${m.oddsX ?? "-"} • 2: ${m.odds2 ?? "-"}</div>
+          <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
+          <div class="odds">${oddsLine}</div>
         `;
 
         const right = document.createElement("div");
@@ -252,13 +262,13 @@
         });
         dbl.addEventListener("change", async ()=>{
           if (dbl.checked){
-            await enforceSingleDouble(String(round), m.id);
+            await enforceSingleDouble(String(roundStr), m.id);
           }
           await saveTip(m, select.value, dbl.checked, saved);
-          reflectDoubleStateForRound(String(round));
+          reflectDoubleStateForRound(String(roundStr));
         });
 
-        if (doublesByRound.get(String(round)) && doublesByRound.get(String(round)) !== m.id){
+        if (doublesByRound.get(String(roundStr)) && doublesByRound.get(String(roundStr)) !== m.id){
           dbl.checked = false;
         }
       }
@@ -281,25 +291,17 @@
 
     function reflectDoubleStateForRound(roundKey){
       if (!roundKey) return;
-      const keepMatchId = doublesByRound.get(roundKey);
-      const rows = document.querySelectorAll(".match");
-      rows.forEach(row=>{
-        const meta = row.querySelector(".meta")?.textContent || "";
-        if (meta.includes("Forduló: "+roundKey)){
-          const teamsText = row.querySelector(".teams")?.textContent || "";
-          const matchIdEl = row.dataset.mid;
-        }
-      });
+      // jelenleg vizuális visszajelzés nélkül; ha kell, itt lehet később jelölni a megmaradt duplát
     }
 
     async function saveTip(matchObj, choice, isDouble, savedEl){
       const matchId = matchObj.id;
-      const round = matchObj.round ?? "";
+      const roundStr = matchRound(matchObj);
       const tipData = {
         user: currentUserEmail,
         nick: currentUserNick || currentUserEmail,
         matchId: matchId,
-        round: String(round),
+        round: String(roundStr),
         choice: choice || "",
         double: !!isDouble,
         createdAt: serverTimestamp(),
@@ -325,6 +327,7 @@
       }catch(e){ console.warn(e); }
     }
 
+    /* ===== Chat (változatlan) ===== */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -371,10 +374,7 @@
               del.className = 'del';
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{
-                try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }
-                catch(e){ }
-              });
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
@@ -401,12 +401,11 @@
           await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
+          console.warn('Chat send failed:', e);
           inputEl.value = backup; inputEl.focus();
         }
       });
-      inputEl.addEventListener('keydown', (e)=>{
-        if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
-      });
+      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
 
       async function markSeen(){
         try{
@@ -480,16 +479,6 @@
         </div>
       </a>
 
-      <a class="nav-card" href="profile.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Profil</span>
-          <span class="desc">Beállítások & kedvenc csapat</span>
-        </div>
-      </a>
-
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
@@ -501,14 +490,13 @@
       </a>
     </nav>
 
-    <div class="content-grid">
-      <section class="card">
-        <h3>Közelgő meccsek és tippek</h3>
-        <div id="matchList" class="match-list"></div>
-      </section>
-    </div>
+    <section class="card">
+      <h3>Közelgő meccsek</h3>
+      <div id="matchList" class="match-list"></div>
+    </section>
   </div>
 
+  <!-- Közösségi chat (változatlan markup) -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
