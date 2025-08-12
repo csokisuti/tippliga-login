@@ -15,6 +15,7 @@
     .header-left{ display:flex; align-items:center; gap:12px; }
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
+
     .nav-grid{ display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:14px; }
     @media (max-width: 1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
     @media (max-width: 700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
@@ -44,6 +45,19 @@
     .save-state{ font-size:12px; color:#16a34a; display:none; }
     .save-state.show{ display:inline-flex; }
 
+    /* ——— BITRE MEGEGYEZŐ KILÉPÉS GOMB, mint a dashboardon ——— */
+    .btn-accent{
+      min-height:40px; padding:10px 14px; border-radius:10px;
+      background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
+      font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+      box-shadow:0 6px 18px rgba(0,0,0,.08);
+    }
+    .btn-accent:hover{ filter:brightness(.95); }
+    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
+    .btn-icon{ width:18px; height:18px; display:inline-block; }
+    /* ———————————————————————————————————————————————— */
+
+    /* Chat (változatlan stílus) */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -60,7 +74,6 @@
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
     .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
-
     #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
@@ -107,8 +120,7 @@
     function crestFor(team){ return crestMap[team] || ""; }
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
 
-    // ==== ÚJ: robusztus segédfüggvények, mint a results oldalon ====
-    // Odds: támogatjuk az {odds:{"1", "X", "2"}} és az odds1/oddsX/odds2 sémát is
+    // Robusztus odds/round olvasás (round vagy roundId; odds mezők vagy beágyazott odds)
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -116,9 +128,7 @@
       if (key==="2") return m.odds2 ?? m["odds2"];
       return undefined;
     }
-    // Forduló mező: 'round' vagy 'roundId'
     function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
-    // ===============================================================
 
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -187,11 +197,13 @@
         }catch(e){ console.warn(e); }
 
         initChat(userRef);
-        if (window.hideLoader) hideLoader();
-      });
 
-      document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login.html");
+        // Kilépés gomb – BITRE egyező a dashboarddal
+        document.getElementById("logout").addEventListener("click", () => {
+          signOut(auth).then(() => window.location.href = "login.html");
+        });
+
+        if (window.hideLoader) hideLoader();
       });
     });
 
@@ -210,8 +222,8 @@
         const curChoice = tip.choice || "";
         const isDouble = !!tip.double;
 
-        const roundStr = matchRound(m);                   // <-- robusztus forduló
-        const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2"); // <-- robusztus odds
+        const roundStr = matchRound(m);
+        const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
         const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
 
         const row = document.createElement("div");
@@ -291,7 +303,7 @@
 
     function reflectDoubleStateForRound(roundKey){
       if (!roundKey) return;
-      // jelenleg vizuális visszajelzés nélkül; ha kell, itt lehet később jelölni a megmaradt duplát
+      // ide jöhet vizuális jelölés, ha később szeretnél
     }
 
     async function saveTip(matchObj, choice, isDouble, savedEl){
@@ -429,6 +441,7 @@
         </div>
       </div>
       <div>
+        <!-- BITRE egyező Kilépés gomb a dashboarddal -->
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
@@ -492,28 +505,4 @@
 
     <section class="card">
       <h3>Közelgő meccsek</h3>
-      <div id="matchList" class="match-list"></div>
-    </section>
-  </div>
-
-  <!-- Közösségi chat (változatlan markup) -->
-  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
-    </svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
-  </button>
-
-  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
-    <div class="chat-head">
-      <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" aria-label="Bezárás">✕</button>
-    </div>
-    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
-    <div id="chatComposer">
-      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
-      <button id="chatSendBtn">Küldés</button>
-    </div>
-  </section>
-</body>
-</html>
+      <div id="matchLis
