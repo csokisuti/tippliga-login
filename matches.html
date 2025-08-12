@@ -505,4 +505,28 @@
 
     <section class="card">
       <h3>Közelgő meccsek</h3>
-      <div id="matchLis
+      <div id="matchList" class="match-list"></div>
+    </section>
+  </div>
+
+  <!-- Közösségi chat (változatlan markup) -->
+  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+    </svg>
+    <span id="chatFabBadge" class="fab-badge"></span>
+  </button>
+
+  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
+    <div class="chat-head">
+      <div class="chat-title">Közösségi chat</div>
+      <button id="chatClose" aria-label="Bezárás">✕</button>
+    </div>
+    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
+    <div id="chatComposer">
+      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
+      <button id="chatSendBtn">Küldés</button>
+    </div>
+  </section>
+</body>
+</html>
