@@ -118,7 +118,7 @@
     function crestFor(team){ return crestMap[team] || ""; }
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
 
-    // Odds/round olvasás (round vagy roundId; odds mezők vagy beágyazott odds)
+    // Robusztus odds/round olvasás
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -196,6 +196,7 @@
 
         initChat(userRef);
 
+        // Kilépés gomb – bitre azonos a dashboarddal
         document.getElementById("logout").addEventListener("click", () => {
           signOut(auth).then(() => window.location.href = "login.html");
         });
@@ -217,7 +218,7 @@
       for (const m of matches){
         const tip = myTipsByMatch.get(m.id) || {};
         const curChoice = tip.choice || "";
-        the const isDouble = !!tip.double;
+        const isDouble = !!tip.double;
 
         const roundStr = matchRound(m);
         const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
@@ -300,6 +301,7 @@
 
     function reflectDoubleStateForRound(roundKey){
       if (!roundKey) return;
+      // későbbre ide tehetünk vizuális jelzést
     }
 
     async function saveTip(matchObj, choice, isDouble, savedEl){
@@ -437,6 +439,7 @@
         </div>
       </div>
       <div>
+        <!-- BITRE egyező Kilépés gomb a dashboarddal -->
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
@@ -487,7 +490,7 @@
         </div>
       </a>
 
-      <!-- ÚJ: Profil kártya – bitre egyezik a dashboardéval -->
+      <!-- Profil kártya – bitre egyezik a dashboardéval -->
       <a class="nav-card" href="profile.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
@@ -534,9 +537,5 @@
       <button id="chatSendBtn">Küldés</button>
     </div>
   </section>
-
-  <script type="module">
-    // ... (a teljes JS fent – változatlanul)
-  </script>
 </body>
 </html>
