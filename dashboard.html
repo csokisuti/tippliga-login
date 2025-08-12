@@ -25,9 +25,10 @@
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
 
+    /* NAV: 6 oszlop nagy képernyőn */
     .nav-grid{
       display:grid;
-      grid-template-columns: repeat(5, minmax(0,1fr));
+      grid-template-columns: repeat(6, minmax(0,1fr));
       gap:14px;
     }
     @media (max-width: 1100px){
@@ -136,7 +137,7 @@
       min-height:40px; padding:10px 14px; border-radius:10px;
       background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
       font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
-      box-shadow:0 6px 18px rgba(15,23,42,.08);
+      box-shadow:0 6px 18px rgba(0,0,0,.08);
     }
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
@@ -411,6 +412,19 @@
     </div>
 
     <nav class="nav-grid">
+      <!-- ÚJ: Főoldal kártya -->
+      <a class="nav-card" href="dashboard.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
+          </svg>
+        </div>
+        <div class="text">
+          <span class="title">Főoldal</span>
+          <span class="desc">Vissza a dashboardra</span>
+        </div>
+      </a>
+
       <a class="nav-card" href="matches.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
@@ -418,16 +432,6 @@
         <div class="text">
           <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
           <span class="desc">Közelgő meccsek & tippek</span>
-        </div>
-      </a>
-
-      <a class="nav-card" href="positions.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Szezon végi sorrend</span>
-          <span class="desc">12 csapat – húzd a helyekre</span>
         </div>
       </a>
 
@@ -443,11 +447,21 @@
 
       <a class="nav-card" href="leaderboard.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1-3V5H4v1Zm16-1h-3v1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Összpontszám</span>
           <span class="desc">Toplista & bónusz</span>
+        </div>
+      </a>
+
+      <a class="nav-card" href="positions.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Szezon végi sorrend</span>
+          <span class="desc">12 csapat – húzd a helyekre</span>
         </div>
       </a>
 
@@ -461,6 +475,7 @@
         </div>
       </a>
 
+      <!-- Admin a végén – ha 7 elem van, simán átcsúszhat 2. sorba -->
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
