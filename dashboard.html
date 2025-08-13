@@ -142,6 +142,18 @@
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
     .btn-icon{ width:18px; height:18px; display:inline-block; }
+
+    /* --- Szabályzat modál (új) --- */
+    .rules-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
+    .rules-modal.open{display:flex}
+    .rules-dialog{width:min(900px,92vw);max-height:80vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
+    .rules-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
+    .rules-title{font-weight:800}
+    .rules-close{width:32px;height:32px;border:1px solid var(--line,#e6eaf1);border-radius:8px;background:#eef2ff;cursor:pointer}
+    .rules-body{padding:14px;overflow:auto;line-height:1.5;color:#111;white-space:pre-wrap}
+    .rules-body p{margin:0 0 10px}
+    .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
+    .rules-updated{font-size:12px;color:var(--muted,#64748b)}
   </style>
 
   <script type="module">
@@ -389,6 +401,20 @@
         }catch(e){ console.warn('markSeen failed', e); }
       }
     }
+
+    /* ---- Szabályzat modál logika (új) ---- */
+    const rulesModal = document.getElementById('rulesModal');
+    const openRulesBtn = document.getElementById('openRules');
+    const closeRules = document.getElementById('closeRules');
+    const closeRules2 = document.getElementById('closeRules2');
+
+    function openRulesModal(){ rulesModal.classList.add('open'); }
+    function closeRulesModal(){ rulesModal.classList.remove('open'); }
+
+    openRulesBtn?.addEventListener('click', openRulesModal);
+    closeRules?.addEventListener('click', closeRulesModal);
+    closeRules2?.addEventListener('click', closeRulesModal);
+    rulesModal?.addEventListener('click', (e)=>{ if(e.target===rulesModal) closeRulesModal(); });
   </script>
 </head>
 <body>
@@ -408,6 +434,8 @@
           </svg>
           Kilépés
         </button>
+        <!-- ÚJ: Szabályzat gomb a Kilépés alatt -->
+        <button id="openRules" class="btn-accent" style="display:block;margin-top:10px;">Szabályzat</button>
       </div>
     </div>
 
@@ -492,6 +520,41 @@
       </a>
     </nav>
 
+    <!-- ÚJ: Szabályzat modál HTML -->
+    <div id="rulesModal" class="rules-modal" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
+      <div class="rules-dialog">
+        <div class="rules-head">
+          <div id="rulesTitle" class="rules-title">NB1 TippLiga – Szabályzat</div>
+          <button id="closeRules" class="rules-close" aria-label="Bezárás">✕</button>
+        </div>
+        <div id="rulesBody" class="rules-body">
+Pontszámítás
+• Alap tét: 1 pont, szorzó: a választott kimenetel odds-a.
+• Fordulónként egyszer használható dupla tét (2 pont alap), ami az odds-szal szorzódik.
+
+Leadás és határidők
+• Tipp leadása a meccs kezdete előtt bármikor.
+• A meccs kezdete után a tipp nem módosítható.
+
+Eredmények és átláthatóság
+• A kezdés után a „Korábbi tippek” nézetben mindenki tippje látható.
+• A pontszámok a rögzített eredmény alapján automatikusan frissülnek.
+
+Admin funkciók
+• Meccsek hozzáadása/szerkesztése/törlése.
+• Oddsok manuális beállítása.
+• Szezon végi sorrend és összesítők kezelése.
+
+Adatkezelés
+• Felhasználói e-mail és becenév a ranglistához és a tipp-azonosításhoz kerül felhasználásra.
+        </div>
+        <div class="rules-foot">
+          <span id="rulesUpdated" class="rules-updated">Utoljára frissítve: 2025. 08. 14.</span>
+          <button id="closeRules2" class="btn-accent">Bezárás</button>
+        </div>
+      </div>
+    </div>
+
     <div class="content-grid">
       <section class="card table-wrap">
         <h3>NB I tabella</h3>
@@ -525,4 +588,3 @@
   </section>
 </body>
 </html>
-
