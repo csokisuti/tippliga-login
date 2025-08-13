@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <title>NB1 TippLiga – Szezon végi sorrend</title>
 
+  <!-- Egységes stílusok -->
   <link rel="stylesheet" href="style-themed.css" />
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <script src="loader.js" defer></script>
 
   <style>
@@ -18,18 +19,27 @@
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
 
-    /* 6-os grid – egységes a dashboarddal */
+    /* NAV – ugyanaz, mint a dashboardon */
     .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
     @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
     @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
-    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
+
+    .nav-card{
+      display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit;
+      padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px;
+      box-shadow:0 6px 18px rgba(15,23,42,.05);
+    }
+    .nav-card .icon-wrap{
+      width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+      background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6);
+    }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
     .nav-card .title{ font-weight:800; }
     .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
-    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
+    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; }
     .pill-badge[hidden]{ display:none !important; }
 
+    /* Kártyák */
     .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
 
@@ -52,7 +62,7 @@
     .save-state{ font-size:12px; color:#16a34a; display:none; }
     .save-state.show{ display:inline-flex; }
 
-    /* Chat */
+    /* Chat gomb és panel (mint a többi oldalon) */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -69,12 +79,19 @@
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
     .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
+
     #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
 
-    .btn-accent{ min-height:40px; padding:10px 14px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(15,23,42,.08); }
+    /* Gomb stílus (Kilépés) – egységes */
+    .btn-accent{
+      min-height:40px; padding:10px 14px; border-radius:10px;
+      background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
+      font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+      box-shadow:0 6px 18px rgba(15,23,42,.08);
+    }
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
     .btn-icon{ width:18px; height:18px; display:inline-block; }
@@ -86,8 +103,8 @@
     import {
       getFirestore,
       doc, getDoc, setDoc,
-      collection, getDocs, serverTimestamp,
-      query, where
+      collection, getDocs, addDoc, deleteDoc, serverTimestamp,
+      query, where, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -121,8 +138,8 @@
       "ETO FC Győr": "crest/crest-gyor.png",
       "MTK Budapest": "crest/crest-mtk.png"
     };
-    const crestFor = (team) => crestMap[team] || "";
-    const fmtTime = (ts) => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
+    function crestFor(team){ return crestMap[team] || ""; }
+    function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
 
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -130,6 +147,7 @@
     let favoriteTeam = "";
     let chatLastSeen = null;
 
+    // A felhasználó által felrakott sorrend (12 hely)
     let placed = Array(12).fill("");
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -162,7 +180,7 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
         }
 
-        // Saját tipp beolvasása
+        // Korábbi saját sorrend betöltése
         try{
           const tipDoc = await getDoc(doc(db,"standingsTips", currentUserEmail));
           if (tipDoc.exists()){
@@ -170,7 +188,7 @@
             placed = Array(12).fill("");
             for (let i=0;i<12;i++){ if (order[i] && TEAMS.includes(order[i])) placed[i]=order[i]; }
           }
-        }catch(e){}
+        }catch(e){ console.warn(e); }
 
         renderAll();
         initChat(userRef);
@@ -288,8 +306,7 @@
               const firstEmpty = placed.findIndex(x=>x==="");
               if (firstEmpty>=0){ placed[firstEmpty] = prevTeam; } else { placed[targetIdx] = teamName; }
             }
-            renderAll();
-            autoSave();
+            renderAll(); autoSave();
           } else if (data.type==="slot"){
             const fromIdx = parseInt(data.index,10);
             if (fromIdx===targetIdx) return;
@@ -297,8 +314,7 @@
             const b = placed[targetIdx] || "";
             placed[targetIdx] = a;
             placed[fromIdx] = b;
-            renderAll();
-            autoSave();
+            renderAll(); autoSave();
           }
         });
 
@@ -323,11 +339,10 @@
         }, { merge:true });
         saved.classList.add("show");
         setTimeout(()=>saved.classList.remove("show"), 1200);
-      }catch(e){}
+      }catch(e){ console.warn(e); }
     }
 
     /* ======= Chat ======= */
-    import { collection, addDoc, deleteDoc, onSnapshot, orderBy, serverTimestamp as ts } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -401,6 +416,7 @@
           await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
+          console.warn('Chat send failed:', e);
           inputEl.value = backup; inputEl.focus();
         }
       });
@@ -419,6 +435,7 @@
 </head>
 <body>
   <div class="layout">
+    <!-- Fejléc egységes kilépés gombbal -->
     <div class="header">
       <div class="header-left">
         <img id="favCrest" class="fav-crest" alt="" hidden>
@@ -437,13 +454,12 @@
       </div>
     </div>
 
+    <!-- NAV – azonos a dashboarddal -->
     <nav class="nav-grid">
-      <!-- Főoldal kártya (dashboard egységes) -->
+      <!-- Főoldal -->
       <a class="nav-card" href="dashboard.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
-          </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg>
         </div>
         <div class="text">
           <span class="title">Főoldal</span>
@@ -451,16 +467,7 @@
         </div>
       </a>
 
-      <a class="nav-card" href="matches.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
-          <span class="desc">Közelgő meccsek & tippek</span>
-        </div>
-      </a>
-
+      <!-- Szezon végi sorrend (aktuális oldal linkje is maradhat) -->
       <a class="nav-card" href="positions.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
@@ -471,6 +478,18 @@
         </div>
       </a>
 
+      <!-- Meccstippek -->
+      <a class="nav-card" href="matches.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
+          <span class="desc">Közelgő meccsek & tippek</span>
+        </div>
+      </a>
+
+      <!-- Eredmények -->
       <a class="nav-card" href="results.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
@@ -481,6 +500,7 @@
         </div>
       </a>
 
+      <!-- Összpontszám -->
       <a class="nav-card" href="leaderboard.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
@@ -491,6 +511,7 @@
         </div>
       </a>
 
+      <!-- Profil -->
       <a class="nav-card" href="profile.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
@@ -501,6 +522,7 @@
         </div>
       </a>
 
+      <!-- Admin (rejtve nem adminoknak) -->
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
@@ -512,6 +534,7 @@
       </a>
     </nav>
 
+    <!-- Tartalom -->
     <div class="content-grid">
       <section class="card">
         <h3>Csapatlista</h3>
