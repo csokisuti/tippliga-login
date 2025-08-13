@@ -136,6 +136,13 @@
     let myTipsByMatch = new Map();
     let doublesByRound = new Map();
 
+    // ÚJ: fordulónként az első meccs kezdési ideje
+    let earliestStartByRound = new Map();
+    function isRoundLocked(roundKey){
+      const first = earliestStartByRound.get(String(roundKey));
+      return first ? (new Date() >= first) : false;
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
@@ -168,8 +175,12 @@
 
         try{
           const now = new Date();
+
+          // 1) Közelgő meccsek a listához
           const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
           const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+          // 2) Tippek beolvasása és duplák feljegyzése
           const tipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail)));
           const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
           const latestByMatch = new Map();
@@ -188,6 +199,18 @@
               doublesByRound.set(String(t.round), t.matchId);
             }
           }
+
+          // 3) ÚJ: minden meccset beolvasunk és kiszámoljuk fordulónként az első kezdést
+          earliestStartByRound.clear();
+          const allSnap = await getDocs(query(collection(db,"matches"), orderBy("startTime","asc")));
+          allSnap.forEach(docu=>{
+            const m = docu.data();
+            const r = matchRound(m);
+            const start = m.startTime?.toDate ? m.startTime.toDate() : new Date(m.startTime);
+            if (!r || !start) return;
+            const prev = earliestStartByRound.get(r);
+            if (!prev || start < prev) earliestStartByRound.set(r, start);
+          });
 
           buildMatchesList(upcoming);
           updatePendingBadge(upcoming);
@@ -224,7 +247,6 @@
 
         const row = document.createElement("div");
         row.className = "match";
-        /* ÚJ: data attribútumok a vizuális frissítéshez */
         row.dataset.round = String(roundStr);
         row.dataset.matchId = m.id;
 
@@ -251,7 +273,7 @@
         const dbl = document.createElement("input");
         dbl.type = "checkbox";
         dbl.checked = isDouble;
-        dbl.dataset.kind = "double";              // megjelöljük
+        dbl.dataset.kind = "double";
         const dblText = document.createElement("span");
         dblText.textContent = "Dupla";
         dblWrap.appendChild(dbl);
@@ -269,12 +291,29 @@
         row.appendChild(right);
         wrap.appendChild(row);
 
+        // --- ÚJ: ha a forduló első meccse már elkezdődött, tiltsuk a duplát (teljes fordulóra) ---
+        if (isRoundLocked(roundStr)) {
+          dbl.disabled = true;
+          dbl.title = "Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).";
+        }
+
         select.addEventListener("change", async ()=>{
           await saveTip(m, select.value, dbl.checked, saved);
         });
 
         dbl.addEventListener("change", async ()=>{
           const rKey = String(roundStr);
+
+          // --- ÚJ: zárolás vizsgálat a forduló első meccséhez kötve ---
+          if (isRoundLocked(rKey)) {
+            // állítsuk vissza a UI-t a tényleges állapotra
+            const lockedId = doublesByRound.get(rKey);
+            const shouldBeChecked = lockedId === m.id;
+            dbl.checked = !!shouldBeChecked;
+            alert("Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).");
+            return;
+          }
+
           if (dbl.checked){
             // 1) UI: azonnal szedd le a többiről
             reflectDoubleStateForRound(rKey, m.id);
@@ -282,7 +321,6 @@
             await enforceSingleDouble(rKey, m.id);
             doublesByRound.set(rKey, m.id);
           } else {
-            // Ha ugyanarról a meccsről vetted ki, töröljük a round mapből
             if (doublesByRound.get(rKey) === m.id) {
               doublesByRound.delete(rKey);
             }
@@ -290,7 +328,7 @@
           await saveTip(m, select.value, dbl.checked, saved);
         });
 
-        // Ha már volt dupla ebben a fordulóban máson, itt vegyük le vizuálisan
+        // Ha már volt dupla ebben a fordulóban máson, vizuálisan vegyük le
         const locked = doublesByRound.get(String(roundStr));
         if (locked && locked !== m.id){
           dbl.checked = false;
@@ -298,7 +336,6 @@
       }
     }
 
-    /* ÚJ: vizuális frissítés – adott fordulóban csak az adott match marad duplázva */
     function reflectDoubleStateForRound(roundKey, keepMatchId){
       const rows = document.querySelectorAll('.match');
       rows.forEach(row=>{
@@ -543,7 +580,7 @@
       <!-- Admin a végén – ha 7 elem van, simán átcsúszhat 2. sorba -->
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -578,4 +615,3 @@
   </section>
 </body>
 </html>
-
