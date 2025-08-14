@@ -38,7 +38,8 @@
     .crest{ width:28px; height:28px; object-fit:contain; border-radius:6px; background:#fff; border:1px solid var(--line,#e6eaf1); }
     .vs{ font-weight:700; color:#475569; }
     .meta{ color:#64748b; font-size:12px; }
-    .odds{ display:flex; gap:10px; font-size:12px; color:#475569; flex-wrap:wrap; }
+    .odds{ display:flex; gap:10px; font-size:16px; color:#475569; flex-wrap:wrap; font-weight:600; }
+    @media (max-width: 700px){ .odds{ font-size:18px; } }
     .ctl{ display:flex; align-items:center; gap:10px; }
     .select{ padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); }
     .double-wrap{ display:flex; align-items:center; gap:6px; }
@@ -306,7 +307,6 @@
 
           // --- ÚJ: zárolás vizsgálat a forduló első meccséhez kötve ---
           if (isRoundLocked(rKey)) {
-            // állítsuk vissza a UI-t a tényleges állapotra
             const lockedId = doublesByRound.get(rKey);
             const shouldBeChecked = lockedId === m.id;
             dbl.checked = !!shouldBeChecked;
@@ -315,9 +315,7 @@
           }
 
           if (dbl.checked){
-            // 1) UI: azonnal szedd le a többiről
             reflectDoubleStateForRound(rKey, m.id);
-            // 2) Szerver: kényszerítsd ki (más felületekről jött ütközés ellen)
             await enforceSingleDouble(rKey, m.id);
             doublesByRound.set(rKey, m.id);
           } else {
@@ -328,7 +326,6 @@
           await saveTip(m, select.value, dbl.checked, saved);
         });
 
-        // Ha már volt dupla ebben a fordulóban máson, vizuálisan vegyük le
         const locked = doublesByRound.get(String(roundStr));
         if (locked && locked !== m.id){
           dbl.checked = false;
