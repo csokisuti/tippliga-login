@@ -5,16 +5,20 @@
   const SECRET = "hfa783jgsdh7823gfdsljfg2389gdf";
 
   document.getElementById("testEmailBtn").onclick = async () => {
+    const payload = {
+      secret: SECRET,
+      subject: "NB1 TippLiga – Próba levél",
+      html: "<p>Szia! Ha ezt megkaptad, működik. 🎉</p>",
+      recipients: ["tippliga1@gmail.com"]
+    };
+
     const res = await fetch(WEBAPP_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        secret: SECRET,
-        subject: "NB1 TippLiga – Próba levél",
-        html: "<p>Szia! Ha ezt megkaptad, működik. 🎉</p>",
-        recipients: ["tippliga1@gmail.com"]
-      })
+      // FONTOS: ne legyen application/json, hanem text/plain (safelisted) → nincs preflight
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
     });
+
     const j = await res.json().catch(()=> ({}));
     alert(res.ok && j.ok ? "Elküldve ✅" : `Hiba ❌: ${j.error || res.status}`);
   };
