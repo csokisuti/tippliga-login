@@ -1,0 +1,21 @@
+<button id="testEmailBtn">Próba e-mail küldése</button>
+
+<script>
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzHPNP8O2bkSSx9uzzvnHzBm-v5JN24GrGs2-p1qzdSbQZl3ALwmFmvrfWRCOTVUkb7mg/exec";
+  const SECRET = "hfa783jgsdh7823gfdsljfg2389gdf";
+
+  document.getElementById("testEmailBtn").onclick = async () => {
+    const res = await fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: SECRET,
+        subject: "NB1 TippLiga – Próba levél",
+        html: "<p>Szia! Ha ezt megkaptad, működik. 🎉</p>",
+        recipients: ["tippliga1@gmail.com"]
+      })
+    });
+    const j = await res.json().catch(()=> ({}));
+    alert(res.ok && j.ok ? "Elküldve ✅" : `Hiba ❌: ${j.error || res.status}`);
+  };
+</script>
