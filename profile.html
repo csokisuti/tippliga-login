@@ -142,6 +142,10 @@
         const pwBtn = document.getElementById("changePasswordBtn");
         const msg = document.getElementById("message");
 
+        // ÚJ: emlékeztető kapcsoló elemei
+        const reminderToggle = document.getElementById("reminderEmail");
+        const reminderHint = document.getElementById("reminderHint");
+
         function showMsg(text, type="ok"){ msg.textContent = text; msg.className = type==="ok" ? "hint ok" : "hint err"; }
         function clearMsg(){ msg.textContent=""; msg.className="hint"; }
 
@@ -153,6 +157,10 @@
           currentUserRole = d.role || "user";
           favoriteTeam = d.favoriteTeam || "";
           chatLastSeen = d.chatLastSeen || null;
+          // ÚJ: emlékeztető beolvasása
+          if (typeof d.reminderEmail !== "undefined") {
+            reminderToggle.checked = !!d.reminderEmail;
+          }
         } else {
           currentUserNick = currentUserEmail;
           currentUserRole = "user";
@@ -229,6 +237,18 @@
             }else{
               showMsg("Hiba a jelszó módosításakor: " + (err?.message || ""), "err");
             }
+          }
+        });
+
+        // ÚJ: emlékeztető toggle mentése (azonnal, kattintáskor)
+        reminderToggle.addEventListener("change", async ()=>{
+          try{
+            await setDoc(userRef, { reminderEmail: reminderToggle.checked }, { merge:true });
+            reminderHint.textContent = reminderToggle.checked
+              ? "Emlékeztető bekapcsolva. Csak akkor megy e-mail, ha 12 órával a forduló első meccse előtt még nem tippeltél minden meccsre."
+              : "Emlékeztető kikapcsolva.";
+          }catch(e){
+            reminderHint.textContent = "Hiba a beállítás mentésekor.";
           }
         });
 
@@ -374,7 +394,7 @@
       </div>
     </div>
 
-<nav class="nav-grid">
+    <nav class="nav-grid">
       <!-- Főoldal kártya -->
       <a class="nav-card" href="dashboard.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -489,6 +509,22 @@
       </div>
     </section>
 
+    <!-- ÚJ: Emlékeztető e-mail kapcsoló -->
+    <section class="card">
+      <h3>Emlékeztető e-mail</h3>
+      <div class="form">
+        <div class="row-inline">
+          <label style="display:flex;align-items:center;gap:10px;">
+            <input id="reminderEmail" type="checkbox">
+            <span>E-mailes emlékeztetőt kérek</span>
+          </label>
+        </div>
+        <div id="reminderHint" class="hint">
+          Ha be van kapcsolva, <strong>csak akkor</strong> küldünk e-mailt, ha a forduló első meccsének kezdete előtt <strong>12 órával</strong> még <strong>nem tippeltél minden meccsre</strong>.
+        </div>
+      </div>
+    </section>
+
     <section class="card">
       <h3>Jelszó megváltoztatása</h3>
       <div class="form">
@@ -523,4 +559,3 @@
   </section>
 </body>
 </html>
-
