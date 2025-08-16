@@ -30,7 +30,7 @@
     .list{list-style:none;padding:0;margin:0}
     .list li{padding:10px;margin:6px 0;background:#fff;border:1px solid #e6eaf1;border-radius:10px}
 
-    /* Sorrend szerkesztés – sorszám vizuálisan, ne legyen a szöveg része */
+    /* Sorrend szerkesztés – sorszám ne része legyen a szövegnek */
     .sortable{list-style:none;padding:0;counter-reset:pos}
     .sortable li{position:relative;padding:10px 10px 10px 36px;margin:5px 0;background:#f2f2f2;border:1px solid #ccc;border-radius:8px;cursor:grab}
     .sortable li.dragging{opacity:.5}
@@ -49,9 +49,8 @@
     const teams = ["Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr","Kazincbarcikai SC","Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus","Paksi FC","Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"];
 
     function parseOutcome(result){ const p=result.split("-").map(x=>parseInt(x.trim())); if(p.length!==2||isNaN(p[0])||isNaN(p[1])) return ""; if(p[0]>p[1]) return "1"; if(p[0]<p[1]) return "2"; return "X" }
-    // " 12. Ferencváros" -> "Ferencváros"
-    const stripNumPrefix = s => (s||'').replace(/^\s*\d+[\.\)]?\s*/, '');
-    const norm = s => stripNumPrefix(s).replace(/\s+/g,' ').trim().toLowerCase();
+    const stripNumPrefix = (s)=> (s||'').replace(/^\s*\d+[\.\)]?\s*/, '');
+    const norm = (s)=> stripNumPrefix(s).replace(/\s+/g,' ').trim().toLowerCase();
 
     let allMatchesCache = [];
     let usersCache = [];
@@ -396,7 +395,6 @@
       const snap=await getDoc(ref);
       const list=document.getElementById('sortableList'); list.innerHTML='';
       const arr = snap.exists() && Array.isArray(snap.data().teams) ? snap.data().teams : teams.slice();
-      // sorszámok levágása már itt
       arr.forEach((t)=>{ const clean = stripNumPrefix(t); const li=document.createElement('li'); li.draggable=true; li.dataset.team=clean; li.textContent=clean; list.appendChild(li) });
       let drag=null;
       document.querySelectorAll('#sortableList li').forEach(li=>{
@@ -407,7 +405,6 @@
     }
 
     async function saveOfficialOrder(){
-      // mentéskor is levágjuk a sorszámot
       const list=[...document.querySelectorAll('#sortableList li')].map(li=> stripNumPrefix(li.dataset.team || li.textContent.trim()));
       await setDoc(doc(db,'finalStandings','official'),{ teams:list, positions:list.map((t,i)=>({ team:t, position:i+1 })) });
       alert('Sorrend elmentve.');
@@ -426,7 +423,6 @@
     }
 
     async function pairWithUsers(){
-      // párosításnál is tisztítjuk a sorszámot
       const official = [...document.querySelectorAll('#sortableList li')].map(li=> stripNumPrefix(li.dataset.team || li.textContent.trim()));
       if(official.length===0){ document.getElementById('pairingResults').innerHTML = '<div class="muted">Előbb töltsd be a hivatalos sorrendet.</div>'; return }
       const posMap = new Map(official.map((t,i)=>[norm(t), i+1]));
