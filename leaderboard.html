@@ -11,7 +11,6 @@
   <style>
     .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
 
-    /* Fejléc/nav – egységes */
     .header{ display:flex; align-items:center; justify-content:space-between; }
     .header-left{ display:flex; align-items:center; gap:12px; }
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
@@ -31,19 +30,30 @@
     .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; }
     .muted{ color:#64748b; }
 
-    /* Kártya + táblázat */
+    /* Kártya */
     .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line,#e6eaf1); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
-    .table-wrap{ display:flex; }
-    .grid{ display:grid; }
+    /* ----- Ranglista: EGY rács, sticky első oszlopok ----- */
+    .table-scroll{ overflow:auto; }
+    .leader-grid{
+      display:grid;
+      /* ezek az értékek JS-ből is felülíródnak (gridTemplateColumns) */
+      grid-template-columns: var(--w-rank) var(--w-player) var(--w-total) var(--w-bonus) var(--w-base);
+      grid-auto-rows: auto;
+    }
     .hdr, .row{ display:contents; }
     .cell{ padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#fff; }
     .hdr .cell{ font-weight:700; background:#f7f8fc; }
-    .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
-    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line,#e6eaf1); }
-    .left .cell{ background:#fff; }
+    /* sticky bal oszlopok – numerikus bal értékeket adunk (JS állítja a width-eket) */
+    .sticky{ position:sticky; z-index:2; background:#fff; }
+    .c0{ left: 0; }                               /* Hely */
+    .c1{ left: var(--left-1); }                   /* Játékos */
+    .c2{ left: calc(var(--left-1) + var(--w-player)); }  /* Összesen */
+    .c3{ left: calc(var(--left-1) + var(--w-player) + var(--w-total)); }  /* Bónusz */
+    .c4{ left: calc(var(--left-1) + var(--w-player) + var(--w-total) + var(--w-bonus)); } /* Alap */
+
     .rank{ text-align:right; color:#64748b; white-space:nowrap; }
     .num{ text-align:right; white-space:nowrap; }
     .total{ font-weight:800; }
@@ -52,9 +62,10 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    /* Játékos cella kiegészítések */
+    /* Játékos cella */
     .player-cell{ display:flex; align-items:center; gap:10px; }
-    .mini-crest{ width:22px; height:22px; object-fit:contain; border-radius:4px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .mini-crest{ width:20px; height:20px; object-fit:contain; border-radius:4px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .player-name{ font-weight:800; }
 
     /* Chat */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
@@ -89,7 +100,6 @@
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    /* ---------------- Firebase init ---------------- */
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
@@ -102,7 +112,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    /* ---------------- Helpers ---------------- */
+    /* --- Címerek + színek --- */
     const crestMap = {
       "Debreceni VSC": "crest/crest-dvsc.png",
       "Diósgyőri VTK": "crest/crest-dvtk.png",
@@ -117,72 +127,52 @@
       "Újpest FC": "crest/crest-ujpest.png",
       "Zalaegerszegi TE FC": "crest/crest-zte.png"
     };
-
-    /* Névszínek a kedvenc csapathoz – ízlés szerinti, visszafogott árnyalatok */
     const teamColors = {
-      "Debreceni VSC": "#b91c1c",        // piros
-      "Diósgyőri VTK": "#dc2626",        // piros
-      "Ferencváros": "#168a3b",          // zöld
-      "ETO FC Győr": "#0e7a0d",          // zöld
-      "Kazincbarcikai SC": "#1e3a8a",    // kék
-      "Kisvárda FC": "#ef4444",          // piros
-      "MTK Budapest": "#2563eb",         // kék
-      "Nyíregyháza Spartacus": "#1d4ed8",// kék
-      "Paksi FC": "#059669",             // zöld
-      "Puskás Akadémia": "#0ea5e9",      // kék
-      "Újpest FC": "#7e22ce",            // lila
-      "Zalaegerszegi TE FC": "#1e40af"   // kék
+      "Debreceni VSC": "#b91c1c",
+      "Diósgyőri VTK": "#dc2626",
+      "Ferencváros": "#168a3b",
+      "ETO FC Győr": "#0e7a0d",
+      "Kazincbarcikai SC": "#1e3a8a",
+      "Kisvárda FC": "#ef4444",
+      "MTK Budapest": "#2563eb",
+      "Nyíregyháza Spartacus": "#1d4ed8",
+      "Paksi FC": "#059669",
+      "Puskás Akadémia": "#0ea5e9",
+      "Újpest FC": "#7e22ce",
+      "Zalaegerszegi TE FC": "#1e40af"
     };
 
     const fmt = n => (Number(n)||0).toFixed(2);
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
     const escapeHtml = s => String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-    // odds schema: {odds:{'1','X','2'}} vagy odds1/oddsX/odds2
-    function getOdds(m, key){
-      if (m?.odds && (key in m.odds)) return m.odds[key];
-      if (key==="1") return m.odds1 ?? m["odds1"];
-      if (key==="X") return m.oddsX ?? m["oddsX"];
-      if (key==="2") return m.odds2 ?? m["odds2"];
-      return undefined;
-    }
-    // tip mezők: choice/tip + double/isDouble
     const tipChoice = t => t.choice ?? t.tip ?? "";
     const tipDouble = t => !!(t.double ?? t.isDouble);
-    // forduló: round/roundId
     const matchRound = m => String(m.round ?? m.roundId ?? "");
-
-    // csapatnév-normalizálás (ékezet, kisbetű, trim)
     const NORM = s => String(s ?? "").trim().toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const eqTeam = (a,b) => !!a && !!b && NORM(a) === NORM(b);
-    // hivatalos sorrend bármely sémából
     function officialArrayFrom(d){
       if (!d) return [];
       if (Array.isArray(d.order)) return d.order;
       if (Array.isArray(d.teams)) return d.teams;
-      if (Array.isArray(d.positions)) {
-        return d.positions.slice().sort((a,b)=>(a.position||0)-(b.position||0)).map(x=>x.team);
-      }
+      if (Array.isArray(d.positions)) return d.positions.slice().sort((a,b)=>(a.position||0)-(b.position||0)).map(x=>x.team);
       return [];
     }
-    // százalék szín (0→piros, 12→zöld)
     function pctColor(pct){ const p=Math.max(0,Math.min(12, pct)); const hue=(p/12)*120; return `hsl(${hue}deg,85%,40%)`; }
 
-    /* ---------------- Állapot ---------------- */
+    /* --- Állapot --- */
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
     let favoriteTeam = "";
     let chatLastSeen = null;
 
-    /* ---------------- INIT ---------------- */
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
         currentUserEmail = user.email;
 
-        // user
         const userRef = doc(db, "users", currentUserEmail);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()){
@@ -200,8 +190,6 @@
         if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
 
         if (favoriteTeam) {
-          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
           const crest = crestMap[favoriteTeam];
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
         }
@@ -209,7 +197,6 @@
         await buildLeaderboard();
         updatePendingBadge();
         initChat(userRef);
-
         if (window.hideLoader) hideLoader();
       });
 
@@ -224,11 +211,11 @@
       });
     });
 
-    /* ---------------- Adatok betöltése és számítás ---------------- */
+    /* --- Betöltés + pontszámítás --- */
     let showAll = false;
-    let rows = [];            // [{nick, email, favTeam, base, perRound, bonusPct, bonusPts, total}]
-    let roundsAsc = [];       // ["1","2",...]
-    let officialOrder = [];   // 12 elem
+    let rows = [];
+    let roundsAsc = [];
+    let officialOrder = [];
 
     async function buildLeaderboard(){
       const [matchesSnap, tipsSnap, usersSnap, officialSnap, standingsTipsSnap] = await Promise.all([
@@ -239,22 +226,18 @@
         getDocs(collection(db, "standingsTips"))
       ]);
 
-      // matches by id
       const matches = {};
       matchesSnap.forEach(d => matches[d.id] = { id:d.id, ...d.data() });
 
-      // users info (nick + kedvenc csapat)
       const usersInfo = {};
       usersSnap.forEach(d => {
         const u = d.data();
         if (u?.email) usersInfo[u.email] = { nick: u.nickname || u.email, favoriteTeam: u.favoriteTeam || "" };
       });
 
-      // official order
       officialOrder = officialArrayFrom(officialSnap.exists() ? officialSnap.data() : []).slice(0,12);
       while (officialOrder.length < 12) officialOrder.push("");
 
-      // standings tips: email -> order[12]
       const orderByEmail = {};
       standingsTipsSnap.forEach(d=>{
         const data = d.data() || {};
@@ -265,7 +248,6 @@
         orderByEmail[d.id] = (arr || []).slice(0,12);
       });
 
-      // tips – legutóbbi tipp per user|match
       const latest = new Map();
       tipsSnap.forEach(docu=>{
         const t = docu.data(); if (!t?.matchId || !t?.user) return;
@@ -276,8 +258,7 @@
         if (!cur || ts >= curTs) latest.set(k, { id:docu.id, ...t });
       });
 
-      // pontszámítás
-      const player = {}; // nick -> {base, perRound, email}
+      const player = {};
       const rounds = new Set();
 
       for (const tip of latest.values()){
@@ -285,17 +266,12 @@
         const roundId = String(m.round ?? m.roundId ?? ""); if (!roundId) continue;
         rounds.add(roundId);
 
-        if (!m.outcome) continue; // csak lezárt meccs
-        const pick = tip.choice ?? tip.tip ?? ""; if (!pick) continue;
+        if (!m.outcome) continue;
+        const pick = tipChoice(tip); if (!pick) continue;
 
-        const correct = pick === m.outcome;
-        const ov = (m?.odds && (pick in m.odds)) ? m.odds[pick]
-                  : pick==="1" ? (m.odds1 ?? m["odds1"])
-                  : pick==="X" ? (m.oddsX ?? m["oddsX"])
-                  : pick==="2" ? (m.odds2 ?? m["odds2"])
-                  : undefined;
-        const mult = (tip.double ?? tip.isDouble) ? 2 : 1;
-        const pts = (correct && ov) ? Number(ov) * mult : 0;
+        const ov = m?.odds?.[pick] ?? (pick==="1" ? m.odds1 : pick==="X" ? m.oddsX : pick==="2" ? m.odds2 : undefined);
+        const mult = tipDouble(tip) ? 2 : 1;
+        const pts = (pick === m.outcome && ov) ? Number(ov) * mult : 0;
 
         const info = usersInfo[tip.user] || { nick: tip.user, favoriteTeam: "" };
         const nick = info.nick;
@@ -306,7 +282,6 @@
 
       roundsAsc = Array.from(rounds).sort((a,b)=> (parseInt(a)||0)-(parseInt(b)||0));
 
-      // bónusz%
       function calcHits(order, official){
         let h = 0; for (let i=0;i<12;i++){ if (eqTeam(order?.[i], official?.[i])) h++; } return h;
       }
@@ -315,17 +290,17 @@
         const info = usersInfo[obj.email] || { nick, favoriteTeam: "" };
         const order = orderByEmail[obj.email] || [];
         const hits = calcHits(order, officialOrder);
-        const bonusPct = hits; // 1 egyezés = +1%
+        const bonusPct = hits;
         const bonusPts = Math.round(obj.base * (bonusPct/100));
         const total = obj.base + bonusPts;
         return { nick: info.nick || nick, email: obj.email, favTeam: info.favoriteTeam || "", base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total };
       });
 
       rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
-
       renderTable();
     }
 
+    /* --- Rajzolás: egyetlen grid + sticky első 5 oszlop --- */
     function renderTable(){
       const mount = document.getElementById('tableMount');
       if (!rows.length){
@@ -333,91 +308,97 @@
         return;
       }
 
-      const roundsDesc = roundsAsc.slice().reverse();
-      const toShow = showAll ? roundsDesc : roundsDesc.slice(0,5);
+      const RANK_W  = 70;
+      const PLAYER_W= 320;  // fix px, hogy a sticky bal oldal számítható legyen
+      const TOTAL_W = 140;
+      const BONUS_W = 180;
+      const BASE_W  = 140;
+      const ROUND_W = 78;
 
-      // range label
+      const roundsDesc = roundsAsc.slice().reverse();
+      const toShow = showAll ? roundsDesc : roundsDesc.slice(0, Math.min(5, roundsDesc.length));
+
       const rangeLabel = document.getElementById('rangeLabel');
       rangeLabel.textContent = showAll
         ? "Teljes nézet: minden forduló látszik (balról jobbra: legutóbbi → régebbi)"
         : (toShow.length ? `Csak az utolsó ${toShow.length} forduló látszik (balról jobbra: F${toShow[0]} → …)` : "Nincs még lezárt forduló.");
 
-      // max per látható forduló
       const maxPerRound = toShow.map(r=>{
         let m = -Infinity;
         rows.forEach(row => { m = Math.max(m, row.perRound[r]||0); });
         return m === -Infinity ? 0 : m;
       });
 
-      const leftHeader = `
+      const templateCols =
+        `${RANK_W}px ${PLAYER_W}px ${TOTAL_W}px ${BONUS_W}px ${BASE_W}px ` +
+        `${(''+Array(toShow.length)).split(',').map(()=>`${ROUND_W}px`).join(' ')}`;
+
+      const scroll = document.createElement('div');
+      scroll.className = 'table-scroll';
+
+      const grid = document.createElement('div');
+      grid.className = 'leader-grid';
+      grid.style.gridTemplateColumns = templateCols;
+
+      // bal offset az első ragadós oszlop után (rank szélessége)
+      grid.style.setProperty('--w-rank',  RANK_W  + 'px');
+      grid.style.setProperty('--w-player',PLAYER_W + 'px');
+      grid.style.setProperty('--w-total', TOTAL_W + 'px');
+      grid.style.setProperty('--w-bonus', BONUS_W + 'px');
+      grid.style.setProperty('--w-base',  BASE_W  + 'px');
+      grid.style.setProperty('--left-1',  RANK_W  + 'px');
+
+      // fejlécek
+      grid.insertAdjacentHTML('beforeend', `
         <div class="hdr">
-          <div class="cell left rank">Hely</div>
-          <div class="cell left">Játékos</div>
-          <div class="cell left num">Összesen</div>
-          <div class="cell left num">Bónusz (pont + %)</div>
-          <div class="cell left num">Alap pont</div>
-        </div>`;
-
-      const rightHeader = toShow.map(r=>`<div class="cell round-cell"><a class="round-link" href="results.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
-
-      const container = document.createElement('div'); container.className = 'table-wrap';
-
-      const left = document.createElement('div');
-      left.className = 'left';
-      left.style.minWidth = '760px';
-      left.style.maxWidth = '760px';
-      left.innerHTML = `
-        <div class="grid" style="grid-template-columns:70px 2fr 140px 180px 140px;">
-          ${leftHeader}
-          ${rows.map((r,i)=>{
-            const crest = r.favTeam && crestMap[r.favTeam] ? `<img class="mini-crest" src="${crestMap[r.favTeam]}" alt="${escapeHtml(r.favTeam)}">` : '';
-            const color = r.favTeam && teamColors[r.favTeam] ? ` style="color:${teamColors[r.favTeam]}; font-weight:800"` : '';
-            return `
-              <div class="row row-bg">
-                <div class="cell left rank">${i+1}.</div>
-                <div class="cell left">
-                  <div class="player-cell">
-                    ${crest}
-                    <span class="player-name"${color}>${escapeHtml(r.nick)}</span>
-                  </div>
-                </div>
-                <div class="cell left num total">${fmt(r.total)}</div>
-                <div class="cell left num">
-                  +${r.bonusPts}
-                  <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
-                </div>
-                <div class="cell left num">${fmt(r.base)}</div>
-              </div>`;
-          }).join('')}
+          <div class="cell rank sticky c0">Hely</div>
+          <div class="cell sticky c1">Játékos</div>
+          <div class="cell num sticky c2">Összesen</div>
+          <div class="cell num sticky c3">Bónusz (pont + %)</div>
+          <div class="cell num sticky c4">Alap pont</div>
+          ${toShow.map(r=>`<div class="cell round-cell">F${r}</div>`).join('')}
         </div>
-      `;
+      `);
 
-      const right = document.createElement('div');
-      right.style.overflow = 'auto';
-      right.style.flex = '1';
-      right.innerHTML = `
-        <div class="grid" style="grid-template-columns:${'78px '.repeat(toShow.length)};">
-          <div class="hdr">${rightHeader}</div>
-          ${rows.map(r=>{
-            const cells = toShow.map((rid, idx)=>{
-              const val = r.perRound[rid]||0;
-              const isTop = val === maxPerRound[idx] && val !== 0;
-              return `<div class="cell round-cell num ${isTop?'top':''}">
-                        <a class="round-link" href="results.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
-                      </div>`;
-            }).join('');
-            return `<div class="row row-bg">${cells}</div>`;
-          }).join('')}
-        </div>
-      `;
+      // sorok
+      rows.forEach((r,i)=>{
+        const crest = r.favTeam && crestMap[r.favTeam] ? `<img class="mini-crest" src="${crestMap[r.favTeam]}" alt="${escapeHtml(r.favTeam)}">` : '';
+        const color = r.favTeam && teamColors[r.favTeam] ? ` style="color:${teamColors[r.favTeam]};"` : '';
+
+        const rightCells = toShow.map((rid, idx)=>{
+          const val = r.perRound[rid]||0;
+          const isTop = val === maxPerRound[idx] && val !== 0;
+          return `<div class="cell round-cell num ${isTop?'top':''}">
+                    <a class="round-link" href="results.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
+                  </div>`;
+        }).join('');
+
+        grid.insertAdjacentHTML('beforeend', `
+          <div class="row">
+            <div class="cell rank sticky c0">${i+1}.</div>
+            <div class="cell sticky c1">
+              <div class="player-cell">
+                ${crest}
+                <span class="player-name"${color}>${escapeHtml(r.nick)}</span>
+              </div>
+            </div>
+            <div class="cell num total sticky c2">${fmt(r.total)}</div>
+            <div class="cell num sticky c3">
+              +${r.bonusPts}
+              <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
+            </div>
+            <div class="cell num sticky c4">${fmt(r.base)}</div>
+            ${rightCells}
+          </div>
+        `);
+      });
 
       mount.innerHTML = '';
-      container.appendChild(left);
-      container.appendChild(right);
-      mount.appendChild(container);
+      scroll.appendChild(grid);
+      mount.appendChild(scroll);
     }
 
-    /* ---------------- Nav „függő tippek” badge ---------------- */
+    /* ---- Függő tippek badge ---- */
     function updatePendingBadge(){
       getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -430,7 +411,7 @@
       });
     }
 
-    /* ---------------- Chat ---------------- */
+    /* ---- Chat (változatlan) ---- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -526,7 +507,6 @@
 </head>
 <body>
   <div class="layout">
-    <!-- Fejléc -->
     <div class="header">
       <div class="header-left">
         <img id="favCrest" class="fav-crest" alt="" hidden>
@@ -545,88 +525,37 @@
       </div>
     </div>
 
-<nav class="nav-grid">
-      <!-- Főoldal kártya -->
+    <nav class="nav-grid">
       <a class="nav-card" href="dashboard.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
-          </svg>
-        </div>
-        <div class="text">
-          <span class="title">Főoldal</span>
-          <span class="desc">Tabella, hírek, kedvencek</span>
-        </div>
+        <div class="icon-wrap"><div class="icon">🏠</div></div>
+        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
       </a>
-
-      <!-- Szezon végi sorrend – közvetlenül a Főoldal után -->
       <a class="nav-card" href="positions.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Szezon végi sorrend</span>
-          <span class="desc">12 csapat – húzd a helyekre</span>
-        </div>
+        <div class="icon-wrap"><div class="icon">🏆</div></div>
+        <div class="text"><span class="title">Szezon végi sorrend</span><span class="desc">12 csapat – húzd a helyekre</span></div>
       </a>
-
-      <!-- Meccstippek -->
       <a class="nav-card" href="matches.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
-          <span class="desc">Közelgő meccsek & tippek</span>
-        </div>
+        <div class="icon-wrap"><div class="icon">📅</div></div>
+        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
-
-      <!-- Eredmények -->
       <a class="nav-card" href="results.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Eredmények</span>
-          <span class="desc">Fordulónkénti bontás</span>
-        </div>
+        <div class="icon-wrap"><div class="icon">📄</div></div>
+        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
       </a>
-
-      <!-- Összpontszám -->
       <a class="nav-card" href="leaderboard.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Összpontszám</span>
-          <span class="desc">Toplista & bónusz</span>
-        </div>
+        <div class="icon-wrap"><div class="icon">📊</div></div>
+        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
       </a>
-
-      <!-- Profil -->
       <a class="nav-card" href="profile.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Profil</span>
-          <span class="desc">Beállítások & kedvenc csapat</span>
-        </div>
+        <div class="icon-wrap"><div class="icon">👤</div></div>
+        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
       </a>
-
-      <!-- Admin a végén – ha 7 elem van, simán átcsúszhat 2. sorba -->
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Admin</span>
-          <span class="desc">Szezon-zár & beállítások</span>
-        </div>
+        <div class="icon-wrap"><div class="icon">⚙️</div></div>
+        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
       </a>
     </nav>
 
-    <!-- Ranglista -->
     <section class="card">
       <div class="subhdr">
         <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
