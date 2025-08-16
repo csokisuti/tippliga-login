@@ -52,6 +52,10 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
+    /* Játékos cella kiegészítések */
+    .player-cell{ display:flex; align-items:center; gap:10px; }
+    .mini-crest{ width:22px; height:22px; object-fit:contain; border-radius:4px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+
     /* Chat */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
@@ -112,6 +116,22 @@
       "Puskás Akadémia": "crest/crest-puskas.png",
       "Újpest FC": "crest/crest-ujpest.png",
       "Zalaegerszegi TE FC": "crest/crest-zte.png"
+    };
+
+    /* Névszínek a kedvenc csapathoz – ízlés szerinti, visszafogott árnyalatok */
+    const teamColors = {
+      "Debreceni VSC": "#b91c1c",        // piros
+      "Diósgyőri VTK": "#dc2626",        // piros
+      "Ferencváros": "#168a3b",          // zöld
+      "ETO FC Győr": "#0e7a0d",          // zöld
+      "Kazincbarcikai SC": "#1e3a8a",    // kék
+      "Kisvárda FC": "#ef4444",          // piros
+      "MTK Budapest": "#2563eb",         // kék
+      "Nyíregyháza Spartacus": "#1d4ed8",// kék
+      "Paksi FC": "#059669",             // zöld
+      "Puskás Akadémia": "#0ea5e9",      // kék
+      "Újpest FC": "#7e22ce",            // lila
+      "Zalaegerszegi TE FC": "#1e40af"   // kék
     };
 
     const fmt = n => (Number(n)||0).toFixed(2);
@@ -206,7 +226,7 @@
 
     /* ---------------- Adatok betöltése és számítás ---------------- */
     let showAll = false;
-    let rows = [];            // [{nick, email, base, perRound, bonusPct, bonusPts, total}]
+    let rows = [];            // [{nick, email, favTeam, base, perRound, bonusPct, bonusPts, total}]
     let roundsAsc = [];       // ["1","2",...]
     let officialOrder = [];   // 12 elem
 
@@ -223,9 +243,12 @@
       const matches = {};
       matchesSnap.forEach(d => matches[d.id] = { id:d.id, ...d.data() });
 
-      // users nick
-      const usersMap = {};
-      usersSnap.forEach(d => { const u = d.data(); if (u?.email) usersMap[u.email] = u.nickname || u.email; });
+      // users info (nick + kedvenc csapat)
+      const usersInfo = {};
+      usersSnap.forEach(d => {
+        const u = d.data();
+        if (u?.email) usersInfo[u.email] = { nick: u.nickname || u.email, favoriteTeam: u.favoriteTeam || "" };
+      });
 
       // official order
       officialOrder = officialArrayFrom(officialSnap.exists() ? officialSnap.data() : []).slice(0,12);
@@ -259,18 +282,23 @@
 
       for (const tip of latest.values()){
         const m = matches[tip.matchId]; if (!m) continue;
-        const roundId = matchRound(m); if (!roundId) continue;
+        const roundId = String(m.round ?? m.roundId ?? ""); if (!roundId) continue;
         rounds.add(roundId);
 
         if (!m.outcome) continue; // csak lezárt meccs
-        const pick = tipChoice(tip); if (!pick) continue;
+        const pick = tip.choice ?? tip.tip ?? ""; if (!pick) continue;
 
         const correct = pick === m.outcome;
-        const ov = getOdds(m, pick);
-        const mult = tipDouble(tip) ? 2 : 1;
+        const ov = (m?.odds && (pick in m.odds)) ? m.odds[pick]
+                  : pick==="1" ? (m.odds1 ?? m["odds1"])
+                  : pick==="X" ? (m.oddsX ?? m["oddsX"])
+                  : pick==="2" ? (m.odds2 ?? m["odds2"])
+                  : undefined;
+        const mult = (tip.double ?? tip.isDouble) ? 2 : 1;
         const pts = (correct && ov) ? Number(ov) * mult : 0;
 
-        const nick = usersMap[tip.user] || tip.user;
+        const info = usersInfo[tip.user] || { nick: tip.user, favoriteTeam: "" };
+        const nick = info.nick;
         if (!player[nick]) player[nick] = { base:0, perRound:{}, email: tip.user };
         player[nick].base += pts;
         player[nick].perRound[roundId] = (player[nick].perRound[roundId]||0) + pts;
@@ -284,12 +312,13 @@
       }
 
       rows = Object.entries(player).map(([nick,obj])=>{
+        const info = usersInfo[obj.email] || { nick, favoriteTeam: "" };
         const order = orderByEmail[obj.email] || [];
         const hits = calcHits(order, officialOrder);
         const bonusPct = hits; // 1 egyezés = +1%
         const bonusPts = Math.round(obj.base * (bonusPct/100));
         const total = obj.base + bonusPts;
-        return { nick, email: obj.email, base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total };
+        return { nick: info.nick || nick, email: obj.email, favTeam: info.favoriteTeam || "", base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total };
       });
 
       rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
@@ -335,23 +364,31 @@
 
       const left = document.createElement('div');
       left.className = 'left';
-      left.style.minWidth = '720px';
-      left.style.maxWidth = '720px';
+      left.style.minWidth = '760px';
+      left.style.maxWidth = '760px';
       left.innerHTML = `
-        <div class="grid" style="grid-template-columns:70px 1.6fr 140px 180px 140px;">
+        <div class="grid" style="grid-template-columns:70px 2fr 140px 180px 140px;">
           ${leftHeader}
-          ${rows.map((r,i)=>`
-            <div class="row row-bg">
-              <div class="cell left rank">${i+1}.</div>
-              <div class="cell left">${escapeHtml(r.nick)}</div>
-              <div class="cell left num total">${fmt(r.total)}</div>
-              <div class="cell left num">
-                +${r.bonusPts}
-                <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
-              </div>
-              <div class="cell left num">${fmt(r.base)}</div>
-            </div>
-          `).join('')}
+          ${rows.map((r,i)=>{
+            const crest = r.favTeam && crestMap[r.favTeam] ? `<img class="mini-crest" src="${crestMap[r.favTeam]}" alt="${escapeHtml(r.favTeam)}">` : '';
+            const color = r.favTeam && teamColors[r.favTeam] ? ` style="color:${teamColors[r.favTeam]}; font-weight:800"` : '';
+            return `
+              <div class="row row-bg">
+                <div class="cell left rank">${i+1}.</div>
+                <div class="cell left">
+                  <div class="player-cell">
+                    ${crest}
+                    <span class="player-name"${color}>${escapeHtml(r.nick)}</span>
+                  </div>
+                </div>
+                <div class="cell left num total">${fmt(r.total)}</div>
+                <div class="cell left num">
+                  +${r.bonusPts}
+                  <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
+                </div>
+                <div class="cell left num">${fmt(r.base)}</div>
+              </div>`;
+          }).join('')}
         </div>
       `;
 
@@ -621,4 +658,3 @@
   </section>
 </body>
 </html>
-
