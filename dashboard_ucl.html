@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <title><span class="bl-flag-inline">NB1 TippLiga</span></title>
+
+  <link rel="stylesheet" href="style-themed.css" />
+  <link rel="stylesheet" href="style.css">
+  <script src="loader.js" defer></script>
+
+  <style>
+    .layout{
+      display:flex; flex-direction:column; gap:16px;
+      max-width:1200px; margin:0 auto; padding:20px;
+    }
+    .content-grid{
+      display:grid; grid-template-columns: 1.2fr 1fr; gap:16px;
+    }
+    @media (max-width: 1000px){
+      .content-grid{ grid-template-columns: 1fr; }
+    }
+
+    .header{ display:flex; align-items:center; justify-content:space-between; }
+    .header-left{ display:flex; align-items:center; gap:12px; }
+    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
+
+    .nav-grid{
+      display:grid;
+      grid-template-columns: repeat(6, minmax(0,1fr));
+      gap:14px;
+    }
+    @media (max-width: 1100px){
+      .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+    @media (max-width: 700px){
+      .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    .nav-card{
+      display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit;
+      padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px;
+      box-shadow:0 6px 18px rgba(15,23,42,.05);
+    }
+    .nav-card .icon-wrap{
+      position:relative;
+      width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+      background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white);
+      color:var(--accent,#3b82f6);
+    }
+    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
+    .nav-card .title{ font-weight:800; }
+    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
+
+    .card{
+      background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px;
+      box-shadow:0 6px 18px rgba(15,23,42,.06);
+      overflow:hidden;
+    }
+    .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .table-wrap{ overflow:auto; }
+    .pill-badge{
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:18px; height:18px; padding:0 6px; margin-left:6px;
+      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700;
+      line-height:1; vertical-align:middle;
+    }
+    .pill-badge[hidden]{ display:none !important; }
+
+    .fb-wrap iframe{
+      width:100%; height:540px; border:0; overflow:hidden;
+    }
+
+    .chat-fab{
+      position:fixed; right:22px; bottom:22px; z-index:999;
+      width:52px; height:52px; border-radius:999px; border:0;
+      background:var(--accent,#3b82f6); color:#fff; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 8px 26px rgba(0,0,0,.15);
+    }
+    .chat-fab .fab-badge{
+      position:absolute; top:-4px; right:-4px;
+      min-width:20px; height:20px; padding:0 6px;
+      border-radius:999px; background:#ef4444; color:#fff;
+      font-size:12px; font-weight:800; line-height:20px; display:none;
+    }
+    .chat-fab.has-unread .fab-badge{ display:inline-block; }
+
+    .chat-panel{
+      position:fixed; right:22px; bottom:86px; z-index:998;
+      width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column;
+      background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14);
+    }
+    .chat-panel.open{ display:flex; }
+    .chat-head{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd;
+    }
+    .chat-title{ font-weight:800; }
+    #chatClose{
+      width:28px; height:28px; border-radius:8px;
+      font-size:18px; line-height:28px;
+      display:inline-flex; align-items:center; justify-content:center;
+      background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer;
+    }
+    #chatClose:hover{ filter:brightness(0.95); }
+
+    .chat-list{ overflow:auto; padding:8px 10px; }
+    .chat-empty{ color:var(--muted,#64748b); font-size:13px; padding:8px 10px; }
+
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
+    .msg .meta{ font-size:12px; color:var(--muted,#64748b); margin-bottom:2px; }
+    .msg .text{ white-space:pre-wrap; word-break:break-word; }
+    .msg .del{
+      margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca;
+      padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none;
+    }
+    .msg:hover .del{ display:inline-block; }
+
+    #chatComposer{
+      display:flex; gap:8px; align-items:center;
+      padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff;
+    }
+    #chatInput{
+      background:#fff; color:#111;
+      border:1px solid var(--line,#e6eaf1);
+      height:40px; padding:8px 10px; border-radius:10px;
+      font-size:14px; outline:none; width:100%; box-sizing:border-box;
+    }
+    #chatInput::placeholder{ color:#6b7280; }
+    #chatSendBtn{
+      min-width:90px; padding:8px 12px; border-radius:10px;
+      background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer;
+    }
+
+    .btn-accent{
+      min-height:40px; padding:10px 14px; border-radius:10px;
+      background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
+      font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    }
+    .btn-accent:hover{ filter:brightness(.95); }
+    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
+    .btn-icon{ width:18px; height:18px; display:inline-block; }
+
+    /* --- Szabályzat modál (új) --- */
+    .rules-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
+    .rules-modal.open{display:flex}
+    .rules-dialog{width:min(900px,92vw);max-height:80vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
+    .rules-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
+    .rules-title{font-weight:800}
+    .rules-close{width:32px;height:32px;border:1px solid var(--line,#e6eaf1);border-radius:8px;background:#eef2ff;cursor:pointer}
+    .rules-body{padding:14px;overflow:auto;line-height:1.5;color:#111;white-space:pre-wrap}
+    .rules-body p{margin:0 0 10px}
+    .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
+    .rules-updated{font-size:12px;color:var(--muted,#64748b)}
+
+    /* --- BL jelölések --- */
+    .bl-flag { background:#ffe4e6 !important; outline:2px dashed #e11d48 !important; }
+    .bl-flag-inline { background:#ffe4e6; }
+    .bl-legend {
+      position:sticky; top:0; z-index:1001; background:#fff7f8; border:1px solid #fecdd3; padding:8px 12px; border-radius:10px; margin-bottom:8px;
+      display:flex; gap:10px; align-items:center; box-shadow:0 4px 14px rgba(0,0,0,.05);
+    }
+    .bl-legend b{color:#be123c}
+    .bl-js-todo {
+      position: fixed; right: 22px; top: 22px; z-index: 1002; width: 320px; max-width: calc(100vw - 40px);
+      background:#fff7f8; border:1px solid #fecdd3; border-radius:12px; padding:10px 12px; box-shadow:0 10px 24px rgba(0,0,0,.12);
+      font-size:13px; line-height:1.35; color:#111;
+    }
+    .bl-js-todo h4{ margin:0 0 6px; font-size:14px; color:#be123c; }
+    .bl-js-todo ul{ margin:0; padding-left:18px; }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore,
+      doc, getDoc, setDoc,
+      collection, getDocs, addDoc, deleteDoc, serverTimestamp,
+      query, where, orderBy, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    /* ▼▼▼ NB1-specifikus: BL-re cserélnivaló – csak listázva jelenik meg jobbra felül ▼▼▼ */
+    const blTodoBox = document.createElement('div');
+    blTodoBox.className = 'bl-js-todo';
+    blTodoBox.innerHTML = `
+      <h4>BL-re cserélendő JS részek</h4>
+      <ul>
+        <li><b>Firestore kollekciók:</b> <code>matches</code> → <code>ucl_matches</code>, <code>tips</code> → <code>ucl_tips</code></li>
+        <li>“<code>settings/nbi_table_image</code>” → BL megfelelője (pl. <code>settings/ucl_table_image</code>)</li>
+        <li><b>crestMap</b> és <b>facebookLinks</b> NB1 csapatokra mutat – BL klubokra cseréld</li>
+        <li>NB1-es szövegek a Szabályzatban (pontozás, nevezések) → BL-re</li>
+        <li>NB1-es navigációs hivatkozások: <code>matches.html</code>, <code>results.html</code>, <code>leaderboard.html</code> → BL oldalak</li>
+      </ul>
+    `;
+    document.addEventListener('DOMContentLoaded', ()=>document.body.appendChild(blTodoBox));
+    /* ▲▲▲ */
+
+    const crestMap = {
+      /* NB1 → BL: ezt teljesen cseréld – NB1 klubok helyett BL klubok címerképei */
+      "Ferencváros": "crest/crest-fradi.png",
+      "Újpest FC": "crest/crest-ujpest.png",
+      "Debreceni VSC": "crest/crest-dvsc.png",
+      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
+      "Paksi FC": "crest/crest-paks.png",
+      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
+      "Puskás Akadémia": "crest/crest-puskas.png",
+      "Kisvárda FC": "crest/crest-kisvarda.png",
+      "Diósgyőri VTK": "crest/crest-dvtk.png",
+      "Zalaegerszegi TE FC": "crest/crest-zte.png",
+      "ETO FC Győr": "crest/crest-gyor.png",
+      "MTK Budapest": "crest/crest-mtk.png"
+    };
+
+    const facebookLinks = {
+      /* NB1 → BL: szintén cserélendő a klubok FB linkjeire vagy tiltható BL verzión */
+      "Ferencváros": "https://www.facebook.com/fradi.hu",
+      "Újpest FC": "https://www.facebook.com/ujpestfootballclub",
+      "Debreceni VSC": "https://www.facebook.com/dvscfoci",
+      "Nyíregyháza Spartacus": "https://www.facebook.com/NYSFC",
+      "Paksi FC": "https://www.facebook.com/paksifcofficialsite",
+      "Kazincbarcikai SC": "https://www.facebook.com/kolorcitykbsc",
+      "Puskás Akadémia": "https://www.facebook.com/PFLAhu",
+      "Kisvárda FC": "https://www.facebook.com/kisvardafc",
+      "Diósgyőri VTK": "https://www.facebook.com/DVTK1910",
+      "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc.hu",
+      "ETO FC Győr": "https://www.facebook.com/etofcgyor",
+      "MTK Budapest": "https://www.facebook.com/MTKBudapest"
+    };
+
+    function fmtTime(ts){
+      try{ return ts.toDate().toLocaleString("hu-HU", { hour12:false }); }catch{ return ""; }
+    }
+
+    let currentUserEmail = "";
+    let currentUserNick = "";
+    let currentUserRole = "user";
+    let favoriteTeam = "";
+    let chatLastSeen = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "login.html"; return; }
+
+        currentUserEmail = user.email;
+
+        const userRef = doc(db, "users", currentUserEmail);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          currentUserNick = data.nickname || currentUserEmail;
+          currentUserRole = data.role || "user";
+          favoriteTeam = data.favoriteTeam || "";
+          chatLastSeen = data.chatLastSeen || null;
+        } else {
+          currentUserNick = currentUserEmail;
+          currentUserRole = "user";
+          favoriteTeam = "";
+          chatLastSeen = null;
+        }
+
+        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
+        if (currentUserRole === "admin") {
+          document.getElementById("adminLink").style.display = "flex";
+        }
+
+        if (favoriteTeam) {
+          /* NB1-es témázás – BL-nél vagy kikapcsolod, vagy BL klubokra térképezed */
+          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+          document.body.classList.add(themeClass);
+
+          const crest = crestMap[favoriteTeam];
+          if (crest) {
+            const img = document.getElementById("favCrest");
+            img.src = crest; img.alt = favoriteTeam; img.hidden = false;
+          }
+        }
+
+        try{
+          /* NB1 -> BL: matches/tips kollekciók */
+          const now = new Date();
+          const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now)));
+          const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+          const myTipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail)));
+          const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
+          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+          const badge = document.getElementById("tipsBadge");
+          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+        }catch(e){ console.warn(e); }
+
+        try {
+          /* NB1 -> BL: settings/nbi_table_image kulcs */
+          const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
+          if (tableDoc.exists()) {
+            const base64 = tableDoc.data().base64;
+            const img = document.createElement("img");
+            img.src = `data:image/png;base64,${base64}`;
+            img.alt = "NB I tabella";
+            document.getElementById("tableContainer").appendChild(img);
+          }
+        } catch(e){ console.warn(e); }
+
+        try {
+          /* NB1 → BL: kedvenc NB1 csapat FB feedje – BL-re nem biztos értelmes */
+          const fbLink = facebookLinks[favoriteTeam];
+          if (fbLink) {
+            const fbDiv = document.createElement("div");
+            fbDiv.className = "fb-wrap";
+            fbDiv.innerHTML = `
+              <iframe 
+                src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=560&height=540&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
+                scrolling="no" frameborder="0" allowfullscreen="true"
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
+            document.getElementById("facebookFeedContainer").appendChild(fbDiv);
+          } else {
+            /* BL verzióban ide jöhetne pl. hivatalos UCL hírcsatorna */
+          }
+        } catch(e){ console.warn(e); }
+
+        initChat(userRef);
+
+        if (window.hideLoader) hideLoader();
+      });
+
+      document.getElementById("logout").addEventListener("click", () => {
+        signOut(auth).then(() => window.location.href = "login.html");
+      });
+    });
+
+    function initChat(userRef){
+      const fab = document.getElementById('chatToggle');
+      const fabBadge = document.getElementById('chatFabBadge');
+      const panel = document.getElementById('chatPanel');
+      const closeBtn = document.getElementById('chatClose');
+      const listEl = document.getElementById('chatMessages');
+      const inputEl = document.getElementById('chatInput');
+      const sendBtn = document.getElementById('chatSendBtn');
+
+      function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
+      function close(){ panel.classList.remove('open'); }
+      function toggle(){ panel.classList.contains('open') ? close() : open(); }
+      fab.addEventListener('click', toggle);
+      closeBtn.addEventListener('click', close);
+
+      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
+
+      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
+      onSnapshot(qAll, snap => {
+        listEl.innerHTML = '';
+        if (snap.empty){
+          const empty = document.createElement('div');
+          empty.className = 'chat-empty';
+          empty.textContent = 'Még nincs üzenet. Légy te az első!';
+          listEl.appendChild(empty);
+        } else {
+          let unread = 0;
+          snap.forEach(docu=>{
+            const d = docu.data();
+            const tsMs = d.ts?.toMillis?.() || 0;
+            if (tsMs > lastSeenMs) unread++;
+
+            const row = document.createElement('div');
+            row.className = 'msg';
+            row.innerHTML = `
+              <div style="flex:1 1 auto">
+                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
+                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+              </div>
+            `;
+            const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
+            if (canDelete){
+              const del = document.createElement('button');
+              del.className = 'del';
+              del.textContent = 'Törlés';
+              del.title = 'Üzenet törlése';
+              del.addEventListener('click', async ()=>{
+                try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }
+                catch(e){ console.warn('Del failed', e); }
+              });
+              row.appendChild(del);
+            }
+            listEl.appendChild(row);
+          });
+
+          if (!panel.classList.contains('open') && unread > 0){
+            fab.classList.add('has-unread');
+            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
+          } else {
+            fab.classList.remove('has-unread');
+            fabBadge.textContent = '';
+          }
+
+          setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
+        }
+      }, err => console.warn('chat snapshot error:', err));
+
+      sendBtn.addEventListener('click', async ()=>{
+        const txt = (inputEl.value || '').trim();
+        if (!txt){ inputEl.focus(); return; }
+        const backup = txt;
+        inputEl.value = '';
+        try{
+          await addDoc(collection(db,'chatMessages'), {
+            email: currentUserEmail,
+            nick: currentUserNick || 'Ismeretlen',
+            text: backup,
+            ts: serverTimestamp()
+          });
+          if (panel.classList.contains('open')) await markSeen();
+        }catch(e){
+          console.warn('Chat send failed:', e);
+          inputEl.value = backup; inputEl.focus();
+        }
+      });
+      inputEl.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
+      });
+
+      async function markSeen(){
+        try{
+          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+          lastSeenMs = Date.now();
+          fab.classList.remove('has-unread');
+          fabBadge.textContent = '';
+        }catch(e){ console.warn('markSeen failed', e); }
+      }
+    }
+
+    /* ---- Szabályzat modál logika (új) ---- */
+    const rulesModal = document.getElementById('rulesModal');
+    const openRulesBtn = document.getElementById('openRules');
+    const closeRules = document.getElementById('closeRules');
+    const closeRules2 = document.getElementById('closeRules2');
+
+    function openRulesModal(){ rulesModal.classList.add('open'); }
+    function closeRulesModal(){ rulesModal.classList.remove('open'); }
+
+    openRulesBtn?.addEventListener('click', openRulesModal);
+    closeRules?.addEventListener('click', closeRulesModal);
+    closeRules2?.addEventListener('click', closeRulesModal);
+    rulesModal?.addEventListener('click', (e)=>{ if(e.target===rulesModal) closeRulesModal(); });
+  </script>
+</head>
+<body>
+  <div class="layout">
+    <div class="bl-legend">
+      <b>Rózsaszín</b> = BL-re cserélendő / NB1-specifikus elem
+    </div>
+
+    <div class="header bl-flag">
+      <div class="header-left">
+        <img id="favCrest" class="fav-crest bl-flag" alt="" hidden>
+        <div>
+          <h1 class="bl-flag">NB1 TippLiga</h1>
+          <p id="welcome" class="welcome"></p>
+        </div>
+      </div>
+      <div>
+        <button id="logout" class="btn-accent" aria-label="Kilépés">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+          </svg>
+          Kilépés
+        </button>
+        <button id="openRules" class="btn-accent bl-flag" style="display:block;margin-top:10px;">Szabályzat</button>
+      </div>
+    </div>
+
+    <nav class="nav-grid">
+      <!-- Főoldal kártya (szövegek NB1-re utalnak) -->
+      <a class="nav-card bl-flag" href="dashboard.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
+          </svg>
+        </div>
+        <div class="text">
+          <span class="title">Főoldal</span>
+          <span class="desc">Tabella, hírek, kedvencek</span>
+        </div>
+      </a>
+
+      <!-- Szezon végi sorrend – NB1 koncepció; BL-ben tipikusan NEM kell (bl-flag) -->
+      <a class="nav-card bl-flag" href="positions.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Szezon végi sorrend</span>
+          <span class="desc">12 csapat – húzd a helyekre</span>
+        </div>
+      </a>
+
+      <!-- Meccstippek – link BL-re külön oldalra mutasson -->
+      <a class="nav-card bl-flag" href="matches.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
+          <span class="desc">Közelgő meccsek & tippek</span>
+        </div>
+      </a>
+
+      <!-- Eredmények – link BL verzióra -->
+      <a class="nav-card bl-flag" href="results.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Eredmények</span>
+          <span class="desc">Fordulónkénti bontás</span>
+        </div>
+      </a>
+
+      <!-- Összpontszám – link BL verzióra -->
+      <a class="nav-card bl-flag" href="leaderboard.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Összpontszám</span>
+          <span class="desc">Toplista & bónusz</span>
+        </div>
+      </a>
+
+      <!-- Profil – leírás NB1 kedvenc csapatra utal -->
+      <a class="nav-card bl-flag" href="profile.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Profil</span>
+          <span class="desc">Beállítások & kedvenc csapat</span>
+        </div>
+      </a>
+
+      <!-- Admin – ha lesz külön BL admin, ez is külön link lehet -->
+      <a class="nav-card bl-flag" id="adminLink" href="admin.html" style="display:none;">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Admin</span>
+          <span class="desc">Szezon-zár & beállítások</span>
+        </div>
+      </a>
+    </nav>
+
+    <!-- Szabályzat modál – teljes tartalma NB1-es (BL-re cserélendő) -->
+    <div id="rulesModal" class="rules-modal bl-flag" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
+      <div class="rules-dialog">
+        <div class="rules-head">
+          <div id="rulesTitle" class="rules-title bl-flag">NB1 TippLiga – Szabályzat</div>
+          <button id="closeRules" class="rules-close" aria-label="Bezárás">✕</button>
+        </div>
+        <div id="rulesBody" class="rules-body bl-flag">
+
+<p><strong>1. A játék célja</strong><br>
+A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong>NB1-es mérkőzések eredményeinek</strong> és a <strong>szezon végi sorrendnek</strong> a megtippelésével.</p>
+
+<p><strong>2. Tippelés</strong><br>
+- Minden mérkőzésre <strong>1×2 (Hazai–Döntetlen–Vendég)</strong> tipp adható le.<br>
+- A tipp a mérkőzés <strong>kezdési időpontjáig módosítható</strong>.<br>
+- Minden fordulóban <strong>egyetlen mérkőzésre kijelölhető „dupla tét”</strong>, amely <strong>kétszeres pontszorzót</strong> ad.<br>
+- <strong>A duplázás módosítása csak az adott forduló első mérkőzésének kezdetéig lehetséges</strong>, utána már nem változtatható.<br>
+- A szezon kezdetén minden játékos <strong>leadhatja tippjét a teljes bajnokság végeredményének sorrendjére</strong> (1–12. hely).</p>
+
+<p><strong>4. Pontszámítás</strong><br>
+- A helyes tipp pontszáma: <strong>odds × tét</strong> (tét = 1 pont, duplázásnál 2 pont).<br>
+- Rossz tipp esetén <strong>0 pont</strong> jár.<br>
+- <strong>Szezon végi sorrend pontozás:</strong> ahány csapat pontos helyezését eltalálja a játékos, annyiszor <strong>+1% bónusz</strong> kerül hozzáadásra a <strong>teljes szezonos összpontszámához</strong>.<br>
+  <em>Példa:</em> ha egy játékos <strong>5 csapat pontos helyét</strong> találja el, akkor a szezon végén összpontszámát <strong>+5%-kal növeljük</strong>.<br>
+- Az oddsok <strong>a Tippmixpro alapján kerülnek meghatározásra</strong> abban az időpontban, amikor a mérkőzés feltöltésre kerül.<br>
+  <strong>A kezdésig az odds módosulhat</strong>, és nem feltétlenül egyezik az aktuálisan érvényes oddsokkal, mivel az értékek manuálisan kerülnek feltöltésre, és nem frissülnek folyamatosan.</p>
+
+<p><strong>5. Eredmények és rangsor</strong><br>
+- A pontok összesítése <strong>fordulónként</strong> és <strong>teljes szezonra</strong> is megtörténik.<br>
+- A „Toplista” a játékosokat <strong>összpontszám</strong> alapján sorolja.</p>
+
+<p><strong>6. Tipp:</strong><br>
+- <strong>A profil menüben érdemes kiválasztani a kedvenc csapatodat</strong>, mert így a felület színe és megjelenése a csapatodhoz igazodik, és a klubcímere is megjelenik a profilodnál.</p>
+ 
+        </div>
+        <div class="rules-foot">
+          <span id="rulesUpdated" class="rules-updated bl-flag">Utoljára frissítve: 2025. 08. 14.</span>
+          <button id="closeRules2" class="btn-accent">Bezárás</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <section class="card table-wrap bl-flag">
+        <h3 class="bl-flag">NB I tabella</h3>
+        <div id="tableContainer"></div>
+      </section>
+
+      <section class="card bl-flag">
+        <h3 class="bl-flag">Csapatod hírei</h3>
+        <div id="facebookFeedContainer"></div>
+      </section>
+    </div>
+  </div>
+
+  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+    </svg>
+    <span id="chatFabBadge" class="fab-badge"></span>
+  </button>
+
+  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
+    <div class="chat-head">
+      <div class="chat-title">Közösségi chat</div>
+      <button id="chatClose" aria-label="Bezárás">✕</button>
+    </div>
+    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
+    <div id="chatComposer">
+      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
+      <button id="chatSendBtn">Küldés</button>
+    </div>
+  </section>
+</body>
+</html>
