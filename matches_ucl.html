@@ -157,11 +157,17 @@
     }
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
+    /* ------ TIP-sémák egységes kezelése ------ */
+    const tipChoice = t => (t?.choice ?? t?.tip ?? "");
+    const tipDouble = t => !!(t?.double ?? t?.isDouble);
+    const tipRound  = t => String(t?.round ?? t?.roundId ?? "");
+    const tipTsMs   = t => t?.updatedAt?.toMillis?.() || t?.createdAt?.toMillis?.() || t?.timestamp?.toMillis?.() || 0;
+
     /* Állapot */
     let currentUserEmail = "";
     let currentUserNick  = "";
     let currentUserRole  = "user";
-    let favouriteTeamucl = "";     // ← THEMING EZT HASZNÁLJA
+    let favouriteTeamucl = "";     // theming
     let chatLastSeen     = null;
 
     let myTipsByMatch = new Map();
@@ -183,7 +189,7 @@
           const d = userSnap.data();
           currentUserNick  = d.nickname || currentUserEmail;
           currentUserRole  = d.role || "user";
-          favouriteTeamucl = d.favouriteTeamucl || "";   // ← itt olvassuk a mezőt
+          favouriteTeamucl = d.favouriteTeamucl || "";
           chatLastSeen     = d.chatLastSeen || null;
         } else {
           currentUserNick = currentUserEmail;
@@ -195,7 +201,7 @@
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
         if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
 
-        /* THEME: favouriteTeamucl alapján */
+        /* THEME */
         if (favouriteTeamucl) {
           const themeClass = "theme-" + favouriteTeamucl.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
@@ -212,23 +218,23 @@
           const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
           const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
 
-          // 2) Saját tippek UCL-ből
+          // 2) Saját tippek UCL-ből (legfrissebb per user+match, bármely sémából)
           const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
           const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
           const latestByMatch = new Map();
           for (const t of tips){
             const k = t.matchId;
+            if (!k) continue;
             const prev = latestByMatch.get(k);
-            const prevTs = prev?.updatedAt?.toMillis?.() || prev?.createdAt?.toMillis?.() || 0;
-            const curTs = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
-            if (!prev || curTs >= prevTs) latestByMatch.set(k, t);
+            if (!prev || tipTsMs(t) >= tipTsMs(prev)) latestByMatch.set(k, t);
           }
           myTipsByMatch = latestByMatch;
 
+          // duplák per forduló
           doublesByRound.clear();
           for (const t of latestByMatch.values()){
-            if (t.double && t.round != null){
-              doublesByRound.set(String(t.round), t.matchId);
+            if (tipDouble(t) && tipRound(t)){
+              doublesByRound.set(tipRound(t), t.matchId);
             }
           }
 
@@ -270,8 +276,8 @@
       wrap.innerHTML = "";
       for (const m of matches){
         const tip = myTipsByMatch.get(m.id) || {};
-        const curChoice = tip.choice || "";
-        const isDouble = !!tip.double;
+        const curChoice = tipChoice(tip);
+        const isDouble  = tipDouble(tip);
 
         const roundStr = matchRound(m);
         const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
@@ -365,32 +371,43 @@
       });
     }
 
+    // Bármely sémával működik: user összes tippje, és csak ugyanarra a fordulóra nullázzuk a duplát
     async function enforceSingleDouble(roundKey, keepMatchId){
       if (!roundKey) return;
-      const qTips = query(collection(db,"ucl_tips"), where("user","==", currentUserEmail), where("round","==", roundKey));
+      const qTips = query(collection(db,"ucl_tips"), where("user","==", currentUserEmail));
       const snap = await getDocs(qTips);
       const tasks = [];
       snap.forEach(docu=>{
         const d = docu.data();
-        if (d.double && d.matchId !== keepMatchId){
-          tasks.push(updateDoc(doc(db,"ucl_tips", docu.id), { double:false, updatedAt: serverTimestamp() }));
+        const sameRound = tipRound(d) === String(roundKey);
+        if (sameRound && tipDouble(d) && d.matchId !== keepMatchId){
+          tasks.push(updateDoc(doc(db,"ucl_tips", docu.id), {
+            double:false, isDouble:false, updatedAt: serverTimestamp(), timestamp: serverTimestamp()
+          }));
         }
       });
       for (const p of tasks) { try{ await p; }catch(e){} }
     }
 
+    // Mentés: írjuk ki a régi ÉS az új mezőket is
     async function saveTip(matchObj, choice, isDouble, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
+      const nowTs = serverTimestamp();
+
       const tipData = {
         user: currentUserEmail,
         nick: currentUserNick || currentUserEmail,
         matchId: matchId,
         round: String(roundStr),
+        roundId: String(roundStr),
         choice: choice || "",
+        tip: choice || "",
         double: !!isDouble,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        isDouble: !!isDouble,
+        createdAt: nowTs,
+        updatedAt: nowTs,
+        timestamp: nowTs
       };
 
       let existingId = null;
@@ -401,7 +418,7 @@
 
       try{
         if (existingId){
-          await updateDoc(doc(db,"ucl_tips", existingId), tipData);
+          await setDoc(doc(db,"ucl_tips", existingId), tipData, { merge:true });
         } else {
           const fixedId = `${currentUserEmail.replace(/[^a-zA-Z0-9._-]/g,'_')}_${matchId}`;
           await setDoc(doc(db,"ucl_tips", fixedId), tipData, { merge:true });
@@ -412,7 +429,7 @@
       }catch(e){ console.warn(e); }
     }
 
-    /* ===== Chat (változatlan) ===== */
+    /* ===== Chat ===== */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -622,4 +639,3 @@
   </section>
 </body>
 </html>
-
