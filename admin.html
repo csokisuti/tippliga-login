@@ -36,24 +36,34 @@
     .sortable li.dragging{opacity:.5}
     .sortable li::before{counter-increment:pos;content:counter(pos) ". ";position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
     .filterbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+    .small{font-size:12px}
+    .inline{display:inline-flex;gap:8px;align-items:center}
+    .xscroll{overflow:auto}
+    details summary{cursor:pointer;color:#334155}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px}
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc,
+      query, orderBy, limit
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = { apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc", authDomain:"tippliga-4b3af.firebaseapp.com", projectId:"tippliga-4b3af", storageBucket:"tippliga-4b3af.appspot.com", messagingSenderId:"720359845241", appId:"1:720359845241:web:d3d6edcac6b43ebff053a8" };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    /* <-- SAJÁT GAS WEBAPP URL (tisztán /exec, nincs query param) */
+    /* GAS webapp URL (tisztán /exec) */
     const GS_BULKMAIL_URL = "https://script.google.com/macros/s/AKfycbzDLLR7gqYnHVRCJbiIhvs9qe5lTh7kMLeRzMXv7a6-Hh9uWb3zXkKmk1sjYemF4Dfe/exec";
 
     const teams = ["Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr","Kazincbarcikai SC","Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus","Paksi FC","Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"];
 
     function parseOutcome(r){ const p=r.split("-").map(x=>parseInt(x.trim())); if(p.length!==2||isNaN(p[0])||isNaN(p[1])) return ""; if(p[0]>p[1]) return "1"; if(p[0]<p[1]) return "2"; return "X" }
     const stripNumPrefix = s => (s||"").replace(/^\s*\d+[\.\)]?\s*/,"");
+
+    let _currentTplId = null; // betöltött sablon azonosítója
 
     onAuthStateChanged(auth, async (user) => {
       if(!user){ document.body.innerHTML = "<h2 style='padding:20px'>⛔ Nincs jogosultságod az admin felülethez.</h2>"; return }
@@ -67,6 +77,8 @@
       await loadResults();
       await loadPositionsLock();
       await loadOfficialOrder();
+      await loadTemplates();
+      await loadMailLog();
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=""}){
@@ -83,7 +95,7 @@
       const back=document.createElement("button"); back.className="btn"; back.textContent="⬅️ Vissza a dashboardra"; back.onclick=()=>location.href="dashboard.html";
       const expand=document.createElement("button"); expand.className="btn"; expand.textContent="Mindet nyisd le"; expand.onclick=()=>document.querySelectorAll(".card").forEach(c=>c.classList.add("open"));
       const collapse=document.createElement("button"); collapse.className="btn"; collapse.textContent="Mindet csukd össze"; collapse.onclick=()=>document.querySelectorAll(".card").forEach(c=>c.classList.remove("open"));
-      const refresh=document.createElement("button"); refresh.className="btn"; refresh.textContent="Frissítés"; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadOfficialOrder(); };
+      const refresh=document.createElement("button"); refresh.className="btn"; refresh.textContent="Frissítés"; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadOfficialOrder(); loadTemplates(); loadMailLog(); };
       left.appendChild(back); right.append(expand, collapse, refresh); top.append(left,right); document.body.appendChild(top);
 
       const wrap=document.createElement("div"); wrap.className="cards";
@@ -124,15 +136,42 @@
 
       const cUsers = makeCard({title:"Felhasználók kezelése", hint:"Szerepkör váltás, törlés", id:"card-users", bodyHTML:`<ul id="userList" class="list" style="margin:0"></ul>`});
 
-      const cBulk = makeCard({title:"Köremail küldése", hint:"Címzettek kijelölése, tárgy, üzenet", id:"card-bulkmail", bodyHTML:`
+      const cBulk = makeCard({title:"Köremail küldése + sablonok", hint:"Címzettek kijelölése, tárgy, üzenet, sablonkezelés", id:"card-bulkmail", bodyHTML:`
         <div class="row">
           <button class="btn" id="bulkLoadUsers">Felhasználók betöltése</button>
-          <label><input type="checkbox" id="bulkSelectAll"> Mind kijelöl</label>
+          <label class="inline"><input type="checkbox" id="bulkSelectAll"> Mind kijelöl</label>
         </div>
         <div id="bulkUsersBox" style="max-height:260px; overflow:auto; border:1px solid var(--border); border-radius:10px; padding:8px; margin:8px 0;"></div>
-        <div class="row"><input id="bulkSubject" placeholder="Tárgy" style="flex:1;"></div>
-        <div class="row"><textarea id="bulkMessage" placeholder="HTML üzenet" rows="8" style="width:100%"></textarea></div>
-        <div class="row"><button class="btn primary" id="bulkSendBtn">Küldés</button></div>`});
+
+        <div class="row">
+          <input id="bulkSubject" placeholder="Tárgy" style="flex:1;">
+        </div>
+        <div class="row">
+          <textarea id="bulkMessage" placeholder="HTML üzenet" rows="8" style="width:100%"></textarea>
+        </div>
+
+        <div class="row" style="gap:12px; align-items:center; border-top:1px dashed var(--border); padding-top:10px; margin-top:6px">
+          <strong class="muted">Sablonok</strong>
+          <select id="tplSelect" style="min-width:240px"><option value="">— Válassz sablont —</option></select>
+          <button class="btn" id="tplRefresh" title="Sablonok frissítése">Frissít</button>
+          <button class="btn" id="tplLoad" title="Betöltés a szerkesztőbe">Betölt</button>
+          <button class="btn" id="tplSaveAs" title="Jelenlegi tartalom mentése új sablonként">Mentés újként</button>
+          <button class="btn" id="tplSave" title="Kijelölt sablon felülírása a jelenlegi tartalommal">Felülírás</button>
+          <button class="btn danger" id="tplDelete" title="Kijelölt sablon törlése">Törlés</button>
+          <span class="muted small" id="tplStatus"></span>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" id="bulkSendBtn">Küldés</button>
+          <span id="bulkInfo" class="muted small"></span>
+        </div>`});
+
+      const cLog = makeCard({title:"Köremail napló", hint:"Utolsó 50 küldés", id:"card-maillog", bodyHTML:`
+        <div class="row">
+          <button class="btn" id="logRefresh">Frissít</button>
+          <span class="muted small">Katt a sorra a részletekhez • <span class="kbd">↩ Betölt</span> gombbal visszatöltheted a tárgy/üzenet mezőkbe</span>
+        </div>
+        <div id="mailLogBox" class="xscroll"></div>`});
 
       const cTable = makeCard({title:"NB1 tabella kép feltöltése", hint:"PNG/JPG, base64 tárolás", id:"card-table", bodyHTML:`
         <div class="row">
@@ -160,20 +199,11 @@
         </div>`});
 
       document.body.appendChild(wrap);
-      wrap.append(cAdd.section, cManage.section, cRes.section, cUsers.section, cBulk.section, cTable.section, cOrder.section, cLock.section);
+      wrap.append(cAdd.section, cManage.section, cRes.section, cUsers.section, cBulk.section, cLog.section, cTable.section, cOrder.section, cLock.section);
 
-      document.getElementById("matchForm").addEventListener("submit", async (e)=>{
-        e.preventDefault();
-        const startTime = Timestamp.fromDate(new Date(document.getElementById("startTime").value));
-        const homeTeam=document.getElementById("homeTeam"), awayTeam=document.getElementById("awayTeam"), roundId=document.getElementById("roundId"), odds1=document.getElementById("odds1"), oddsX=document.getElementById("oddsX"), odds2=document.getElementById("odds2");
-        await addDoc(collection(db,"matches"),{ homeTeam:homeTeam.value, awayTeam:awayTeam.value, startTime, roundId:roundId.value, odds:{"1":parseFloat(odds1.value),"X":parseFloat(oddsX.value),"2":parseFloat(odds2.value)} });
-        alert("Meccs mentve"); e.target.reset(); await loadMatches(); await loadResults();
-      });
+      document.getElementById("matchForm").addEventListener("submit", onAddMatch);
 
-      document.getElementById("uploadTableImage").addEventListener("click", async ()=>{
-        const f=document.getElementById("tableImageInput").files[0]; if(!f) return alert("Válassz ki egy képet!");
-        const rd=new FileReader(); rd.onload=async()=>{ const b64=rd.result.split(",")[1]; await setDoc(doc(db,"settings","nbi_table_image"),{ base64:b64 }); alert("Kép elmentve Firestore-ba!"); }; rd.readAsDataURL(f);
-      });
+      document.getElementById("uploadTableImage").addEventListener("click", onUploadTable);
 
       document.getElementById("withResultHeader").onclick=()=>{ const c=document.getElementById("withResultContent"); c.style.display = c.style.display==="none" ? "block":"none" };
 
@@ -187,8 +217,19 @@
       document.getElementById("bulkLoadUsers").onclick = bulkLoadUsers;
       document.getElementById("bulkSelectAll").onchange = (e)=>{ document.querySelectorAll("#bulkUsersBox input[type=checkbox]").forEach(cb=> cb.checked = e.target.checked) };
       document.getElementById("bulkSendBtn").onclick = bulkSend;
+
+      // sablonok
+      document.getElementById("tplRefresh").onclick = loadTemplates;
+      document.getElementById("tplLoad").onclick = loadTemplateIntoForm;
+      document.getElementById("tplSaveAs").onclick = saveTemplateAs;
+      document.getElementById("tplSave").onclick = saveTemplateUpdate;
+      document.getElementById("tplDelete").onclick = deleteTemplate;
+
+      // napló
+      document.getElementById("logRefresh").onclick = loadMailLog;
     }
 
+    // === Matches CRUD ===
     let _matchesCache = [];
     async function loadMatches(){
       const container = document.getElementById("matchesList");
@@ -266,6 +307,19 @@
       await loadResults();
     }
 
+    async function onAddMatch(e){
+      e.preventDefault();
+      const startTime = Timestamp.fromDate(new Date(document.getElementById("startTime").value));
+      const homeTeam=document.getElementById("homeTeam"), awayTeam=document.getElementById("awayTeam"), roundId=document.getElementById("roundId"), odds1=document.getElementById("odds1"), oddsX=document.getElementById("oddsX"), odds2=document.getElementById("odds2");
+      await addDoc(collection(db,"matches"),{ homeTeam:homeTeam.value, awayTeam:awayTeam.value, startTime, roundId:roundId.value, odds:{"1":parseFloat(odds1.value),"X":parseFloat(oddsX.value),"2":parseFloat(odds2.value)} });
+      alert("Meccs mentve"); e.target.reset(); await loadMatches(); await loadResults();
+    }
+
+    async function onUploadTable(){
+      const f=document.getElementById("tableImageInput").files[0]; if(!f) return alert("Válassz ki egy képet!");
+      const rd=new FileReader(); rd.onload=async()=>{ const b64=rd.result.split(",")[1]; await setDoc(doc(db,"settings","nbi_table_image"),{ base64:b64 }); alert("Kép elmentve Firestore-ba!"); }; rd.readAsDataURL(f);
+    }
+
     async function loadResults(){
       const noC=document.getElementById("noResultContent");
       const withC=document.getElementById("withResultContent");
@@ -308,6 +362,7 @@
       });
     }
 
+    // === Users ===
     async function loadUsers(){
       const list=document.getElementById("userList"); list.innerHTML="";
       const snap=await getDocs(collection(db,"users"));
@@ -334,6 +389,7 @@
       });
     }
 
+    // === Bulk mail (users + send) ===
     async function bulkLoadUsers(){
       const box=document.getElementById("bulkUsersBox");
       box.innerHTML = "<div class='muted'>Betöltés…</div>";
@@ -360,17 +416,148 @@
       const user=auth.currentUser; if(!user){ alert("Nincs bejelentkezve."); return }
       const idToken=await user.getIdToken();
 
-      /* simple request – nincs JSON header; action a BODY-ban */
+      document.getElementById("bulkInfo").textContent = "Küldés folyamatban…";
+
+      // simple request – nincs JSON header; action a BODY-ban
       const res = await fetch(GS_BULKMAIL_URL, {
         method: "POST",
-        body: JSON.stringify({ action:"sendBulkEmail", idToken, emails, subject, htmlBody })
+        body: JSON.stringify({ action:"sendBulkEmail", idToken, emails, subject, htmlBody, templateId: _currentTplId || "" })
       });
 
       const data=await res.json().catch(()=>({ok:false,error:"JSON hiba"}));
+      document.getElementById("bulkInfo").textContent = "";
       if(!data.ok){ alert("Hiba a küldésnél: " + (data.error||"")); return }
       alert(`Kész. Kiküldve: ${data.sent} címre.`);
+      await loadMailLog();
     }
 
+    // === Templates ===
+    async function loadTemplates(){
+      const sel = document.getElementById("tplSelect");
+      sel.innerHTML = `<option value="">— Válassz sablont —</option>`;
+      const qy = query(collection(db,"mailTemplates"), orderBy("updatedAt","desc"), limit(100));
+      const snap = await getDocs(qy);
+      const opts = [];
+      snap.forEach(d=>{
+        const t = d.data();
+        opts.push(`<option value="${d.id}">${t.title||"(névtelen)"} — ${t.subject||""}</option>`);
+      });
+      sel.insertAdjacentHTML("beforeend", opts.join(""));
+      document.getElementById("tplStatus").textContent = `Sablonok: ${opts.length} db`;
+    }
+
+    async function loadTemplateIntoForm(){
+      const id = document.getElementById("tplSelect").value;
+      if(!id) return alert("Válassz sablont.");
+      const d = await getDoc(doc(db,"mailTemplates", id));
+      if(!d.exists()) return alert("A sablon nem található.");
+      const t = d.data();
+      document.getElementById("bulkSubject").value = t.subject || "";
+      document.getElementById("bulkMessage").value = t.htmlBody || "";
+      _currentTplId = id;
+      document.getElementById("tplStatus").textContent = `Betöltve: ${t.title||id}`;
+    }
+
+    async function saveTemplateAs(){
+      const title = prompt("Sablon neve:");
+      if(!title) return;
+      const subject=(document.getElementById("bulkSubject").value||"").trim();
+      const htmlBody=(document.getElementById("bulkMessage").value||"").trim();
+      const user = auth.currentUser;
+      await addDoc(collection(db,"mailTemplates"),{
+        title, subject, htmlBody,
+        createdBy: user?.email || "",
+        updatedAt: Timestamp.fromDate(new Date())
+      });
+      _currentTplId = null;
+      await loadTemplates();
+      document.getElementById("tplStatus").textContent = `Mentve: ${title}`;
+    }
+
+    async function saveTemplateUpdate(){
+      const id = document.getElementById("tplSelect").value;
+      if(!id) return alert("Válassz sablont, amit felülírunk.");
+      const subject=(document.getElementById("bulkSubject").value||"").trim();
+      const htmlBody=(document.getElementById("bulkMessage").value||"").trim();
+      await updateDoc(doc(db,"mailTemplates", id),{
+        subject, htmlBody, updatedAt: Timestamp.fromDate(new Date())
+      });
+      _currentTplId = id;
+      await loadTemplates();
+      document.getElementById("tplStatus").textContent = "Sablon frissítve.";
+    }
+
+    async function deleteTemplate(){
+      const id = document.getElementById("tplSelect").value;
+      if(!id) return alert("Válassz sablont a törléshez.");
+      if(!confirm("Biztos törlöd a sablont?")) return;
+      await deleteDoc(doc(db,"mailTemplates", id));
+      _currentTplId = null;
+      await loadTemplates();
+      document.getElementById("tplStatus").textContent = "Sablon törölve.";
+    }
+
+    // === Mail log ===
+    function fmtDate(ts){ try{ return ts?.toDate?.()?.toLocaleString("hu-HU") || "" }catch{ return "" } }
+
+    async function loadMailLog(){
+      const box = document.getElementById("mailLogBox");
+      box.innerHTML = "<div class='muted'>Betöltés…</div>";
+      const qy = query(collection(db,"adminMailLog"), orderBy("sentAt","desc"), limit(50));
+      const snap = await getDocs(qy);
+      if(snap.empty){ box.innerHTML = "<div class='muted'>Nincs még bejegyzés.</div>"; return; }
+
+      let html = "<table><thead><tr><th>Időpont</th><th>Tárgy</th><th>Címzettek</th><th>Feladó</th><th></th></tr></thead><tbody>";
+      const rows = [];
+      snap.forEach(d=>{
+        const x=d.data();
+        const id=d.id;
+        const count = x.sentCount ?? (x.recipients?.length||0);
+        rows.push(`
+          <tr data-id="${id}">
+            <td>${fmtDate(x.sentAt)}</td>
+            <td>${(x.subject||"").replace(/</g,"&lt;")}</td>
+            <td>${count} címzett</td>
+            <td>${x.sender||""}</td>
+            <td><button class="btn small" data-load="${id}">↩ Betölt</button></td>
+          </tr>
+          <tr><td colspan="5">
+            <details>
+              <summary>Részletek</summary>
+              <div class="small" style="margin:8px 0"><strong>Címzettek:</strong> ${(x.recipients||[]).join(", ")||"—"}</div>
+              <div class="small"><strong>Forrás sablon:</strong> ${x.templateId||"—"}</div>
+              <div style="border:1px solid var(--border); border-radius:10px; padding:8px; background:#fff; margin-top:8px">
+                ${x.bodyHtml||x.html||""}
+              </div>
+            </details>
+          </td></tr>
+        `);
+      });
+      html += rows.join("") + "</tbody></table>";
+      box.innerHTML = html;
+
+      // Betölt gombok
+      box.querySelectorAll("button[data-load]").forEach(btn=>{
+        btn.onclick = async ()=>{
+          const id = btn.getAttribute("data-load");
+          const d = await getDoc(doc(db,"adminMailLog", id));
+          if(!d.exists()) return;
+          const x = d.data();
+          document.getElementById("bulkSubject").value = x.subject || "";
+          document.getElementById("bulkMessage").value = x.bodyHtml || x.html || "";
+          _currentTplId = x.templateId || null;
+          alert("Betöltve a szerkesztőbe.");
+        };
+      });
+    }
+
+    // expose
+    window.updateMatch = updateMatch;
+    window.deleteMatch = deleteMatch;
+    window.saveLock = saveLock;
+    window.clearLock = clearLock;
+
+    // lock helpers
     async function loadPositionsLock(){
       const status=document.getElementById("lockStatus");
       const snap=await getDoc(doc(db,"settings","positionsLock"));
@@ -409,11 +596,6 @@
       await setDoc(doc(db,"finalStandings","official"),{ teams:list, positions:list.map((t,i)=>({ team:t, position:i+1 })) });
       alert("Sorrend elmentve.");
     }
-
-    window.updateMatch = updateMatch;
-    window.deleteMatch = deleteMatch;
-    window.saveLock = saveLock;
-    window.clearLock = clearLock;
   </script>
 </head>
 <body></body>
