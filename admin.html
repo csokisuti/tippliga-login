@@ -47,6 +47,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    /* <-- SAJÁT GAS WEBAPP URL (tisztán /exec, nincs query param) */
     const GS_BULKMAIL_URL = "https://script.google.com/macros/s/AKfycbzDLLR7gqYnHVRCJbiIhvs9qe5lTh7kMLeRzMXv7a6-Hh9uWb3zXkKmk1sjYemF4Dfe/exec";
 
     const teams = ["Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr","Kazincbarcikai SC","Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus","Paksi FC","Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"];
@@ -358,12 +359,12 @@
       if(!htmlBody){ alert("Adj meg üzenetet."); return }
       const user=auth.currentUser; if(!user){ alert("Nincs bejelentkezve."); return }
       const idToken=await user.getIdToken();
-     const res = await fetch(GS_BULKMAIL_URL, {
-  method: 'POST',
-  // fejlécek NÉLKÜL, vagy:
-  // headers: {'Content-Type':'text/plain;charset=utf-8'},
-  body: JSON.stringify({ idToken, emails, subject, htmlBody })
-});
+
+      /* simple request – nincs JSON header; action a BODY-ban */
+      const res = await fetch(GS_BULKMAIL_URL, {
+        method: "POST",
+        body: JSON.stringify({ action:"sendBulkEmail", idToken, emails, subject, htmlBody })
+      });
 
       const data=await res.json().catch(()=>({ok:false,error:"JSON hiba"}));
       if(!data.ok){ alert("Hiba a küldésnél: " + (data.error||"")); return }
