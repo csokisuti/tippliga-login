@@ -358,7 +358,13 @@
       if(!htmlBody){ alert("Adj meg üzenetet."); return }
       const user=auth.currentUser; if(!user){ alert("Nincs bejelentkezve."); return }
       const idToken=await user.getIdToken();
-      const res=await fetch(GS_BULKMAIL_URL,{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ idToken, emails, subject, htmlBody }) });
+     const res = await fetch(GS_BULKMAIL_URL, {
+  method: 'POST',
+  // fejlécek NÉLKÜL, vagy:
+  // headers: {'Content-Type':'text/plain;charset=utf-8'},
+  body: JSON.stringify({ idToken, emails, subject, htmlBody })
+});
+
       const data=await res.json().catch(()=>({ok:false,error:"JSON hiba"}));
       if(!data.ok){ alert("Hiba a küldésnél: " + (data.error||"")); return }
       alert(`Kész. Kiküldve: ${data.sent} címre.`);
