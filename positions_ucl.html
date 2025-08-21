@@ -146,8 +146,8 @@
 
     // model
     let selectedTop8 = [];         // string[]
-    let championCandidates = [];   // {team, oddsPercent}
-    let goldenCandidates   = [];   // {player, team?, oddsPercent}
+    let championCandidates = [];   // {team, odds?}
+    let goldenCandidates   = [];   // {player, team?, odds?}
     let pickedChampion     = "";   // string
     let pickedGolden       = "";   // player string
     let teamQuery          = "";   // kereső
@@ -210,8 +210,18 @@
     });
 
     /* ===== Helpers ===== */
-    const percentToDecimal = p => (p && p > 0) ? (100 / p) : null;
-    const fmtDec = d => (d==null ? "—" : d.toFixed(2));
+    const asNumber = v => (v===null||v===undefined||v==='') ? null : Number(v);
+    // Adminból érkező odds normalizálása (odds -> oddsDecimal -> 100/percent)
+    const fromCandidateOdds = c => {
+      const direct = asNumber(c?.odds);
+      if (direct != null && !Number.isNaN(direct)) return direct;
+      const dec = asNumber(c?.oddsDecimal);
+      if (dec != null && !Number.isNaN(dec)) return dec;
+      const pct = asNumber(c?.oddsPercent);
+      if (pct != null && pct > 0) return 100 / pct;
+      return null;
+    };
+    const fmtOdds = v => (v==null || Number.isNaN(v)) ? "—" : Number(v).toFixed(2);
 
     /* ===== Accordion ===== */
     function initAccordions(){
@@ -253,19 +263,19 @@
         return;
       }
       championCandidates.forEach(c=>{
-        const dec = percentToDecimal(Number(c.oddsPercent||0));
+        const odds = fromCandidateOdds(c); // az admin által megadott odds
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.team = c.team;
-        el.dataset.odds = dec==null ? "" : String(dec);
+        el.dataset.odds = odds==null ? "" : String(odds);
         el.innerHTML = `
           <img class="pc-crest" src="${crestFor(c.team)}" alt="">
           <div class="pc-text">
             <div class="pc-name">${c.team}</div>
-            <div class="badge-odds">${fmtDec(dec)}</div>
+            <div class="badge-odds">${fmtOdds(odds)}</div>
           </div>
           <div class="pc-check">✓</div>`;
-        el.addEventListener('click', ()=> saveChampionPickWith(c.team, Number(c.oddsPercent||0), dec));
+        el.addEventListener('click', ()=> saveChampionPickWith(c.team, odds));
         box.appendChild(el);
       });
       highlightChampionCard();
@@ -280,21 +290,21 @@
       }
       goldenCandidates.forEach(c=>{
         const crest = crestFor(c.team||'') || '';
-        const dec = percentToDecimal(Number(c.oddsPercent||0));
+        const odds = fromCandidateOdds(c); // az admin által megadott odds
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.player = c.player;
         el.dataset.team = c.team || '';
-        el.dataset.odds = dec==null ? "" : String(dec);
+        el.dataset.odds = odds==null ? "" : String(odds);
         el.innerHTML = `
           ${crest? `<img class="pc-crest" src="${crest}" alt="">` : `<div class="pc-crest" style="display:flex;align-items:center;justify-content:center;font-size:16px">⚽</div>`}
           <div class="pc-text">
             <div class="pc-name">${c.player}</div>
             <div class="pc-sub">${c.team || '–'}</div>
-            <div class="badge-odds">${fmtDec(dec)}</div>
+            <div class="badge-odds">${fmtOdds(odds)}</div>
           </div>
           <div class="pc-check">✓</div>`;
-        el.addEventListener('click', ()=> saveGoldenPickWith(c.player, c.team||'', Number(c.oddsPercent||0), dec));
+        el.addEventListener('click', ()=> saveGoldenPickWith(c.player, c.team||'', odds));
         box.appendChild(el);
       });
       highlightGoldenCard();
@@ -350,19 +360,22 @@
     }
 
     let saveTimerC = null;
-    function saveChampionPickWith(team, oddsPercent, oddsDecimal){
+    function saveChampionPickWith(team, oddsDecimal){
       clearTimeout(saveTimerC);
       pickedChampion = team;
       highlightChampionCard();
       updateBadges();
       saveTimerC = setTimeout(async ()=>{
         try{
+          const oddsDec = (oddsDecimal!=null && !Number.isNaN(oddsDecimal)) ? Number(oddsDecimal) : null;
+          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null; // kompatibilitás, ha szükséges
           await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
             email: currentUserEmail,
             nick: currentUserNick || currentUserEmail,
             team,
-            oddsPercent: Number(oddsPercent||0),
-            oddsDecimal: oddsDecimal ?? null,
+            odds: oddsDec,            // <-- az adminnal egyező odds
+            oddsDecimal: oddsDec,     // (opcionális kompat)
+            oddsPercent: oddsPct,     // (opcionális kompat)
             updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateC");
@@ -372,20 +385,23 @@
     }
 
     let saveTimerG = null;
-    function saveGoldenPickWith(player, team, oddsPercent, oddsDecimal){
+    function saveGoldenPickWith(player, team, oddsDecimal){
       clearTimeout(saveTimerG);
       pickedGolden = player;
       highlightGoldenCard();
       updateBadges();
       saveTimerG = setTimeout(async ()=>{
         try{
+          const oddsDec = (oddsDecimal!=null && !Number.isNaN(oddsDecimal)) ? Number(oddsDecimal) : null;
+          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null; // kompatibilitás, ha szükséges
           await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
             email: currentUserEmail,
             nick: currentUserNick || currentUserEmail,
             player,
             team,
-            oddsPercent: Number(oddsPercent||0),
-            oddsDecimal: oddsDecimal ?? null,
+            odds: oddsDec,            // <-- az adminnal egyező odds
+            oddsDecimal: oddsDec,     // (opcionális kompat)
+            oddsPercent: oddsPct,     // (opcionális kompat)
             updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateG");
@@ -441,7 +457,7 @@
 
     /* ===== Fejléc pipák ===== */
     function updateBadges(){
-      setStatus('stTop8', selectedTop8.length===8);  // csak 8/8-nál zöld
+      setStatus('stTop8', selectedTop8.length===8);
       setStatus('stChampion', !!pickedChampion);
       setStatus('stGolden', !!pickedGolden);
     }
