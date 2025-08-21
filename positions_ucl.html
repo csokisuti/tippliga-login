@@ -9,96 +9,95 @@
   <script src="loader.js" defer></script>
 
   <style>
-    .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
-    .content-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-    @media (max-width:1000px){ .content-grid{ grid-template-columns: 1fr; } }
+    .layout{display:flex;flex-direction:column;gap:16px;max-width:1200px;margin:0 auto;padding:20px}
+    .content-grid{display:grid;grid-template-columns:1fr;gap:16px}
 
-    .header{ display:flex; align-items:center; justify-content:space-between; }
-    .header-left{ display:flex; align-items:center; gap:12px; }
-    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
-    .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
+    .header{display:flex;align-items:center;justify-content:space-between}
+    .header-left{display:flex;align-items:center;gap:12px}
+    .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
+    .welcome{color:var(--muted,#64748b);margin:4px 0 0}
 
-    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
-    @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
-    @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05)}
+    .nav-card .icon-wrap{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white);color:var(--accent,#3b82f6)}
+    .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
+    .nav-card .title{font-weight:800}
+    .nav-card .desc{color:var(--muted,#64748b);font-size:12px}
+    .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;line-height:1}
+    .pill-badge[hidden]{display:none!important}
 
-    .nav-card{
-      display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit;
-      padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px;
-      box-shadow:0 6px 18px rgba(15,23,42,.05);
-    }
-    .nav-card .icon-wrap{
-      width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-      background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6);
-    }
-    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
-    .nav-card .title{ font-weight:800; }
-    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
-    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; }
-    .pill-badge[hidden]{ display:none !important; }
+    /* Cards + accordion */
+    .card{background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
+    .card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd;cursor:pointer;gap:12px}
+    .card-title{display:flex;align-items:center;gap:8px;font-weight:800;margin:0}
+    .card-meta{display:flex;align-items:center;gap:10px}
+    .card-body{display:none}
+    .card.open .card-body{display:block}
+    .arrow{transition:transform .18s ease}
+    .card.open .arrow{transform:rotate(180deg)}
 
-    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
-    .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .sub{ font-size:12px; color:#64748b; }
+    /* Status pill (grey / green check) */
+    .status{display:inline-flex;align-items:center;gap:6px;font-size:12px}
+    .dot{width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:#e2e8f0;color:#fff}
+    .dot.ok{background:#16a34a}
+    .dot svg{width:14px;height:14px}
 
-    .pool{ padding:12px; display:flex; flex-wrap:wrap; gap:10px; align-content:flex-start; min-height:120px; }
-    .team-chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:pointer; user-select:none; }
-    .team-chip[aria-pressed="true"]{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 35%, white); }
-    .crest{ width:22px; height:22px; object-fit:contain; border-radius:4px; background:#fff; border:1px solid var(--line,#e6eaf1); }
+    .count{font-size:12px;color:#111;background:#e6f1ff;border:1px solid var(--line,#e6eaf1);padding:2px 8px;border-radius:999px}
 
-    .selected-wrap{ padding:12px; display:flex; flex-wrap:wrap; gap:10px; min-height:70px; background:#fafbff; border-top:1px dashed var(--line,#e6eaf1); }
-    .selected-chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:pointer; user-select:none; }
-    .count{ font-size:12px; color:#111; background:#e6f1ff; border:1px solid var(--line,#e6eaf1); padding:2px 8px; border-radius:999px; }
+    /* Top8 pool + selected chips */
+    .pool{padding:12px;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;min-height:90px}
+    .team-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line,#e6eaf1);border-radius:10px;background:#fff;cursor:pointer}
+    .team-chip[aria-pressed="true"]{outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 35%, white)}
+    .crest{width:22px;height:22px;object-fit:contain;border-radius:4px;background:#fff;border:1px solid var(--line,#e6eaf1)}
+    .selected-wrap{padding:12px;display:flex;flex-wrap:wrap;gap:10px;min-height:60px;background:#fafbff;border-top:1px dashed var(--line,#e6eaf1)}
+    .selected-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line,#e6eaf1);border-radius:10px;background:#fff;cursor:pointer}
 
-    .form{ padding:12px; display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-    @media (max-width:700px){ .form{ grid-template-columns: 1fr; } }
-    .field{ display:flex; flex-direction:column; gap:6px; }
-    .field label{ font-size:13px; color:#475569; }
-    .field select{ min-height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); background:#fff; }
-    .hint{ font-size:12px; color:#64748b; }
-    .read{ font-weight:700; }
+    .save-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
+    .save-state{font-size:12px;color:#16a34a;display:none}
+    .save-state.show{display:inline-flex}
 
-    .save-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    .save-state{ font-size:12px; color:#16a34a; display:none; }
-    .save-state.show{ display:inline-flex; }
+    /* Pick cards (győztes/gólkirály) */
+    .grid-cards{padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+    .pick-card{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line,#e6eaf1);border-radius:12px;background:#fff;cursor:pointer;transition:transform .08s ease}
+    .pick-card:hover{transform:translateY(-1px)}
+    .pick-card.selected{outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 40%, white)}
+    .pc-crest{width:34px;height:34px;object-fit:contain;border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff}
+    .pc-text{display:flex;flex-direction:column;line-height:1.15}
+    .pc-name{font-weight:700}
+    .pc-sub{font-size:12px;color:#64748b}
+    .badge-odds{font-size:12px;background:#eef2ff;border:1px solid var(--line,#e6eaf1);padding:2px 6px;border-radius:999px;margin-top:4px;display:inline-block}
+    .pc-check{margin-left:auto;font-weight:800;opacity:0}
+    .pick-card.selected .pc-check{opacity:1}
 
-    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
-    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
-    .chat-fab.has-unread .fab-badge{ display:inline-block; }
-    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
-    .chat-panel.open{ display:flex; }
-    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
-    .chat-title{ font-weight:800; }
-    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
-    #chatClose:hover{ filter:brightness(0.95); }
-    .chat-list{ overflow:auto; padding:8px 10px; }
-    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
-    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
-    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
-    .msg .text{ white-space:pre-wrap; word-break:break-word; }
-    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
-    .msg:hover .del{ display:inline-block; }
+    /* Chat floating action button (unchanged) */
+    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
+    .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
+    .chat-fab.has-unread .fab-badge{display:inline-block}
+    .chat-panel{position:fixed;right:22px;bottom:86px;z-index:998;width:380px;max-width:calc(100vw - 32px);max-height:70vh;display:none;flex-direction:column;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.14)}
+    .chat-panel.open{display:flex}
+    .chat-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
+    .chat-title{font-weight:800}
+    #chatClose{width:28px;height:28px;border-radius:8px;font-size:18px;line-height:28px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#111;border:1px solid var(--line,#e6eaf1);cursor:pointer}
+    #chatClose:hover{filter:brightness(.95)}
+    .chat-list{overflow:auto;padding:8px 10px}
+    .chat-empty{color:#64748b;font-size:13px;padding:8px 10px}
+    .msg{padding:8px 10px;border-bottom:1px solid var(--line,#e6eaf1);display:flex;gap:8px;align-items:flex-start}
+    .msg .meta{font-size:12px;color:#64748b;margin-bottom:2px}
+    .msg .text{white-space:pre-wrap;word-break:break-word}
+    .msg .del{margin-left:auto;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:2px 8px;border-radius:8px;font-size:12px;cursor:pointer;display:none}
+    .msg:hover .del{display:inline-block}
 
-    .btn-accent{
-      min-height:40px; padding:10px 14px; border-radius:10px;
-      background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
-      font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
-      box-shadow:0 6px 18px rgba(15,23,42,.08);
-    }
-    .btn-accent:hover{ filter:brightness(.95); }
-    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
-    .btn-icon{ width:18px; height:18px; display:inline-block; }
+    .btn-accent{min-height:40px;padding:10px 14px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(15,23,42,.08)}
+    .btn-accent:hover{filter:brightness(.95)}
+    .btn-icon{width:18px;height:18px;display:inline-block}
   </style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      doc, getDoc, setDoc,
-      collection, getDocs, addDoc, deleteDoc, serverTimestamp,
-      query, where, orderBy, onSnapshot
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -113,6 +112,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    /* Címerek */
     const crestMap = {
       "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png",
       "Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Bayer Leverkusen":"ucl_crest/leverkusen.png",
@@ -134,14 +134,17 @@
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
     let currentUserEmail = "";
-    let currentUserNick = "";
-    let currentUserRole = "user";
+    let currentUserNick  = "";
+    let currentUserRole  = "user";
     let favouriteTeamucl = "";
-    let chatLastSeen = null;
+    let chatLastSeen     = null;
 
-    let selectedTop8 = [];
-    let championCandidates = [];
-    let goldenCandidates = [];
+    // model
+    let selectedTop8 = [];         // string[]
+    let championCandidates = [];   // {team, oddsPercent}
+    let goldenCandidates   = [];   // {player, team?, oddsPercent}
+    let pickedChampion     = "";   // string
+    let pickedGolden       = "";   // player string
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -171,19 +174,24 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
+        // Betöltött tippek
         try{
           const tipDoc = await getDoc(doc(db,"ucl_top8Tips", currentUserEmail));
           if (tipDoc.exists()){
             const arr = Array.isArray(tipDoc.data().picks) ? tipDoc.data().picks : [];
             selectedTop8 = arr.filter(t => TEAMS.includes(t)).slice(0,8);
           }
-        }catch(e){}
+        }catch{}
 
-        await loadMarkets();
-        await hydrateChampionPick();
-        await hydrateGoldenPick();
+        await loadMarkets();           // jelöltek kirakása
+        await hydrateChampionPick();   // saját pick bejelölése
+        await hydrateGoldenPick();     // saját pick bejelölése
+
         renderPool();
         renderSelected();
+        updateBadges();
+
+        initAccordions();  // lenyitás/összecsukás
         initChat(userRef);
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
@@ -194,79 +202,237 @@
       });
     });
 
+    /* ===== Accordion ===== */
+    function initAccordions(){
+      document.querySelectorAll('.card-head').forEach(h=>{
+        h.addEventListener('click',()=> h.parentElement.classList.toggle('open'));
+      });
+      // alapból nyitva a Top8
+      document.getElementById('card-top8').classList.add('open');
+    }
+
+    /* ===== Markets => kártyák render ===== */
     async function loadMarkets(){
       try{
         const cSnap = await getDocs(collection(db,"ucl_championCandidates"));
-        championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.team);
-      }catch(e){ championCandidates=[]; }
+        championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }))
+          .filter(x=>x.team).sort((a,b)=>a.team.localeCompare(b.team,"hu"));
+      }catch{ championCandidates=[]; }
+
       try{
         const gSnap = await getDocs(collection(db,"ucl_goldenBootCandidates"));
-        goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
-      }catch(e){ goldenCandidates=[]; }
+        goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }))
+          .filter(x=>x.player).sort((a,b)=>a.player.localeCompare(b.player,"hu"));
+      }catch{ goldenCandidates=[]; }
 
-      const chSel = document.getElementById("championSelect");
-      chSel.innerHTML = "";
-      if (championCandidates.length===0){
-        const o = document.createElement("option"); o.value=""; o.textContent="Nincs jelölt"; chSel.appendChild(o);
-      } else {
-        const o0 = document.createElement("option"); o0.value=""; o0.textContent="Válassz jelöltet"; chSel.appendChild(o0);
-        championCandidates.forEach(c=>{ const o=document.createElement("option"); o.value=c.team; o.textContent=c.team; o.dataset.odds=String(c.oddsPercent||0); chSel.appendChild(o); });
-      }
-
-      const gbSel = document.getElementById("goldenSelect");
-      gbSel.innerHTML = "";
-      if (goldenCandidates.length===0){
-        const o = document.createElement("option"); o.value=""; o.textContent="Nincs jelölt"; gbSel.appendChild(o);
-      } else {
-        const o0 = document.createElement("option"); o0.value=""; o0.textContent="Válassz jelöltet"; gbSel.appendChild(o0);
-        goldenCandidates.forEach(c=>{ const o=document.createElement("option"); o.value=c.player; o.textContent=c.team?`${c.player} (${c.team})`:`${c.player}`; o.dataset.team=c.team||""; o.dataset.odds=String(c.oddsPercent||0); gbSel.appendChild(o); });
-      }
-
-      chSel.addEventListener("change", saveChampionPick);
-      gbSel.addEventListener("change", saveGoldenPick);
+      renderChampionGrid();
+      renderGoldenGrid();
     }
 
+    function renderChampionGrid(){
+      const box = document.getElementById('chGrid');
+      box.innerHTML = '';
+      if(championCandidates.length===0){
+        box.innerHTML = '<div class="pc-sub" style="padding:0 12px 12px">Nincs elérhető jelölt. Kérd az admint!</div>';
+        return;
+      }
+      championCandidates.forEach(c=>{
+        const el = document.createElement('div');
+        el.className = 'pick-card';
+        el.dataset.team = c.team;
+        el.dataset.odds = Number(c.oddsPercent||0);
+        el.innerHTML = `
+          <img class="pc-crest" src="${crestFor(c.team)}" alt="">
+          <div class="pc-text">
+            <div class="pc-name">${c.team}</div>
+            <div class="badge-odds">${Number(c.oddsPercent||0)}%</div>
+          </div>
+          <div class="pc-check">✓</div>
+        `;
+        el.addEventListener('click', ()=> saveChampionPickWith(c.team, Number(c.oddsPercent||0)));
+        box.appendChild(el);
+      });
+    }
+
+    function renderGoldenGrid(){
+      const box = document.getElementById('gbGrid');
+      box.innerHTML = '';
+      if(goldenCandidates.length===0){
+        box.innerHTML = '<div class="pc-sub" style="padding:0 12px 12px">Nincs elérhető jelölt. Kérd az admint!</div>';
+        return;
+      }
+      goldenCandidates.forEach(c=>{
+        const crest = crestFor(c.team||'') || '';
+        const el = document.createElement('div');
+        el.className = 'pick-card';
+        el.dataset.player = c.player;
+        el.dataset.team = c.team || '';
+        el.dataset.odds = Number(c.oddsPercent||0);
+        el.innerHTML = `
+          ${crest? `<img class="pc-crest" src="${crest}" alt="">` : `<div class="pc-crest" style="display:flex;align-items:center;justify-content:center;font-size:16px">⚽</div>`}
+          <div class="pc-text">
+            <div class="pc-name">${c.player}</div>
+            <div class="pc-sub">${c.team || '–'}</div>
+            <div class="badge-odds">${Number(c.oddsPercent||0)}%</div>
+          </div>
+          <div class="pc-check">✓</div>
+        `;
+        el.addEventListener('click', ()=> saveGoldenPickWith(c.player, c.team||'', Number(c.oddsPercent||0)));
+        box.appendChild(el);
+      });
+    }
+
+    /* ===== Saját pickek beolvasása + UI kijelölés ===== */
     async function hydrateChampionPick(){
-      const chSel = document.getElementById("championSelect");
-      const oddsView = document.getElementById("championOddsView");
       try{
         const chDoc = await getDoc(doc(db,"ucl_championPickTips", currentUserEmail));
-        if (chDoc.exists()){
-          const d=chDoc.data();
-          if (d.team && Array.from(chSel.options).some(o=>o.value===d.team)) chSel.value=d.team;
-          const opt = chSel.options[chSel.selectedIndex];
-          const viewOdds = Number(opt?.dataset?.odds||d.oddsPercent||0);
-          oddsView.textContent = viewOdds ? `${viewOdds}%` : "-";
-        } else {
-          oddsView.textContent = "-";
-        }
-      }catch(e){ oddsView.textContent = "-"; }
+        pickedChampion = (chDoc.exists() && chDoc.data().team) ? chDoc.data().team : "";
+      }catch{ pickedChampion = ""; }
+      highlightChampionCard();
+      updateBadges();
+    }
+    function highlightChampionCard(){
+      document.querySelectorAll('#chGrid .pick-card').forEach(el=>{
+        el.classList.toggle('selected', el.dataset.team === pickedChampion);
+      });
+      document.getElementById("saveStateC")?.classList.remove('show');
     }
 
     async function hydrateGoldenPick(){
-      const gbSel = document.getElementById("goldenSelect");
-      const teamView = document.getElementById("goldenTeamView");
-      const oddsView = document.getElementById("goldenOddsView");
       try{
         const gbDoc = await getDoc(doc(db,"ucl_goldenBootTips", currentUserEmail));
-        if (gbDoc.exists()){
-          const d=gbDoc.data();
-          if (d.player && Array.from(gbSel.options).some(o=>o.value===d.player)) gbSel.value=d.player;
-          const opt = gbSel.options[gbSel.selectedIndex];
-          const viewTeam = opt?.dataset?.team || d.team || "";
-          const viewOdds = Number(opt?.dataset?.odds||d.oddsPercent||0);
-          teamView.textContent = viewTeam || "-";
-          oddsView.textContent = viewOdds ? `${viewOdds}%` : "-";
-        } else {
-          teamView.textContent = "-";
-          oddsView.textContent = "-";
-        }
-      }catch(e){
-        teamView.textContent = "-";
-        oddsView.textContent = "-";
-      }
+        pickedGolden = (gbDoc.exists() && gbDoc.data().player) ? gbDoc.data().player : "";
+      }catch{ pickedGolden = ""; }
+      highlightGoldenCard();
+      updateBadges();
+    }
+    function highlightGoldenCard(){
+      document.querySelectorAll('#gbGrid .pick-card').forEach(el=>{
+        el.classList.toggle('selected', el.dataset.player === pickedGolden);
+      });
+      document.getElementById("saveStateG")?.classList.remove('show');
     }
 
+    /* ===== Mentések ===== */
+    let saveTimerTop8 = null;
+    function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 250); }
+    async function saveTop8Now(){
+      const saved = document.getElementById("saveStateTop8");
+      try{
+        await setDoc(doc(db,"ucl_top8Tips", currentUserEmail), {
+          email: currentUserEmail,
+          nick: currentUserNick || currentUserEmail,
+          picks: selectedTop8.slice(0,8),
+          updatedAt: serverTimestamp()
+        }, { merge:true });
+        saved.classList.add("show");
+        setTimeout(()=>saved.classList.remove("show"), 1100);
+        updateBadges();
+      }catch{}
+    }
+
+    let saveTimerC = null;
+    function saveChampionPickWith(team, oddsPercent){
+      clearTimeout(saveTimerC);
+      pickedChampion = team;
+      highlightChampionCard();
+      updateBadges();
+      saveTimerC = setTimeout(async ()=>{
+        try{
+          await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
+            email: currentUserEmail,
+            nick: currentUserNick || currentUserEmail,
+            team,
+            oddsPercent: Number(oddsPercent||0),
+            updatedAt: serverTimestamp()
+          }, { merge:true });
+          const s = document.getElementById("saveStateC");
+          s.classList.add("show"); setTimeout(()=>s.classList.remove("show"), 1100);
+        }catch{}
+      }, 150);
+    }
+
+    let saveTimerG = null;
+    function saveGoldenPickWith(player, team, oddsPercent){
+      clearTimeout(saveTimerG);
+      pickedGolden = player;
+      highlightGoldenCard();
+      updateBadges();
+      saveTimerG = setTimeout(async ()=>{
+        try{
+          await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
+            email: currentUserEmail,
+            nick: currentUserNick || currentUserEmail,
+            player,
+            team,
+            oddsPercent: Number(oddsPercent||0),
+            updatedAt: serverTimestamp()
+          }, { merge:true });
+          const s = document.getElementById("saveStateG");
+          s.classList.add("show"); setTimeout(()=>s.classList.remove("show"), 1100);
+        }catch{}
+      }, 150);
+    }
+
+    /* ===== Top8 UI ===== */
+    function renderPool(){
+      const pool = document.getElementById("pool");
+      pool.innerHTML = "";
+      const notSelected = TEAMS.filter(t => !selectedTop8.includes(t));
+      for (const team of notSelected){
+        const chip = document.createElement("div");
+        chip.className = "team-chip";
+        chip.setAttribute("role","button");
+        chip.setAttribute("aria-pressed","false");
+        chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
+        chip.addEventListener("click", ()=>toggleSelect(team));
+        pool.appendChild(chip);
+      }
+    }
+    function renderSelected(){
+      const sel = document.getElementById("selected");
+      const countEl = document.getElementById("top8Count");
+      sel.innerHTML = "";
+      selectedTop8.forEach(team=>{
+        const chip = document.createElement("div");
+        chip.className = "selected-chip";
+        chip.setAttribute("role","button");
+        chip.setAttribute("aria-pressed","true");
+        chip.title = "Eltávolítás";
+        chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
+        chip.addEventListener("click", ()=>removeTeam(team));
+        sel.appendChild(chip);
+      });
+      countEl.textContent = `${selectedTop8.length}/8`;
+      document.getElementById("saveStateTop8").classList.toggle("show", false);
+    }
+    function toggleSelect(team){
+      if (selectedTop8.includes(team)){ removeTeam(team); return; }
+      if (selectedTop8.length>=8) return;
+      selectedTop8.push(team);
+      renderPool(); renderSelected(); autoSaveTop8();
+    }
+    function removeTeam(team){
+      selectedTop8 = selectedTop8.filter(t=>t!==team);
+      renderPool(); renderSelected(); autoSaveTop8();
+    }
+
+    /* ===== Fejléc pipák ===== */
+    function updateBadges(){
+      // Top8: ha már bármennyi pick van, legyen pipa (ha akarod: selectedTop8.length===8)
+      setStatus('stTop8', selectedTop8.length>0);
+      setStatus('stChampion', !!pickedChampion);
+      setStatus('stGolden', !!pickedGolden);
+    }
+    function setStatus(id, ok){
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.innerHTML = ok
+        ? '<span class="dot ok" title="Tipp mentve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="status-text">Kész</span>'
+        : '<span class="dot" title="Még nincs tipp">–</span><span class="status-text">Nincs tipp</span>';
+    }
+
+    /* ===== Egyéb (match badge + chat) ===== */
     function updatePendingBadge(){
       getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -285,128 +451,6 @@
       });
     }
 
-    function renderPool(){
-      const pool = document.getElementById("pool");
-      pool.innerHTML = "";
-      const notSelected = TEAMS.filter(t => !selectedTop8.includes(t));
-      for (const team of notSelected){
-        const chip = document.createElement("div");
-        chip.className = "team-chip";
-        chip.setAttribute("role","button");
-        chip.setAttribute("aria-pressed","false");
-        chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
-        chip.addEventListener("click", ()=>toggleSelect(team));
-        pool.appendChild(chip);
-      }
-    }
-
-    function renderSelected(){
-      const sel = document.getElementById("selected");
-      const countEl = document.getElementById("top8Count");
-      sel.innerHTML = "";
-      selectedTop8.forEach(team=>{
-        const chip = document.createElement("div");
-        chip.className = "selected-chip";
-        chip.setAttribute("role","button");
-        chip.setAttribute("aria-pressed","true");
-        chip.title = "Eltávolítás";
-        chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
-        chip.addEventListener("click", ()=>removeTeam(team));
-        sel.appendChild(chip);
-      });
-      countEl.textContent = `${selectedTop8.length}/8`;
-      document.getElementById("saveStateTop8").classList.toggle("show", false);
-    }
-
-    function toggleSelect(team){
-      if (selectedTop8.includes(team)){ removeTeam(team); return; }
-      if (selectedTop8.length>=8) return;
-      selectedTop8.push(team);
-      renderPool();
-      renderSelected();
-      autoSaveTop8();
-    }
-
-    function removeTeam(team){
-      selectedTop8 = selectedTop8.filter(t=>t!==team);
-      renderPool();
-      renderSelected();
-      autoSaveTop8();
-    }
-
-    function safeParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
-
-    let saveTimerTop8 = null;
-    function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 250); }
-
-    async function saveTop8Now(){
-      const saved = document.getElementById("saveStateTop8");
-      try{
-        await setDoc(doc(db,"ucl_top8Tips", currentUserEmail), {
-          email: currentUserEmail,
-          nick: currentUserNick || currentUserEmail,
-          picks: selectedTop8.slice(0,8),
-          updatedAt: serverTimestamp()
-        }, { merge:true });
-        saved.classList.add("show");
-        setTimeout(()=>saved.classList.remove("show"), 1200);
-      }catch(e){}
-    }
-
-    let saveTimerC = null;
-    async function saveChampionPick(){
-      clearTimeout(saveTimerC);
-      saveTimerC = setTimeout(async ()=>{
-        const sel = document.getElementById("championSelect");
-        const oddsView = document.getElementById("championOddsView");
-        const opt = sel.options[sel.selectedIndex];
-        const team = sel.value || "";
-        const oddsPercent = Number(opt?.dataset?.odds||0);
-        oddsView.textContent = team ? (oddsPercent?`${oddsPercent}%`:"-") : "-";
-        try{
-          await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
-            email: currentUserEmail,
-            nick: currentUserNick || currentUserEmail,
-            team,
-            oddsPercent,
-            updatedAt: serverTimestamp()
-          }, { merge:true });
-          const s = document.getElementById("saveStateC");
-          s.classList.add("show");
-          setTimeout(()=>s.classList.remove("show"), 1200);
-        }catch(e){}
-      }, 200);
-    }
-
-    let saveTimerG = null;
-    async function saveGoldenPick(){
-      clearTimeout(saveTimerG);
-      saveTimerG = setTimeout(async ()=>{
-        const sel = document.getElementById("goldenSelect");
-        const teamView = document.getElementById("goldenTeamView");
-        const oddsView = document.getElementById("goldenOddsView");
-        const opt = sel.options[sel.selectedIndex];
-        const player = sel.value || "";
-        const team = opt?.dataset?.team || "";
-        const oddsPercent = Number(opt?.dataset?.odds||0);
-        teamView.textContent = player ? (team||"-") : "-";
-        oddsView.textContent = player ? (oddsPercent?`${oddsPercent}%`:"-") : "-";
-        try{
-          await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
-            email: currentUserEmail,
-            nick: currentUserNick || currentUserEmail,
-            player,
-            team,
-            oddsPercent,
-            updatedAt: serverTimestamp()
-          }, { merge:true });
-          const s = document.getElementById("saveStateG");
-          s.classList.add("show");
-          setTimeout(()=>s.classList.remove("show"), 1200);
-        }catch(e){}
-      }, 200);
-    }
-
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -418,8 +462,7 @@
 
       function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
       function close(){ panel.classList.remove('open'); }
-      function toggle(){ panel.classList.contains('open') ? close() : open(); }
-      fab.addEventListener('click', toggle);
+      fab.addEventListener('click', ()=> panel.classList.contains('open') ? close() : open());
       closeBtn.addEventListener('click', close);
 
       let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
@@ -445,15 +488,14 @@
               <div style="flex:1 1 auto">
                 <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
                 <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-              </div>
-            `;
+              </div>`;
             const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
             if (canDelete){
               const del = document.createElement('button');
               del.className = 'del';
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){} });
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch{} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
@@ -471,7 +513,7 @@
         }
       });
 
-      sendBtn.addEventListener('click', async ()=>{
+      document.getElementById('chatSendBtn').addEventListener('click', async ()=>{
         const txt = (inputEl.value || '').trim();
         if (!txt){ inputEl.focus(); return; }
         const backup = txt;
@@ -479,11 +521,11 @@
         try{
           await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
           if (panel.classList.contains('open')) await markSeen();
-        }catch(e){
+        }catch{
           inputEl.value = backup; inputEl.focus();
         }
       });
-      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
+      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); document.getElementById('chatSendBtn').click(); } });
 
       async function markSeen(){
         try{
@@ -491,7 +533,7 @@
           lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
-        }catch(e){}
+        }catch{}
       }
     }
   </script>
@@ -516,6 +558,7 @@
       </div>
     </div>
 
+    <!-- NAV -->
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -561,50 +604,57 @@
       </a>
     </nav>
 
-    <div class="content-grid">
-      <section class="card">
-        <h3>Top 8 tipp <span class="count" id="top8Count">0/8</span></h3>
+    <!-- 1) Top 8 -->
+    <section id="card-top8" class="card">
+      <div class="card-head" role="button" aria-expanded="true">
+        <div class="card-title">Top 8 tipp</div>
+        <div class="card-meta">
+          <span class="count" id="top8Count">0/8</span>
+          <span class="status" id="stTop8"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
+          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+      </div>
+      <div class="card-body">
         <div id="pool" class="pool"></div>
         <div id="selected" class="selected-wrap"></div>
-        <div class="save-row">
-          <span id="saveStateTop8" class="save-state">Mentve</span>
-        </div>
-      </section>
+        <div class="save-row"><span id="saveStateTop8" class="save-state">Mentve</span></div>
+      </div>
+    </section>
 
-      <section class="card">
-        <h3>Végső győztes jelölt</h3>
-        <div class="form">
-          <div class="field">
-            <label for="championSelect">Jelölt</label>
-            <select id="championSelect"></select>
-            <div class="hint">Aktuális odds: <span id="championOddsView" class="read">-</span></div>
-          </div>
+    <!-- 2) Végső győztes -->
+    <section id="card-champion" class="card">
+      <div class="card-head" role="button" aria-expanded="false">
+        <div class="card-title">Végső győztes jelöltek</div>
+        <div class="card-meta">
+          <span class="status" id="stChampion"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
+          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </div>
-        <div class="save-row">
-          <span id="saveStateC" class="save-state">Mentve</span>
-        </div>
-      </section>
+      </div>
+      <div class="card-body">
+        <div id="chGrid" class="grid-cards"></div>
+        <div class="save-row"><span id="saveStateC" class="save-state">Mentve</span></div>
+      </div>
+    </section>
 
-      <section class="card" style="grid-column: 1 / -1;">
-        <h3>Gólkirály jelölt</h3>
-        <div class="form">
-          <div class="field">
-            <label for="goldenSelect">Jelölt</label>
-            <select id="goldenSelect"></select>
-            <div class="hint">Klub: <span id="goldenTeamView" class="read">-</span> • Odds: <span id="goldenOddsView" class="read">-</span></div>
-          </div>
+    <!-- 3) Gólkirály -->
+    <section id="card-golden" class="card">
+      <div class="card-head" role="button" aria-expanded="false">
+        <div class="card-title">Gólkirály jelöltek</div>
+        <div class="card-meta">
+          <span class="status" id="stGolden"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
+          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </div>
-        <div class="save-row">
-          <span id="saveStateG" class="save-state">Mentve</span>
-        </div>
-      </section>
-    </div>
+      </div>
+      <div class="card-body">
+        <div id="gbGrid" class="grid-cards"></div>
+        <div class="save-row"><span id="saveStateG" class="save-state">Mentve</span></div>
+      </div>
+    </section>
   </div>
 
+  <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
-    </svg>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
