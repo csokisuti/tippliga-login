@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
@@ -41,6 +41,12 @@
     .sortable li::before{counter-increment:pos;content: counter(pos) ". ";position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
 
     .filterbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+
+    /* Chip lista Top8-hoz */
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:999px;background:#fff;cursor:pointer}
+    .chip.selected{outline:2px solid color-mix(in oklab, var(--primary) 35%, white)}
+    .count{font-size:12px;color:#111;background:#e6f1ff;border:1px solid var(--border);padding:2px 8px;border-radius:999px}
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -66,6 +72,13 @@
     const stripNumPrefix = s => (s||'').replace(/^\s*\d+[\.\)]?\s*/, '');
     const norm = s => stripNumPrefix(s).replace(/\s+/g,' ').trim().toLowerCase();
 
+    // ====== Globális cache az új kártyákhoz ======
+    let championCandidates = []; // {id, team, oddsPercent}
+    let goldenCandidates = [];   // {id, player, team, oddsPercent}
+    let officialTop8 = [];       // string[]
+    let officialChampion = "";   // string
+    let officialGolden = { player:"", team:"" };
+
     onAuthStateChanged(auth, async (user) => {
       if(!user){ document.body.innerHTML = "<h2 style='padding:20px'>⛔ Nincs jogosultságod az admin felülethez.</h2>"; return }
       const userSnap = await getDoc(doc(db, "users", user.email));
@@ -78,6 +91,10 @@
       await loadResults();
       await loadPositionsLock();
       await loadOfficialOrder();
+
+      // ÚJ: bónusz piacok + hivatalos eredmények
+      await loadBonusMarkets();
+      await loadOfficialBonus();
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=''}){
@@ -95,8 +112,8 @@
       const back=document.createElement('button'); back.className='btn'; back.textContent='⬅️ Vissza a dashboardra'; back.onclick=()=>location.href='dashboard_ucl.html';
       const expand=document.createElement('button'); expand.className='btn'; expand.textContent='Mindet nyisd le'; expand.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.add('open'));
       const collapse=document.createElement('button'); collapse.className='btn'; collapse.textContent='Mindet csukd össze'; collapse.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.remove('open'));
-      const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadOfficialOrder(); };
-      left.appendChild(back); right.append(expand, collapse, refresh); top.append(left,right); document.body.appendChild(top);
+      const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadOfficialOrder(); loadBonusMarkets(); loadOfficialBonus(); };
+      left.appendChild(back); right.append(expand, collapse, refresh); document.body.append(top);
 
       const wrap=document.createElement('div'); wrap.className='cards';
 
@@ -147,15 +164,15 @@
           <button id="uploadTableImage" class="btn primary">Feltöltés</button>
         </div>`});
 
-      // Szezon sorrend (UCL)
-      const cOrder = makeCard({title:'Hivatalos UCL sorrend / fázisok', hint:'Húzd–és–vidd, mentés', id:'card-order', bodyHTML:`
+      // Szezon sorrend (régi) – megmarad kompatibilitás miatt
+      const cOrder = makeCard({title:'Hivatalos UCL sorrend / fázisok (régi)', hint:'Húzd–és–vidd, mentés', id:'card-order', bodyHTML:`
         <button id="toggleOrder" class="btn">Sorrend szerkesztése/elrejtése</button>
         <ul id="sortableList" class="sortable" style="display:none; margin-top:10px;"></ul>
         <button id="saveOrderBtn" style="display:none;" class="btn primary">Mentés</button>`});
 
       // Lezárás (UCL)
-      const cLock = makeCard({title:'Pozíciós tipp lezárás (UCL)', hint:'Azonnal vagy időpontra', id:'card-lock', bodyHTML:`
-        <div class="muted">Itt szabályozható az UCL pozíciós/fázisos tipp módosíthatósága.</div>
+      const cLock = makeCard({title:'Pozíciós/Top8 tipp lezárás (UCL)', hint:'Azonnal vagy időpontra', id:'card-lock', bodyHTML:`
+        <div class="muted">Itt szabályozható a Top 8 tipp módosíthatósága.</div>
         <div class="row" style="margin-top:8px">
           <label><input type="checkbox" id="lockNow"> Azonnali lezárás</label>
           <span class="muted">vagy</span>
@@ -168,63 +185,113 @@
           <span id="lockStatus" class="muted"></span>
         </div>`});
 
-      wrap.append(cAdd.section, cManage.section, cRes.section, cUsers.section, cTable.section, cOrder.section, cLock.section);
-      document.body.appendChild(wrap);
+      /* ÚJ: Bónusz piacok – Végső győztes jelöltek */
+      const cBonusCh = makeCard({title:'Bónusz piacok – Végső győztes jelöltek', hint:'`ucl_championCandidates`', id:'card-bonus-ch', bodyHTML:`
+        <form id="chAddForm">
+          <div class="row">
+            <select id="chAddTeam"><option value="">Válassz csapatot</option>${teamOpts}</select>
+            <input type="number" id="chAddOdds" min="0" step="1" placeholder="Odds % (pl. 120)">
+            <button class="btn primary" type="submit">Hozzáadás</button>
+          </div>
+          <div class="muted" style="margin-top:6px">A jelöltek listáját a játékosok látják; az odds itt adminisztrálható.</div>
+        </form>
+        <div style="margin-top:12px">
+          <table id="chTable">
+            <thead><tr><th>Csapat</th><th>Odds %</th><th>Művelet</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>`});
 
-      // Listeners
-      document.getElementById('matchForm').addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        const startTime = Timestamp.fromDate(new Date(document.getElementById('startTime').value));
-        await addDoc(collection(db,'ucl_matches'),{
-          homeTeam: homeTeam.value,
-          awayTeam: awayTeam.value,
-          startTime,
-          roundId: roundId.value,
-          odds: {"1":parseFloat(odds1.value),"X":parseFloat(oddsX.value),"2":parseFloat(odds2.value)}
-        });
-        alert('UCL meccs mentve');
-        e.target.reset();
-        await loadMatches();
-        await loadResults();
-      });
+      /* ÚJ: Bónusz piacok – Gólkirály jelöltek */
+      const cBonusGb = makeCard({title:'Bónusz piacok – Gólkirály jelöltek', hint:'`ucl_goldenBootCandidates`', id:'card-bonus-gb', bodyHTML:`
+        <form id="gbAddForm">
+          <div class="row">
+            <input id="gbAddPlayer" placeholder="Játékos neve">
+            <select id="gbAddTeam"><option value="">Klub (opcionális)</option>${teamOpts}</select>
+            <input type="number" id="gbAddOdds" min="0" step="1" placeholder="Odds % (pl. 150)">
+            <button class="btn primary" type="submit">Hozzáadás</button>
+          </div>
+          <div class="muted" style="margin-top:6px">A klub opcionális. A játékos neve legyen egyedi a listában.</div>
+        </form>
+        <div style="margin-top:12px">
+          <table id="gbTable">
+            <thead><tr><th>Játékos</th><th>Klub</th><th>Odds %</th><th>Művelet</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>`});
 
-      document.getElementById('uploadTableImage').addEventListener('click', async ()=>{
-        const f=document.getElementById('tableImageInput').files[0];
-        if(!f) return alert('Válassz ki egy képet!');
-        const rd=new FileReader();
-        rd.onload=async()=>{
-          const b64=rd.result.split(',')[1];
-          await setDoc(doc(db,'settings','ucl_table_image'),{ base64:b64 });
-          alert('Kép elmentve (settings/ucl_table_image).');
-        };
-        rd.readAsDataURL(f);
-      });
+      /* ÚJ: Hivatalos eredmények – Top 8 / Győztes / Gólkirály */
+      const cOfficial = makeCard({title:'Hivatalos eredmények – Top 8 / Győztes / Gólkirály', hint:'`ucl_official/current`', id:'card-official', bodyHTML:`
+        <div class="card" style="margin:0 0 12px 0">
+          <div class="card-head"><h3>Top 8 (sorrend nélkül)</h3><div class="hint"><span id="top8Count" class="count">0/8</span></div></div>
+          <div class="card-body">
+            <div class="row">
+              <div style="flex:1">
+                <div class="muted" style="margin-bottom:6px">Kattints a csapatokra a kiválasztáshoz/kivételhez (max. 8).</div>
+                <div id="top8Chips" class="chips"></div>
+              </div>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <button id="saveTop8" class="btn primary">Top 8 mentése</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin:0 0 12px 0">
+          <div class="card-head"><h3>Végső győztes</h3></div>
+          <div class="card-body">
+            <div class="row">
+              <select id="officialChampion"><option value="">Válassz csapatot</option>${teamOpts}</select>
+              <button id="saveChampion" class="btn primary">Győztes mentése</button>
+            </div>
+            <div class="muted" style="margin-top:6px">Bármely csapat kiválasztható (nem kötött a jelöltekhez).</div>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-head"><h3>Gólkirály</h3></div>
+          <div class="card-body">
+            <div class="row">
+              <select id="officialGoldenPlayer"><option value="">Válassz játékost (jelöltek)</option></select>
+              <input id="officialGoldenTeam" placeholder="Klub (betöltve a jelöltből)" readonly>
+              <button id="saveGolden" class="btn primary">Gólkirály mentése</button>
+            </div>
+            <div class="muted" style="margin-top:6px">A játékost a jelöltek közül válaszd ki; a klub mező automatikusan kitöltődik.</div>
+          </div>
+        </div>`});
 
-      document.getElementById('withResultHeader').onclick=()=>{
-        const c=document.getElementById('withResultContent');
-        c.style.display = c.style.display==='none' ? 'block':'none';
-      };
+      wrap.append(
+        cAdd.section, cManage.section, cRes.section, cUsers.section, cTable.section,
+        cOrder.section, cLock.section,
+        cBonusCh.section, cBonusGb.section, cOfficial.section
+      );
+      document.body.append(wrap);
 
+      // Listeners (létező)
+      document.getElementById('matchForm').addEventListener('submit', onAddMatch);
+      document.getElementById('uploadTableImage').addEventListener('click', onUploadTableImage);
+      document.getElementById('withResultHeader').onclick=()=>{ const c=document.getElementById('withResultContent'); c.style.display = c.style.display==='none' ? 'block':'none'; };
       const sortableList = document.getElementById('sortableList');
-      document.getElementById('toggleOrder').onclick=()=>{
-        const vis = sortableList.style.display==='block';
-        sortableList.style.display = vis? 'none':'block';
-        document.getElementById('saveOrderBtn').style.display = vis? 'none':'inline-block';
-      };
+      document.getElementById('toggleOrder').onclick=()=>{ const vis = sortableList.style.display==='block'; sortableList.style.display = vis? 'none':'block'; document.getElementById('saveOrderBtn').style.display = vis? 'none':'inline-block'; };
       document.getElementById('saveOrderBtn').onclick = saveOfficialOrder;
-
       document.getElementById('applyFilters').onclick = renderMatchesFiltered;
       document.getElementById('resetFilters').onclick = ()=>{ document.getElementById('filterRound').value=''; document.getElementById('filterTeam').value=''; renderMatchesFiltered(); };
-
-      // Lezárás gombok
       document.getElementById('saveLock').onclick = saveLock;
       document.getElementById('clearLock').onclick = clearLock;
+
+      // ÚJ: Bónusz piacok
+      document.getElementById('chAddForm').addEventListener('submit', onAddChampionCandidate);
+      document.getElementById('gbAddForm').addEventListener('submit', onAddGoldenCandidate);
+
+      // ÚJ: Hivatalos eredmények
+      document.getElementById('saveTop8').onclick = saveOfficialTop8;
+      document.getElementById('saveChampion').onclick = saveOfficialChampion;
+      document.getElementById('saveGolden').onclick = saveOfficialGolden;
     }
 
-    // ===== Meccsek (UCL) =====
+    // ===== Meccsek (UCL) – meglévő =====
     let _matchesCache = [];
     async function loadMatches(){
       const container = document.getElementById('matchesList');
+      if(!container) return;
       container.innerHTML = '';
 
       const snap = await getDocs(collection(db,'ucl_matches'));
@@ -238,12 +305,14 @@
       });
 
       const fr=document.getElementById('filterRound');
-      fr.innerHTML = '<option value="">Összes forduló</option>' + Array.from(rounds).sort((a,b)=>parseInt(a)-parseInt(b)).map(r=>`<option value="${r}">${r}</option>`).join('');
+      if(fr) fr.innerHTML = '<option value="">Összes forduló</option>' + Array.from(rounds).sort((a,b)=>parseInt(a)-parseInt(b)).map(r=>`<option value="${r}">${r}</option>`).join('');
 
       renderMatchesFiltered();
     }
 
     function renderMatchesFiltered(){
+      const container = document.getElementById('matchesList');
+      if(!container) return;
       const r = document.getElementById('filterRound').value.trim();
       const q = (document.getElementById('filterTeam').value||'').toLowerCase();
       const list = _matchesCache.filter(m=> (!r || String(m.roundId)===r) && (!q || (m.homeTeam||'').toLowerCase().includes(q) || (m.awayTeam||'').toLowerCase().includes(q)) );
@@ -252,6 +321,7 @@
 
     function renderMatches(list){
       const container = document.getElementById('matchesList');
+      if(!container) return;
       container.innerHTML = '';
       if(list.length===0){ container.innerHTML = '<div class="muted">Nincs találat.</div>'; return }
 
@@ -314,10 +384,39 @@
       await loadResults();
     }
 
-    // ===== Eredmények (UCL) =====
+    async function onAddMatch(e){
+      e.preventDefault();
+      const startTime = Timestamp.fromDate(new Date(document.getElementById('startTime').value));
+      await addDoc(collection(db,'ucl_matches'),{
+        homeTeam: homeTeam.value,
+        awayTeam: awayTeam.value,
+        startTime,
+        roundId: roundId.value,
+        odds: {"1":parseFloat(odds1.value),"X":parseFloat(oddsX.value),"2":parseFloat(odds2.value)}
+      });
+      alert('UCL meccs mentve');
+      e.target.reset();
+      await loadMatches();
+      await loadResults();
+    }
+
+    async function onUploadTableImage(){
+      const f=document.getElementById('tableImageInput').files[0];
+      if(!f) return alert('Válassz ki egy képet!');
+      const rd=new FileReader();
+      rd.onload=async()=>{
+        const b64=rd.result.split(',')[1];
+        await setDoc(doc(db,'settings','ucl_table_image'),{ base64:b64 });
+        alert('Kép elmentve (settings/ucl_table_image).');
+      };
+      rd.readAsDataURL(f);
+    }
+
+    // ===== Eredmények (UCL) – meglévő =====
     async function loadResults(){
       const noC=document.getElementById('noResultContent');
       const withC=document.getElementById('withResultContent');
+      if(!noC || !withC) return;
       noC.innerHTML=''; withC.innerHTML='';
 
       const snap = await getDocs(collection(db,'ucl_matches'));
@@ -354,9 +453,10 @@
       });
     }
 
-    // ===== Felhasználók =====
+    // ===== Felhasználók – meglévő =====
     async function loadUsers(){
-      const list=document.getElementById('userList'); list.innerHTML='';
+      const list=document.getElementById('userList'); if(!list) return;
+      list.innerHTML='';
       const snap=await getDocs(collection(db,'users'));
       snap.forEach(docSnap=>{
         const user=docSnap.data();
@@ -381,9 +481,9 @@
       });
     }
 
-    // ===== Lezárás (UCL) =====
+    // ===== Lezárás (UCL) – meglévő =====
     async function loadPositionsLock(){
-      const status=document.getElementById('lockStatus');
+      const status=document.getElementById('lockStatus'); if(!status) return;
       const snap=await getDoc(doc(db,'settings','positionsLock_ucl'));
       if(!snap.exists()){ status.textContent='Jelenleg nyitva.'; status.className='muted'; return }
       const d=snap.data()||{}; const isLocked=!!d.isLocked; const until=d.lockUntil?.toDate?.()||null; const msg=d.message||''; const now=new Date(); const timeLocked=until && now>=until;
@@ -399,10 +499,10 @@
     }
     async function clearLock(){ await setDoc(doc(db,'settings','positionsLock_ucl'),{ isLocked:false, lockUntil:null, message:'' }); alert('Lezárás feloldva.'); await loadPositionsLock(); }
 
-    // ===== Szezon sorrend (UCL) =====
+    // ===== Szezon sorrend (régi) – meglévő =====
     async function loadOfficialOrder(){
       const ref=doc(db,'finalStandings_ucl','official');
-      const listEl=document.getElementById('sortableList');
+      const listEl=document.getElementById('sortableList'); if(!listEl) return;
       listEl.innerHTML='';
       const snap=await getDoc(ref);
       const source = snap.exists() && Array.isArray(snap.data().teams) ? snap.data().teams : teams;
@@ -423,11 +523,221 @@
       alert('Sorrend elmentve.');
     }
 
-    // Expose for inline handlers (ha később kellene)
+    // ===== ÚJ: Bónusz piacok (admin) =====
+    async function loadBonusMarkets(){
+      // Győztes jelöltek
+      const cSnap = await getDocs(collection(db,'ucl_championCandidates'));
+      championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.team);
+      renderChampionCandidates();
+
+      // Gólkirály jelöltek
+      const gSnap = await getDocs(collection(db,'ucl_goldenBootCandidates'));
+      goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
+      renderGoldenCandidates();
+
+      // Hivatalos gólkirály dropdown feltöltése
+      const sel = document.getElementById('officialGoldenPlayer');
+      if(sel){
+        sel.innerHTML = '<option value="">Válassz játékost (jelöltek)</option>' + goldenCandidates.map(c=>`<option value="${c.player}" data-team="${c.team||''}">${c.player}${c.team?` (${c.team})`:''}</option>`).join('');
+        sel.onchange = ()=>{
+          const teamInput = document.getElementById('officialGoldenTeam');
+          const opt = sel.options[sel.selectedIndex];
+          teamInput.value = opt?.dataset?.team || '';
+        };
+      }
+    }
+
+    function renderChampionCandidates(){
+      const tbody=document.querySelector('#chTable tbody'); if(!tbody) return;
+      tbody.innerHTML='';
+      championCandidates.sort((a,b)=>norm(a.team).localeCompare(norm(b.team),'hu'));
+      championCandidates.forEach(c=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <select id="ch-team-${c.id}">
+              ${teams.map(t=>`<option value="${t}" ${t===c.team?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </td>
+          <td><input type="number" id="ch-odds-${c.id}" min="0" step="1" value="${Number(c.oddsPercent||0)}" style="width:120px"></td>
+          <td>
+            <button class="btn primary" data-act="save" data-id="${c.id}">Mentés</button>
+            <button class="btn danger" data-act="del" data-id="${c.id}">Törlés</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll('button').forEach(btn=>{
+        btn.onclick = async ()=>{
+          const id=btn.dataset.id;
+          if(btn.dataset.act==='save'){
+            const team = document.getElementById(`ch-team-${id}`).value;
+            const odds = Math.max(0, parseInt(document.getElementById(`ch-odds-${id}`).value||0));
+            // duplikáció ellenőrzés
+            const dup = championCandidates.find(x=>x.id!==id && norm(x.team)===norm(team));
+            if(dup) return alert('Már van ilyen csapat a jelöltek között.');
+            await updateDoc(doc(db,'ucl_championCandidates',id),{ team, oddsPercent:odds });
+            await loadBonusMarkets();
+          } else if(btn.dataset.act==='del'){
+            if(!confirm('Törlöd a jelöltet?')) return;
+            await deleteDoc(doc(db,'ucl_championCandidates',id));
+            await loadBonusMarkets();
+          }
+        };
+      });
+    }
+
+    async function onAddChampionCandidate(e){
+      e.preventDefault();
+      const teamSel = document.getElementById('chAddTeam');
+      const oddsInp = document.getElementById('chAddOdds');
+      const team = teamSel.value;
+      const odds = Math.max(0, parseInt(oddsInp.value||0));
+      if(!team) return alert('Válassz csapatot!');
+      if(championCandidates.some(c=>norm(c.team)===norm(team))) return alert('Ez a csapat már szerepel a jelöltek között.');
+      await addDoc(collection(db,'ucl_championCandidates'),{ team, oddsPercent:odds });
+      teamSel.value=''; oddsInp.value='';
+      await loadBonusMarkets();
+    }
+
+    function renderGoldenCandidates(){
+      const tbody=document.querySelector('#gbTable tbody'); if(!tbody) return;
+      tbody.innerHTML='';
+      goldenCandidates.sort((a,b)=>norm(a.player).localeCompare(norm(b.player),'hu'));
+      goldenCandidates.forEach(c=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `
+          <td><input id="gb-player-${c.id}" value="${c.player}"></td>
+          <td>
+            <select id="gb-team-${c.id}">
+              <option value="">–</option>
+              ${teams.map(t=>`<option value="${t}" ${t===(c.team||'')?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </td>
+          <td><input type="number" id="gb-odds-${c.id}" min="0" step="1" value="${Number(c.oddsPercent||0)}" style="width:120px"></td>
+          <td>
+            <button class="btn primary" data-act="save" data-id="${c.id}">Mentés</button>
+            <button class="btn danger" data-act="del" data-id="${c.id}">Törlés</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+      tbody.querySelectorAll('button').forEach(btn=>{
+        btn.onclick = async ()=>{
+          const id=btn.dataset.id;
+          if(btn.dataset.act==='save'){
+            const player = document.getElementById(`gb-player-${id}`).value.trim();
+            const team = document.getElementById(`gb-team-${id}`).value || '';
+            const odds = Math.max(0, parseInt(document.getElementById(`gb-odds-${id}`).value||0));
+            if(!player) return alert('A játékos neve kötelező.');
+            // duplikáció ellenőrzés
+            const dup = goldenCandidates.find(x=>x.id!==id && norm(x.player)===norm(player));
+            if(dup) return alert('Ez a játékos már szerepel a jelöltek között.');
+            await updateDoc(doc(db,'ucl_goldenBootCandidates',id),{ player, team, oddsPercent:odds });
+            await loadBonusMarkets();
+          } else if(btn.dataset.act==='del'){
+            if(!confirm('Törlöd a jelöltet?')) return;
+            await deleteDoc(doc(db,'ucl_goldenBootCandidates',id));
+            await loadBonusMarkets();
+          }
+        };
+      });
+    }
+
+    async function onAddGoldenCandidate(e){
+      e.preventDefault();
+      const player = document.getElementById('gbAddPlayer').value.trim();
+      const team = document.getElementById('gbAddTeam').value || '';
+      const odds = Math.max(0, parseInt(document.getElementById('gbAddOdds').value||0));
+      if(!player) return alert('Írd be a játékos nevét!');
+      if(goldenCandidates.some(c=>norm(c.player)===norm(player))) return alert('Ez a játékos már szerepel a jelöltek között.');
+      await addDoc(collection(db,'ucl_goldenBootCandidates'),{ player, team, oddsPercent:odds });
+      document.getElementById('gbAddPlayer').value='';
+      document.getElementById('gbAddTeam').value='';
+      document.getElementById('gbAddOdds').value='';
+      await loadBonusMarkets();
+    }
+
+    // ===== ÚJ: Hivatalos eredmények (Top8/Győztes/Gólkirály) =====
+    function renderTop8Chips(){
+      const box = document.getElementById('top8Chips'); if(!box) return;
+      box.innerHTML='';
+      const set = new Set(officialTop8);
+      teams.forEach(t=>{
+        const div=document.createElement('div');
+        div.className='chip' + (set.has(t)?' selected':'');
+        div.textContent = t;
+        div.onclick = ()=>{
+          if(set.has(t)){ set.delete(t) }
+          else{
+            if(set.size>=8) return;
+            set.add(t);
+          }
+          officialTop8 = Array.from(set);
+          renderTop8Chips();
+          updateTop8Count();
+        };
+        box.appendChild(div);
+      });
+      updateTop8Count();
+    }
+    function updateTop8Count(){
+      const el=document.getElementById('top8Count'); if(el) el.textContent = `${officialTop8.length}/8`;
+    }
+
+    async function loadOfficialBonus(){
+      // Doc: ucl_official/current
+      const ref=doc(db,'ucl_official','current');
+      const snap=await getDoc(ref);
+      if(snap.exists()){
+        const d=snap.data()||{};
+        officialTop8 = Array.isArray(d.top8)? d.top8.filter(x=>teams.includes(x)).slice(0,8): [];
+        officialChampion = teams.includes(d.champion)? d.champion : "";
+        officialGolden = d.goldenBoot && d.goldenBoot.player ? { player:d.goldenBoot.player, team:d.goldenBoot.team||"" } : { player:"", team:"" };
+      }else{
+        officialTop8 = [];
+        officialChampion = "";
+        officialGolden = { player:"", team:"" };
+      }
+      // Render
+      renderTop8Chips();
+      const chSel = document.getElementById('officialChampion'); if(chSel) chSel.value = officialChampion || "";
+      const gbSel = document.getElementById('officialGoldenPlayer'); if(gbSel) {
+        gbSel.value = officialGolden.player || "";
+        const opt = gbSel.options[gbSel.selectedIndex];
+        document.getElementById('officialGoldenTeam').value = opt?.dataset?.team || officialGolden.team || "";
+      }
+    }
+
+    async function saveOfficialTop8(){
+      if(officialTop8.length!==8) return alert('Pontosan 8 csapatot válassz ki a Top 8-hoz.');
+      await setDoc(doc(db,'ucl_official','current'),{
+        top8: officialTop8,
+      },{ merge:true });
+      alert('Top 8 elmentve.');
+    }
+    async function saveOfficialChampion(){
+      const val = document.getElementById('officialChampion').value || "";
+      if(!val) return alert('Válassz csapatot!');
+      await setDoc(doc(db,'ucl_official','current'),{ champion: val },{ merge:true });
+      officialChampion = val;
+      alert('Győztes elmentve.');
+    }
+    async function saveOfficialGolden(){
+      const playerSel = document.getElementById('officialGoldenPlayer');
+      const player = playerSel.value || "";
+      if(!player) return alert('Válassz játékost!');
+      const team = playerSel.options[playerSel.selectedIndex]?.dataset?.team || "";
+      await setDoc(doc(db,'ucl_official','current'),{ goldenBoot: { player, team } },{ merge:true });
+      officialGolden = { player, team };
+      document.getElementById('officialGoldenTeam').value = team;
+      alert('Gólkirály elmentve.');
+    }
+
+    // Expose for inline handlers (meglévő kártyáknál kell)
     window.updateMatch = updateMatch;
     window.deleteMatch = deleteMatch;
     window.saveLock = saveLock;
     window.clearLock = clearLock;
+    window.saveOfficialOrder = saveOfficialOrder;
   </script>
 </head>
 <body></body>
