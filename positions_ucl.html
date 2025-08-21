@@ -38,31 +38,29 @@
     .pill-badge[hidden]{ display:none !important; }
 
     .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
-    .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .sub{ font-size:12px; color:#64748b; }
 
     .pool{ padding:12px; display:flex; flex-wrap:wrap; gap:10px; align-content:flex-start; min-height:120px; }
-    .team-chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:grab; user-select:none; }
-    .team-chip:active{ cursor:grabbing; }
+    .team-chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:pointer; user-select:none; }
+    .team-chip[aria-pressed="true"]{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 35%, white); }
     .crest{ width:22px; height:22px; object-fit:contain; border-radius:4px; background:#fff; border:1px solid var(--line,#e6eaf1); }
 
-    .slots{ padding:12px; display:grid; grid-template-columns: 1fr; gap:10px; }
-    .slot{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border:1px dashed var(--line,#e6eaf1); border-radius:12px; background:#fafbff; min-height:52px; }
-    .slot.dragover{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 40%, white); outline-offset:2px; }
-    .slot-left{ display:flex; align-items:center; gap:10px; }
-    .pos-num{ width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:color-mix(in oklab, var(--accent,#3b82f6) 20%, white); color:var(--accent,#3b82f6); font-weight:800; }
-    .slot-chip{ display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:grab; user-select:none; }
-    .slot-empty{ color:#94a3b8; font-size:13px; }
-
-    .save-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    .save-state{ font-size:12px; color:#16a34a; display:none; }
-    .save-state.show{ display:inline-flex; }
+    .selected-wrap{ padding:12px; display:flex; flex-wrap:wrap; gap:10px; min-height:70px; background:#fafbff; border-top:1px dashed var(--line,#e6eaf1); }
+    .selected-chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:pointer; user-select:none; }
+    .count{ font-size:12px; color:#111; background:#e6f1ff; border:1px solid var(--line,#e6eaf1); padding:2px 8px; border-radius:999px; }
 
     .form{ padding:12px; display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
     @media (max-width:700px){ .form{ grid-template-columns: 1fr; } }
     .field{ display:flex; flex-direction:column; gap:6px; }
     .field label{ font-size:13px; color:#475569; }
-    .field input, .field select{ min-height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .field select{ min-height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .hint{ font-size:12px; color:#64748b; }
+    .read{ font-weight:700; }
+
+    .save-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
+    .save-state{ font-size:12px; color:#16a34a; display:none; }
+    .save-state.show{ display:inline-flex; }
 
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
@@ -141,7 +139,7 @@
     let favouriteTeamucl = "";
     let chatLastSeen = null;
 
-    let top8Placed = Array(8).fill("");
+    let selectedTop8 = [];
     let championCandidates = [];
     let goldenCandidates = [];
 
@@ -177,17 +175,15 @@
           const tipDoc = await getDoc(doc(db,"ucl_top8Tips", currentUserEmail));
           if (tipDoc.exists()){
             const arr = Array.isArray(tipDoc.data().picks) ? tipDoc.data().picks : [];
-            top8Placed = Array(8).fill("");
-            for (let i=0;i<8;i++){ if (arr[i] && TEAMS.includes(arr[i])) top8Placed[i]=arr[i]; }
+            selectedTop8 = arr.filter(t => TEAMS.includes(t)).slice(0,8);
           }
         }catch(e){}
 
         await loadMarkets();
-        hydrateChampionUI();
-        hydrateGoldenUI();
-        renderAll();
-        initForms();
-
+        await hydrateChampionPick();
+        await hydrateGoldenPick();
+        renderPool();
+        renderSelected();
         initChat(userRef);
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
@@ -207,39 +203,68 @@
         const gSnap = await getDocs(collection(db,"ucl_goldenBootCandidates"));
         goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
       }catch(e){ goldenCandidates=[]; }
+
       const chSel = document.getElementById("championSelect");
       chSel.innerHTML = "";
       if (championCandidates.length===0){
-        const o = document.createElement("option"); o.value=""; o.textContent="Nincs elérhető jelölt"; chSel.appendChild(o);
+        const o = document.createElement("option"); o.value=""; o.textContent="Nincs jelölt"; chSel.appendChild(o);
       } else {
         const o0 = document.createElement("option"); o0.value=""; o0.textContent="Válassz jelöltet"; chSel.appendChild(o0);
-        championCandidates.forEach(c=>{ const o=document.createElement("option"); o.value=c.team; o.textContent=`${c.team}`; chSel.appendChild(o); });
+        championCandidates.forEach(c=>{ const o=document.createElement("option"); o.value=c.team; o.textContent=c.team; o.dataset.odds=String(c.oddsPercent||0); chSel.appendChild(o); });
       }
+
       const gbSel = document.getElementById("goldenSelect");
       gbSel.innerHTML = "";
       if (goldenCandidates.length===0){
-        const o = document.createElement("option"); o.value=""; o.textContent="Nincs elérhető jelölt"; gbSel.appendChild(o);
+        const o = document.createElement("option"); o.value=""; o.textContent="Nincs jelölt"; gbSel.appendChild(o);
       } else {
         const o0 = document.createElement("option"); o0.value=""; o0.textContent="Válassz jelöltet"; gbSel.appendChild(o0);
-        goldenCandidates.forEach(c=>{ const t=c.team?` (${c.team})`:""; const o=document.createElement("option"); o.value=c.player; o.textContent=`${c.player}${t}`; o.dataset.team=c.team||""; gbSel.appendChild(o); });
+        goldenCandidates.forEach(c=>{ const o=document.createElement("option"); o.value=c.player; o.textContent=c.team?`${c.player} (${c.team})`:`${c.player}`; o.dataset.team=c.team||""; o.dataset.odds=String(c.oddsPercent||0); gbSel.appendChild(o); });
       }
+
+      chSel.addEventListener("change", saveChampionPick);
+      gbSel.addEventListener("change", saveGoldenPick);
+    }
+
+    async function hydrateChampionPick(){
+      const chSel = document.getElementById("championSelect");
+      const oddsView = document.getElementById("championOddsView");
       try{
         const chDoc = await getDoc(doc(db,"ucl_championPickTips", currentUserEmail));
         if (chDoc.exists()){
-          const d=chDoc.data(); if (d.team) chSel.value=d.team;
-          const found = championCandidates.find(x=>x.team===d.team);
-          document.getElementById("championOdds").value = String(d.oddsPercent || found?.oddsPercent || 0);
+          const d=chDoc.data();
+          if (d.team && Array.from(chSel.options).some(o=>o.value===d.team)) chSel.value=d.team;
+          const opt = chSel.options[chSel.selectedIndex];
+          const viewOdds = Number(opt?.dataset?.odds||d.oddsPercent||0);
+          oddsView.textContent = viewOdds ? `${viewOdds}%` : "-";
+        } else {
+          oddsView.textContent = "-";
         }
-      }catch(e){}
+      }catch(e){ oddsView.textContent = "-"; }
+    }
+
+    async function hydrateGoldenPick(){
+      const gbSel = document.getElementById("goldenSelect");
+      const teamView = document.getElementById("goldenTeamView");
+      const oddsView = document.getElementById("goldenOddsView");
       try{
         const gbDoc = await getDoc(doc(db,"ucl_goldenBootTips", currentUserEmail));
         if (gbDoc.exists()){
-          const d=gbDoc.data(); if (d.player) gbSel.value=d.player;
-          const found = goldenCandidates.find(x=>x.player===d.player);
-          document.getElementById("goldenTeam").value = d.team || found?.team || "";
-          document.getElementById("goldenOdds").value = String(d.oddsPercent || found?.oddsPercent || 0);
+          const d=gbDoc.data();
+          if (d.player && Array.from(gbSel.options).some(o=>o.value===d.player)) gbSel.value=d.player;
+          const opt = gbSel.options[gbSel.selectedIndex];
+          const viewTeam = opt?.dataset?.team || d.team || "";
+          const viewOdds = Number(opt?.dataset?.odds||d.oddsPercent||0);
+          teamView.textContent = viewTeam || "-";
+          oddsView.textContent = viewOdds ? `${viewOdds}%` : "-";
+        } else {
+          teamView.textContent = "-";
+          oddsView.textContent = "-";
         }
-      }catch(e){}
+      }catch(e){
+        teamView.textContent = "-";
+        oddsView.textContent = "-";
+      }
     }
 
     function updatePendingBadge(){
@@ -260,201 +285,127 @@
       });
     }
 
-    function renderAll(){ renderPool(); renderSlots(); }
-
-    function poolTeams(){
-      const inSlots = new Set(top8Placed.filter(Boolean));
-      return TEAMS.filter(t => !inSlots.has(t));
-    }
-
     function renderPool(){
       const pool = document.getElementById("pool");
       pool.innerHTML = "";
-      for (const team of poolTeams()){
+      const notSelected = TEAMS.filter(t => !selectedTop8.includes(t));
+      for (const team of notSelected){
         const chip = document.createElement("div");
         chip.className = "team-chip";
-        chip.draggable = true;
-        chip.dataset.team = team;
+        chip.setAttribute("role","button");
+        chip.setAttribute("aria-pressed","false");
         chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
-        chip.addEventListener("dragstart", e=>{
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", JSON.stringify({type:"team", team, from:"pool"}));
-        });
+        chip.addEventListener("click", ()=>toggleSelect(team));
         pool.appendChild(chip);
       }
-      pool.addEventListener("dragover", e=>{ e.preventDefault(); });
-      pool.addEventListener("drop", e=>{
-        e.preventDefault();
-        const data = safeParse(e.dataTransfer.getData("text/plain"));
-        if (data && data.type==="slot"){
-          const fromIdx = data.index;
-          if (top8Placed[fromIdx]){
-            top8Placed[fromIdx] = "";
-            renderAll();
-            autoSaveTop8();
-          }
-        }
-      });
     }
 
-    function renderSlots(){
-      const wrap = document.getElementById("slots");
-      wrap.innerHTML = "";
-      for (let i=0;i<8;i++){
-        const slot = document.createElement("div");
-        slot.className = "slot";
-        slot.dataset.index = String(i);
+    function renderSelected(){
+      const sel = document.getElementById("selected");
+      const countEl = document.getElementById("top8Count");
+      sel.innerHTML = "";
+      selectedTop8.forEach(team=>{
+        const chip = document.createElement("div");
+        chip.className = "selected-chip";
+        chip.setAttribute("role","button");
+        chip.setAttribute("aria-pressed","true");
+        chip.title = "Eltávolítás";
+        chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
+        chip.addEventListener("click", ()=>removeTeam(team));
+        sel.appendChild(chip);
+      });
+      countEl.textContent = `${selectedTop8.length}/8`;
+      document.getElementById("saveStateTop8").classList.toggle("show", false);
+    }
 
-        const left = document.createElement("div");
-        left.className = "slot-left";
-        left.innerHTML = `<div class="pos-num">${i+1}</div>`;
-        slot.appendChild(left);
+    function toggleSelect(team){
+      if (selectedTop8.includes(team)){ removeTeam(team); return; }
+      if (selectedTop8.length>=8) return;
+      selectedTop8.push(team);
+      renderPool();
+      renderSelected();
+      autoSaveTop8();
+    }
 
-        const right = document.createElement("div");
-        right.className = "slot-right";
-        right.innerHTML = `<div class="hint">Top 8 helyezett</div>`;
-        slot.appendChild(right);
-
-        const team = top8Placed[i] || "";
-        if (team){
-          const chip = document.createElement("div");
-          chip.className = "slot-chip";
-          chip.draggable = true;
-          chip.dataset.team = team;
-          chip.dataset.slot = String(i);
-          chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
-          chip.addEventListener("dragstart", e=>{
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", JSON.stringify({type:"slot", index:i, team}));
-          });
-          left.appendChild(chip);
-        } else {
-          const empty = document.createElement("div");
-          empty.className = "slot-empty";
-          empty.textContent = "Húzd ide a csapatot";
-          left.appendChild(empty);
-        }
-
-        slot.addEventListener("dragover", e=>{ e.preventDefault(); slot.classList.add("dragover"); });
-        slot.addEventListener("dragleave", ()=>{ slot.classList.remove("dragover"); });
-        slot.addEventListener("drop", e=>{
-          e.preventDefault();
-          slot.classList.remove("dragover");
-          const data = safeParse(e.dataTransfer.getData("text/plain"));
-          if (!data) return;
-          const targetIdx = parseInt(slot.dataset.index,10);
-          if (data.type==="team" && data.from==="pool"){
-            const teamName = data.team;
-            const existingIdx = top8Placed.findIndex(x=>x===teamName);
-            if (existingIdx>=0) top8Placed[existingIdx] = "";
-            top8Placed[targetIdx] = teamName;
-            renderAll(); autoSaveTop8();
-          } else if (data.type==="slot"){
-            const fromIdx = parseInt(data.index,10);
-            if (fromIdx===targetIdx) return;
-            const a = top8Placed[fromIdx] || "";
-            const b = top8Placed[targetIdx] || "";
-            top8Placed[targetIdx] = a;
-            top8Placed[fromIdx] = b;
-            renderAll(); autoSaveTop8();
-          }
-        });
-
-        wrap.appendChild(slot);
-      }
+    function removeTeam(team){
+      selectedTop8 = selectedTop8.filter(t=>t!==team);
+      renderPool();
+      renderSelected();
+      autoSaveTop8();
     }
 
     function safeParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
 
     let saveTimerTop8 = null;
-    function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 300); }
+    function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 250); }
 
     async function saveTop8Now(){
       const saved = document.getElementById("saveStateTop8");
       try{
-        const picks = top8Placed.map(x=>x||"");
         await setDoc(doc(db,"ucl_top8Tips", currentUserEmail), {
           email: currentUserEmail,
           nick: currentUserNick || currentUserEmail,
-          picks,
+          picks: selectedTop8.slice(0,8),
           updatedAt: serverTimestamp()
         }, { merge:true });
         saved.classList.add("show");
         setTimeout(()=>saved.classList.remove("show"), 1200);
       }catch(e){}
-    }
-
-    function hydrateChampionUI(){
-      const sel = document.getElementById("championSelect");
-      const odds = document.getElementById("championOdds");
-      sel.addEventListener("change", ()=>{
-        const chosen = championCandidates.find(x=>x.team===sel.value);
-        odds.value = String(chosen?.oddsPercent || 0);
-        autoSaveChampion();
-      });
-      odds.addEventListener("input", autoSaveChampion);
-    }
-
-    function hydrateGoldenUI(){
-      const sel = document.getElementById("goldenSelect");
-      const team = document.getElementById("goldenTeam");
-      const odds = document.getElementById("goldenOdds");
-      sel.addEventListener("change", ()=>{
-        const opt = sel.options[sel.selectedIndex];
-        const chosen = goldenCandidates.find(x=>x.player===sel.value);
-        team.value = chosen?.team || opt?.dataset?.team || "";
-        odds.value = String(chosen?.oddsPercent || 0);
-        autoSaveGolden();
-      });
-      team.addEventListener("input", autoSaveGolden);
-      odds.addEventListener("input", autoSaveGolden);
     }
 
     let saveTimerC = null;
-    function autoSaveChampion(){ clearTimeout(saveTimerC); saveTimerC = setTimeout(saveChampionNow, 300); }
-
-    async function saveChampionNow(){
-      const saved = document.getElementById("saveStateC");
-      try{
-        const team = document.getElementById("championSelect").value || "";
-        let oddsPercent = Number(document.getElementById("championOdds").value||0);
-        if (!isFinite(oddsPercent) || oddsPercent<0) oddsPercent = 0;
-        await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
-          email: currentUserEmail,
-          nick: currentUserNick || currentUserEmail,
-          team,
-          oddsPercent,
-          updatedAt: serverTimestamp()
-        }, { merge:true });
-        saved.classList.add("show");
-        setTimeout(()=>saved.classList.remove("show"), 1200);
-      }catch(e){}
+    async function saveChampionPick(){
+      clearTimeout(saveTimerC);
+      saveTimerC = setTimeout(async ()=>{
+        const sel = document.getElementById("championSelect");
+        const oddsView = document.getElementById("championOddsView");
+        const opt = sel.options[sel.selectedIndex];
+        const team = sel.value || "";
+        const oddsPercent = Number(opt?.dataset?.odds||0);
+        oddsView.textContent = team ? (oddsPercent?`${oddsPercent}%`:"-") : "-";
+        try{
+          await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
+            email: currentUserEmail,
+            nick: currentUserNick || currentUserEmail,
+            team,
+            oddsPercent,
+            updatedAt: serverTimestamp()
+          }, { merge:true });
+          const s = document.getElementById("saveStateC");
+          s.classList.add("show");
+          setTimeout(()=>s.classList.remove("show"), 1200);
+        }catch(e){}
+      }, 200);
     }
 
     let saveTimerG = null;
-    function autoSaveGolden(){ clearTimeout(saveTimerG); saveTimerG = setTimeout(saveGoldenNow, 300); }
-
-    async function saveGoldenNow(){
-      const saved = document.getElementById("saveStateG");
-      try{
-        const player = document.getElementById("goldenSelect").value || "";
-        const team = document.getElementById("goldenTeam").value || "";
-        let oddsPercent = Number(document.getElementById("goldenOdds").value||0);
-        if (!isFinite(oddsPercent) || oddsPercent<0) oddsPercent = 0;
-        await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
-          email: currentUserEmail,
-          nick: currentUserNick || currentUserEmail,
-          player,
-          team,
-          oddsPercent,
-          updatedAt: serverTimestamp()
-        }, { merge:true });
-        saved.classList.add("show");
-        setTimeout(()=>saved.classList.remove("show"), 1200);
-      }catch(e){}
+    async function saveGoldenPick(){
+      clearTimeout(saveTimerG);
+      saveTimerG = setTimeout(async ()=>{
+        const sel = document.getElementById("goldenSelect");
+        const teamView = document.getElementById("goldenTeamView");
+        const oddsView = document.getElementById("goldenOddsView");
+        const opt = sel.options[sel.selectedIndex];
+        const player = sel.value || "";
+        const team = opt?.dataset?.team || "";
+        const oddsPercent = Number(opt?.dataset?.odds||0);
+        teamView.textContent = player ? (team||"-") : "-";
+        oddsView.textContent = player ? (oddsPercent?`${oddsPercent}%`:"-") : "-";
+        try{
+          await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
+            email: currentUserEmail,
+            nick: currentUserNick || currentUserEmail,
+            player,
+            team,
+            oddsPercent,
+            updatedAt: serverTimestamp()
+          }, { merge:true });
+          const s = document.getElementById("saveStateG");
+          s.classList.add("show");
+          setTimeout(()=>s.classList.remove("show"), 1200);
+        }catch(e){}
+      }, 200);
     }
-
-    function initForms(){}
 
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
@@ -612,9 +563,9 @@
 
     <div class="content-grid">
       <section class="card">
-        <h3>Top 8 tipp</h3>
+        <h3>Top 8 tipp <span class="count" id="top8Count">0/8</span></h3>
         <div id="pool" class="pool"></div>
-        <div id="slots" class="slots"></div>
+        <div id="selected" class="selected-wrap"></div>
         <div class="save-row">
           <span id="saveStateTop8" class="save-state">Mentve</span>
         </div>
@@ -626,11 +577,7 @@
           <div class="field">
             <label for="championSelect">Jelölt</label>
             <select id="championSelect"></select>
-            <div class="hint">A listát az admin állítja össze.</div>
-          </div>
-          <div class="field">
-            <label for="championOdds">Bónusz %</label>
-            <input id="championOdds" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
+            <div class="hint">Aktuális odds: <span id="championOddsView" class="read">-</span></div>
           </div>
         </div>
         <div class="save-row">
@@ -644,15 +591,7 @@
           <div class="field">
             <label for="goldenSelect">Jelölt</label>
             <select id="goldenSelect"></select>
-            <div class="hint">A listát az admin állítja össze.</div>
-          </div>
-          <div class="field">
-            <label for="goldenTeam">Klub</label>
-            <input id="goldenTeam" type="text" placeholder="">
-          </div>
-          <div class="field">
-            <label for="goldenOdds">Bónusz %</label>
-            <input id="goldenOdds" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
+            <div class="hint">Klub: <span id="goldenTeamView" class="read">-</span> • Odds: <span id="goldenOddsView" class="read">-</span></div>
           </div>
         </div>
         <div class="save-row">
