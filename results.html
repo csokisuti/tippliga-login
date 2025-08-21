@@ -159,7 +159,7 @@
     function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
     // Odds: támogatjuk az {odds:{"1":..,"X":..,"2":..}} és az odds1/oddsX/odds2 sémát is
-    function getOdds(m, key){ 
+    function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
       if (key==="X") return m.oddsX ?? m["oddsX"];
@@ -408,11 +408,21 @@
           tipsWrap.appendChild(kicker("Ehhez a meccshez még nincs leadott tipp."));
         } else if (!hasStarted){
           tipsWrap.appendChild(hiddenInfo("A tippek a kezdésig nem nyilvánosak."));
+          // saját tipp megmutatása a felhasználónak
           mTips.filter(t => t.user === currentUserEmail).forEach(t=>{
             const row = document.createElement("div"); row.className = "tip";
             row.innerHTML = `<b>Saját tipped</b>: ${escapeHtml(tipChoice(t))}${tipDouble(t) ? ' <span class="kicker">(dupla)</span>' : ''}`;
             tipsWrap.appendChild(row);
           });
+          // ADMIN: csak a leadók listája (tippek nélkül)
+          if (currentUserRole === 'admin') {
+            const uNames = [...new Set(mTips.map(t => t.user).filter(Boolean))]
+              .map(e => escapeHtml(nickByEmail[e] || e));
+            const adminRow = document.createElement('div');
+            adminRow.className = 'kicker';
+            adminRow.innerHTML = `<b>Leadott tippek (admin):</b> ${uNames.length ? uNames.join(', ') : '—'} (${uNames.length} fő)`;
+            tipsWrap.appendChild(adminRow);
+          }
         } else {
           mTips.forEach(t=>{
             const pick = tipChoice(t);
@@ -682,7 +692,7 @@
       </div>
     </div>
 
-<nav class="nav-grid">
+    <nav class="nav-grid">
       <!-- Főoldal kártya -->
       <a class="nav-card" href="dashboard.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -834,4 +844,3 @@
   </div>
 </body>
 </html>
-
