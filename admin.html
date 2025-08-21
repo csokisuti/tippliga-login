@@ -65,7 +65,7 @@
 
     let _currentTplId = null; // betöltött sablon azonosítója
 
-    // --- ÚJ: HTML escape segédfüggvény a nyers JSON debug megjelenítéséhez
+    // --- HTML escape segéd a nyers JSON debughoz
     function esc(s){ return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
     onAuthStateChanged(auth, async (user) => {
@@ -166,6 +166,7 @@
 
         <div class="row">
           <button class="btn primary" id="bulkSendBtn">Küldés</button>
+          <button class="btn" id="bulkPing" title="GAS webapp ellenőrzés (verzió)">Ping</button>
           <span id="bulkInfo" class="muted small"></span>
         </div>`});
 
@@ -220,6 +221,7 @@
       document.getElementById("bulkLoadUsers").onclick = bulkLoadUsers;
       document.getElementById("bulkSelectAll").onchange = (e)=>{ document.querySelectorAll("#bulkUsersBox input[type=checkbox]").forEach(cb=> cb.checked = e.target.checked) };
       document.getElementById("bulkSendBtn").onclick = bulkSend;
+      document.getElementById("bulkPing").onclick = pingServer;
 
       // sablonok
       document.getElementById("tplRefresh").onclick = loadTemplates;
@@ -421,7 +423,6 @@
 
       document.getElementById("bulkInfo").textContent = "Küldés folyamatban…";
 
-      // simple request – nincs JSON header; action a BODY-ban
       const res = await fetch(GS_BULKMAIL_URL, {
         method: "POST",
         body: JSON.stringify({ action:"sendBulkEmail", idToken, emails, subject, htmlBody, templateId: _currentTplId || "" })
@@ -430,8 +431,32 @@
       const data=await res.json().catch(()=>({ok:false,error:"JSON hiba"}));
       document.getElementById("bulkInfo").textContent = "";
       if(!data.ok){ alert("Hiba a küldésnél: " + (data.error||"")); return }
-      alert(`Kész. Kiküldve: ${data.sent} címre.`);
+
+      // --- ÚJ: verzió és echo megjelenítése
+      const v  = data.version || 'n/a';
+      const hl = (data.echo && typeof data.echo.htmlLen==='number') ? data.echo.htmlLen : (htmlBody||'').length;
+      const ec = (data.echo && typeof data.echo.emailsCount==='number') ? data.echo.emailsCount : emails.length;
+
+      alert(`Kész. Kiküldve: ${data.sent} címre.
+verzió: ${v}
+htmlLen: ${hl} | címzettek: ${ec}`);
+
       await loadMailLog();
+    }
+
+    // --- ÚJ: Ping / verziólekérdezés gomb
+    async function pingServer(){
+      try{
+        const res = await fetch(GS_BULKMAIL_URL, {
+          method: "POST",
+          body: JSON.stringify({ action:"ping" })
+        });
+        const data = await res.json().catch(()=>({ok:false}));
+        alert(`Ping: ${data.ok ? 'OK' : 'HIBA'}
+verzió: ${data.version || 'n/a'}`);
+      }catch(e){
+        alert('Ping hiba: ' + e);
+      }
     }
 
     // === Templates ===
