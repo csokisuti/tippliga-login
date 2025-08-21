@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
-  <title>BL TippLiga – Szezon végi sorrend</title>
+  <title>BL TippLiga – Bónusz tippek</title>
 
   <link rel="stylesheet" href="style-themed.css" />
   <link rel="stylesheet" href="style.css" />
@@ -58,6 +58,15 @@
     .save-state{ font-size:12px; color:#16a34a; display:none; }
     .save-state.show{ display:inline-flex; }
 
+    .form{ padding:12px; display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    @media (max-width:700px){ .form{ grid-template-columns: 1fr; } }
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    .field label{ font-size:13px; color:#475569; }
+    .field input, .field select{ min-height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .hint{ font-size:12px; color:#64748b; }
+    .split{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width:700px){ .split{ grid-template-columns: 1fr; } }
+
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -109,14 +118,6 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    /* === 12 UCL csapat – igény szerint módosítható === */
-    const TEAMS = [
-      "Real Madrid","Manchester City","Bayern München","Barcelona",
-      "Paris Saint-Germain","Liverpool","Inter","Juventus",
-      "Arsenal","Borussia Dortmund","Atlético Madrid","Chelsea"
-    ];
-
-    /* Címerek */
     const crestMap = {
       "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png",
       "Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Bayer Leverkusen":"ucl_crest/leverkusen.png",
@@ -131,9 +132,11 @@
       "Paris Saint-Germain":"ucl_crest/psg.png","Qarabağ":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png",
       "Red Star Belgrade":"ucl_crest/redstar.png","Slavia Praha":"ucl_crest/slavia.png","Sporting":"ucl_crest/sporting.png",
       "Sturm Graz":"ucl_crest/sturm.png","Tottenham":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png",
-      "Villarreal":"ucl_crest/villareal.png","Ferencváros":"crest/crest-fradi.png"
+      "Villarreal":"ucl_crest/villareal.png","Ferencváros":"crest/crest-fradi.png","Borussia Mönchengladbach":"ucl_crest/gladbach.png"
     };
     const crestFor = t => crestMap[t] || "";
+    const TEAMS = Object.keys(crestMap).sort((a,b)=>a.localeCompare(b,"hu"));
+    const GROUP_LABELS = ["A","B","C","D","E","F","G","H"];
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
     let currentUserEmail = "";
@@ -142,8 +145,9 @@
     let favouriteTeamucl = "";
     let chatLastSeen = null;
 
-    // a felhasználó által felrakott sorrend (12 hely)
-    let placed = Array(12).fill("");
+    let winnersPlaced = Array(8).fill("");
+    let championPick = { team:"", oddsPercent:0 };
+    let goldenBoot = { player:"", team:"", oddsPercent:0 };
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -165,7 +169,6 @@
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
         if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
 
-        // téma
         if (favouriteTeamucl) {
           const themeClass = "theme-" + favouriteTeamucl.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
@@ -174,17 +177,36 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
-        // korábbi saját sorrend betöltése (UCL)
         try{
-          const tipDoc = await getDoc(doc(db,"standingsTips_ucl", currentUserEmail));
-          if (tipDoc.exists()){
-            const order = Array.isArray(tipDoc.data().order) ? tipDoc.data().order : (Array.isArray(tipDoc.data().teams) ? tipDoc.data().teams : []);
-            placed = Array(12).fill("");
-            for (let i=0;i<12;i++){ if (order[i] && TEAMS.includes(order[i])) placed[i]=order[i]; }
+          const gwDoc = await getDoc(doc(db,"ucl_groupWinners", currentUserEmail));
+          if (gwDoc.exists()){
+            const picks = Array.isArray(gwDoc.data().picks) ? gwDoc.data().picks : [];
+            winnersPlaced = Array(8).fill("");
+            for (let i=0;i<8;i++){ if (picks[i] && TEAMS.includes(picks[i])) winnersPlaced[i]=picks[i]; }
           }
-        }catch(e){ console.warn(e); }
+        }catch(e){}
+
+        try{
+          const chDoc = await getDoc(doc(db,"ucl_championPick", currentUserEmail));
+          if (chDoc.exists()){
+            const d = chDoc.data();
+            championPick.team = TEAMS.includes(d.team) ? d.team : "";
+            championPick.oddsPercent = Number(d.oddsPercent)||0;
+          }
+        }catch(e){}
+
+        try{
+          const gbDoc = await getDoc(doc(db,"ucl_goldenBoot", currentUserEmail));
+          if (gbDoc.exists()){
+            const d = gbDoc.data();
+            goldenBoot.player = d.player || "";
+            goldenBoot.team = TEAMS.includes(d.team) ? d.team : "";
+            goldenBoot.oddsPercent = Number(d.oddsPercent)||0;
+          }
+        }catch(e){}
 
         renderAll();
+        initForms();
         initChat(userRef);
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
@@ -195,12 +217,10 @@
       });
     });
 
-    /* ---- Nav badge: függő meccstipp ---- */
     function updatePendingBadge(){
       getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
         getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
-          // legutóbbi tipp meccsenként
           const latestByMatch = new Map();
           tipsSnap.forEach(x=>{ const t=x.data(); if(!t?.matchId) return; const cur=latestByMatch.get(t.matchId);
             const ts=(t.updatedAt?.toMillis?.()||t.createdAt?.toMillis?.()||t.timestamp?.toMillis?.()||0);
@@ -215,18 +235,17 @@
       });
     }
 
-    /* ======= Drag & drop ======= */
-    function renderAll(){ renderPool(); renderSlots(); }
+    function renderAll(){ renderGroupPool(); renderGroupSlots(); populateTeamSelects(); hydrateChampionUI(); hydrateGoldenUI(); }
 
-    function poolTeams(){
-      const inSlots = new Set(placed.filter(Boolean));
+    function groupPoolTeams(){
+      const inSlots = new Set(winnersPlaced.filter(Boolean));
       return TEAMS.filter(t => !inSlots.has(t));
     }
 
-    function renderPool(){
-      const pool = document.getElementById("pool");
+    function renderGroupPool(){
+      const pool = document.getElementById("groupPool");
       pool.innerHTML = "";
-      for (const team of poolTeams()){
+      for (const team of groupPoolTeams()){
         const chip = document.createElement("div");
         chip.className = "team-chip";
         chip.draggable = true;
@@ -244,33 +263,34 @@
         const data = safeParse(e.dataTransfer.getData("text/plain"));
         if (data && data.type==="slot"){
           const fromIdx = data.index;
-          if (placed[fromIdx]){
-            placed[fromIdx] = "";
+          if (winnersPlaced[fromIdx]){
+            winnersPlaced[fromIdx] = "";
             renderAll();
-            autoSave();
+            autoSaveWinners();
           }
         }
       });
     }
 
-    function renderSlots(){
-      const wrap = document.getElementById("slots");
+    function renderGroupSlots(){
+      const wrap = document.getElementById("groupSlots");
       wrap.innerHTML = "";
-      for (let i=0;i<12;i++){
+      for (let i=0;i<8;i++){
         const slot = document.createElement("div");
         slot.className = "slot";
         slot.dataset.index = String(i);
 
         const left = document.createElement("div");
         left.className = "slot-left";
-        left.innerHTML = `<div class="pos-num">${i+1}</div>`;
+        left.innerHTML = `<div class="pos-num">${GROUP_LABELS[i]}</div>`;
         slot.appendChild(left);
 
         const right = document.createElement("div");
         right.className = "slot-right";
+        right.innerHTML = `<div class="hint">Csoport győztese</div>`;
         slot.appendChild(right);
 
-        const team = placed[i] || "";
+        const team = winnersPlaced[i] || "";
         if (team){
           const chip = document.createElement("div");
           chip.className = "slot-chip";
@@ -300,23 +320,18 @@
           const targetIdx = parseInt(slot.dataset.index,10);
           if (data.type==="team" && data.from==="pool"){
             const teamName = data.team;
-            const existingIdx = placed.findIndex(x=>x===teamName);
-            if (existingIdx>=0) placed[existingIdx] = "";
-            const prevTeam = placed[targetIdx] || "";
-            placed[targetIdx] = teamName;
-            if (prevTeam){
-              const firstEmpty = placed.findIndex(x=>x==="");
-              if (firstEmpty>=0){ placed[firstEmpty] = prevTeam; } else { placed[targetIdx] = teamName; }
-            }
-            renderAll(); autoSave();
+            const existingIdx = winnersPlaced.findIndex(x=>x===teamName);
+            if (existingIdx>=0) winnersPlaced[existingIdx] = "";
+            winnersPlaced[targetIdx] = teamName;
+            renderAll(); autoSaveWinners();
           } else if (data.type==="slot"){
             const fromIdx = parseInt(data.index,10);
             if (fromIdx===targetIdx) return;
-            const a = placed[fromIdx] || "";
-            const b = placed[targetIdx] || "";
-            placed[targetIdx] = a;
-            placed[fromIdx] = b;
-            renderAll(); autoSave();
+            const a = winnersPlaced[fromIdx] || "";
+            const b = winnersPlaced[targetIdx] || "";
+            winnersPlaced[targetIdx] = a;
+            winnersPlaced[fromIdx] = b;
+            renderAll(); autoSaveWinners();
           }
         });
 
@@ -324,27 +339,118 @@
       }
     }
 
+    function populateTeamSelects(){
+      const teamSelects = [document.getElementById("championTeamSelect"), document.getElementById("topScorerTeamSelect")];
+      for (const sel of teamSelects){
+        const valueKeep = sel.value || "";
+        sel.innerHTML = "";
+        const optEmpty = document.createElement("option");
+        optEmpty.value = "";
+        optEmpty.textContent = sel.id==="topScorerTeamSelect" ? "Nincs megadva" : "Válassz csapatot";
+        sel.appendChild(optEmpty);
+        for (const t of TEAMS){
+          const o = document.createElement("option");
+          o.value = t;
+          o.textContent = t;
+          sel.appendChild(o);
+        }
+        if (valueKeep && TEAMS.includes(valueKeep)) sel.value = valueKeep;
+      }
+    }
+
+    function hydrateChampionUI(){
+      const sel = document.getElementById("championTeamSelect");
+      const odds = document.getElementById("championOdds");
+      sel.value = championPick.team || "";
+      odds.value = championPick.oddsPercent ? String(championPick.oddsPercent) : "";
+    }
+
+    function hydrateGoldenUI(){
+      const name = document.getElementById("topScorerName");
+      const team = document.getElementById("topScorerTeamSelect");
+      const odds = document.getElementById("topScorerOdds");
+      name.value = goldenBoot.player || "";
+      team.value = goldenBoot.team || "";
+      odds.value = goldenBoot.oddsPercent ? String(goldenBoot.oddsPercent) : "";
+    }
+
     function safeParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
 
-    let saveTimer = null;
-    function autoSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 300); }
+    let saveTimerW = null;
+    function autoSaveWinners(){ clearTimeout(saveTimerW); saveTimerW = setTimeout(saveWinnersNow, 300); }
 
-    async function saveNow(){
-      const saved = document.getElementById("saveState");
+    async function saveWinnersNow(){
+      const saved = document.getElementById("saveStateW");
       try{
-        const order = placed.map(x=>x||"");
-        await setDoc(doc(db,"standingsTips_ucl", currentUserEmail), {
+        const picks = winnersPlaced.map(x=>x||"");
+        await setDoc(doc(db,"ucl_groupWinners", currentUserEmail), {
           email: currentUserEmail,
           nick: currentUserNick || currentUserEmail,
-          order,
+          picks,
           updatedAt: serverTimestamp()
         }, { merge:true });
         saved.classList.add("show");
         setTimeout(()=>saved.classList.remove("show"), 1200);
-      }catch(e){ console.warn(e); }
+      }catch(e){}
     }
 
-    /* ======= Chat ======= */
+    let saveTimerC = null;
+    function autoSaveChampion(){ clearTimeout(saveTimerC); saveTimerC = setTimeout(saveChampionNow, 300); }
+
+    async function saveChampionNow(){
+      const saved = document.getElementById("saveStateC");
+      try{
+        const team = document.getElementById("championTeamSelect").value || "";
+        let oddsPercent = Number(document.getElementById("championOdds").value||0);
+        if (!isFinite(oddsPercent) || oddsPercent<0) oddsPercent = 0;
+        championPick.team = team;
+        championPick.oddsPercent = oddsPercent;
+        await setDoc(doc(db,"ucl_championPick", currentUserEmail), {
+          email: currentUserEmail,
+          nick: currentUserNick || currentUserEmail,
+          team,
+          oddsPercent,
+          updatedAt: serverTimestamp()
+        }, { merge:true });
+        saved.classList.add("show");
+        setTimeout(()=>saved.classList.remove("show"), 1200);
+      }catch(e){}
+    }
+
+    let saveTimerG = null;
+    function autoSaveGolden(){ clearTimeout(saveTimerG); saveTimerG = setTimeout(saveGoldenNow, 300); }
+
+    async function saveGoldenNow(){
+      const saved = document.getElementById("saveStateG");
+      try{
+        const player = (document.getElementById("topScorerName").value||"").trim();
+        const team = document.getElementById("topScorerTeamSelect").value || "";
+        let oddsPercent = Number(document.getElementById("topScorerOdds").value||0);
+        if (!isFinite(oddsPercent) || oddsPercent<0) oddsPercent = 0;
+        goldenBoot.player = player;
+        goldenBoot.team = team;
+        goldenBoot.oddsPercent = oddsPercent;
+        await setDoc(doc(db,"ucl_goldenBoot", currentUserEmail), {
+          email: currentUserEmail,
+          nick: currentUserNick || currentUserEmail,
+          player,
+          team,
+          oddsPercent,
+          updatedAt: serverTimestamp()
+        }, { merge:true });
+        saved.classList.add("show");
+        setTimeout(()=>saved.classList.remove("show"), 1200);
+      }catch(e){}
+    }
+
+    function initForms(){
+      document.getElementById("championTeamSelect").addEventListener("change", autoSaveChampion);
+      document.getElementById("championOdds").addEventListener("input", autoSaveChampion);
+      document.getElementById("topScorerName").addEventListener("input", autoSaveGolden);
+      document.getElementById("topScorerTeamSelect").addEventListener("change", autoSaveGolden);
+      document.getElementById("topScorerOdds").addEventListener("input", autoSaveGolden);
+    }
+
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -454,7 +560,6 @@
       </div>
     </div>
 
-    <!-- NAV -->
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -466,7 +571,7 @@
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
-        <div class="text"><span class="title">Szezon végi sorrend</span><span class="desc">12 csapat – húzd a helyekre</span></div>
+        <div class="text"><span class="title">Bónusz tippek</span><span class="desc">Csoportelsők, győztes, gólkirály</span></div>
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -502,21 +607,56 @@
 
     <div class="content-grid">
       <section class="card">
-        <h3>Csapatlista</h3>
-        <div id="pool" class="pool"></div>
+        <h3>Csoportelsők (A–H)</h3>
+        <div id="groupPool" class="pool"></div>
+        <div id="groupSlots" class="slots"></div>
         <div class="save-row">
-          <span id="saveState" class="save-state">Mentve</span>
+          <span id="saveStateW" class="save-state">Mentve</span>
         </div>
       </section>
 
       <section class="card">
-        <h3>Helyezések</h3>
-        <div id="slots" class="slots"></div>
+        <h3>Végső győztes + bónusz %</h3>
+        <div class="form">
+          <div class="field">
+            <label for="championTeamSelect">Csapat</label>
+            <select id="championTeamSelect"></select>
+          </div>
+          <div class="field">
+            <label for="championOdds">Bónusz %</label>
+            <input id="championOdds" type="number" inputmode="numeric" min="0" step="1" placeholder="pl. 150">
+            <div class="hint">Ez %-ként jelenik meg az Eredmények és Toplista oldalakon.</div>
+          </div>
+        </div>
+        <div class="save-row">
+          <span id="saveStateC" class="save-state">Mentve</span>
+        </div>
+      </section>
+
+      <section class="card" style="grid-column: 1 / -1;">
+        <h3>Gólkirály + bónusz %</h3>
+        <div class="form">
+          <div class="field">
+            <label for="topScorerName">Játékos neve</label>
+            <input id="topScorerName" type="text" placeholder="pl. Erling Haaland">
+          </div>
+          <div class="field">
+            <label for="topScorerTeamSelect">Klub (opcionális)</label>
+            <select id="topScorerTeamSelect"></select>
+          </div>
+          <div class="field">
+            <label for="topScorerOdds">Bónusz %</label>
+            <input id="topScorerOdds" type="number" inputmode="numeric" min="0" step="1" placeholder="pl. 120">
+            <div class="hint">Ez is %-ként jelenik meg majd az Eredmények és Toplistán.</div>
+          </div>
+        </div>
+        <div class="save-row">
+          <span id="saveStateG" class="save-state">Mentve</span>
+        </div>
       </section>
     </div>
   </div>
 
-  <!-- Chat FAB -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
