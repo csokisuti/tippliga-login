@@ -65,6 +65,9 @@
 
     let _currentTplId = null; // betöltött sablon azonosítója
 
+    // --- ÚJ: HTML escape segédfüggvény a nyers JSON debug megjelenítéséhez
+    function esc(s){ return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
     onAuthStateChanged(auth, async (user) => {
       if(!user){ document.body.innerHTML = "<h2 style='padding:20px'>⛔ Nincs jogosultságod az admin felülethez.</h2>"; return }
       const userSnap = await getDoc(doc(db, "users", user.email));
@@ -526,9 +529,14 @@
               <summary>Részletek</summary>
               <div class="small" style="margin:8px 0"><strong>Címzettek:</strong> ${(x.recipients||[]).join(", ")||"—"}</div>
               <div class="small"><strong>Forrás sablon:</strong> ${x.templateId||"—"}</div>
+              <div class="small"><strong>Séma:</strong> ${x.schema||"—"} • <strong>Törzs hossza:</strong> ${x.bodyLen ?? ((x.bodyHtml||x.htmlBody||x.html||'')+'').length}</div>
               <div style="border:1px solid var(--border); border-radius:10px; padding:8px; background:#fff; margin-top:8px">
-                ${x.bodyHtml || x.htmlBody || x.html || ""}
+                ${x.bodyHtml || x.htmlBody || x.html || "<em class='muted'>Nincs bodyHtml/htmlBody/html mező a dokumentumban.</em>"}
               </div>
+              <details style="margin-top:8px">
+                <summary class="small">Nyers dokumentum (debug)</summary>
+                <pre class="small" style="white-space:pre-wrap; background:#f8fafc; padding:8px; border:1px solid var(--border); border-radius:8px;">${esc(JSON.stringify(x,null,2))}</pre>
+              </details>
             </details>
           </td></tr>
         `);
