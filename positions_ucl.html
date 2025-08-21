@@ -75,7 +75,7 @@
     .pc-check{margin-left:auto;font-weight:800;opacity:0}
     .pick-card.selected .pc-check{opacity:1;color:#16a34a}
 
-    /* Chat FAB (változatlan) */
+    /* Chat FAB */
     .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
     .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
     .chat-fab.has-unread .fab-badge{display:inline-block}
@@ -210,18 +210,23 @@
     });
 
     /* ===== Helpers ===== */
-    const asNumber = v => (v===null||v===undefined||v==='') ? null : Number(v);
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === '') return null;
+      if (typeof v === 'string') v = v.replace(',', '.');
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
     // Adminból érkező odds normalizálása (odds -> oddsDecimal -> 100/percent)
     const fromCandidateOdds = c => {
-      const direct = asNumber(c?.odds);
-      if (direct != null && !Number.isNaN(direct)) return direct;
-      const dec = asNumber(c?.oddsDecimal);
-      if (dec != null && !Number.isNaN(dec)) return dec;
-      const pct = asNumber(c?.oddsPercent);
+      const direct = toNum(c?.odds);
+      if (direct != null) return direct;
+      const dec = toNum(c?.oddsDecimal);
+      if (dec != null) return dec;
+      const pct = toNum(c?.oddsPercent);
       if (pct != null && pct > 0) return 100 / pct;
       return null;
     };
-    const fmtOdds = v => (v==null || Number.isNaN(v)) ? "—" : Number(v).toFixed(2);
+    const fmtOdds = v => (v==null ? "—" : toNum(v).toFixed(2));
 
     /* ===== Accordion ===== */
     function initAccordions(){
@@ -263,7 +268,7 @@
         return;
       }
       championCandidates.forEach(c=>{
-        const odds = fromCandidateOdds(c); // az admin által megadott odds
+        const odds = fromCandidateOdds(c);
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.team = c.team;
@@ -290,7 +295,7 @@
       }
       goldenCandidates.forEach(c=>{
         const crest = crestFor(c.team||'') || '';
-        const odds = fromCandidateOdds(c); // az admin által megadott odds
+        const odds = fromCandidateOdds(c);
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.player = c.player;
@@ -367,15 +372,15 @@
       updateBadges();
       saveTimerC = setTimeout(async ()=>{
         try{
-          const oddsDec = (oddsDecimal!=null && !Number.isNaN(oddsDecimal)) ? Number(oddsDecimal) : null;
-          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null; // kompatibilitás, ha szükséges
+          const oddsDec = toNum(oddsDecimal);
+          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null; // kompatibilitás
           await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
             email: currentUserEmail,
             nick: currentUserNick || currentUserEmail,
             team,
-            odds: oddsDec,            // <-- az adminnal egyező odds
-            oddsDecimal: oddsDec,     // (opcionális kompat)
-            oddsPercent: oddsPct,     // (opcionális kompat)
+            odds: oddsDec,            // fő mező
+            oddsDecimal: oddsDec,     // kompat
+            oddsPercent: oddsPct,     // kompat
             updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateC");
@@ -392,16 +397,16 @@
       updateBadges();
       saveTimerG = setTimeout(async ()=>{
         try{
-          const oddsDec = (oddsDecimal!=null && !Number.isNaN(oddsDecimal)) ? Number(oddsDecimal) : null;
-          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null; // kompatibilitás, ha szükséges
+          const oddsDec = toNum(oddsDecimal);
+          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null; // kompat
           await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
             email: currentUserEmail,
             nick: currentUserNick || currentUserEmail,
             player,
             team,
-            odds: oddsDec,            // <-- az adminnal egyező odds
-            oddsDecimal: oddsDec,     // (opcionális kompat)
-            oddsPercent: oddsPct,     // (opcionális kompat)
+            odds: oddsDec,            // fő mező
+            oddsDecimal: oddsDec,     // kompat
+            oddsPercent: oddsPct,     // kompat
             updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateG");
@@ -588,7 +593,7 @@
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/>
           </svg>
           Kilépés
         </button>
