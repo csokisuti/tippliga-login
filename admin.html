@@ -527,7 +527,7 @@
               <div class="small" style="margin:8px 0"><strong>Címzettek:</strong> ${(x.recipients||[]).join(", ")||"—"}</div>
               <div class="small"><strong>Forrás sablon:</strong> ${x.templateId||"—"}</div>
               <div style="border:1px solid var(--border); border-radius:10px; padding:8px; background:#fff; margin-top:8px">
-                ${x.bodyHtml||x.html||""}
+                ${x.bodyHtml || x.htmlBody || x.html || ""}
               </div>
             </details>
           </td></tr>
@@ -544,7 +544,7 @@
           if(!d.exists()) return;
           const x = d.data();
           document.getElementById("bulkSubject").value = x.subject || "";
-          document.getElementById("bulkMessage").value = x.bodyHtml || x.html || "";
+          document.getElementById("bulkMessage").value = (x.bodyHtml || x.htmlBody || x.html || "");
           _currentTplId = x.templateId || null;
           alert("Betöltve a szerkesztőbe.");
         };
