@@ -43,15 +43,19 @@
     .dot{width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:#e2e8f0;color:#fff}
     .dot.ok{background:#16a34a}
     .dot svg{width:14px;height:14px}
-
     .count{font-size:12px;color:#111;background:#e6f1ff;border:1px solid var(--line,#e6eaf1);padding:2px 8px;border-radius:999px}
 
-    /* Top8 pool + selected chips */
-    .pool{padding:12px;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;min-height:90px}
+    /* Top8 – dupla lista */
+    .top8-wrap{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:800px){.top8-wrap{grid-template-columns:1fr}}
+    .col{background:#fff;border:1px dashed var(--line,#e6eaf1);border-radius:12px}
+    .col h4{margin:0;padding:10px 12px;border-bottom:1px dashed var(--line,#e6eaf1);font-size:14px}
+    .search{width:100%;padding:8px 10px;border:1px solid var(--line,#e6eaf1);border-radius:10px;margin:10px 12px}
+    .pool{padding:0 12px 12px;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;min-height:86px}
     .team-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line,#e6eaf1);border-radius:10px;background:#fff;cursor:pointer}
     .team-chip[aria-pressed="true"]{outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 35%, white)}
     .crest{width:22px;height:22px;object-fit:contain;border-radius:4px;background:#fff;border:1px solid var(--line,#e6eaf1)}
-    .selected-wrap{padding:12px;display:flex;flex-wrap:wrap;gap:10px;min-height:60px;background:#fafbff;border-top:1px dashed var(--line,#e6eaf1)}
+    .selected-wrap{padding:12px;display:flex;flex-wrap:wrap;gap:10px;min-height:86px;background:#fafbff;border-radius:0 0 12px 12px}
     .selected-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line,#e6eaf1);border-radius:10px;background:#fff;cursor:pointer}
 
     .save-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
@@ -62,16 +66,16 @@
     .grid-cards{padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
     .pick-card{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line,#e6eaf1);border-radius:12px;background:#fff;cursor:pointer;transition:transform .08s ease}
     .pick-card:hover{transform:translateY(-1px)}
-    .pick-card.selected{outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 40%, white)}
+    .pick-card.selected{background:#ecfdf5;border-color:#16a34a;box-shadow:0 0 0 2px rgba(22,163,74,.15) inset}
     .pc-crest{width:34px;height:34px;object-fit:contain;border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff}
     .pc-text{display:flex;flex-direction:column;line-height:1.15}
     .pc-name{font-weight:700}
     .pc-sub{font-size:12px;color:#64748b}
     .badge-odds{font-size:12px;background:#eef2ff;border:1px solid var(--line,#e6eaf1);padding:2px 6px;border-radius:999px;margin-top:4px;display:inline-block}
     .pc-check{margin-left:auto;font-weight:800;opacity:0}
-    .pick-card.selected .pc-check{opacity:1}
+    .pick-card.selected .pc-check{opacity:1;color:#16a34a}
 
-    /* Chat floating action button (unchanged) */
+    /* Chat FAB (változatlan) */
     .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
     .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
     .chat-fab.has-unread .fab-badge{display:inline-block}
@@ -132,6 +136,7 @@
     const crestFor = t => crestMap[t] || "";
     const TEAMS = Object.keys(crestMap).sort((a,b)=>a.localeCompare(b,"hu"));
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
+    const norm = s => (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 
     let currentUserEmail = "";
     let currentUserNick  = "";
@@ -145,6 +150,7 @@
     let goldenCandidates   = [];   // {player, team?, oddsPercent}
     let pickedChampion     = "";   // string
     let pickedGolden       = "";   // player string
+    let teamQuery          = "";   // kereső
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -183,15 +189,16 @@
           }
         }catch{}
 
-        await loadMarkets();           // jelöltek kirakása
-        await hydrateChampionPick();   // saját pick bejelölése
-        await hydrateGoldenPick();     // saját pick bejelölése
+        await loadMarkets();
+        await hydrateChampionPick();
+        await hydrateGoldenPick();
 
         renderPool();
         renderSelected();
         updateBadges();
 
-        initAccordions();  // lenyitás/összecsukás
+        initAccordions();
+        initSearch();
         initChat(userRef);
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
@@ -202,13 +209,22 @@
       });
     });
 
+    /* ===== Helpers ===== */
+    const percentToDecimal = p => (p && p > 0) ? (100 / p) : null;
+    const fmtDec = d => (d==null ? "—" : d.toFixed(2));
+
     /* ===== Accordion ===== */
     function initAccordions(){
       document.querySelectorAll('.card-head').forEach(h=>{
         h.addEventListener('click',()=> h.parentElement.classList.toggle('open'));
       });
-      // alapból nyitva a Top8
       document.getElementById('card-top8').classList.add('open');
+    }
+
+    /* ===== Search ===== */
+    function initSearch(){
+      const inp = document.getElementById('teamSearch');
+      inp.addEventListener('input', ()=>{ teamQuery = inp.value; renderPool(); });
     }
 
     /* ===== Markets => kártyák render ===== */
@@ -237,21 +253,22 @@
         return;
       }
       championCandidates.forEach(c=>{
+        const dec = percentToDecimal(Number(c.oddsPercent||0));
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.team = c.team;
-        el.dataset.odds = Number(c.oddsPercent||0);
+        el.dataset.odds = dec==null ? "" : String(dec);
         el.innerHTML = `
           <img class="pc-crest" src="${crestFor(c.team)}" alt="">
           <div class="pc-text">
             <div class="pc-name">${c.team}</div>
-            <div class="badge-odds">${Number(c.oddsPercent||0)}%</div>
+            <div class="badge-odds">${fmtDec(dec)}</div>
           </div>
-          <div class="pc-check">✓</div>
-        `;
-        el.addEventListener('click', ()=> saveChampionPickWith(c.team, Number(c.oddsPercent||0)));
+          <div class="pc-check">✓</div>`;
+        el.addEventListener('click', ()=> saveChampionPickWith(c.team, Number(c.oddsPercent||0), dec));
         box.appendChild(el);
       });
+      highlightChampionCard();
     }
 
     function renderGoldenGrid(){
@@ -263,23 +280,24 @@
       }
       goldenCandidates.forEach(c=>{
         const crest = crestFor(c.team||'') || '';
+        const dec = percentToDecimal(Number(c.oddsPercent||0));
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.player = c.player;
         el.dataset.team = c.team || '';
-        el.dataset.odds = Number(c.oddsPercent||0);
+        el.dataset.odds = dec==null ? "" : String(dec);
         el.innerHTML = `
           ${crest? `<img class="pc-crest" src="${crest}" alt="">` : `<div class="pc-crest" style="display:flex;align-items:center;justify-content:center;font-size:16px">⚽</div>`}
           <div class="pc-text">
             <div class="pc-name">${c.player}</div>
             <div class="pc-sub">${c.team || '–'}</div>
-            <div class="badge-odds">${Number(c.oddsPercent||0)}%</div>
+            <div class="badge-odds">${fmtDec(dec)}</div>
           </div>
-          <div class="pc-check">✓</div>
-        `;
-        el.addEventListener('click', ()=> saveGoldenPickWith(c.player, c.team||'', Number(c.oddsPercent||0)));
+          <div class="pc-check">✓</div>`;
+        el.addEventListener('click', ()=> saveGoldenPickWith(c.player, c.team||'', Number(c.oddsPercent||0), dec));
         box.appendChild(el);
       });
+      highlightGoldenCard();
     }
 
     /* ===== Saját pickek beolvasása + UI kijelölés ===== */
@@ -332,7 +350,7 @@
     }
 
     let saveTimerC = null;
-    function saveChampionPickWith(team, oddsPercent){
+    function saveChampionPickWith(team, oddsPercent, oddsDecimal){
       clearTimeout(saveTimerC);
       pickedChampion = team;
       highlightChampionCard();
@@ -344,6 +362,7 @@
             nick: currentUserNick || currentUserEmail,
             team,
             oddsPercent: Number(oddsPercent||0),
+            oddsDecimal: oddsDecimal ?? null,
             updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateC");
@@ -353,7 +372,7 @@
     }
 
     let saveTimerG = null;
-    function saveGoldenPickWith(player, team, oddsPercent){
+    function saveGoldenPickWith(player, team, oddsPercent, oddsDecimal){
       clearTimeout(saveTimerG);
       pickedGolden = player;
       highlightGoldenCard();
@@ -366,6 +385,7 @@
             player,
             team,
             oddsPercent: Number(oddsPercent||0),
+            oddsDecimal: oddsDecimal ?? null,
             updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateG");
@@ -378,7 +398,9 @@
     function renderPool(){
       const pool = document.getElementById("pool");
       pool.innerHTML = "";
-      const notSelected = TEAMS.filter(t => !selectedTop8.includes(t));
+      const q = norm(teamQuery);
+      const notSelected = TEAMS.filter(t => !selectedTop8.includes(t))
+        .filter(t => !q || norm(t).includes(q));
       for (const team of notSelected){
         const chip = document.createElement("div");
         chip.className = "team-chip";
@@ -419,8 +441,7 @@
 
     /* ===== Fejléc pipák ===== */
     function updateBadges(){
-      // Top8: ha már bármennyi pick van, legyen pipa (ha akarod: selectedTop8.length===8)
-      setStatus('stTop8', selectedTop8.length>0);
+      setStatus('stTop8', selectedTop8.length===8);  // csak 8/8-nál zöld
       setStatus('stChampion', !!pickedChampion);
       setStatus('stGolden', !!pickedGolden);
     }
@@ -522,152 +543,3 @@
           await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
           if (panel.classList.contains('open')) await markSeen();
         }catch{
-          inputEl.value = backup; inputEl.focus();
-        }
-      });
-      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); document.getElementById('chatSendBtn').click(); } });
-
-      async function markSeen(){
-        try{
-          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
-          lastSeenMs = Date.now();
-          fab.classList.remove('has-unread');
-          fabBadge.textContent = '';
-        }catch{}
-      }
-    }
-  </script>
-</head>
-<body>
-  <div class="layout">
-    <div class="header">
-      <div class="header-left">
-        <img id="favCrest" class="fav-crest" alt="" hidden>
-        <div>
-          <h1>BL TippLiga</h1>
-          <p id="welcome" class="welcome"></p>
-        </div>
-      </div>
-      <div>
-        <button id="logout" class="btn-accent" aria-label="Kilépés">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
-          </svg>
-          Kilépés
-        </button>
-      </div>
-    </div>
-
-    <!-- NAV -->
-    <nav class="nav-grid">
-      <a class="nav-card" href="dashboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg>
-        </div>
-        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
-      </a>
-      <a class="nav-card" href="positions_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
-        </div>
-        <div class="text"><span class="title">Top 8 + bónusz</span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
-      </a>
-      <a class="nav-card" href="matches_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
-      </a>
-      <a class="nav-card" href="results_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
-      </a>
-      <a class="nav-card" href="leaderboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
-      </a>
-      <a class="nav-card" href="profile_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
-      </a>
-      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
-      </a>
-    </nav>
-
-    <!-- 1) Top 8 -->
-    <section id="card-top8" class="card">
-      <div class="card-head" role="button" aria-expanded="true">
-        <div class="card-title">Top 8 tipp</div>
-        <div class="card-meta">
-          <span class="count" id="top8Count">0/8</span>
-          <span class="status" id="stTop8"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
-          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
-        </div>
-      </div>
-      <div class="card-body">
-        <div id="pool" class="pool"></div>
-        <div id="selected" class="selected-wrap"></div>
-        <div class="save-row"><span id="saveStateTop8" class="save-state">Mentve</span></div>
-      </div>
-    </section>
-
-    <!-- 2) Végső győztes -->
-    <section id="card-champion" class="card">
-      <div class="card-head" role="button" aria-expanded="false">
-        <div class="card-title">Végső győztes jelöltek</div>
-        <div class="card-meta">
-          <span class="status" id="stChampion"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
-          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
-        </div>
-      </div>
-      <div class="card-body">
-        <div id="chGrid" class="grid-cards"></div>
-        <div class="save-row"><span id="saveStateC" class="save-state">Mentve</span></div>
-      </div>
-    </section>
-
-    <!-- 3) Gólkirály -->
-    <section id="card-golden" class="card">
-      <div class="card-head" role="button" aria-expanded="false">
-        <div class="card-title">Gólkirály jelöltek</div>
-        <div class="card-meta">
-          <span class="status" id="stGolden"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
-          <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
-        </div>
-      </div>
-      <div class="card-body">
-        <div id="gbGrid" class="grid-cards"></div>
-        <div class="save-row"><span id="saveStateG" class="save-state">Mentve</span></div>
-      </div>
-    </section>
-  </div>
-
-  <!-- Chat -->
-  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
-  </button>
-
-  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
-    <div class="chat-head">
-      <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" aria-label="Bezárás">✕</button>
-    </div>
-    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
-    <div id="chatComposer">
-      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
-      <button id="chatSendBtn">Küldés</button>
-    </div>
-  </section>
-</body>
-</html>
