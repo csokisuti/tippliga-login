@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
-  <title>BL TippLiga – Bónusz tippek</title>
+  <title>BL TippLiga – Top 8 + bónuszok</title>
 
   <link rel="stylesheet" href="style-themed.css" />
   <link rel="stylesheet" href="style.css" />
@@ -45,12 +45,11 @@
     .team-chip:active{ cursor:grabbing; }
     .crest{ width:22px; height:22px; object-fit:contain; border-radius:4px; background:#fff; border:1px solid var(--line,#e6eaf1); }
 
-    .slots{ padding:12px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-    @media (max-width:700px){ .slots{ grid-template-columns: 1fr; } }
+    .slots{ padding:12px; display:grid; grid-template-columns: 1fr; gap:10px; }
     .slot{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border:1px dashed var(--line,#e6eaf1); border-radius:12px; background:#fafbff; min-height:52px; }
     .slot.dragover{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 40%, white); outline-offset:2px; }
     .slot-left{ display:flex; align-items:center; gap:10px; }
-    .pos-num{ width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:color-mix(in oklab, var(--accent,#3b82f6) 20%, white); color:var(--accent,#3b82f6); font-weight:800; }
+    .pos-num{ width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:color-mix(in oklab, var(--accent,#3b82f6) 20%, white); color:var(--accent,#3b82f6); font-weight:800; }
     .slot-chip{ display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:grab; user-select:none; }
     .slot-empty{ color:#94a3b8; font-size:13px; }
 
@@ -64,8 +63,6 @@
     .field label{ font-size:13px; color:#475569; }
     .field input, .field select{ min-height:40px; padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .hint{ font-size:12px; color:#64748b; }
-    .split{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-    @media (max-width:700px){ .split{ grid-template-columns: 1fr; } }
 
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
@@ -126,9 +123,9 @@
       "Celtic":"ucl_crest/celtic.png","Chelsea":"ucl_crest/chelsea.png","Club Brugge":"ucl_crest/brugge.png",
       "Eintracht Frankfurt":"ucl_crest/frankfurt.png","FC Copenhagen":"ucl_crest/copenhagen.png","Fenerbahçe":"ucl_crest/fener.png",
       "Galatasaray":"ucl_crest/galata.png","Inter":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png",
-      "Kairat":"ucl_crest/kairat.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png",
+      "Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png",
       "Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png",
-      "Newcastle":"ucl_crest/newcastle.png","Olympiacos":"ucl_crest/olympiacos.png","Pafos":"ucl_crest/pafos.png",
+      "Newcastle":"ucl_crest/newcastle.png","Olympiacos":"ucl_crest/olympiacos.png",
       "Paris Saint-Germain":"ucl_crest/psg.png","Qarabağ":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png",
       "Red Star Belgrade":"ucl_crest/redstar.png","Slavia Praha":"ucl_crest/slavia.png","Sporting":"ucl_crest/sporting.png",
       "Sturm Graz":"ucl_crest/sturm.png","Tottenham":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png",
@@ -136,7 +133,6 @@
     };
     const crestFor = t => crestMap[t] || "";
     const TEAMS = Object.keys(crestMap).sort((a,b)=>a.localeCompare(b,"hu"));
-    const GROUP_LABELS = ["A","B","C","D","E","F","G","H"];
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
     let currentUserEmail = "";
@@ -145,9 +141,9 @@
     let favouriteTeamucl = "";
     let chatLastSeen = null;
 
-    let winnersPlaced = Array(8).fill("");
-    let championPick = { team:"", oddsPercent:0 };
-    let goldenBoot = { player:"", team:"", oddsPercent:0 };
+    let top8Placed = Array(8).fill("");
+    let championCandidates = [];
+    let goldenCandidates = [];
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -178,35 +174,20 @@
         }
 
         try{
-          const gwDoc = await getDoc(doc(db,"ucl_groupWinners", currentUserEmail));
-          if (gwDoc.exists()){
-            const picks = Array.isArray(gwDoc.data().picks) ? gwDoc.data().picks : [];
-            winnersPlaced = Array(8).fill("");
-            for (let i=0;i<8;i++){ if (picks[i] && TEAMS.includes(picks[i])) winnersPlaced[i]=picks[i]; }
+          const tipDoc = await getDoc(doc(db,"ucl_top8Tips", currentUserEmail));
+          if (tipDoc.exists()){
+            const arr = Array.isArray(tipDoc.data().picks) ? tipDoc.data().picks : [];
+            top8Placed = Array(8).fill("");
+            for (let i=0;i<8;i++){ if (arr[i] && TEAMS.includes(arr[i])) top8Placed[i]=arr[i]; }
           }
         }catch(e){}
 
-        try{
-          const chDoc = await getDoc(doc(db,"ucl_championPick", currentUserEmail));
-          if (chDoc.exists()){
-            const d = chDoc.data();
-            championPick.team = TEAMS.includes(d.team) ? d.team : "";
-            championPick.oddsPercent = Number(d.oddsPercent)||0;
-          }
-        }catch(e){}
-
-        try{
-          const gbDoc = await getDoc(doc(db,"ucl_goldenBoot", currentUserEmail));
-          if (gbDoc.exists()){
-            const d = gbDoc.data();
-            goldenBoot.player = d.player || "";
-            goldenBoot.team = TEAMS.includes(d.team) ? d.team : "";
-            goldenBoot.oddsPercent = Number(d.oddsPercent)||0;
-          }
-        }catch(e){}
-
+        await loadMarkets();
+        hydrateChampionUI();
+        hydrateGoldenUI();
         renderAll();
         initForms();
+
         initChat(userRef);
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
@@ -216,6 +197,50 @@
         signOut(auth).then(() => window.location.href = "login_ucl.html");
       });
     });
+
+    async function loadMarkets(){
+      try{
+        const cSnap = await getDocs(collection(db,"ucl_championCandidates"));
+        championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.team);
+      }catch(e){ championCandidates=[]; }
+      try{
+        const gSnap = await getDocs(collection(db,"ucl_goldenBootCandidates"));
+        goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
+      }catch(e){ goldenCandidates=[]; }
+      const chSel = document.getElementById("championSelect");
+      chSel.innerHTML = "";
+      if (championCandidates.length===0){
+        const o = document.createElement("option"); o.value=""; o.textContent="Nincs elérhető jelölt"; chSel.appendChild(o);
+      } else {
+        const o0 = document.createElement("option"); o0.value=""; o0.textContent="Válassz jelöltet"; chSel.appendChild(o0);
+        championCandidates.forEach(c=>{ const o=document.createElement("option"); o.value=c.team; o.textContent=`${c.team}`; chSel.appendChild(o); });
+      }
+      const gbSel = document.getElementById("goldenSelect");
+      gbSel.innerHTML = "";
+      if (goldenCandidates.length===0){
+        const o = document.createElement("option"); o.value=""; o.textContent="Nincs elérhető jelölt"; gbSel.appendChild(o);
+      } else {
+        const o0 = document.createElement("option"); o0.value=""; o0.textContent="Válassz jelöltet"; gbSel.appendChild(o0);
+        goldenCandidates.forEach(c=>{ const t=c.team?` (${c.team})`:""; const o=document.createElement("option"); o.value=c.player; o.textContent=`${c.player}${t}`; o.dataset.team=c.team||""; gbSel.appendChild(o); });
+      }
+      try{
+        const chDoc = await getDoc(doc(db,"ucl_championPickTips", currentUserEmail));
+        if (chDoc.exists()){
+          const d=chDoc.data(); if (d.team) chSel.value=d.team;
+          const found = championCandidates.find(x=>x.team===d.team);
+          document.getElementById("championOdds").value = String(d.oddsPercent || found?.oddsPercent || 0);
+        }
+      }catch(e){}
+      try{
+        const gbDoc = await getDoc(doc(db,"ucl_goldenBootTips", currentUserEmail));
+        if (gbDoc.exists()){
+          const d=gbDoc.data(); if (d.player) gbSel.value=d.player;
+          const found = goldenCandidates.find(x=>x.player===d.player);
+          document.getElementById("goldenTeam").value = d.team || found?.team || "";
+          document.getElementById("goldenOdds").value = String(d.oddsPercent || found?.oddsPercent || 0);
+        }
+      }catch(e){}
+    }
 
     function updatePendingBadge(){
       getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
@@ -235,17 +260,17 @@
       });
     }
 
-    function renderAll(){ renderGroupPool(); renderGroupSlots(); populateTeamSelects(); hydrateChampionUI(); hydrateGoldenUI(); }
+    function renderAll(){ renderPool(); renderSlots(); }
 
-    function groupPoolTeams(){
-      const inSlots = new Set(winnersPlaced.filter(Boolean));
+    function poolTeams(){
+      const inSlots = new Set(top8Placed.filter(Boolean));
       return TEAMS.filter(t => !inSlots.has(t));
     }
 
-    function renderGroupPool(){
-      const pool = document.getElementById("groupPool");
+    function renderPool(){
+      const pool = document.getElementById("pool");
       pool.innerHTML = "";
-      for (const team of groupPoolTeams()){
+      for (const team of poolTeams()){
         const chip = document.createElement("div");
         chip.className = "team-chip";
         chip.draggable = true;
@@ -263,17 +288,17 @@
         const data = safeParse(e.dataTransfer.getData("text/plain"));
         if (data && data.type==="slot"){
           const fromIdx = data.index;
-          if (winnersPlaced[fromIdx]){
-            winnersPlaced[fromIdx] = "";
+          if (top8Placed[fromIdx]){
+            top8Placed[fromIdx] = "";
             renderAll();
-            autoSaveWinners();
+            autoSaveTop8();
           }
         }
       });
     }
 
-    function renderGroupSlots(){
-      const wrap = document.getElementById("groupSlots");
+    function renderSlots(){
+      const wrap = document.getElementById("slots");
       wrap.innerHTML = "";
       for (let i=0;i<8;i++){
         const slot = document.createElement("div");
@@ -282,15 +307,15 @@
 
         const left = document.createElement("div");
         left.className = "slot-left";
-        left.innerHTML = `<div class="pos-num">${GROUP_LABELS[i]}</div>`;
+        left.innerHTML = `<div class="pos-num">${i+1}</div>`;
         slot.appendChild(left);
 
         const right = document.createElement("div");
         right.className = "slot-right";
-        right.innerHTML = `<div class="hint">Csoport győztese</div>`;
+        right.innerHTML = `<div class="hint">Top 8 helyezett</div>`;
         slot.appendChild(right);
 
-        const team = winnersPlaced[i] || "";
+        const team = top8Placed[i] || "";
         if (team){
           const chip = document.createElement("div");
           chip.className = "slot-chip";
@@ -320,18 +345,18 @@
           const targetIdx = parseInt(slot.dataset.index,10);
           if (data.type==="team" && data.from==="pool"){
             const teamName = data.team;
-            const existingIdx = winnersPlaced.findIndex(x=>x===teamName);
-            if (existingIdx>=0) winnersPlaced[existingIdx] = "";
-            winnersPlaced[targetIdx] = teamName;
-            renderAll(); autoSaveWinners();
+            const existingIdx = top8Placed.findIndex(x=>x===teamName);
+            if (existingIdx>=0) top8Placed[existingIdx] = "";
+            top8Placed[targetIdx] = teamName;
+            renderAll(); autoSaveTop8();
           } else if (data.type==="slot"){
             const fromIdx = parseInt(data.index,10);
             if (fromIdx===targetIdx) return;
-            const a = winnersPlaced[fromIdx] || "";
-            const b = winnersPlaced[targetIdx] || "";
-            winnersPlaced[targetIdx] = a;
-            winnersPlaced[fromIdx] = b;
-            renderAll(); autoSaveWinners();
+            const a = top8Placed[fromIdx] || "";
+            const b = top8Placed[targetIdx] || "";
+            top8Placed[targetIdx] = a;
+            top8Placed[fromIdx] = b;
+            renderAll(); autoSaveTop8();
           }
         });
 
@@ -339,51 +364,16 @@
       }
     }
 
-    function populateTeamSelects(){
-      const teamSelects = [document.getElementById("championTeamSelect"), document.getElementById("topScorerTeamSelect")];
-      for (const sel of teamSelects){
-        const valueKeep = sel.value || "";
-        sel.innerHTML = "";
-        const optEmpty = document.createElement("option");
-        optEmpty.value = "";
-        optEmpty.textContent = sel.id==="topScorerTeamSelect" ? "Nincs megadva" : "Válassz csapatot";
-        sel.appendChild(optEmpty);
-        for (const t of TEAMS){
-          const o = document.createElement("option");
-          o.value = t;
-          o.textContent = t;
-          sel.appendChild(o);
-        }
-        if (valueKeep && TEAMS.includes(valueKeep)) sel.value = valueKeep;
-      }
-    }
-
-    function hydrateChampionUI(){
-      const sel = document.getElementById("championTeamSelect");
-      const odds = document.getElementById("championOdds");
-      sel.value = championPick.team || "";
-      odds.value = championPick.oddsPercent ? String(championPick.oddsPercent) : "";
-    }
-
-    function hydrateGoldenUI(){
-      const name = document.getElementById("topScorerName");
-      const team = document.getElementById("topScorerTeamSelect");
-      const odds = document.getElementById("topScorerOdds");
-      name.value = goldenBoot.player || "";
-      team.value = goldenBoot.team || "";
-      odds.value = goldenBoot.oddsPercent ? String(goldenBoot.oddsPercent) : "";
-    }
-
     function safeParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
 
-    let saveTimerW = null;
-    function autoSaveWinners(){ clearTimeout(saveTimerW); saveTimerW = setTimeout(saveWinnersNow, 300); }
+    let saveTimerTop8 = null;
+    function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 300); }
 
-    async function saveWinnersNow(){
-      const saved = document.getElementById("saveStateW");
+    async function saveTop8Now(){
+      const saved = document.getElementById("saveStateTop8");
       try{
-        const picks = winnersPlaced.map(x=>x||"");
-        await setDoc(doc(db,"ucl_groupWinners", currentUserEmail), {
+        const picks = top8Placed.map(x=>x||"");
+        await setDoc(doc(db,"ucl_top8Tips", currentUserEmail), {
           email: currentUserEmail,
           nick: currentUserNick || currentUserEmail,
           picks,
@@ -394,18 +384,42 @@
       }catch(e){}
     }
 
+    function hydrateChampionUI(){
+      const sel = document.getElementById("championSelect");
+      const odds = document.getElementById("championOdds");
+      sel.addEventListener("change", ()=>{
+        const chosen = championCandidates.find(x=>x.team===sel.value);
+        odds.value = String(chosen?.oddsPercent || 0);
+        autoSaveChampion();
+      });
+      odds.addEventListener("input", autoSaveChampion);
+    }
+
+    function hydrateGoldenUI(){
+      const sel = document.getElementById("goldenSelect");
+      const team = document.getElementById("goldenTeam");
+      const odds = document.getElementById("goldenOdds");
+      sel.addEventListener("change", ()=>{
+        const opt = sel.options[sel.selectedIndex];
+        const chosen = goldenCandidates.find(x=>x.player===sel.value);
+        team.value = chosen?.team || opt?.dataset?.team || "";
+        odds.value = String(chosen?.oddsPercent || 0);
+        autoSaveGolden();
+      });
+      team.addEventListener("input", autoSaveGolden);
+      odds.addEventListener("input", autoSaveGolden);
+    }
+
     let saveTimerC = null;
     function autoSaveChampion(){ clearTimeout(saveTimerC); saveTimerC = setTimeout(saveChampionNow, 300); }
 
     async function saveChampionNow(){
       const saved = document.getElementById("saveStateC");
       try{
-        const team = document.getElementById("championTeamSelect").value || "";
+        const team = document.getElementById("championSelect").value || "";
         let oddsPercent = Number(document.getElementById("championOdds").value||0);
         if (!isFinite(oddsPercent) || oddsPercent<0) oddsPercent = 0;
-        championPick.team = team;
-        championPick.oddsPercent = oddsPercent;
-        await setDoc(doc(db,"ucl_championPick", currentUserEmail), {
+        await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
           email: currentUserEmail,
           nick: currentUserNick || currentUserEmail,
           team,
@@ -423,14 +437,11 @@
     async function saveGoldenNow(){
       const saved = document.getElementById("saveStateG");
       try{
-        const player = (document.getElementById("topScorerName").value||"").trim();
-        const team = document.getElementById("topScorerTeamSelect").value || "";
-        let oddsPercent = Number(document.getElementById("topScorerOdds").value||0);
+        const player = document.getElementById("goldenSelect").value || "";
+        const team = document.getElementById("goldenTeam").value || "";
+        let oddsPercent = Number(document.getElementById("goldenOdds").value||0);
         if (!isFinite(oddsPercent) || oddsPercent<0) oddsPercent = 0;
-        goldenBoot.player = player;
-        goldenBoot.team = team;
-        goldenBoot.oddsPercent = oddsPercent;
-        await setDoc(doc(db,"ucl_goldenBoot", currentUserEmail), {
+        await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
           email: currentUserEmail,
           nick: currentUserNick || currentUserEmail,
           player,
@@ -443,13 +454,7 @@
       }catch(e){}
     }
 
-    function initForms(){
-      document.getElementById("championTeamSelect").addEventListener("change", autoSaveChampion);
-      document.getElementById("championOdds").addEventListener("input", autoSaveChampion);
-      document.getElementById("topScorerName").addEventListener("input", autoSaveGolden);
-      document.getElementById("topScorerTeamSelect").addEventListener("change", autoSaveGolden);
-      document.getElementById("topScorerOdds").addEventListener("input", autoSaveGolden);
-    }
+    function initForms(){}
 
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
@@ -571,7 +576,7 @@
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
-        <div class="text"><span class="title">Bónusz tippek</span><span class="desc">Csoportelsők, győztes, gólkirály</span></div>
+        <div class="text"><span class="title">Top 8 + bónusz</span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -607,25 +612,25 @@
 
     <div class="content-grid">
       <section class="card">
-        <h3>Csoportelsők (A–H)</h3>
-        <div id="groupPool" class="pool"></div>
-        <div id="groupSlots" class="slots"></div>
+        <h3>Top 8 tipp</h3>
+        <div id="pool" class="pool"></div>
+        <div id="slots" class="slots"></div>
         <div class="save-row">
-          <span id="saveStateW" class="save-state">Mentve</span>
+          <span id="saveStateTop8" class="save-state">Mentve</span>
         </div>
       </section>
 
       <section class="card">
-        <h3>Végső győztes + bónusz %</h3>
+        <h3>Végső győztes jelölt</h3>
         <div class="form">
           <div class="field">
-            <label for="championTeamSelect">Csapat</label>
-            <select id="championTeamSelect"></select>
+            <label for="championSelect">Jelölt</label>
+            <select id="championSelect"></select>
+            <div class="hint">A listát az admin állítja össze.</div>
           </div>
           <div class="field">
             <label for="championOdds">Bónusz %</label>
-            <input id="championOdds" type="number" inputmode="numeric" min="0" step="1" placeholder="pl. 150">
-            <div class="hint">Ez %-ként jelenik meg az Eredmények és Toplista oldalakon.</div>
+            <input id="championOdds" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
           </div>
         </div>
         <div class="save-row">
@@ -634,20 +639,20 @@
       </section>
 
       <section class="card" style="grid-column: 1 / -1;">
-        <h3>Gólkirály + bónusz %</h3>
+        <h3>Gólkirály jelölt</h3>
         <div class="form">
           <div class="field">
-            <label for="topScorerName">Játékos neve</label>
-            <input id="topScorerName" type="text" placeholder="pl. Erling Haaland">
+            <label for="goldenSelect">Jelölt</label>
+            <select id="goldenSelect"></select>
+            <div class="hint">A listát az admin állítja össze.</div>
           </div>
           <div class="field">
-            <label for="topScorerTeamSelect">Klub (opcionális)</label>
-            <select id="topScorerTeamSelect"></select>
+            <label for="goldenTeam">Klub</label>
+            <input id="goldenTeam" type="text" placeholder="">
           </div>
           <div class="field">
-            <label for="topScorerOdds">Bónusz %</label>
-            <input id="topScorerOdds" type="number" inputmode="numeric" min="0" step="1" placeholder="pl. 120">
-            <div class="hint">Ez is %-ként jelenik meg majd az Eredmények és Toplistán.</div>
+            <label for="goldenOdds">Bónusz %</label>
+            <input id="goldenOdds" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
           </div>
         </div>
         <div class="save-row">
