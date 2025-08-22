@@ -9,97 +9,118 @@
   <script src="loader.js" defer></script>
 
   <style>
+    :root{ --line:#e6eaf1; --muted:#64748b; --accent:#3b82f6; }
+
     .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
 
+    /* Fejléc/nav */
     .header{ display:flex; align-items:center; justify-content:space-between; }
     .header-left{ display:flex; align-items:center; gap:12px; }
-    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
-    .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
+    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line); background:#fff; }
+    .welcome{ color:var(--muted); margin:4px 0 0; }
 
     .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
     @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
     @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
-    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
+    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent) 15%, white); color:var(--accent); }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
     .nav-card .title{ font-weight:800; }
-    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
+    .nav-card .desc{ color:var(--muted); font-size:12px; }
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
     .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; }
-    .muted{ color:#64748b; }
+    .muted{ color:var(--muted); }
 
-    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
-    .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line,#e6eaf1); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    /* Kártya + táblázat */
+    .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
+    .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
-    /* TÁBLÁZAT */
     .table-wrap{ display:flex; }
-    .grid{ display:grid; grid-auto-rows:44px; } /* egységes sormagasság */
+    .grid{ display:grid; }
     .hdr, .row{ display:contents; }
-    .cell{ padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#fff; display:flex; align-items:center; }
+    .cell{ padding:10px 12px; border-bottom:1px solid var(--line); background:#fff; }
     .hdr .cell{ font-weight:700; background:#f7f8fc; }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
-    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line,#e6eaf1); }
+    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
     .left .cell{ background:#fff; }
-    .rank{ text-align:right; color:#64748b; white-space:nowrap; justify-content:flex-end; }
-    .num{ text-align:right; white-space:nowrap; justify-content:flex-end; }
+    .rank{ text-align:right; color:#64748b; white-space:nowrap; }
+    .num{ text-align:right; white-space:nowrap; }
     .total{ font-weight:800; }
-    .round-cell{ min-width:78px; text-align:right; justify-content:flex-end; }
-    .round-link{ display:block; color:inherit; text-decoration:none; width:100%; text-align:right; }
+    .round-cell{ min-width:78px; text-align:right; }
+    .round-link{ display:block; color:inherit; text-decoration:none; }
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    .name-wrap{ display:flex; align-items:center; gap:8px; white-space:nowrap; min-width:0; }
-    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line,#e6eaf1); background:#fff; flex:0 0 auto; }
-    .name-text, .name-subtle{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
-    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; flex:0 0 auto; }
-    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line,#e6eaf1); border-radius:8px; background:#f8fafc; cursor:pointer; white-space:nowrap; }
-    .bot-btn{
-      border-color: color-mix(in oklab, var(--accent,#3b82f6) 40%, white);
-      background: color-mix(in oklab, var(--accent,#3b82f6) 12%, white);
-      color: var(--accent,#3b82f6);
-      font-weight:700;
-    }
-    .bot-btn:hover{ filter:brightness(0.96); }
+    /* Név + avatár/ címer + gombok */
+    .name-wrap{ display:flex; align-items:center; gap:8px; }
+    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; }
+    .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); }
+    .name-text{ font-weight:700; }
+    .name-subtle{ font-weight:700; opacity:.9; }
+    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; }
+    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; }
+    .bot-btn{ border-color: color-mix(in oklab, var(--accent) 40%, white);
+      background: color-mix(in oklab, var(--accent) 12%, white);
+      color: var(--accent); font-weight:700; }
 
-    /* MODAL */
+    /* Bot profil-popover */
+    .bot-card{
+      position:fixed; z-index:1200; display:none;
+      width:min(340px, calc(100vw - 32px));
+      background:#fff; border:1px solid var(--line);
+      border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.18);
+    }
+    .bot-card.open{ display:block; }
+    .bot-card .head{ display:flex; align-items:center; gap:10px;
+      padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .bot-card .avatar{ width:64px; height:64px; border-radius:12px; object-fit:cover;
+      border:1px solid var(--line); flex:0 0 auto; }
+    .bot-card .title{ font-weight:800; line-height:1.1; }
+    .bot-card .tag{ font-size:12px; color:#64748b; }
+    .bot-card .close{ margin-left:auto; width:28px; height:28px; border-radius:8px;
+      background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+    .bot-card .body{ padding:12px; font-size:14px; line-height:1.35; }
+    .bot-card .actions{ display:flex; gap:8px; padding:10px 12px;
+      border-top:1px solid var(--line); background:#fff; }
+
+    /* Modalok */
     .modal{ position:fixed; inset:0; background:rgba(15,23,42,.35); display:none; align-items:center; justify-content:center; z-index:1000; }
     .modal.open{ display:flex; }
-    .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
-    .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
+    .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
     .modal-title{ font-weight:800; }
     .modal-body{ padding:12px; overflow:auto; }
-    .modal-close{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); }
+    .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
 
     .ok{ color:#15803d; font-weight:700; }
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
 
-    /* CHAT */
-    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    /* Chat – (változatlan) */
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
-
-    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
     .chat-panel.open{ display:flex; }
-    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
     .chat-title{ font-weight:800; }
-    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
     #chatClose:hover{ filter:brightness(0.95); }
     .chat-list{ overflow:auto; padding:8px 10px; }
     .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
-    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start; }
     .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
-    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; width:auto; }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
 
-    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
-    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
   </style>
 
   <script type="module">
@@ -111,6 +132,31 @@
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    /* ---- Bot avatarok + bemutatkozások (képek a projekt gyökerében) ---- */
+    const BOT_META = {
+      "Evidens Elek": {
+        avatar: "elek-256.webp",
+        avatar2x: "elek-512.webp",
+        intro: "„Szia, Elek vagyok, a józan ész futószalagon. Mindig az esélyesebbre kattintok (legkisebb odds), a duplám a forduló legmeredekebb meccsére megy.”"
+      },
+      "Hazai Hugó": {
+        avatar: "hugo-256.webp",
+        avatar2x: "hugo-512.webp",
+        intro: "„Hugó, a lelátó sommelier-je. Nálam minden 1-es; a duplám a forduló legvastagabb hazai oddsa.”"
+      },
+      "Ikszes Ilona": {
+        avatar: "ilona-256.webp",
+        avatar2x: "ilona-512.webp",
+        intro: "„Ilona vagyok, az X-miniszter. Nem a béke kedvéért – a feszes meccseket imádom. Mindig X-re megyek, a duplám a legmeredekebb X-oddsra.”"
+      },
+      "Vendég Vendel": {
+        avatar: "vendel-256.webp",
+        avatar2x: "vendel-512.webp",
+        intro: "„Vendel, idegenben is otthon. Minden tipp 2-es; a duplám a legbátrabb vendég oddson. Kézipoggyász: bátorság.”"
+      }
+    };
+
+    /* ---------------- Firebase init ---------------- */
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
@@ -123,6 +169,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    /* ---------------- Helpers ---------------- */
     const crestMap = {
       "Debreceni VSC": "crest/crest-dvsc.png",
       "Diósgyőri VTK": "crest/crest-dvtk.png",
@@ -139,18 +186,9 @@
     };
 
     const teamColor = {
-      "Debreceni VSC":"#b91c1c",
-      "Diósgyőri VTK":"#dc2626",
-      "Ferencváros":"#166534",
-      "ETO FC Győr":"#14532d",
-      "Kazincbarcikai SC":"#1d4ed8",
-      "Kisvárda FC":"#991b1b",
-      "MTK Budapest":"#2563eb",
-      "Nyíregyháza Spartacus":"#1e40af",
-      "Paksi FC":"#047857",
-      "Puskás Akadémia":"#065f46",
-      "Újpest FC":"#6b21a8",
-      "Zalaegerszegi TE FC":"#1d4ed8"
+      "Debreceni VSC":"#b91c1c","Diósgyőri VTK":"#dc2626","Ferencváros":"#166534","ETO FC Győr":"#14532d",
+      "Kazincbarcikai SC":"#1d4ed8","Kisvárda FC":"#991b1b","MTK Budapest":"#2563eb","Nyíregyháza Spartacus":"#1e40af",
+      "Paksi FC":"#047857","Puskás Akadémia":"#065f46","Újpest FC":"#6b21a8","Zalaegerszegi TE FC":"#1d4ed8"
     };
 
     const fmt = n => (Number(n)||0).toFixed(2);
@@ -165,7 +203,7 @@
       return undefined;
     }
     const tipChoice = t => t.choice ?? t.tip ?? "";
-    const tipDouble = t => !!(t.double ?? t.isDouble);  /* <-- javítva */
+    const tipDouble = t => !!(t.double ?? t.isDouble);
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
     const NORM = s => String(s ?? "").trim().toLowerCase()
@@ -182,6 +220,7 @@
     }
     function pctColor(pct){ const p=Math.max(0,Math.min(12, pct)); const hue=(p/12)*120; return `hsl(${hue}deg,85%,40%)`; }
 
+    /* ---------------- Állapot ---------------- */
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
@@ -198,6 +237,7 @@
     let matchesCache = {};
     let botPickStore = {};
 
+    /* ---------------- INIT ---------------- */
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
@@ -257,11 +297,25 @@
           const name = btn.getAttribute('data-bot-view');
           openBotModal(name);
         }
-        if (e.target.matches('.modal-close')) closeBotModal();
+        if (e.target.matches('.close-x')) closeBotModal();
         if (e.target.classList.contains('modal')) closeBotModal();
+
+        // Popover
+        const trigger = e.target.closest('[data-bot-card]');
+        if (trigger){ openBotCard(trigger.getAttribute('data-bot-card'), trigger); return; }
+        if (e.target.matches('[data-bc-open-tips]')){
+          const name = document.getElementById('botCard').dataset.name;
+          closeBotCard(); if (name) openBotModal(name);
+          return;
+        }
+        if (e.target.matches('[data-bc-close]')){ closeBotCard(); return; }
+        if (!e.target.closest('#botCard')) closeBotCard();
       });
+      window.addEventListener('keydown', e=>{ if (e.key==='Escape') closeBotCard(); });
+      window.addEventListener('resize', closeBotCard);
     });
 
+    /* ---------------- Adatok betöltése és számítás ---------------- */
     async function buildLeaderboard(){
       const [matchesSnap, tipsSnap, usersSnap, officialSnap, standingsTipsSnap] = await Promise.all([
         getDocs(collection(db, "matches")),
@@ -290,14 +344,6 @@
         orderByEmail[d.id] = (arr || []).slice(0,12);
       });
 
-      // Fordulók a meccsekből is (lezárt meccsek)
-      const roundsSet = new Set();
-      Object.values(matchesCache).forEach(m=>{
-        const r = matchRound(m);
-        if (r && m.outcome) roundsSet.add(r);
-      });
-
-      // Felhasználói tippek legutóbbi példányai
       const latest = new Map();
       tipsSnap.forEach(docu=>{
         const t = docu.data(); if (!t?.matchId || !t?.user) return;
@@ -309,11 +355,12 @@
       });
 
       const player = {};
+      const rounds = new Set();
 
       for (const tip of latest.values()){
         const m = matchesCache[tip.matchId]; if (!m) continue;
         const roundId = matchRound(m); if (!roundId) continue;
-        roundsSet.add(roundId);
+        rounds.add(roundId);
 
         if (!m.outcome) continue;
         const pick = tipChoice(tip); if (!pick) continue;
@@ -330,7 +377,7 @@
         player[nick].perRound[roundId] = (player[nick].perRound[roundId]||0) + pts;
       }
 
-      roundsAsc = Array.from(roundsSet).sort((a,b)=> (parseInt(a)||0)-(parseInt(b)||0));
+      roundsAsc = Array.from(rounds).sort((a,b)=> (parseInt(a)||0)-(parseInt(b)||0));
 
       function calcHits(order, official){
         let h = 0; for (let i=0;i<12;i++){ if (eqTeam(order?.[i], official?.[i])) h++; } return h;
@@ -474,7 +521,7 @@
       right.style.overflow = 'auto';
       right.style.flex = '1';
       right.innerHTML = `
-        <div class="grid" style="grid-template-columns:${'minmax(78px,1fr) '.repeat(toShow.length)};">
+        <div class="grid" style="grid-template-columns:${'78px '.repeat(toShow.length)};">
           <div class="hdr">${rightHeader}</div>
           ${rows.map(r=>{
             const cells = toShow.map((rid, idx)=>{
@@ -498,13 +545,17 @@
     function renderLeftRow(r,i){
       let nameHtml = "";
       if (r.isBot){
-        const robot = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a1 1 0 0 1 1 1v1h3a2 2 0 0 1 2 2v2h1a2 2 0 0 1 2 2v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V10a2 2 0 0 1 2-2h1V6a2 2 0 0 1 2-2h3V3a1 1 0 0 1 1-1Zm-5 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>`;
+        const meta = BOT_META[r.nick] || {};
+        const av = meta.avatar
+          ? `<img class="avatar-mini" src="${meta.avatar}" ${meta.avatar2x ? `srcset="${meta.avatar} 1x, ${meta.avatar2x} 2x"` : ""} alt="${escapeHtml(r.nick)}" loading="lazy" decoding="async">`
+          : "";
         nameHtml = `
           <div class="name-wrap">
-            ${robot}
+            ${av}
             <span class="name-subtle">${escapeHtml(r.nick)}</span>
             <span class="name-actions">
-              <button class="link-btn bot-btn" data-bot-view="${escapeHtml(r.nick)}">Nézd meg a tippjeit</button>
+              <button class="link-btn bot-btn" data-bot-card="${escapeHtml(r.nick)}">Profil</button>
+              <button class="link-btn bot-btn" data-bot-view="${escapeHtml(r.nick)}">Tippjei</button>
             </span>
           </div>`;
       } else {
@@ -530,6 +581,38 @@
       `;
     }
 
+    /* ---- Bot profil popover ---- */
+    function openBotCard(name, anchorEl){
+      const meta = BOT_META[name]; if (!meta) return;
+      const pop = document.getElementById('botCard');
+      pop.dataset.name = name;
+      const imgEl = pop.querySelector('.bc-img');
+      imgEl.src = meta.avatar || '';
+      imgEl.srcset = meta.avatar2x ? `${meta.avatar} 1x, ${meta.avatar2x} 2x` : '';
+      imgEl.loading = 'lazy'; imgEl.decoding = 'async';
+      pop.querySelector('.bc-title').textContent = name;
+      pop.querySelector('.bc-intro').textContent = meta.intro;
+
+      // pozicionálás
+      pop.style.top = '0px'; pop.style.left = '0px';
+      pop.classList.add('open');
+      const r = anchorEl.getBoundingClientRect();
+      const margin = 10;
+      const pw = pop.offsetWidth, ph = pop.offsetHeight;
+      let top = r.bottom + 8;
+      let left = Math.min(Math.max(margin, r.left), window.innerWidth - pw - margin);
+      if (top + ph > window.innerHeight - margin) top = r.top - ph - 8;
+      if (top < margin) top = margin;
+      pop.style.top  = `${Math.round(top)}px`;
+      pop.style.left = `${Math.round(left)}px`;
+    }
+    function closeBotCard(){
+      const pop = document.getElementById('botCard');
+      pop.classList.remove('open');
+      pop.removeAttribute('data-name');
+    }
+
+    /* ---- Bot „tippjei” modal ---- */
     function openBotModal(botName){
       const modal = document.getElementById('botModal');
       const title = document.getElementById('botModalTitle');
@@ -543,7 +626,7 @@
         let html = "";
         rounds.forEach(r=>{
           html += `<h3 style="margin:12px 0 6px;font-weight:800;">Forduló ${r}</h3>`;
-          html += `<div class="grid" style="grid-template-columns:1.4fr 1.4fr 80px 80px 90px 120px;">
+          html += `<div class="grid" style="grid-template-columns:1.4fr 1.4fr 80px 80px 90px 90px;">
             <div class="hdr"><div class="cell">Hazai</div></div>
             <div class="hdr"><div class="cell">Vendég</div></div>
             <div class="hdr"><div class="cell">Tipp</div></div>
@@ -551,7 +634,7 @@
             <div class="hdr"><div class="cell">Dupla</div></div>
             <div class="hdr"><div class="cell">Eredmény</div></div>
           `;
-          (data[r]||[]).forEach(x=>{
+          data[r].forEach(x=>{
             html += `
               <div class="row row-bg">
                 <div class="cell">${escapeHtml(x.homeTeam||"")}</div>
@@ -574,6 +657,7 @@
       modal.classList.remove('open');
     }
 
+    /* ---------------- Nav „függő tippek” badge ---------------- */
     function updatePendingBadge(){
       getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -586,6 +670,7 @@
       });
     }
 
+    /* ---------------- Chat ---------------- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -623,7 +708,7 @@
             row.innerHTML = `
               <div style="flex:1 1 auto">
                 <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
-                <div class="text">${(d.text || '').replace(/</g,'&lt;','gt;')}</div>
+                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
               </div>
             `;
             const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
@@ -681,6 +766,7 @@
 </head>
 <body>
   <div class="layout">
+    <!-- Fejléc -->
     <div class="header">
       <div class="header-left">
         <img id="favCrest" class="fav-crest" alt="" hidden>
@@ -690,7 +776,7 @@
         </div>
       </div>
       <div>
-        <button id="logout" class="btn" aria-label="Kilépés" style="background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);">
+        <button id="logout" class="btn" aria-label="Kilépés" style="background:var(--accent);color:#fff;border:1px solid var(--line);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
           </svg>
@@ -699,12 +785,11 @@
       </div>
     </div>
 
+    <!-- Nav -->
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
-          </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg>
         </div>
         <div class="text">
           <span class="title">Főoldal</span>
@@ -764,7 +849,7 @@
 
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -773,6 +858,7 @@
       </a>
     </nav>
 
+    <!-- Ranglista -->
     <section class="card">
       <div class="subhdr">
         <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
@@ -798,7 +884,7 @@
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
     <div class="chat-head">
       <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" aria-label="Bezárás">✕</button>
+      <button id="chatClose" class="close-x" aria-label="Bezárás">✕</button>
     </div>
     <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
     <div id="chatComposer">
@@ -812,9 +898,26 @@
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="botModalTitle">
       <div class="modal-head">
         <div id="botModalTitle" class="modal-title"></div>
-        <button class="modal-close" aria-label="Bezárás">✕</button>
+        <button class="close-x" aria-label="Bezárás">✕</button>
       </div>
       <div id="botModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Bot profil popover -->
+  <div id="botCard" class="bot-card" role="dialog" aria-modal="false" aria-hidden="true">
+    <div class="head">
+      <img class="avatar bc-img" alt="">
+      <div>
+        <div class="title bc-title"></div>
+        <div class="tag">Gépi tippelő</div>
+      </div>
+      <button class="close" data-bc-close aria-label="Bezárás">✕</button>
+    </div>
+    <div class="body"><p class="bc-intro" style="margin:0;"></p></div>
+    <div class="actions">
+      <button class="link-btn bot-btn" data-bc-open-tips>Mutasd a tippjeit</button>
+      <button class="link-btn" data-bc-close>Bezár</button>
     </div>
   </div>
 </body>
