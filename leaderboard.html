@@ -50,27 +50,24 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
-    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
-    .chat-fab.has-unread .fab-badge{ display:inline-block; }
-    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
-    .chat-panel.open{ display:flex; }
-    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
-    .chat-title{ font-weight:800; }
-    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
-    #chatClose:hover{ filter:brightness(0.95); }
-    .chat-list{ overflow:auto; padding:8px 10px; }
-    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
-    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
-    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
-    .msg .text{ white-space:pre-wrap; word-break:break-word; }
-    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
-    .msg:hover .del{ display:inline-block; }
+    .name-wrap{ display:flex; align-items:center; gap:8px; }
+    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .name-text{ font-weight:700; }
+    .name-subtle{ font-weight:700; opacity:.9; }
+    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; }
+    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line,#e6eaf1); border-radius:8px; background:#f8fafc; cursor:pointer; }
 
-    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
-    #chatInput::placeholder{ color:#6b7280; }
-    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
+    .modal{ position:fixed; inset:0; background:rgba(15,23,42,.35); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal.open{ display:flex; }
+    .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
+    .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .modal-title{ font-weight:800; }
+    .modal-body{ padding:12px; overflow:auto; }
+    .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); }
+
+    .ok{ color:#15803d; font-weight:700; }
+    .wrong{ color:#b91c1c; font-weight:700; }
+    .dbl{ font-weight:800; }
   </style>
 
   <script type="module">
@@ -107,6 +104,21 @@
       "Puskás Akadémia": "crest/crest-puskas.png",
       "Újpest FC": "crest/crest-ujpest.png",
       "Zalaegerszegi TE FC": "crest/crest-zte.png"
+    };
+
+    const teamColor = {
+      "Debreceni VSC":"#b91c1c",
+      "Diósgyőri VTK":"#dc2626",
+      "Ferencváros":"#166534",
+      "ETO FC Győr":"#14532d",
+      "Kazincbarcikai SC":"#1d4ed8",
+      "Kisvárda FC":"#991b1b",
+      "MTK Budapest":"#2563eb",
+      "Nyíregyháza Spartacus":"#1e40af",
+      "Paksi FC":"#047857",
+      "Puskás Akadémia":"#065f46",
+      "Újpest FC":"#6b21a8",
+      "Zalaegerszegi TE FC":"#1d4ed8"
     };
 
     const fmt = n => (Number(n)||0).toFixed(2);
@@ -149,6 +161,10 @@
     let rows = [];
     let roundsAsc = [];
     let officialOrder = [];
+
+    let usersInfo = {};
+    let matchesCache = {};
+    let botPickStore = {};
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -202,6 +218,16 @@
           await buildLeaderboard();
         });
       }
+
+      document.addEventListener('click', (e)=>{
+        const btn = e.target.closest('[data-bot-view]');
+        if (btn){
+          const name = btn.getAttribute('data-bot-view');
+          openBotModal(name);
+        }
+        if (e.target.matches('.close-x')) closeBotModal();
+        if (e.target.classList.contains('modal')) closeBotModal();
+      });
     });
 
     async function buildLeaderboard(){
@@ -213,11 +239,11 @@
         getDocs(collection(db, "standingsTips"))
       ]);
 
-      const matches = {};
-      matchesSnap.forEach(d => matches[d.id] = { id:d.id, ...d.data() });
+      matchesCache = {};
+      matchesSnap.forEach(d => matchesCache[d.id] = { id:d.id, ...d.data() });
 
-      const usersMap = {};
-      usersSnap.forEach(d => { const u = d.data(); if (u?.email) usersMap[u.email] = u.nickname || u.email; });
+      usersInfo = {};
+      usersSnap.forEach(d => { const u = d.data(); if (u?.email) usersInfo[u.email] = { nick: u.nickname || u.email, team: u.favoriteTeam || "" }; });
 
       officialOrder = officialArrayFrom(officialSnap.exists() ? officialSnap.data() : []).slice(0,12);
       while (officialOrder.length < 12) officialOrder.push("");
@@ -246,7 +272,7 @@
       const rounds = new Set();
 
       for (const tip of latest.values()){
-        const m = matches[tip.matchId]; if (!m) continue;
+        const m = matchesCache[tip.matchId]; if (!m) continue;
         const roundId = matchRound(m); if (!roundId) continue;
         rounds.add(roundId);
 
@@ -258,8 +284,9 @@
         const mult = tipDouble(tip) ? 2 : 1;
         const pts = (correct && ov) ? Number(ov) * mult : 0;
 
-        const nick = usersMap[tip.user] || tip.user;
-        if (!player[nick]) player[nick] = { base:0, perRound:{}, email: tip.user };
+        const info = usersInfo[tip.user] || { nick: tip.user, team: "" };
+        const nick = info.nick;
+        if (!player[nick]) player[nick] = { base:0, perRound:{}, email: tip.user, team: info.team };
         player[nick].base += pts;
         player[nick].perRound[roundId] = (player[nick].perRound[roundId]||0) + pts;
       }
@@ -276,67 +303,87 @@
         const bonusPct = hits;
         const bonusPts = Math.round(obj.base * (bonusPct/100));
         const total = obj.base + bonusPts;
-        return { nick, email: obj.email, base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total };
+        return { nick, email: obj.email, team: obj.team || "", base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total, isBot:false };
       });
 
       if (showBots){
-        function addBotRows(matches, roundsAsc){
-          const bots = [];
-          function calcForBot(type){
-            let base = 0;
-            const perRound = {};
-            for (const r of roundsAsc){
-              const ms = Object.values(matches).filter(m=>matchRound(m)===r && m.outcome);
-              if (!ms.length) continue;
-              const tips = ms.map(m=>{
-                let pick="", odds=0;
-                if (type==="Evidens Elek"){
-                  const o1=getOdds(m,"1"), oX=getOdds(m,"X"), o2=getOdds(m,"2");
-                  const min = Math.min(o1||Infinity,oX||Infinity,o2||Infinity);
-                  if (min===o1){ pick="1"; odds=o1; }
-                  else if (min===oX){ pick="X"; odds=oX; }
-                  else if (min===o2){ pick="2"; odds=o2; }
-                } else if (type==="Hazai Hugó"){ pick="1"; odds=getOdds(m,"1"); }
-                else if (type==="Ikszes Ilona"){ pick="X"; odds=getOdds(m,"X"); }
-                else if (type==="Vendég Vendel"){ pick="2"; odds=getOdds(m,"2"); }
-                return {m,pick,odds};
-              });
-              let bestIdx=-1, bestVal=-1;
-              tips.forEach((t,i)=>{
-                if (!t || !t.m) return;
-                let val=0;
-                if (type==="Evidens Elek"){
-                  const o1=getOdds(t.m,"1"), oX=getOdds(t.m,"X"), o2=getOdds(t.m,"2");
-                  val = Math.min(o1||Infinity,oX||Infinity,o2||Infinity);
-                  if (!isFinite(val)) val = -1;
-                } else if (type==="Hazai Hugó"){ val = getOdds(t.m,"1")||0; }
-                else if (type==="Ikszes Ilona"){ val = getOdds(t.m,"X")||0; }
-                else if (type==="Vendég Vendel"){ val = getOdds(t.m,"2")||0; }
-                if (val>bestVal){ bestVal=val; bestIdx=i; }
-              });
-              tips.forEach((t,i)=>{
-                if (!t.pick || !t.odds) return;
-                if (t.m.outcome===t.pick){
-                  const mult = (i===bestIdx?2:1);
-                  base += t.odds*mult;
-                  perRound[r] = (perRound[r]||0)+t.odds*mult;
-                }
-              });
-            }
-            return {base, perRound};
-          }
-          ["Evidens Elek","Hazai Hugó","Ikszes Ilona","Vendég Vendel"].forEach(name=>{
-            const {base, perRound} = calcForBot(name);
-            bots.push({ nick:name, email:"", base, perRound, bonusPct:0, bonusPts:0, total:base });
-          });
-          return bots;
-        }
-        const botRows = addBotRows(matches, roundsAsc);
+        const botRows = addBotRows(matchesCache, roundsAsc);
         rows = rows.concat(botRows);
       }
 
       rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
       renderTable();
+    }
+
+    function addBotRows(matches, roundsAsc){
+      botPickStore = {};
+      const bots = [];
+      function calcForBot(type){
+        let base = 0;
+        const perRound = {};
+        const byRound = {};
+        for (const r of roundsAsc){
+          const ms = Object.values(matches).filter(m=>matchRound(m)===r && m.outcome);
+          if (!ms.length) continue;
+          const tips = ms.map(m=>{
+            let pick="", odds=0;
+            const o1=getOdds(m,"1"), oX=getOdds(m,"X"), o2=getOdds(m,"2");
+            if (type==="Evidens Elek"){
+              const min = Math.min(o1||Infinity,oX||Infinity,o2||Infinity);
+              if (min===o1){ pick="1"; odds=o1; }
+              else if (min===oX){ pick="X"; odds=oX; }
+              else if (min===o2){ pick="2"; odds=o2; }
+            } else if (type==="Hazai Hugó"){ pick="1"; odds=o1; }
+            else if (type==="Ikszes Ilona"){ pick="X"; odds=oX; }
+            else if (type==="Vendég Vendel"){ pick="2"; odds=o2; }
+            return {m,pick,odds};
+          });
+          let bestIdx=-1, bestVal=-1;
+          tips.forEach((t,i)=>{
+            if (!t || !t.m) return;
+            let val=0;
+            if (type==="Evidens Elek"){
+              const o1=getOdds(t.m,"1"), oX=getOdds(t.m,"X"), o2=getOdds(t.m,"2");
+              val = Math.min(o1||Infinity,oX||Infinity,o2||Infinity);
+              if (!isFinite(val)) val = -1;
+            } else if (type==="Hazai Hugó"){ val = getOdds(t.m,"1")||0; }
+            else if (type==="Ikszes Ilona"){ val = getOdds(t.m,"X")||0; }
+            else if (type==="Vendég Vendel"){ val = getOdds(t.m,"2")||0; }
+            if (val>bestVal){ bestVal=val; bestIdx=i; }
+          });
+          const list = [];
+          tips.forEach((t,i)=>{
+            if (!t.pick || !t.odds) return;
+            const doubled = i===bestIdx;
+            const correct = t.m.outcome===t.pick;
+            const mult = doubled?2:1;
+            if (correct){
+              base += t.odds*mult;
+              perRound[r] = (perRound[r]||0)+t.odds*mult;
+            } else {
+              perRound[r] = (perRound[r]||0)+0;
+            }
+            list.push({
+              matchId: t.m.id,
+              homeTeam: t.m.homeTeam || t.m.home || "",
+              awayTeam: t.m.awayTeam || t.m.away || "",
+              pick: t.pick,
+              odds: t.odds || 0,
+              doubled,
+              correct,
+              outcome: t.m.outcome || ""
+            });
+          });
+          if (list.length) byRound[r]=list;
+        }
+        return {base, perRound, byRound};
+      }
+      ["Evidens Elek","Hazai Hugó","Ikszes Ilona","Vendég Vendel"].forEach(name=>{
+        const {base, perRound, byRound} = calcForBot(name);
+        bots.push({ nick:name, email:"", team:"", base, perRound, bonusPct:0, bonusPts:0, total:base, isBot:true });
+        botPickStore[name] = byRound;
+      });
+      return bots;
     }
 
     function renderTable(){
@@ -375,23 +422,12 @@
 
       const left = document.createElement('div');
       left.className = 'left';
-      left.style.minWidth = '720px';
-      left.style.maxWidth = '720px';
+      left.style.minWidth = '820px';
+      left.style.maxWidth = '820px';
       left.innerHTML = `
-        <div class="grid" style="grid-template-columns:70px 1.6fr 140px 180px 140px;">
+        <div class="grid" style="grid-template-columns:70px 2.2fr 140px 180px 140px;">
           ${leftHeader}
-          ${rows.map((r,i)=>`
-            <div class="row row-bg">
-              <div class="cell left rank">${i+1}.</div>
-              <div class="cell left">${escapeHtml(r.nick)}</div>
-              <div class="cell left num total">${fmt(r.total)}</div>
-              <div class="cell left num">
-                +${r.bonusPts}
-                <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
-              </div>
-              <div class="cell left num">${fmt(r.base)}</div>
-            </div>
-          `).join('')}
+          ${rows.map((r,i)=> renderLeftRow(r,i)).join('')}
         </div>
       `;
 
@@ -418,6 +454,85 @@
       container.appendChild(left);
       container.appendChild(right);
       mount.appendChild(container);
+    }
+
+    function renderLeftRow(r,i){
+      let nameHtml = "";
+      if (r.isBot){
+        const robot = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a1 1 0 0 1 1 1v1h3a2 2 0 0 1 2 2v2h1a2 2 0 0 1 2 2v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V10a2 2 0 0 1 2-2h1V6a2 2 0 0 1 2-2h3V3a1 1 0 0 1 1-1Zm-5 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>`;
+        nameHtml = `
+          <div class="name-wrap">
+            ${robot}
+            <span class="name-subtle">${escapeHtml(r.nick)}</span>
+            <span class="name-actions">
+              <button class="link-btn" data-bot-view="${escapeHtml(r.nick)}">Nézd meg a tippjeit</button>
+            </span>
+          </div>`;
+      } else {
+        const crest = r.team && crestMap[r.team] ? `<img class="name-crest" src="${crestMap[r.team]}" alt="${escapeHtml(r.team)}">` : "";
+        const color = r.team && teamColor[r.team] ? teamColor[r.team] : "#111827";
+        nameHtml = `
+          <div class="name-wrap">
+            ${crest || ""}
+            <span class="name-text" style="color:${color}">${escapeHtml(r.nick)}</span>
+          </div>`;
+      }
+      return `
+        <div class="row row-bg">
+          <div class="cell left rank">${i+1}.</div>
+          <div class="cell left">${nameHtml}</div>
+          <div class="cell left num total">${fmt(r.total)}</div>
+          <div class="cell left num">
+            +${r.bonusPts}
+            <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
+          </div>
+          <div class="cell left num">${fmt(r.base)}</div>
+        </div>
+      `;
+    }
+
+    function openBotModal(botName){
+      const modal = document.getElementById('botModal');
+      const title = document.getElementById('botModalTitle');
+      const body = document.getElementById('botModalBody');
+      title.textContent = botName + " – tippjei";
+      const data = botPickStore[botName] || {};
+      const rounds = Object.keys(data).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+      if (!rounds.length){
+        body.innerHTML = "<div class='muted'>Nincs megjeleníthető adat.</div>";
+      } else {
+        let html = "";
+        rounds.forEach(r=>{
+          html += `<h3 style="margin:12px 0 6px;font-weight:800;">Forduló ${r}</h3>`;
+          html += `<div class="grid" style="grid-template-columns:1.4fr 1.4fr 80px 80px 90px 90px;">
+            <div class="hdr"><div class="cell">Hazai</div></div>
+            <div class="hdr"><div class="cell">Vendég</div></div>
+            <div class="hdr"><div class="cell">Tipp</div></div>
+            <div class="hdr"><div class="cell">Odds</div></div>
+            <div class="hdr"><div class="cell">Dupla</div></div>
+            <div class="hdr"><div class="cell">Eredmény</div></div>
+          `;
+          data[r].forEach(x=>{
+            html += `
+              <div class="row row-bg">
+                <div class="cell">${escapeHtml(x.homeTeam||"")}</div>
+                <div class="cell">${escapeHtml(x.awayTeam||"")}</div>
+                <div class="cell">${escapeHtml(x.pick||"")}</div>
+                <div class="cell">${fmt(x.odds||0)}</div>
+                <div class="cell ${x.doubled?'dbl':''}">${x.doubled?'Igen':'-'}</div>
+                <div class="cell ${x.correct?'ok':'wrong'}">${x.correct?'Talált':'Mellé'}${x.outcome?` ( ${escapeHtml(x.outcome)} )`:""}</div>
+              </div>
+            `;
+          });
+          html += `</div>`;
+        });
+        body.innerHTML = html;
+      }
+      modal.classList.add('open');
+    }
+    function closeBotModal(){
+      const modal = document.getElementById('botModal');
+      modal.classList.remove('open');
     }
 
     function updatePendingBadge(){
@@ -643,7 +758,7 @@
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
     <div class="chat-head">
       <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" aria-label="Bezárás">✕</button>
+      <button id="chatClose" class="close-x" aria-label="Bezárás">✕</button>
     </div>
     <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
     <div id="chatComposer">
@@ -651,5 +766,15 @@
       <button id="chatSendBtn">Küldés</button>
     </div>
   </section>
+
+  <div id="botModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="botModalTitle">
+      <div class="modal-head">
+        <div id="botModalTitle" class="modal-title"></div>
+        <button class="close-x" aria-label="Bezárás">✕</button>
+      </div>
+      <div id="botModalBody" class="modal-body"></div>
+    </div>
+  </div>
 </body>
 </html>
