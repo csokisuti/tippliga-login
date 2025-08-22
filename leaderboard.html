@@ -33,30 +33,29 @@
     .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line,#e6eaf1); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
+    /* TÁBLÁZAT */
     .table-wrap{ display:flex; }
-    .grid{ display:grid; }
+    .grid{ display:grid; grid-auto-rows:44px; } /* egységes sormagasság, hogy a két rács ne csússzon szét */
     .hdr, .row{ display:contents; }
-    .cell{ padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#fff; }
+    .cell{ padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#fff; display:flex; align-items:center; }
     .hdr .cell{ font-weight:700; background:#f7f8fc; }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
     .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line,#e6eaf1); }
     .left .cell{ background:#fff; }
-    .rank{ text-align:right; color:#64748b; white-space:nowrap; }
-    .num{ text-align:right; white-space:nowrap; }
+    .rank{ text-align:right; color:#64748b; white-space:nowrap; justify-content:flex-end; }
+    .num{ text-align:right; white-space:nowrap; justify-content:flex-end; }
     .total{ font-weight:800; }
-    .round-cell{ min-width:78px; text-align:right; }
-    .round-link{ display:block; color:inherit; text-decoration:none; }
+    .round-cell{ min-width:78px; text-align:right; justify-content:flex-end; }
+    .round-link{ display:block; color:inherit; text-decoration:none; width:100%; text-align:right; }
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    .name-wrap{ display:flex; align-items:center; gap:8px; }
-    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line,#e6eaf1); background:#fff; }
-    .name-text{ font-weight:700; }
-    .name-subtle{ font-weight:700; opacity:.9; }
-    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; }
-    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line,#e6eaf1); border-radius:8px; background:#f8fafc; cursor:pointer; }
-    /* témaszínhez igazított bot gomb */
+    .name-wrap{ display:flex; align-items:center; gap:8px; white-space:nowrap; min-width:0; }
+    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line,#e6eaf1); background:#fff; flex:0 0 auto; }
+    .name-text, .name-subtle{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
+    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; flex:0 0 auto; }
+    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line,#e6eaf1); border-radius:8px; background:#f8fafc; cursor:pointer; white-space:nowrap; }
     .bot-btn{
       border-color: color-mix(in oklab, var(--accent,#3b82f6) 40%, white);
       background: color-mix(in oklab, var(--accent,#3b82f6) 12%, white);
@@ -65,6 +64,7 @@
     }
     .bot-btn:hover{ filter:brightness(0.96); }
 
+    /* MODAL */
     .modal{ position:fixed; inset:0; background:rgba(15,23,42,.35); display:none; align-items:center; justify-content:center; z-index:1000; }
     .modal.open{ display:flex; }
     .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
@@ -73,13 +73,33 @@
     .modal-body{ padding:12px; overflow:auto; }
     .modal-close{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); }
 
-    /* chat close gomb saját stílusa vissza */
-    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
-    #chatClose:hover{ filter:brightness(0.95); }
-
     .ok{ color:#15803d; font-weight:700; }
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
+
+    /* CHAT – teljes blokk visszarakva */
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
+    .chat-fab.has-unread .fab-badge{ display:inline-block; }
+
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel.open{ display:flex; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .chat-title{ font-weight:800; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
+    #chatClose:hover{ filter:brightness(0.95); }
+    .chat-list{ overflow:auto; padding:8px 10px; }
+    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
+    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
+    .msg .text{ white-space:pre-wrap; word-break:break-word; }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; width:auto; }
+    .msg:hover .del{ display:inline-block; }
+
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatInput::placeholder{ color:#6b7280; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
   </style>
 
   <script type="module">
@@ -145,7 +165,7 @@
       return undefined;
     }
     const tipChoice = t => t.choice ?? t.tip ?? "";
-    const tipDouble = t => !!(t.double ?? t.isDouble);
+    the tipDouble = t => !!(t.double ?? t.isDouble);
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
     const NORM = s => String(s ?? "").trim().toLowerCase()
@@ -270,13 +290,14 @@
         orderByEmail[d.id] = (arr || []).slice(0,12);
       });
 
-      // --- FORDULÓK ÖSSZEGYŰJTÉSE A MECCSEKBŐL IS ---
+      // Fordulók a meccsekből is (lezárt meccsek)
       const roundsSet = new Set();
       Object.values(matchesCache).forEach(m=>{
         const r = matchRound(m);
         if (r && m.outcome) roundsSet.add(r);
       });
 
+      // Felhasználói tippek legutóbbi példányai
       const latest = new Map();
       tipsSnap.forEach(docu=>{
         const t = docu.data(); if (!t?.matchId || !t?.user) return;
@@ -292,7 +313,7 @@
       for (const tip of latest.values()){
         const m = matchesCache[tip.matchId]; if (!m) continue;
         const roundId = matchRound(m); if (!roundId) continue;
-        roundsSet.add(roundId); // biztosan benne van
+        roundsSet.add(roundId);
 
         if (!m.outcome) continue;
         const pick = tipChoice(tip); if (!pick) continue;
@@ -348,9 +369,7 @@
             const o1=getOdds(m,"1"), oX=getOdds(m,"X"), o2=getOdds(m,"2");
             if (type==="Evidens Elek"){
               const min = Math.min(o1||Infinity,oX||Infinity,o2||Infinity);
-              if (min===o1){ pick="1"; odds=o1; }
-              else if (min===oX){ pick="X"; odds=oX; }
-              else if (min===o2){ pick="2"; odds=o2; }
+              if (min===o1){ pick="1"; odds=o1; } else if (min===oX){ pick="X"; odds=oX; } else if (min===o2){ pick="2"; odds=o2; }
             } else if (type==="Hazai Hugó"){ pick="1"; odds=o1; }
             else if (type==="Ikszes Ilona"){ pick="X"; odds=oX; }
             else if (type==="Vendég Vendel"){ pick="2"; odds=o2; }
@@ -375,12 +394,7 @@
             const doubled = i===bestIdx;
             const correct = t.m.outcome===t.pick;
             const mult = doubled?2:1;
-            if (correct){
-              base += t.odds*mult;
-              perRound[r] = (perRound[r]||0)+t.odds*mult;
-            } else {
-              perRound[r] = (perRound[r]||0)+0;
-            }
+            if (correct){ base += t.odds*mult; perRound[r] = (perRound[r]||0)+t.odds*mult; }
             list.push({
               matchId: t.m.id,
               homeTeam: t.m.homeTeam || t.m.home || "",
@@ -530,7 +544,7 @@
             <div class="hdr"><div class="cell">Dupla</div></div>
             <div class="hdr"><div class="cell">Eredmény</div></div>
           `;
-          data[r].forEach(x=>{
+          (data[r]||[]).forEach(x=>{
             html += `
               <div class="row row-bg">
                 <div class="cell">${escapeHtml(x.homeTeam||"")}</div>
@@ -681,74 +695,33 @@
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
-          </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg>
         </div>
-        <div class="text">
-          <span class="title">Főoldal</span>
-          <span class="desc">Tabella, hírek, kedvencek</span>
-        </div>
+        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
       </a>
-
       <a class="nav-card" href="positions.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Szezon végi sorrend</span>
-          <span class="desc">12 csapat – húzd a helyekre</span>
-        </div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg></div>
+        <div class="text"><span class="title">Szezon végi sorrend</span><span class="desc">12 csapat – húzd a helyekre</span></div>
       </a>
-
       <a class="nav-card" href="matches.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
-          <span class="desc">Közelgő meccsek & tippek</span>
-        </div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg></div>
+        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
-
       <a class="nav-card" href="results.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Eredmények</span>
-          <span class="desc">Fordulónkénti bontás</span>
-        </div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg></div>
+        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
       </a>
-
       <a class="nav-card" href="leaderboard.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Összpontszám</span>
-          <span class="desc">Toplista & bónusz</span>
-        </div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg></div>
+        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
       </a>
-
       <a class="nav-card" href="profile.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Profil</span>
-          <span class="desc">Beállítások & kedvenc csapat</span>
-        </div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg></div>
+        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
       </a>
-
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
-        </div>
-        <div class="text">
-          <span class="title">Admin</span>
-          <span class="desc">Szezon-zár & beállítások</span>
-        </div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg></div>
+        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
       </a>
     </nav>
 
@@ -768,9 +741,7 @@
 
   <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
-    </svg>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
