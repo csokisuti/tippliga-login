@@ -60,12 +60,13 @@
     .top{ background:#fff8e1 !important; font-weight:700; }
 
     /* Név + avatár/címer + gombok */
-    .name-wrap{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; }
+    .name-wrap{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; min-width:0; }
+    .left .cell > .name-wrap{ flex:1; min-width:0; } /* a gombok ne tűnjenek el */
     .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
     .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
-    .name-text{ font-weight:700; }
-    .name-subtle{ font-weight:700; opacity:.9; }
-    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; white-space:nowrap; flex:0 0 auto; }
+    .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
+    .name-subtle{ font-weight:700; opacity:.9; overflow:hidden; text-overflow:ellipsis; }
+    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; white-space:nowrap; flex-shrink:0; flex:0 0 auto; }
     .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1; white-space:nowrap; }
     .bot-btn{ border-color: color-mix(in oklab, var(--accent) 40%, white);
       background: color-mix(in oklab, var(--accent) 12%, white);
@@ -81,14 +82,14 @@
     /* Bot profil-popover */
     .bot-card{
       position:fixed; z-index:1200; display:none;
-      width:min(380px, calc(100vw - 32px));
+      width:min(420px, calc(100vw - 32px));
       background:#fff; border:1px solid var(--line);
       border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.18);
     }
     .bot-card.open{ display:block; }
     .bot-card .head{ display:flex; align-items:center; gap:12px;
       padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
-    .bot-card .avatar{ width:120px; height:120px; border-radius:14px; object-fit:cover;
+    .bot-card .avatar{ width:140px; height:140px; border-radius:14px; object-fit:cover;
       border:1px solid var(--line); flex:0 0 auto; }
     .bot-card .title{ font-weight:800; line-height:1.1; }
     .bot-card .tag{ font-size:12px; color:#64748b; }
@@ -127,6 +128,11 @@
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
+
+    /* Tippjei státusz színezés */
+    .ok{ color:#15803d; font-weight:700; }
+    .wrong{ color:#b91c1c; font-weight:700; }
+    .dbl{ font-weight:800; }
   </style>
 
   <script type="module">
@@ -142,11 +148,11 @@
     const BOT_META = {
       "Evidens Elek": {
         avatar: "elek-256.webp",  avatar2x: "elek-512.webp",
-        intro: "„Szia, Elek vagyok, a józan ész futószalagon. Mindig az esélyesebbre kattintok (legkisebb odds, köszönöm szépen), a duplámat pedig arra a meccsre teszem, ahol a fordulóban a legerősebb odds csábít. Kockázat? Csak kontrollált mennyiségben, mint a csípős szósz”"
+        intro: "„Szia, Elek vagyok, a józan ész futószalagon. Mindig az esélyesebbre kattintok (legkisebb odds, köszönöm szépen), a duplámat pedig arra a meccsre teszem, ahol a fordulóban a legerősebb odds csábít. Kockázat? Csak kontrollált mennyiségben, mint a csípős szósz.”"
       },
       "Hazai Hugó": {
         avatar: "hugo-256.webp", avatar2x: "hugo-512.webp",
-        intro: "„Én vagyok Hugó, a stadion fűszagának sommelier-je. Nálam minden 1-es, mert otthon a legpuhább a gyep. A duplát mindig a forduló legnagyobb hazai oddsára küldöm—ha drukkolni kell, én a kapu mögött állok.”"
+        intro: "„Én vagyok Hugó, a stadion fűszagának sommelier-je. Nálam minden 1-es, mert otthon a legpuhább a gyep. A duplát mindig a forduló legnagyobb hazai oddsára küldöm — ha drukkolni kell, én a kapu mögött állok.”"
       },
       "Ikszes Ilona": {
         avatar: "ilona-256.webp", avatar2x: "ilona-512.webp",
@@ -154,7 +160,7 @@
       },
       "Vendég Vendel": {
         avatar: "vendel-256.webp", avatar2x: "vendel-512.webp",
-        intro: "„Vendel vagyok, idegenben is otthon. Minden tippem 2-es, mert szeretek vendégként kasszát robbantani. A duplám a forduló legnagyobb vendég oddsára repül—kézipoggyászban csak bátorságot viszek.”"
+        intro: "„Vendel vagyok, idegenben is otthon. Minden tippem 2-es, mert szeretek vendégként kasszát robbantani. A duplám a forduló legnagyobb vendég oddsára repül — kézipoggyászban csak bátorságot viszek.”"
       }
     };
 
@@ -205,7 +211,7 @@
       return undefined;
     }
     const tipChoice = t => t.choice ?? t.tip ?? "";
-       const tipDouble = t => !!(t.double ?? t.isDouble);
+    const tipDouble = t => !!(t.double ?? t.isDouble);
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
     const NORM = s => String(s ?? "").trim().toLowerCase()
@@ -266,6 +272,7 @@
           document.body.classList.add(themeClass);
           const crest = crestMap[favoriteTeam];
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
+          document.documentElement.style.setProperty('--accent', getComputedStyle(document.body).getPropertyValue('--accent') || '#3b82f6');
         }
 
         await buildLeaderboard();
@@ -637,7 +644,7 @@
             <div class="hdr"><div class="cell">Dupla</div></div>
             <div class="hdr"><div class="cell">Eredmény</div></div>
           `;
-          data[r].forEach(x=>{
+          (data[r]||[]).forEach(x=>{
             html += `
               <div class="row row-bg">
                 <div class="cell">${escapeHtml(x.homeTeam||"")}</div>
