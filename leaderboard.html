@@ -43,7 +43,6 @@
     .cell{
       padding:8px 12px; border-bottom:1px solid var(--line); background:#fff;
       display:flex; align-items:center; gap:8px; box-sizing:border-box;
-      /* >>> fix sor-magasság mindkét oldalon */
       height:var(--rowh); overflow:hidden;
     }
     .hdr .cell{ font-weight:700; background:#f7f8fc; height:var(--hdrh); }
@@ -61,7 +60,7 @@
 
     /* Név + avatár/címer + gombok */
     .name-wrap{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; min-width:0; }
-    .left .cell > .name-wrap{ flex:1; min-width:0; } /* a gombok ne tűnjenek el */
+    .left .cell > .name-wrap{ flex:1; min-width:0; }
     .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
     .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
     .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
@@ -102,7 +101,7 @@
     .modal.open{ display:flex; }
     .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
     .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
-    .modal-title{ font-weight:800; }
+    .modal-title{ font-weight:800; font-size:18px; white-space:nowrap; } /* kisebb és nem törik */
     .modal-body{ padding:12px; overflow:auto; }
     .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
 
@@ -236,7 +235,7 @@
     let chatLastSeen = null;
 
     let showAll = false;
-    let showBots = true;   // alapból látszanak
+    let showBots = true;
     let rows = [];
     let roundsAsc = [];
     let officialOrder = [];
@@ -272,7 +271,6 @@
           document.body.classList.add(themeClass);
           const crest = crestMap[favoriteTeam];
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
-          document.documentElement.style.setProperty('--accent', getComputedStyle(document.body).getPropertyValue('--accent') || '#3b82f6');
         }
 
         await buildLeaderboard();
@@ -627,7 +625,9 @@
       const modal = document.getElementById('botModal');
       const title = document.getElementById('botModalTitle');
       const body = document.getElementById('botModalBody');
-      title.textContent = botName + " – tippjei";
+
+      title.textContent = botName + " – tippjei";  // kisebb és egy sorban a CSS miatt
+
       const data = botPickStore[botName] || {};
       const rounds = Object.keys(data).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
       if (!rounds.length){
@@ -652,7 +652,7 @@
                 <div class="cell">${escapeHtml(x.pick||"")}</div>
                 <div class="cell">${fmt(x.odds||0)}</div>
                 <div class="cell ${x.doubled?'dbl':''}">${x.doubled?'Igen':'-'}</div>
-                <div class="cell ${x.correct?'ok':'wrong'}">${x.correct?'Talált':'Mellé'}${x.outcome?` ( ${escapeHtml(x.outcome)} )`:""}</div>
+                <div class="cell ${x.correct?'ok':'wrong'}">${x.correct?'Talált':'Mellé'}${x.outcome?`&nbsp;(${escapeHtml(x.outcome)})`:""}</div>
               </div>
             `;
           });
@@ -922,7 +922,6 @@
         <div class="title bc-title"></div>
         <div class="tag">Gépi tippelő</div>
       </div>
-      <!-- nincs fejléc X -->
     </div>
     <div class="body"><p class="bc-intro" style="margin:0;"></p></div>
     <div class="actions">
