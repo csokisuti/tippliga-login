@@ -42,10 +42,11 @@
     .hdr, .row{ display:contents; }
     .cell{
       padding:8px 12px; border-bottom:1px solid var(--line); background:#fff;
-      /* >>> fix: azonos sor-magasság mindkét oldalon */
-      min-height: var(--rowh); display:flex; align-items:center; gap:8px; box-sizing:border-box;
+      display:flex; align-items:center; gap:8px; box-sizing:border-box;
+      /* >>> fix sor-magasság mindkét oldalon */
+      height:var(--rowh); overflow:hidden;
     }
-    .hdr .cell{ font-weight:700; background:#f7f8fc; min-height: var(--hdrh); }
+    .hdr .cell{ font-weight:700; background:#f7f8fc; height:var(--hdrh); }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
     .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
@@ -59,43 +60,43 @@
     .top{ background:#fff8e1 !important; font-weight:700; }
 
     /* Név + avatár/címer + gombok */
-    .name-wrap{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; }
+    .name-wrap{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; }
     .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
     .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
     .name-text{ font-weight:700; }
     .name-subtle{ font-weight:700; opacity:.9; }
-    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; white-space:nowrap; }
-    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; white-space:nowrap; }
+    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; white-space:nowrap; flex:0 0 auto; }
+    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1; white-space:nowrap; }
     .bot-btn{ border-color: color-mix(in oklab, var(--accent) 40%, white);
       background: color-mix(in oklab, var(--accent) 12%, white);
       color: var(--accent); font-weight:700; }
 
+    /* Accent gomb (kedvenc csapat színe) */
+    .btn-accent{
+      background:var(--accent); color:#fff;
+      border:1px solid color-mix(in oklab, var(--accent) 40%, white);
+    }
+    .btn-accent:hover{ filter:brightness(.96); }
+
     /* Bot profil-popover */
     .bot-card{
       position:fixed; z-index:1200; display:none;
-      width:min(360px, calc(100vw - 32px));
+      width:min(380px, calc(100vw - 32px));
       background:#fff; border:1px solid var(--line);
       border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.18);
     }
     .bot-card.open{ display:block; }
     .bot-card .head{ display:flex; align-items:center; gap:12px;
       padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
-    .bot-card .avatar{ width:96px; height:96px; border-radius:14px; object-fit:cover;
+    .bot-card .avatar{ width:120px; height:120px; border-radius:14px; object-fit:cover;
       border:1px solid var(--line); flex:0 0 auto; }
     .bot-card .title{ font-weight:800; line-height:1.1; }
     .bot-card .tag{ font-size:12px; color:#64748b; }
-    .bot-card .close{
-      margin-left:auto; width:32px; height:32px; border-radius:10px;
-      background:var(--accent); color:#fff;
-      border:1px solid color-mix(in oklab, var(--accent) 40%, white);
-      cursor:pointer;
-    }
-    .bot-card .close:hover{ filter:brightness(.96); }
     .bot-card .body{ padding:12px; font-size:14px; line-height:1.35; }
     .bot-card .actions{ display:flex; gap:8px; padding:10px 12px;
       border-top:1px solid var(--line); background:#fff; }
 
-    /* Modalok */
+    /* Modalok (bot „tippjei”) */
     .modal{ position:fixed; inset:0; background:rgba(15,23,42,.35); display:none; align-items:center; justify-content:center; z-index:1000; }
     .modal.open{ display:flex; }
     .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
@@ -103,10 +104,6 @@
     .modal-title{ font-weight:800; }
     .modal-body{ padding:12px; overflow:auto; }
     .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
-
-    .ok{ color:#15803d; font-weight:700; }
-    .wrong{ color:#b91c1c; font-weight:700; }
-    .dbl{ font-weight:800; }
 
     /* Chat */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
@@ -141,26 +138,22 @@
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    /* ---- Bot avatarok + bemutatkozások (képek a projekt gyökerében) ---- */
+    /* ---- Bot avatarok + bemutatkozások ---- */
     const BOT_META = {
       "Evidens Elek": {
-        avatar: "elek-256.webp",
-        avatar2x: "elek-512.webp",
+        avatar: "elek-256.webp",  avatar2x: "elek-512.webp",
         intro: "„Szia, Elek vagyok, a józan ész futószalagon. Mindig az esélyesebbre kattintok (legkisebb odds), a duplám a forduló legmeredekebb meccsére megy.”"
       },
       "Hazai Hugó": {
-        avatar: "hugo-256.webp",
-        avatar2x: "hugo-512.webp",
+        avatar: "hugo-256.webp", avatar2x: "hugo-512.webp",
         intro: "„Hugó, a lelátó sommelier-je. Nálam minden 1-es; a duplám a forduló legvastagabb hazai oddsa.”"
       },
       "Ikszes Ilona": {
-        avatar: "ilona-256.webp",
-        avatar2x: "ilona-512.webp",
+        avatar: "ilona-256.webp", avatar2x: "ilona-512.webp",
         intro: "„Ilona vagyok, az X-miniszter. Nem a béke kedvéért – a feszes meccseket imádom. Mindig X-re megyek, a duplám a legmeredekebb X-oddsra.”"
       },
       "Vendég Vendel": {
-        avatar: "vendel-256.webp",
-        avatar2x: "vendel-512.webp",
+        avatar: "vendel-256.webp", avatar2x: "vendel-512.webp",
         intro: "„Vendel, idegenben is otthon. Minden tipp 2-es; a duplám a legbátrabb vendég oddson. Kézipoggyász: bátorság.”"
       }
     };
@@ -212,7 +205,7 @@
       return undefined;
     }
     const tipChoice = t => t.choice ?? t.tip ?? "";
-    const tipDouble = t => !!(t.double ?? t.isDouble);
+       const tipDouble = t => !!(t.double ?? t.isDouble);
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
     const NORM = s => String(s ?? "").trim().toLowerCase()
@@ -237,7 +230,7 @@
     let chatLastSeen = null;
 
     let showAll = false;
-    let showBots = false;
+    let showBots = true;   // alapból látszanak
     let rows = [];
     let roundsAsc = [];
     let officialOrder = [];
@@ -294,6 +287,7 @@
 
       const botsEl = document.getElementById('showBots');
       if (botsEl){
+        botsEl.checked = true;
         botsEl.addEventListener('change', async e=>{
           showBots = e.target.checked;
           await buildLeaderboard();
@@ -921,12 +915,12 @@
         <div class="title bc-title"></div>
         <div class="tag">Gépi tippelő</div>
       </div>
-      <button class="close" data-bc-close aria-label="Bezárás">✕</button>
+      <!-- nincs fejléc X -->
     </div>
     <div class="body"><p class="bc-intro" style="margin:0;"></p></div>
     <div class="actions">
       <button class="link-btn bot-btn" data-bc-open-tips>Mutasd a tippjeit</button>
-      <button class="link-btn" data-bc-close>Bezár</button>
+      <button class="link-btn btn-accent" data-bc-close>Bezár</button>
     </div>
   </div>
 </body>
