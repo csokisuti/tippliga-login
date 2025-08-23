@@ -9,7 +9,7 @@
   <script src="loader.js" defer></script>
 
   <style>
-    :root{ --line:#e6eaf1; --muted:#64748b; --accent:#3b82f6; }
+    :root{ --line:#e6eaf1; --muted:#64748b; --accent:#3b82f6; --rowh:48px; --hdrh:44px; }
 
     .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
 
@@ -40,8 +40,12 @@
     .table-wrap{ display:flex; }
     .grid{ display:grid; }
     .hdr, .row{ display:contents; }
-    .cell{ padding:10px 12px; border-bottom:1px solid var(--line); background:#fff; }
-    .hdr .cell{ font-weight:700; background:#f7f8fc; }
+    .cell{
+      padding:8px 12px; border-bottom:1px solid var(--line); background:#fff;
+      /* >>> fix: azonos sor-magasság mindkét oldalon */
+      min-height: var(--rowh); display:flex; align-items:center; gap:8px; box-sizing:border-box;
+    }
+    .hdr .cell{ font-weight:700; background:#f7f8fc; min-height: var(--hdrh); }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
     .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
@@ -54,14 +58,14 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    /* Név + avatár/ címer + gombok */
-    .name-wrap{ display:flex; align-items:center; gap:8px; }
-    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; }
-    .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); }
+    /* Név + avatár/címer + gombok */
+    .name-wrap{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; }
+    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
+    .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
     .name-text{ font-weight:700; }
     .name-subtle{ font-weight:700; opacity:.9; }
-    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; }
-    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; }
+    .name-actions{ display:inline-flex; gap:6px; margin-left:8px; white-space:nowrap; }
+    .link-btn{ font-size:12px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; white-space:nowrap; }
     .bot-btn{ border-color: color-mix(in oklab, var(--accent) 40%, white);
       background: color-mix(in oklab, var(--accent) 12%, white);
       color: var(--accent); font-weight:700; }
@@ -69,19 +73,24 @@
     /* Bot profil-popover */
     .bot-card{
       position:fixed; z-index:1200; display:none;
-      width:min(340px, calc(100vw - 32px));
+      width:min(360px, calc(100vw - 32px));
       background:#fff; border:1px solid var(--line);
       border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.18);
     }
     .bot-card.open{ display:block; }
-    .bot-card .head{ display:flex; align-items:center; gap:10px;
+    .bot-card .head{ display:flex; align-items:center; gap:12px;
       padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
-    .bot-card .avatar{ width:64px; height:64px; border-radius:12px; object-fit:cover;
+    .bot-card .avatar{ width:96px; height:96px; border-radius:14px; object-fit:cover;
       border:1px solid var(--line); flex:0 0 auto; }
     .bot-card .title{ font-weight:800; line-height:1.1; }
     .bot-card .tag{ font-size:12px; color:#64748b; }
-    .bot-card .close{ margin-left:auto; width:28px; height:28px; border-radius:8px;
-      background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+    .bot-card .close{
+      margin-left:auto; width:32px; height:32px; border-radius:10px;
+      background:var(--accent); color:#fff;
+      border:1px solid color-mix(in oklab, var(--accent) 40%, white);
+      cursor:pointer;
+    }
+    .bot-card .close:hover{ filter:brightness(.96); }
     .bot-card .body{ padding:12px; font-size:14px; line-height:1.35; }
     .bot-card .actions{ display:flex; gap:8px; padding:10px 12px;
       border-top:1px solid var(--line); background:#fff; }
@@ -99,7 +108,7 @@
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
 
-    /* Chat – (változatlan) */
+    /* Chat */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -863,7 +872,7 @@
       <div class="subhdr">
         <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
         <label style="display:flex; align-items:center; gap:6px; font-size:14px; user-select:none;">
-          <input type="checkbox" id="showBots">
+          <input type="checkbox" id="showBots" checked>
           Mutasd a gépi tippelőket (Elek, Hugó, Ilona, Vendel)
         </label>
         <span id="rangeLabel" class="muted">Alap: az utolsó 5 forduló látszik</span>
