@@ -51,8 +51,7 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    .name-wrap{ display:flex; align-items:center; gap:6px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; min-width:0; }
-    .left .cell > .name-wrap{ flex:1; min-width:0; }
+    .name-wrap{ display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; min-width:0; }
     .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
     .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
     .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
@@ -194,8 +193,8 @@
     let botPickStore = {};
 
     // Admin beállítás
-    let LB_MODE = "lastN"; // "full" | "lastN"
-    let LB_COUNT = 5;
+    let LB_MODE = "full";      // "full" | "fromRound"
+    let LB_START = 1;
 
     /* ---------------- INIT ---------------- */
     document.addEventListener("DOMContentLoaded", () => {
@@ -223,15 +222,16 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
         }
 
-        // Admin leaderbord config betöltése
+        // Admin leaderboard config
         const lbSnap = await getDoc(doc(db,"settings","leaderboardConfig"));
         if (lbSnap.exists()){
           const cfg = lbSnap.data()||{};
-          LB_MODE = (cfg.mode==="full"||cfg.mode==="lastN") ? cfg.mode : "lastN";
-          LB_COUNT = Math.max(1, Number(cfg.count)||5);
+          LB_MODE  = (cfg.mode==="fromRound") ? "fromRound" : "full";
+          LB_START = Math.max(1, Number(cfg.startFrom)||1);
         }
 
-        // Ha admin "full", induláskor minden forduló
+        // indulás: ha admin "full", akkor showAll = true és minden forduló látszik;
+        // ha "fromRound", akkor showAll = false, azaz admin szerinti szűrő aktív
         showAll = (LB_MODE === "full");
 
         await buildLeaderboard();
@@ -282,12 +282,12 @@
       const btn = document.getElementById('toggleAll');
       const rangeLabel = document.getElementById('rangeLabel');
       if (showAll){
-        btn.textContent = (LB_MODE==="lastN") ? `Csak az utolsó ${LB_COUNT} forduló` : 'Vissza az admin szerinti nézetre';
+        btn.textContent = 'Vissza az admin szerinti nézetre';
         rangeLabel.textContent = "Teljes nézet: minden forduló látszik (balról jobbra: legutóbbi → régebbi)";
       } else {
         btn.textContent = 'Mutasd az összes fordulót';
-        rangeLabel.textContent = (LB_MODE==="lastN")
-          ? `Alap: az utolsó ${LB_COUNT} forduló látszik`
+        rangeLabel.textContent = (LB_MODE==="fromRound")
+          ? `Alap: csak a ${LB_START}. fordulótól számolunk`
           : 'Alap: minden forduló látszik';
       }
     }
@@ -449,14 +449,20 @@
       if (!rows.length){ mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>"; return; }
 
       const roundsDesc = roundsAsc.slice().reverse();
-      const useAdminSlice = (LB_MODE==="lastN") ? LB_COUNT : roundsDesc.length;
-      const toShow = showAll ? roundsDesc : roundsDesc.slice(0, useAdminSlice);
+
+      // Admin-szűrő alkalmazása: ha fromRound, akkor csak az adott fordulótól balra (újabb fordulók) mutatjuk
+      let filteredRoundsDesc = roundsDesc.slice();
+      if (!showAll && LB_MODE === "fromRound"){
+        filteredRoundsDesc = roundsDesc.filter(r => (parseInt(r)||0) >= LB_START);
+      }
+
+      const toShow = showAll ? roundsDesc : filteredRoundsDesc;
 
       const rangeLabel = document.getElementById('rangeLabel');
       rangeLabel.textContent = showAll
         ? "Teljes nézet: minden forduló látszik (balról jobbra: legutóbbi → régebbi)"
-        : (LB_MODE==="lastN"
-            ? (toShow.length ? `Csak az utolsó ${toShow.length} forduló látszik (balról jobbra: F${toShow[0]} → …)` : "Nincs még lezárt forduló.")
+        : (LB_MODE==="fromRound"
+            ? (toShow.length ? `Csak a ${LB_START}. fordulótól látszik (balról jobbra: F${toShow[0]} → …)` : "Nincs még lezárt forduló a megadott tartományban.")
             : "Alap: minden forduló látszik");
 
       const maxPerRound = toShow.map(r=>{
