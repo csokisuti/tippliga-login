@@ -174,10 +174,7 @@
       return undefined;
     }
     const tipChoice = t => t.choice ?? t.tip ?? "";
-    function tipDouble(t){
-      // a botoknál nincs 'double' flag, csak a felhasználóknál – ez marad
-      return !!(t.double ?? t.isDouble);
-    }
+    function tipDouble(t){ return !!(t.double ?? t.isDouble); }
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
     /* ---- Állapot ---- */
@@ -186,7 +183,10 @@
     let currentUserRole = "user";
     let favoriteTeam = "";
 
+    // VIZUÁLIS nézet: alapból csak az utolsó 5 forduló látszik
+    let showAllView = false;
     let showBots = true;
+
     let rows = [];
     let roundsAsc = [];
     let officialOrder = [];
@@ -194,7 +194,7 @@
     let matchesCache = {};
     let botPickStore = {};
 
-    // Admin beállítás
+    // Admin beállítás – EZ SZÁMOLÁSRA HAT
     let LB_MODE = "full";      // "full" | "fromRound"
     let LB_START = 1;
 
@@ -224,7 +224,7 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
         }
 
-        // Admin leaderboard config
+        // Admin leaderboard config (SZÁMOLÁSHOZ)
         const lbSnap = await getDoc(doc(db,"settings","leaderboardConfig"));
         if (lbSnap.exists()){
           const cfg = lbSnap.data()||{};
@@ -233,7 +233,7 @@
         }
 
         await buildLeaderboard();
-        renderRangeLabel();
+        updateControlsText();
         updatePendingBadge();
         initChat(userRef);
 
@@ -242,6 +242,13 @@
 
       document.getElementById("logout").addEventListener("click", () => {
         signOut(auth).then(() => window.location.href = "login.html");
+      });
+
+      // Új: vizuális váltó
+      document.getElementById('toggleAll').addEventListener('click', ()=>{
+        showAllView = !showAllView;
+        updateControlsText();
+        renderTable();
       });
 
       const botsEl = document.getElementById('showBots');
@@ -270,14 +277,20 @@
       window.addEventListener('resize', closeBotCard);
     });
 
-    function renderRangeLabel(){
+    function updateControlsText(){
+      const btn = document.getElementById('toggleAll');
       const rangeLabel = document.getElementById('rangeLabel');
-      rangeLabel.textContent = (LB_MODE==="fromRound")
-        ? `Csak a ${LB_START}. fordulótól számolunk`
-        : "Teljes szezon";
+
+      btn.textContent = showAllView ? 'Csak az utolsó 5 forduló' : 'Mutasd az összes fordulót';
+
+      // Tájékoztatás: admin beállítás a számolásra
+      rangeLabel.textContent =
+        (LB_MODE==='fromRound'
+          ? `Számolás: ${LB_START}. fordulótól • Nézet: ${showAllView ? 'összes forduló' : 'utolsó 5 forduló'}`
+          : `Számolás: teljes szezon • Nézet: ${showAllView ? 'összes forduló' : 'utolsó 5 forduló'}`);
     }
 
-    /* ---------------- Adatok betöltése és számítás ---------------- */
+    /* ---------------- Adatok betöltése és SZÁMÍTÁS ---------------- */
     async function buildLeaderboard(){
       const [matchesSnap, tipsSnap, usersSnap, officialSnap, standingsTipsSnap] = await Promise.all([
         getDocs(collection(db, "matches")),
@@ -306,6 +319,7 @@
         orderByEmail[d.id] = (arr || []).slice(0,12);
       });
 
+      // Utolsó tipp verzió
       const latest = new Map();
       tipsSnap.forEach(docu=>{
         const t = docu.data(); if (!t?.matchId || !t?.user) return;
@@ -319,11 +333,10 @@
       const player = {};
       const rounds = new Set();
 
+      // SZÁMOLÁS: admin beállítás szerint szűrjük a fordulókat
       for (const tip of latest.values()){
         const m = matchesCache[tip.matchId]; if (!m) continue;
         const roundId = matchRound(m); if (!roundId) continue;
-
-        // SZŰRÉS: ha "fromRound", akkor csak az adott fordulótól számolunk
         if (LB_MODE === "fromRound" && (parseInt(roundId)||0) < LB_START) continue;
 
         rounds.add(roundId);
@@ -437,9 +450,11 @@
       const mount = document.getElementById('tableMount');
       if (!rows.length){ mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>"; return; }
 
-      const roundsDesc = roundsAsc.slice().reverse(); // már előre szűrt lista
+      // Minden elérhető forduló (admin-szűrés UTÁN) legújabb -> legrégebbi
+      const roundsDesc = roundsAsc.slice().reverse();
 
-      const toShow = roundsDesc;
+      // VIZUÁLIS szeletelés: utolsó 5 vagy mind
+      const toShow = showAllView ? roundsDesc : roundsDesc.slice(0, 5);
 
       const maxPerRound = toShow.map(r=>{
         let m = -Infinity;
@@ -652,7 +667,7 @@
             row.innerHTML = `
               <div style="flex:1 1 auto">
                 <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
-                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/</g,'&gt;')}</div>
               </div>`;
             const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
             if (canDelete){
@@ -798,6 +813,7 @@
     <!-- Ranglista -->
     <section class="card">
       <div class="subhdr">
+        <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
         <label style="display:flex; align-items:center; gap:6px; font-size:14px; user-select:none;">
           <input type="checkbox" id="showBots" checked>
           Mutasd a gépi tippelőket (Elek, Hugó, Ilona, Vendel)
