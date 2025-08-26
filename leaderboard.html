@@ -185,7 +185,7 @@
 
     // VIZUÁLIS nézet: alapból csak az utolsó 5 forduló látszik
     let showAllView = false;
-    let showBots = true;
+    let showBots = false;
 
     let rows = [];
     let roundsAsc = [];
@@ -815,7 +815,7 @@
       <div class="subhdr">
         <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
         <label style="display:flex; align-items:center; gap:6px; font-size:14px; user-select:none;">
-          <input type="checkbox" id="showBots" checked>
+          <input type="checkbox" id="showBots">
           Mutasd a gépi tippelőket (Elek, Hugó, Ilona, Vendel)
         </label>
         <span id="rangeLabel" class="muted"></span>
@@ -873,3 +873,4 @@
   </div>
 </body>
 </html>
+
