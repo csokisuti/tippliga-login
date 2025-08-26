@@ -204,8 +204,8 @@
       const cLb = makeCard({title:"Leaderboard – beszámított fordulók", hint:"Csak a ranglistára hat; a tabellát nem érinti", id:"card-lb", bodyHTML:`
         <div class="row">
           <label class="inline"><input type="radio" name="lbMode" value="full"> Teljes szezon</label>
-          <label class="inline"><input type="radio" name="lbMode" value="lastN"> Utolsó N forduló</label>
-          <input type="number" id="lbCount" min="1" step="1" placeholder="N" style="width:100px">
+          <label class="inline"><input type="radio" name="lbMode" value="fromRound"> Fordulótól számítson</label>
+          <input type="number" id="lbFrom" min="1" step="1" placeholder="Kezdő forduló (pl. 10)" style="width:180px">
         </div>
         <div class="row">
           <button class="btn primary" id="lbSave">Mentés</button>
@@ -434,7 +434,7 @@
       if(!data.ok){ alert("Hiba a küldésnél: " + (data.error||"")); return }
       const v  = data.version || 'n/a';
       const hl = (data.echo && typeof data.echo.htmlLen==='number') ? data.echo.htmlLen : (htmlBody||'').length;
-      const ec = (data.echo && typeof data.echo.emailsCount==='number') ? data.echo.emailsCount : emails.length;
+      const ec = (data.echo and typeof data.echo.emailsCount==='number') ? data.echo.emailsCount : emails.length;
       alert(`Kész. Kiküldve: ${data.sent} címre.
 verzió: ${v}
 htmlLen: ${hl} | címzettek: ${ec}`);
@@ -621,15 +621,20 @@ verzió: ${data.version || 'n/a'}`);
       alert("Sorrend elmentve.");
     }
 
+    // ---- Leaderboard config: TELJES / FORDULÓTÓL ----
     async function loadLbCfg(){
       const ref = doc(db,"settings","leaderboardConfig");
       const snap = await getDoc(ref);
       const d = snap.exists()? snap.data(): {};
       const mode = d.mode || "full";
-      const count = Number(d.count)||5;
-      document.querySelectorAll('input[name="lbMode"]').forEach(r=> r.checked = (r.value===mode));
-      const el = document.getElementById("lbCount");
-      if(el) el.value = count;
+      const from = Number(d.from) || 1;
+
+      document.querySelectorAll('input[name="lbMode"]').forEach(r=>{
+        r.checked = (r.value === mode);
+      });
+      const fromEl = document.getElementById("lbFrom");
+      if(fromEl) fromEl.value = from;
+
       const st = document.getElementById("lbStatus");
       if(st) st.textContent = "Betöltve.";
     }
@@ -637,8 +642,13 @@ verzió: ${data.version || 'n/a'}`);
     async function saveLbCfg(){
       const r = [...document.querySelectorAll('input[name="lbMode"]')].find(x=>x.checked);
       const mode = r ? r.value : "full";
-      const count = Math.max(1, Number(document.getElementById("lbCount").value)||5);
-      await setDoc(doc(db,"settings","leaderboardConfig"), { mode, count }, { merge:true });
+      const from = Math.max(1, Number(document.getElementById("lbFrom").value)||1);
+
+      const payload = (mode === "fromRound")
+        ? { mode, from }
+        : { mode };
+
+      await setDoc(doc(db,"settings","leaderboardConfig"), payload, { merge:true });
       const st = document.getElementById("lbStatus");
       if(st) st.textContent = "Mentve.";
     }
