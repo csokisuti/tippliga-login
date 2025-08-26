@@ -213,6 +213,130 @@
       try{ return ts.toDate().toLocaleString("hu-HU", { hour12:false }); }catch{ return ""; }
     }
 
+    /* ---------- SZÁMOLT NB I TABELLA (ÚJ) ---------- */
+
+    // "2-1" -> [2,1]
+    function parseRes(str){
+      const m = String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
+      return m ? [parseInt(m[1]), parseInt(m[2])] : null;
+    }
+
+    async function buildComputedTable(){
+      const teams = [
+        "Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr",
+        "Kazincbarcikai SC","Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus",
+        "Paksi FC","Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"
+      ];
+
+      const S = {};
+      teams.forEach(t=> S[t] = { team:t, MP:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 });
+
+      const H2H = {}; // "A|B" -> { A:{Pts,GF,GA}, B:{Pts,GF,GA} }
+
+      const snap = await getDocs(collection(db,"matches"));
+      snap.forEach(d=>{
+        const m = d.data() || {};
+        const A = m.homeTeam, B = m.awayTeam;
+        const r = parseRes(m.result);
+        if (!A || !B || !r) return;
+
+        const [hg, ag] = r;
+        const a = S[A], b = S[B];
+        if (!a || !b) return; // csak az NB I listából
+
+        a.MP++; b.MP++;
+        a.GF += hg; a.GA += ag; a.GD = a.GF - a.GA;
+        b.GF += ag; b.GA += hg; b.GD = b.GF - b.GA;
+
+        if (hg > ag){ a.W++; b.L++; a.Pts += 3; }
+        else if (hg < ag){ b.W++; a.L++; b.Pts += 3; }
+        else { a.D++; b.D++; a.Pts += 1; b.Pts += 1; }
+
+        const k = [A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        H2H[k] ||= { [A]:{Pts:0,GF:0,GA:0}, [B]:{Pts:0,GF:0,GA:0} };
+        if (hg > ag){ H2H[k][A].Pts += 3; }
+        else if (hg < ag){ H2H[k][B].Pts += 3; }
+        else { H2H[k][A].Pts += 1; H2H[k][B].Pts += 1; }
+        H2H[k][A].GF += hg; H2H[k][A].GA += ag;
+        H2H[k][B].GF += ag; H2H[k][B].GA += hg;
+      });
+
+      function cmp(a,b){
+        if (b.Pts !== a.Pts) return b.Pts - a.Pts;
+        if (b.W   !== a.W  ) return b.W   - a.W;
+        if (b.GD  !== a.GD ) return b.GD  - a.GD;
+        if (b.GF  !== a.GF ) return b.GF  - a.GF;
+
+        const k = [a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        const row = H2H[k];
+        if (row){
+          const pa = row[a.team]?.Pts ?? 0, pb = row[b.team]?.Pts ?? 0;
+          if (pb !== pa) return pb - pa;
+          const gda = (row[a.team]?.GF ?? 0) - (row[a.team]?.GA ?? 0);
+          const gdb = (row[b.team]?.GF ?? 0) - (row[b.team]?.GA ?? 0);
+          if (gdb !== gda) return gdb - gda;
+        }
+        return a.team.localeCompare(b.team,'hu');
+      }
+
+      const rows = Object.values(S).sort(cmp);
+      renderComputedTable(rows);
+    }
+
+    function renderComputedTable(rows){
+      const crest = {
+        "Debreceni VSC":"crest/crest-dvsc.png","Diósgyőri VTK":"crest/crest-dvtk.png","Ferencváros":"crest/crest-fradi.png",
+        "ETO FC Győr":"crest/crest-gyor.png","Kazincbarcikai SC":"crest/crest-kazincbarcika.png","Kisvárda FC":"crest/crest-kisvarda.png",
+        "MTK Budapest":"crest/crest-mtk.png","Nyíregyháza Spartacus":"crest/crest-nyiregyhaza.png","Paksi FC":"crest/crest-paks.png",
+        "Puskás Akadémia":"crest/crest-puskas.png","Újpest FC":"crest/crest-ujpest.png","Zalaegerszegi TE FC":"crest/crest-zte.png"
+      };
+
+      const wrap = document.getElementById("tableContainer");
+      const tbl = document.createElement("table");
+      tbl.style.width = "100%";
+      tbl.style.borderCollapse = "separate";
+      tbl.style.borderSpacing = "0";
+
+      tbl.innerHTML = `
+        <thead>
+          <tr>
+            <th style="text-align:right;padding:8px 10px;">H</th>
+            <th style="padding:8px 10px;">Csapat</th>
+            <th style="text-align:right;padding:8px 10px;">M</th>
+            <th style="text-align:right;padding:8px 10px;">Gy</th>
+            <th style="text-align:right;padding:8px 10px;">D</th>
+            <th style="text-align:right;padding:8px 10px;">V</th>
+            <th style="text-align:right;padding:8px 10px;">LG</th>
+            <th style="text-align:right;padding:8px 10px;">KG</th>
+            <th style="text-align:right;padding:8px 10px;">GK</th>
+            <th style="text-align:right;padding:8px 10px;">P</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r,i)=>`
+            <tr>
+              <td style="text-align:right;padding:8px 10px;color:#64748b;">${i+1}.</td>
+              <td style="padding:8px 10px;display:flex;align-items:center;gap:8px;">
+                ${crest[r.team] ? `<img src="${crest[r.team]}" alt="" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff;object-fit:contain">` : ""}
+                <strong>${r.team}</strong>
+              </td>
+              <td style="text-align:right;padding:8px 10px;">${r.MP}</td>
+              <td style="text-align:right;padding:8px 10px;">${r.W}</td>
+              <td style="text-align:right;padding:8px 10px;">${r.D}</td>
+              <td style="text-align:right;padding:8px 10px;">${r.L}</td>
+              <td style="text-align:right;padding:8px 10px;">${r.GF}</td>
+              <td style="text-align:right;padding:8px 10px;">${r.GA}</td>
+              <td style="text-align:right;padding:8px 10px;">${r.GD}</td>
+              <td style="text-align:right;padding:8px 10px;font-weight:800;">${r.Pts}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+      wrap.innerHTML = "";
+      wrap.appendChild(tbl);
+    }
+    /* ---------- /SZÁMOLT TABELLÁHOZ ---------- */
+
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
@@ -268,17 +392,12 @@
           if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
         }catch(e){ console.warn(e); }
 
-        try {
-          const tableDoc = await getDoc(doc(db, "settings", "nbi_table_image"));
-          if (tableDoc.exists()) {
-            const base64 = tableDoc.data().base64;
-            const img = document.createElement("img");
-            img.src = `data:image/png;base64,${base64}`;
-            img.alt = "NB I tabella";
-            document.getElementById("tableContainer").appendChild(img);
-          }
-        } catch(e){ console.warn(e); }
+        /* --- ÚJ: számolt tabella betöltése --- */
+        await buildComputedTable();
+        // Ha élő frissítést is akarsz (eredmény beírás után automatikus újrarajzolás):
+        onSnapshot(collection(db, "matches"), () => buildComputedTable());
 
+        /* --- Kedvenc csapat FB-feed --- */
         try {
           const fbLink = facebookLinks[favoriteTeam];
           if (fbLink) {
@@ -595,4 +714,3 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
   </section>
 </body>
 </html>
-
