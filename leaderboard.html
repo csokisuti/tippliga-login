@@ -174,7 +174,10 @@
       return undefined;
     }
     const tipChoice = t => t.choice ?? t.tip ?? "";
-    const tipDouble = t => !!(t.double ?? t.isDouble);
+    function tipDouble(t){
+      // a botoknál nincs 'double' flag, csak a felhasználóknál – ez marad
+      return !!(t.double ?? t.isDouble);
+    }
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
     /* ---- Állapot ---- */
@@ -183,7 +186,6 @@
     let currentUserRole = "user";
     let favoriteTeam = "";
 
-    let showAll = false;           // UI toggle
     let showBots = true;
     let rows = [];
     let roundsAsc = [];
@@ -230,12 +232,8 @@
           LB_START = Math.max(1, Number(cfg.startFrom)||1);
         }
 
-        // indulás: ha admin "full", akkor showAll = true és minden forduló látszik;
-        // ha "fromRound", akkor showAll = false, azaz admin szerinti szűrő aktív
-        showAll = (LB_MODE === "full");
-
         await buildLeaderboard();
-        updateToggleButton();
+        renderRangeLabel();
         updatePendingBadge();
         initChat(userRef);
 
@@ -244,12 +242,6 @@
 
       document.getElementById("logout").addEventListener("click", () => {
         signOut(auth).then(() => window.location.href = "login.html");
-      });
-
-      document.getElementById('toggleAll').addEventListener('click', ()=>{
-        showAll = !showAll;
-        updateToggleButton();
-        renderTable();
       });
 
       const botsEl = document.getElementById('showBots');
@@ -278,18 +270,11 @@
       window.addEventListener('resize', closeBotCard);
     });
 
-    function updateToggleButton(){
-      const btn = document.getElementById('toggleAll');
+    function renderRangeLabel(){
       const rangeLabel = document.getElementById('rangeLabel');
-      if (showAll){
-        btn.textContent = 'Vissza az admin szerinti nézetre';
-        rangeLabel.textContent = "Teljes nézet: minden forduló látszik (balról jobbra: legutóbbi → régebbi)";
-      } else {
-        btn.textContent = 'Mutasd az összes fordulót';
-        rangeLabel.textContent = (LB_MODE==="fromRound")
-          ? `Alap: csak a ${LB_START}. fordulótól számolunk`
-          : 'Alap: minden forduló látszik';
-      }
+      rangeLabel.textContent = (LB_MODE==="fromRound")
+        ? `Csak a ${LB_START}. fordulótól számolunk`
+        : "Teljes szezon";
     }
 
     /* ---------------- Adatok betöltése és számítás ---------------- */
@@ -337,6 +322,10 @@
       for (const tip of latest.values()){
         const m = matchesCache[tip.matchId]; if (!m) continue;
         const roundId = matchRound(m); if (!roundId) continue;
+
+        // SZŰRÉS: ha "fromRound", akkor csak az adott fordulótól számolunk
+        if (LB_MODE === "fromRound" && (parseInt(roundId)||0) < LB_START) continue;
+
         rounds.add(roundId);
         if (!m.outcome) continue;
         const pick = tipChoice(tip); if (!pick) continue;
@@ -448,22 +437,9 @@
       const mount = document.getElementById('tableMount');
       if (!rows.length){ mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>"; return; }
 
-      const roundsDesc = roundsAsc.slice().reverse();
+      const roundsDesc = roundsAsc.slice().reverse(); // már előre szűrt lista
 
-      // Admin-szűrő alkalmazása: ha fromRound, akkor csak az adott fordulótól balra (újabb fordulók) mutatjuk
-      let filteredRoundsDesc = roundsDesc.slice();
-      if (!showAll && LB_MODE === "fromRound"){
-        filteredRoundsDesc = roundsDesc.filter(r => (parseInt(r)||0) >= LB_START);
-      }
-
-      const toShow = showAll ? roundsDesc : filteredRoundsDesc;
-
-      const rangeLabel = document.getElementById('rangeLabel');
-      rangeLabel.textContent = showAll
-        ? "Teljes nézet: minden forduló látszik (balról jobbra: legutóbbi → régebbi)"
-        : (LB_MODE==="fromRound"
-            ? (toShow.length ? `Csak a ${LB_START}. fordulótól látszik (balról jobbra: F${toShow[0]} → …)` : "Nincs még lezárt forduló a megadott tartományban.")
-            : "Alap: minden forduló látszik");
+      const toShow = roundsDesc;
 
       const maxPerRound = toShow.map(r=>{
         let m = -Infinity;
@@ -822,7 +798,6 @@
     <!-- Ranglista -->
     <section class="card">
       <div class="subhdr">
-        <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
         <label style="display:flex; align-items:center; gap:6px; font-size:14px; user-select:none;">
           <input type="checkbox" id="showBots" checked>
           Mutasd a gépi tippelőket (Elek, Hugó, Ilona, Vendel)
