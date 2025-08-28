@@ -9,98 +9,40 @@
   <script src="loader.js" defer></script>
 
   <style>
-    .layout{
-      display:flex; flex-direction:column; gap:16px;
-      max-width:1200px; margin:0 auto; padding:20px;
-    }
-    .content-grid{
-      display:grid; grid-template-columns: 1.2fr 1fr; gap:16px;
-    }
-    @media (max-width: 1000px){
-      .content-grid{ grid-template-columns: 1fr; }
-    }
-
+    .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
+    .content-grid{ display:grid; grid-template-columns: 1.2fr 1fr; gap:16px; }
+    @media (max-width:1000px){ .content-grid{ grid-template-columns:1fr; } }
     .header{ display:flex; align-items:center; justify-content:space-between; }
     .header-left{ display:flex; align-items:center; gap:12px; }
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
 
-    .nav-grid{
-      display:grid;
-      grid-template-columns: repeat(6, minmax(0,1fr));
-      gap:14px;
-    }
-    @media (max-width: 1100px){
-      .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-    }
-    @media (max-width: 700px){
-      .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-    }
-    .nav-card{
-      display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit;
-      padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px;
-      box-shadow:0 6px 18px rgba(15,23,42,.05);
-    }
-    .nav-card .icon-wrap{
-      position:relative;
-      width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-      background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white);
-      color:var(--accent,#3b82f6);
-    }
+    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
+    @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    .nav-card .icon-wrap{ position:relative; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
     .nav-card .title{ font-weight:800; }
     .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
 
-    .card{
-      background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px;
-      box-shadow:0 6px 18px rgba(15,23,42,.06);
-      overflow:hidden;
-    }
+    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
     .table-wrap{ overflow:auto; }
-    .pill-badge{
-      display:inline-flex; align-items:center; justify-content:center;
-      min-width:18px; height:18px; padding:0 6px; margin-left:6px;
-      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700;
-      line-height:1; vertical-align:middle;
-    }
+    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
-    .fb-wrap iframe{
-      width:100%; height:540px; border:0; overflow:hidden;
-    }
+    .fb-wrap iframe{ width:100%; height:540px; border:0; overflow:hidden; }
 
-    .chat-fab{
-      position:fixed; right:22px; bottom:22px; z-index:999;
-      width:52px; height:52px; border-radius:999px; border:0;
-      background:var(--accent,#3b82f6); color:#fff; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      box-shadow:0 8px 26px rgba(0,0,0,.15);
-    }
-    .chat-fab .fab-badge{
-      position:absolute; top:-4px; right:-4px;
-      min-width:20px; height:20px; padding:0 6px;
-      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none;
-    }
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
 
-    .chat-panel{
-      position:fixed; right:22px; bottom:86px; z-index:998;
-      width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column;
-      background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14);
-    }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
     .chat-panel.open{ display:flex; }
-    .chat-head{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd;
-    }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
     .chat-title{ font-weight:800; }
-    #chatClose{
-      width:28px; height:28px; border-radius:8px;
-      font-size:18px; line-height:28px;
-      display:inline-flex; align-items:center; justify-content:center;
-      background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer;
-    }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
     #chatClose:hover{ filter:brightness(0.95); }
 
     .chat-list{ overflow:auto; padding:8px 10px; }
@@ -109,49 +51,18 @@
     .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
     .msg .meta{ font-size:12px; color:var(--muted,#64748b); margin-bottom:2px; }
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
-    .msg .del{
-      margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca;
-      padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none;
-    }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
 
-    #chatComposer{
-      display:flex; gap:8px; align-items:center;
-      padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff;
-    }
-    #chatInput{
-      background:#fff; color:#111;
-      border:1px solid var(--line,#e6eaf1);
-      height:40px; padding:8px 10px; border-radius:10px;
-      font-size:14px; outline:none; width:100%; box-sizing:border-box;
-    }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
-    #chatSendBtn{
-      min-width:90px; padding:8px 12px; border-radius:10px;
-      background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer;
-    }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
 
-    .btn-accent{
-      min-height:40px; padding:10px 14px; border-radius:10px;
-      background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
-      font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
-      box-shadow:0 6px 18px rgba(0,0,0,0.08);
-    }
+    .btn-accent{ min-height:40px; padding:10px 14px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
     .btn-icon{ width:18px; height:18px; display:inline-block; }
-
-    /* --- Szabályzat modál --- */
-    .rules-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
-    .rules-modal.open{display:flex}
-    .rules-dialog{width:min(900px,92vw);max-height:80vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
-    .rules-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .rules-title{font-weight:800}
-    .rules-close{width:32px;height:32px;border:1px solid var(--line,#e6eaf1);border-radius:8px;background:#eef2ff;cursor:pointer}
-    .rules-body{padding:14px;overflow:auto;line-height:1.5;color:#111;white-space:pre-wrap}
-    .rules-body p{margin:0 0 10px}
-    .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
-    .rules-updated{font-size:12px;color:var(--muted,#64748b)}
   </style>
 
   <script type="module">
@@ -178,7 +89,6 @@
     const db = getFirestore(app);
 
     const crestMap = {
-      "Ferencváros": "crest/crest-fradi.png",
       "Ajax": "ucl_crest/ajax.png",
       "Arsenal": "ucl_crest/arsenal.png",
       "Atalanta": "ucl_crest/atalanta.png",
@@ -186,16 +96,13 @@
       "Atlético Madrid": "ucl_crest/atletico.png",
       "Bayer Leverkusen": "ucl_crest/leverkusen.png",
       "Borussia Dortmund": "ucl_crest/borussia.png",
-      "Celtic": "ucl_crest/celtic.png",
       "Chelsea": "ucl_crest/chelsea.png",
       "Club Brugge": "ucl_crest/brugge.png",
       "Eintracht Frankfurt": "ucl_crest/frankfurt.png",
       "Barcelona": "ucl_crest/barcelona.png",
-      "Basel": "ucl_crest/basel.png",
       "Bayern München": "ucl_crest/bayern.png",
       "FC Copenhagen": "ucl_crest/copenhagen.png",
       "Kairat": "ucl_crest/kairat.png",
-      "Fenerbahçe": "ucl_crest/fener.png",
       "Bodø/Glimt": "ucl_crest/bodo.png",
       "Inter": "ucl_crest/inter.png",
       "Juventus": "ucl_crest/juventus.png",
@@ -211,18 +118,16 @@
       "Paris Saint-Germain": "ucl_crest/psg.png",
       "Qarabağ": "ucl_crest/qarabag.png",
       "Real Madrid": "ucl_crest/real.png",
-      "Red Star Belgrade": "ucl_crest/redstar.png",
-      "Sturm Graz": "ucl_crest/sturm.png",
       "Benfica": "ucl_crest/benfica.png",
       "Sporting": "ucl_crest/sporting.png",
       "Napoli": "ucl_crest/napoli.png",
       "Tottenham": "ucl_crest/tottenham.png",
       "Villarreal": "ucl_crest/villareal.png",
       "Union Saint-Gilloise": "ucl_crest/usg.png",
+      "PSV": "ucl_crest/psv.png"
     };
 
     const facebookLinks = {
-      "Ferencváros": "https://www.facebook.com/fradi.hu",
       "Ajax": "https://www.facebook.com/afcajax",
       "Arsenal": "https://www.facebook.com/Arsenal",
       "Atalanta": "https://www.facebook.com/atalantabc",
@@ -230,16 +135,13 @@
       "Atlético Madrid": "https://www.facebook.com/AtleticodeMadrid",
       "Bayer Leverkusen": "https://www.facebook.com/bayer04leverkusen",
       "Borussia Dortmund": "https://www.facebook.com/BVB",
-      "Celtic": "https://www.facebook.com/CelticFC",
       "Chelsea": "https://www.facebook.com/ChelseaFC",
       "Club Brugge": "https://www.facebook.com/clubbrugge",
       "Eintracht Frankfurt": "https://www.facebook.com/eintracht",
       "Barcelona": "https://www.facebook.com/fcbarcelona",
-      "Basel": "https://www.facebook.com/fcbasel1893",
       "Bayern München": "https://www.facebook.com/FCBayern",
       "FC Copenhagen": "https://www.facebook.com/FCKobenhavn",
       "Kairat": "https://www.facebook.com/fckairat",
-      "Fenerbahçe": "https://www.facebook.com/Fenerbahce",
       "Bodø/Glimt": "https://www.facebook.com/Glimt1916",
       "Inter": "https://www.facebook.com/Inter",
       "Juventus": "https://www.facebook.com/Juventus",
@@ -255,8 +157,6 @@
       "Paris Saint-Germain": "https://www.facebook.com/PSG",
       "Qarabağ": "https://www.facebook.com/QarabagFK",
       "Real Madrid": "https://www.facebook.com/RealMadrid",
-      "Red Star Belgrade": "https://www.facebook.com/crvenazvezdafk",
-      "Sturm Graz": "https://www.facebook.com/SKSturm",
       "Benfica": "https://www.facebook.com/SLBenfica",
       "Sporting": "https://www.facebook.com/SportingCP",
       "Napoli": "https://www.facebook.com/SSCNapoli",
@@ -273,7 +173,7 @@
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
-    let favouriteTeamucl = "";
+    let favoriteTeam = "";
     let chatLastSeen = null;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -288,12 +188,12 @@
           const data = userSnap.data();
           currentUserNick = data.nickname || currentUserEmail;
           currentUserRole = data.role || "user";
-          favouriteTeamucl = data.favouriteTeamucl || "";
+          favoriteTeam = data.favoriteTeam || "";
           chatLastSeen = data.chatLastSeen || null;
         } else {
           currentUserNick = currentUserEmail;
           currentUserRole = "user";
-          favouriteTeamucl = "";
+          favoriteTeam = "";
           chatLastSeen = null;
         }
 
@@ -302,34 +202,45 @@
           document.getElementById("adminLink").style.display = "flex";
         }
 
-        // Téma + címer a BL kedvenc alapján
-        if (favouriteTeamucl) {
-          const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD")
+        if (favoriteTeam) {
+          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
             .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
           document.body.classList.add(themeClass);
 
-          const crest = crestMap[favouriteTeamucl];
+          const crest = crestMap[favoriteTeam];
           if (crest) {
             const img = document.getElementById("favCrest");
-            img.src = crest; img.alt = favouriteTeamucl; img.hidden = false;
+            img.src = crest; img.alt = favoriteTeam; img.hidden = false;
           }
         }
 
-        // Függő tippek badge (maradhat, ha már van BL-es oldalad, itt később ucl_* kollekciókra válts)
         try{
+          /* BL gyűjtemények */
           const now = new Date();
-          const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now)));
+          const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", now)));
           const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-          const myTipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail)));
+          const myTipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
           const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
           const badge = document.getElementById("tipsBadge");
           if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
         }catch(e){ console.warn(e); }
 
-        // FB feed a BL kedvenc alapján
         try {
-          const fbLink = facebookLinks[favouriteTeamucl];
+          /* BL tabellakép */
+          const tableDoc = await getDoc(doc(db, "settings", "ucl_table_image"));
+          if (tableDoc.exists()) {
+            const base64 = tableDoc.data().base64;
+            const img = document.createElement("img");
+            img.src = `data:image/png;base64,${base64}`;
+            img.alt = "BL tabella";
+            document.getElementById("tableContainer").appendChild(img);
+          }
+        } catch(e){ console.warn(e); }
+
+        try {
+          /* Kedvenc klub FB-feed (ha van) */
+          const fbLink = facebookLinks[favoriteTeam];
           if (fbLink) {
             const fbDiv = document.createElement("div");
             fbDiv.className = "fb-wrap";
@@ -490,9 +401,7 @@
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
-          </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg>
         </div>
         <div class="text">
           <span class="title">Főoldal</span>
@@ -506,7 +415,7 @@
         </div>
         <div class="text">
           <span class="title">Szezon végi sorrend</span>
-          <span class="desc">12 csapat – húzd a helyekre</span>
+          <span class="desc">Top 8 / bónuszok</span>
         </div>
       </a>
 
@@ -552,7 +461,7 @@
 
       <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -561,15 +470,15 @@
       </a>
     </nav>
 
-    <!-- Szabályzat modál -->
+    <!-- Szabályzat modál – (tartalmát külön frissíthetjük BL-re) -->
     <div id="rulesModal" class="rules-modal" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
       <div class="rules-dialog">
         <div class="rules-head">
-          <div id="rulesTitle" class="rules-title">Szabályzat</div>
+          <div id="rulesTitle" class="rules-title">TippLiga – Szabályzat</div>
           <button id="closeRules" class="rules-close" aria-label="Bezárás">✕</button>
         </div>
         <div id="rulesBody" class="rules-body">
-          <p>Itt jelenhet meg a BL TippLiga szabályzata.</p>
+NB1-re írt szöveg található itt. Szólj, és átírom BL-re a pontozással/duplázással/bónuszokkal együtt.
         </div>
         <div class="rules-foot">
           <span id="rulesUpdated" class="rules-updated">Utoljára frissítve: 2025. 08. 14.</span>
@@ -580,7 +489,7 @@
 
     <div class="content-grid">
       <section class="card table-wrap">
-        <h3>Tabella</h3>
+        <h3>BL tabella</h3>
         <div id="tableContainer"></div>
       </section>
 
