@@ -96,22 +96,46 @@
     const db = getFirestore(app);
 
     /* ---------- Helper-ek ---------- */
-    const crestMap = {
-      "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png",
-      "Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Bayer Leverkusen":"ucl_crest/leverkusen.png",
-      "Barcelona":"ucl_crest/barcelona.png","Basel":"ucl_crest/basel.png","Bayern München":"ucl_crest/bayern.png",
-      "Benfica":"ucl_crest/benfica.png","Bodø/Glimt":"ucl_crest/bodo.png","Borussia Dortmund":"ucl_crest/borussia.png",
-      "Celtic":"ucl_crest/celtic.png","Chelsea":"ucl_crest/chelsea.png","Club Brugge":"ucl_crest/brugge.png",
-      "Eintracht Frankfurt":"ucl_crest/frankfurt.png","FC Copenhagen":"ucl_crest/copenhagen.png","Fenerbahçe":"ucl_crest/fener.png",
-      "Galatasaray":"ucl_crest/galata.png","Inter":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png",
-      "Kairat":"ucl_crest/kairat.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png",
-      "Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png",
-      "Newcastle":"ucl_crest/newcastle.png","Olympiacos":"ucl_crest/olympiacos.png","Pafos":"ucl_crest/pafos.png",
-      "Paris Saint-Germain":"ucl_crest/psg.png","Qarabağ":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png",
-      "Red Star Belgrade":"ucl_crest/redstar.png","Slavia Praha":"ucl_crest/slavia.png","Sporting":"ucl_crest/sporting.png",
-      "Sturm Graz":"ucl_crest/sturm.png","Tottenham":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png",
-      "Villarreal":"ucl_crest/villareal.png","Ferencváros":"crest/crest-fradi.png"
-    };
+    /* ---------- Helper-ek ---------- */
+const crestMap = {
+  "Ajax":"ucl_crest/ajax.png",
+  "Arsenal":"ucl_crest/arsenal.png",
+  "Atalanta":"ucl_crest/atalanta.png",
+  "Athletic Bilbao":"ucl_crest/athletic.png",
+  "Atlético Madrid":"ucl_crest/atletico.png",
+  "Bayer Leverkusen":"ucl_crest/leverkusen.png",
+  "Barcelona":"ucl_crest/barcelona.png",
+  "Bayern München":"ucl_crest/bayern.png",
+  "Benfica":"ucl_crest/benfica.png",
+  "Bodø/Glimt":"ucl_crest/bodo.png",
+  "Borussia Dortmund":"ucl_crest/borussia.png",
+  "Chelsea":"ucl_crest/chelsea.png",
+  "Club Brugge":"ucl_crest/brugge.png",
+  "Eintracht Frankfurt":"ucl_crest/frankfurt.png",
+  "FC Copenhagen":"ucl_crest/copenhagen.png",
+  "Galatasaray":"ucl_crest/galata.png",
+  "Inter":"ucl_crest/inter.png",
+  "Juventus":"ucl_crest/juventus.png",
+  "Kairat":"ucl_crest/kairat.png",
+  "Liverpool":"ucl_crest/liverpool.png",
+  "Manchester City":"ucl_crest/mancity.png",
+  "Marseille":"ucl_crest/marseille.png",
+  "Monaco":"ucl_crest/monaco.png",
+  "Napoli":"ucl_crest/napoli.png",
+  "Newcastle":"ucl_crest/newcastle.png",
+  "Olympiacos":"ucl_crest/olympiacos.png",
+  "Pafos":"ucl_crest/pafos.png",
+  "Paris Saint-Germain":"ucl_crest/psg.png",
+  "PSV":"ucl_crest/psv.png",
+  "Qarabağ":"ucl_crest/qarabag.png",
+  "Real Madrid":"ucl_crest/real.png",
+  "Slavia Praha":"ucl_crest/slavia.png",
+  "Sporting":"ucl_crest/sporting.png",
+  "Tottenham":"ucl_crest/tottenham.png",
+  "Union Saint-Gilloise":"ucl_crest/usg.png",
+  "Villarreal":"ucl_crest/villareal.png"
+};
+
     const crestFor = t => crestMap[t] || "";
     const fmt = n => (Number(n)||0).toFixed(2);
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
