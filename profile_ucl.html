@@ -95,48 +95,20 @@
     const db = getFirestore(app);
 
     /* ---------------- Helpers ---------------- */
+    /* Címerek – BL/UCL mezőny */
     const crestMap = {
-      "Ferencváros": "crest/crest-fradi.png",
-      "Ajax": "ucl_crest/ajax.png",
-      "Arsenal": "ucl_crest/arsenal.png",
-      "Atalanta": "ucl_crest/atalanta.png",
-      "Athletic Bilbao": "ucl_crest/athletic.png",
-      "Atlético Madrid": "ucl_crest/atletico.png",
-      "Bayer Leverkusen": "ucl_crest/leverkusen.png",
-      "Borussia Dortmund": "ucl_crest/borussia.png",
-      "Celtic": "ucl_crest/celtic.png",
-      "Chelsea": "ucl_crest/chelsea.png",
-      "Club Brugge": "ucl_crest/brugge.png",
-      "Eintracht Frankfurt": "ucl_crest/frankfurt.png",
-      "Barcelona": "ucl_crest/barcelona.png",
-      "Basel": "ucl_crest/basel.png",
-      "Bayern München": "ucl_crest/bayern.png",
-      "FC Copenhagen": "ucl_crest/copenhagen.png",
-      "Kairat": "ucl_crest/kairat.png",
-      "Fenerbahçe": "ucl_crest/fener.png",
-      "Bodø/Glimt": "ucl_crest/bodo.png",
-      "Inter": "ucl_crest/inter.png",
-      "Juventus": "ucl_crest/juventus.png",
-      "Liverpool": "ucl_crest/liverpool.png",
-      "Monaco": "ucl_crest/monaco.png",
-      "Manchester City": "ucl_crest/mancity.png",
-      "Newcastle": "ucl_crest/newcastle.png",
-      "Olympiacos": "ucl_crest/olympiacos.png",
-      "Galatasaray": "ucl_crest/galata.png",
-      "Slavia Praha": "ucl_crest/slavia.png",
-      "Marseille": "ucl_crest/marseille.png",
-      "Pafos": "ucl_crest/pafos.png",
-      "Paris Saint-Germain": "ucl_crest/psg.png",
-      "Qarabağ": "ucl_crest/qarabag.png",
-      "Real Madrid": "ucl_crest/real.png",
-      "Red Star Belgrade": "ucl_crest/redstar.png",
-      "Sturm Graz": "ucl_crest/sturm.png",
-      "Benfica": "ucl_crest/benfica.png",
-      "Sporting": "ucl_crest/sporting.png",
-      "Napoli": "ucl_crest/napoli.png",
-      "Tottenham": "ucl_crest/tottenham.png",
-      "Villarreal": "ucl_crest/villareal.png",
-      "Union Saint-Gilloise": "ucl_crest/usg.png",
+      "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png",
+      "Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Bayer Leverkusen":"ucl_crest/leverkusen.png",
+      "Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png",
+      "Bodø/Glimt":"ucl_crest/bodo.png","Borussia Dortmund":"ucl_crest/borussia.png","Celtic":"ucl_crest/celtic.png",
+      "Chelsea":"ucl_crest/chelsea.png","Club Brugge":"ucl_crest/brugge.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png",
+      "FC Copenhagen":"ucl_crest/copenhagen.png","Fenerbahçe":"ucl_crest/fener.png","Galatasaray":"ucl_crest/galata.png",
+      "Inter":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Liverpool":"ucl_crest/liverpool.png",
+      "Manchester City":"ucl_crest/mancity.png","Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png",
+      "Napoli":"ucl_crest/napoli.png","Newcastle":"ucl_crest/newcastle.png","Olympiacos":"ucl_crest/olympiacos.png",
+      "Paris Saint-Germain":"ucl_crest/psg.png","PSV":"ucl_crest/psv.png","Qarabağ":"ucl_crest/qarabag.png",
+      "Real Madrid":"ucl_crest/real.png","Slavia Praha":"ucl_crest/slavia.png","Sporting":"ucl_crest/sporting.png",
+      "Tottenham":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png"
     };
     const escapeHtml = s => String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
@@ -151,7 +123,7 @@
     /* ---------------- INIT ---------------- */
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "login.html"; return; }
+        if (!user) { window.location.href = "login_ucl.html"; return; }
         currentUserEmail = user.email;
 
         const userRef = doc(db, "users", currentUserEmail);
@@ -291,16 +263,17 @@
       });
 
       document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login.html");
+        signOut(auth).then(() => window.location.href = "login_ucl.html");
       });
     });
 
-    /* ---------------- Nav „függő tippek” badge ---------------- */
+    /* ---------------- Nav „függő tippek” badge (UCL) ---------------- */
     function updatePendingBadge(){
-      getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+      getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
-          const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
+        getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+          const tippedIds = new Set();
+          tipsSnap.forEach(x=>{ const t=x.data(); if(t?.matchId) tippedIds.add(t.matchId); });
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
           const badge = document.getElementById("tipsBadge");
           if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
@@ -409,7 +382,7 @@
       <div class="header-left">
         <img id="favCrest" class="fav-crest" alt="" hidden>
         <div>
-          <h1>NB1 TippLiga</h1>
+          <h1>BL TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
       </div>
@@ -425,7 +398,7 @@
 
     <nav class="nav-grid">
       <!-- Főoldal kártya -->
-      <a class="nav-card" href="dashboard.html">
+      <a class="nav-card" href="dashboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
@@ -437,8 +410,8 @@
         </div>
       </a>
 
-      <!-- Szezon végi sorrend – közvetlenül a Főoldal után -->
-      <a class="nav-card" href="positions.html">
+      <!-- Szezon végi sorrend / Top8 -->
+      <a class="nav-card" href="positions_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
@@ -449,7 +422,7 @@
       </a>
 
       <!-- Meccstippek -->
-      <a class="nav-card" href="matches.html">
+      <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
         </div>
@@ -460,9 +433,9 @@
       </a>
 
       <!-- Eredmények -->
-      <a class="nav-card" href="results.html">
+      <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Eredmények</span>
@@ -471,9 +444,9 @@
       </a>
 
       <!-- Összpontszám -->
-      <a class="nav-card" href="leaderboard.html">
+      <a class="nav-card" href="leaderboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Összpontszám</span>
@@ -482,7 +455,7 @@
       </a>
 
       <!-- Profil -->
-      <a class="nav-card" href="profile.html">
+      <a class="nav-card" href="profile_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
         </div>
@@ -492,10 +465,10 @@
         </div>
       </a>
 
-      <!-- Admin a végén – ha 7 elem van, simán átcsúszhat 2. sorba -->
-      <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
+      <!-- Admin a végén -->
+      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -588,4 +561,3 @@
   </section>
 </body>
 </html>
-
