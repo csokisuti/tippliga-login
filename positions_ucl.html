@@ -157,7 +157,6 @@ const crestMap = {
   "Kajrat Almati": "ucl_crest/kairat.png"
 };
 
-
     const crestFor = t => crestMap[t] || "";
     const TEAMS = Object.keys(crestMap).sort((a,b)=>a.localeCompare(b,"hu"));
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
