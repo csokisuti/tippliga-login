@@ -166,6 +166,9 @@
       query, where, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    /* >>> ÚJ: standings modul import <<< */
+    import { computeLiveOrderFromMatches } from "./standings.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
@@ -213,7 +216,7 @@
       try{ return ts.toDate().toLocaleString("hu-HU", { hour12:false }); }catch{ return ""; }
     }
 
-    /* ---------- SZÁMOLT NB I TABELLA (ÚJ) ---------- */
+    /* ---------- SZÁMOLT NB I TABELLA (élő) + élő sorrend mentése ---------- */
 
     // "2-1" -> [2,1]
     function parseRes(str){
@@ -234,16 +237,23 @@
       const H2H = {}; // "A|B" -> { A:{Pts,GF,GA}, B:{Pts,GF,GA} }
 
       const snap = await getDocs(collection(db,"matches"));
+      const matchesForModule = [];
+
       snap.forEach(d=>{
         const m = d.data() || {};
-        const A = m.homeTeam, B = m.awayTeam;
+        const A = m.homeTeam || m.home || "";
+        const B = m.awayTeam || m.away || "";
         const r = parseRes(m.result);
-        if (!A || !B || !r) return;
+        if (A && B && m.result) {
+          // a modulnak csak homeTeam/awayTeam/result kell
+          matchesForModule.push({ homeTeam:A, awayTeam:B, result:m.result });
+        }
 
-        const [hg, ag] = r;
         const a = S[A], b = S[B];
-        if (!a || !b) return; // csak az NB I listából
+        const res = parseRes(m.result);
+        if (!a || !b || !res) return;
 
+        const [hg, ag] = res;
         a.MP++; b.MP++;
         a.GF += hg; a.GA += ag; a.GD = a.GF - a.GA;
         b.GF += ag; b.GA += hg; b.GD = b.GF - b.GA;
@@ -280,6 +290,17 @@
       }
 
       const rows = Object.values(S).sort(cmp);
+
+      /* >>> ÚJ: élő sorrend számítása a modulból + elmentés <<< */
+      try{
+        const liveOrder = computeLiveOrderFromMatches(matchesForModule, teams);
+        // tegye ki globálisan, és cache-eljük localStorage-ba is
+        window.liveStandingsOrder = liveOrder;
+        localStorage.setItem("liveStandingsOrder", JSON.stringify(liveOrder));
+      }catch(e){
+        console.warn("Live standings (module) compute failed:", e);
+      }
+
       renderComputedTable(rows);
     }
 
@@ -392,9 +413,9 @@
           if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
         }catch(e){ console.warn(e); }
 
-        /* --- ÚJ: számolt tabella betöltése --- */
+        /* --- ÚJ: számolt tabella betöltése + élő sorrend cache --- */
         await buildComputedTable();
-        // Ha élő frissítést is akarsz (eredmény beírás után automatikus újrarajzolás):
+        // realtime frissítés: eredmény írás után automatikus újraszámolás + élő sorrend frissítése
         onSnapshot(collection(db, "matches"), () => buildComputedTable());
 
         /* --- Kedvenc csapat FB-feed --- */
