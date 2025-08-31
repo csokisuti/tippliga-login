@@ -177,6 +177,17 @@
     function tipDouble(t){ return !!(t.double ?? t.isDouble); }
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
+    /* ---- ÚJ: élő sorrend kiolvasása localStorage-ból ---- */
+    function readLiveOrderFromLocal(){
+      try{
+        const raw = localStorage.getItem("liveStandingsOrder");
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+        return arr.slice(0,12).map(x => String(x||""));
+      }catch{ return []; }
+    }
+
     /* ---- Állapot ---- */
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -311,6 +322,10 @@
       officialOrder = officialArrayFrom(officialSnap.exists() ? officialSnap.data() : []).slice(0,12);
       while (officialOrder.length < 12) officialOrder.push("");
 
+      // ÚJ: referencia sorrend kiválasztása (localStorage -> official fallback)
+      const liveOrder = readLiveOrderFromLocal();
+      const refOrder = liveOrder.filter(Boolean).length ? liveOrder : officialOrder;
+
       const orderByEmail = {};
       standingsTipsSnap.forEach(d=>{
         const data = d.data() || {};
@@ -365,7 +380,7 @@
 
       rows = Object.entries(player).map(([nick,obj])=>{
         const order = orderByEmail[obj.email] || [];
-        const hits = calcHits(order, officialOrder);
+        const hits = calcHits(order, refOrder);   // <-- official helyett refOrder
         const bonusPct = hits;
         const bonusPts = Math.round(obj.base * (bonusPct/100));
         const total = obj.base + bonusPts;
@@ -803,7 +818,7 @@
 
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
