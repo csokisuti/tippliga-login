@@ -24,7 +24,7 @@
     .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
     .nav-card .title{ font-weight:800; }
-    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
+    .nav-card .desc{ color:#64748b; font-size:12px; }
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
@@ -125,6 +125,9 @@
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    /* >>> ÚJ: standings modul az élő „hivatalos” sorrendhez <<< */
+    import { computeLiveOrderFromMatches } from "./standings.js";
+
     /* ---------------- Firebase init ---------------- */
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -153,6 +156,8 @@
       "Újpest FC": "crest/crest-ujpest.png",
       "Zalaegerszegi TE FC": "crest/crest-zte.png"
     };
+    const TEAM_LIST = Object.keys(crestMap);
+
     function crestFor(team){ return crestMap[team] || ""; }
     function fmt(n){ return (Number(n)||0).toFixed(2); }
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
@@ -182,20 +187,6 @@
     const canonTeam = s => CANON[NORM(s)] || String(s||"").trim();
     const eqTeam = (a,b) => !!a && !!b && NORM(a) === NORM(b);
 
-    // Hivatalos sorrend bármely sémából
-    function officialArrayFrom(data){
-      if (!data) return [];
-      if (Array.isArray(data.order)) return data.order;
-      if (Array.isArray(data.teams)) return data.teams;
-      if (Array.isArray(data.positions)) {
-        return data.positions
-          .slice()
-          .sort((a,b)=>(a.position||0)-(b.position||0))
-          .map(x=>x.team);
-      }
-      return [];
-    }
-
     /* ---------------- Állapot ---------------- */
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -207,6 +198,8 @@
     let tipsByMatch = new Map();      // matchId -> [{...tipp}]
     let nickByEmail = {};             // email -> nick
     let roundsAsc = [];               // elérhető fordulók
+
+    // >>> „Hivatalos” sorrend = élő tabella
     let officialOrder = Array(12).fill("");
 
     // Bónusz/közösségi
@@ -258,7 +251,7 @@
       usersList.innerHTML = "";
 
       if (!officialOrder.filter(Boolean).length){
-        usersList.innerHTML = `<div style="padding:8px 12px; color:#64748b;">A hivatalos sorrend még nincs beállítva.</div>`;
+        usersList.innerHTML = `<div style="padding:8px 12px; color:#64748b;">Az élő sorrend még nem elérhető.</div>`;
         return;
       }
 
@@ -309,7 +302,7 @@
         o.value = r; o.textContent = `${r}. forduló`;
         sel.appendChild(o);
       });
-      // URL-ben ?round= param támogatás
+      // URL-ben ?round=
       const url = new URL(location.href);
       const qRound = url.searchParams.get("round");
       sel.value = qRound && roundsAsc.includes(qRound) ? qRound : (roundsAsc[roundsAsc.length-1] || "");
@@ -327,7 +320,6 @@
       hdr.textContent = `${roundId}. forduló`;
       card.appendChild(hdr);
 
-      // forduló meccsei időrendben
       const list = matches.filter(m => matchRound(m) === String(roundId))
                           .sort((a,b)=> (a.startTime?.toDate?.()||0) - (b.startTime?.toDate?.()||0));
 
@@ -504,9 +496,7 @@
               del.className = 'del';
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{
-                try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){}
-              });
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
@@ -536,9 +526,7 @@
           inputEl.value = backup; inputEl.focus();
         }
       });
-      inputEl.addEventListener('keydown', (e)=>{
-        if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
-      });
+      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
 
       async function markSeen(){
         try{
@@ -551,13 +539,45 @@
     }
 
     /* ---------------- INIT ---------------- */
+
+    // >>> Élő sorrend beállítása: először cache-ből, aztán meccsekből, és realtime frissítés
+    function setOfficialFromCacheIfAny(){
+      try{
+        const cached = JSON.parse(localStorage.getItem("liveStandingsOrder") || "[]");
+        if (Array.isArray(cached) && cached.length){
+          officialOrder = Array(12).fill("");
+          for (let i=0;i<12;i++) officialOrder[i] = cached[i] || "";
+          refreshBonusCard();
+        }
+      }catch{}
+    }
+
+    function recomputeOfficialFromMatches(){
+      try{
+        const ms = matches
+          .filter(m => TEAM_LIST.includes(canonTeam(m.homeTeam)) && TEAM_LIST.includes(canonTeam(m.awayTeam)))
+          .map(m => ({ homeTeam: canonTeam(m.homeTeam), awayTeam: canonTeam(m.awayTeam), result: m.result }));
+        const live = computeLiveOrderFromMatches(ms, TEAM_LIST);
+        officialOrder = Array(12).fill("");
+        for (let i=0;i<12;i++) officialOrder[i] = live[i] || "";
+        // cache-be is írjuk, hogy más oldalak azonnal lássák
+        localStorage.setItem("liveStandingsOrder", JSON.stringify(officialOrder));
+        refreshBonusCard();
+        if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
+      }catch(e){
+        console.warn("recomputeOfficialFromMatches failed:", e);
+      }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
-      // Modál gombok – ugyanebben a modulban!
       const bonusOverlayEl = document.getElementById("bonusOverlay");
       document.getElementById("bonusDetailsBtn").addEventListener("click", openBonusModal);
       document.getElementById("bonusClose").addEventListener("click", closeBonusModal);
       bonusOverlayEl.addEventListener("click", (e)=> { if (e.target === bonusOverlayEl) closeBonusModal(); });
       document.getElementById("userSearch").addEventListener("input", (e)=> renderUsersList(e.target.value));
+
+      // Első körben cache-ből töltsük a hivatalosnak tekintett élő sorrendet
+      setOfficialFromCacheIfAny();
 
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
@@ -596,10 +616,23 @@
         const matchesSnap = await getDocs(collection(db, "matches"));
         matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
 
+        // Fordulók
         const roundSet = new Set();
         matches.forEach(m => { const r = matchRound(m); if (r) roundSet.add(r); });
         roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
         buildRoundsUI();
+
+        // >>> Itt számoljuk újra az „official” élő sorrendet meccsekből
+        recomputeOfficialFromMatches();
+
+        // Realtime: ha bármelyik meccs változik (eredmény kerül be), frissítsünk
+        onSnapshot(collection(db,"matches"), snap => {
+          matches = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+          recomputeOfficialFromMatches();
+          // ha épp egy fordulót néz a user, ne ugorjunk máshova – csak újrarender
+          const sel = document.getElementById("roundSelect");
+          if (sel?.value) renderRound(sel.value);
+        });
 
         // Tippek (legfrissebb per user-meccs)
         tipsByMatch.clear();
@@ -617,17 +650,6 @@
           if (!tipsByMatch.has(tip.matchId)) tipsByMatch.set(tip.matchId, []);
           tipsByMatch.get(tip.matchId).push(tip);
         }
-
-        // Hivatalos sorrend realtime (bármely séma)
-        onSnapshot(doc(db,"finalStandings","official"), (offDoc)=>{
-          const d = offDoc.exists() ? offDoc.data() : {};
-          const arr = officialArrayFrom(d);
-
-          officialOrder = Array(12).fill("");
-          for (let i=0;i<12;i++){ officialOrder[i] = arr[i] || ""; }
-
-          refreshBonusCard();
-        });
 
         // Közösségi tippek realtime – mindig a users-ből vett becenévvel
         onSnapshot(collection(db,"standingsTips"), snap=>{
