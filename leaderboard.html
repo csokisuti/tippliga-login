@@ -90,9 +90,9 @@
     #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
     #chatClose:hover{ filter:brightness(0.95); }
     .chat-list{ overflow:auto; padding:8px 10px; }
-    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
+    .chat-empty{ color:var(--muted); font-size:13px; padding:8px 10px; }
     .msg{ padding:8px 10px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start; }
-    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
+    .msg .meta{ font-size:12px; color:var(--muted); margin-bottom:2px; }
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
     .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
@@ -185,6 +185,7 @@
 
     // VIZUÁLIS nézet: alapból csak az utolsó 5 forduló látszik
     let showAllView = false;
+    // GÉPI TIPPELŐK: alapból rejtve
     let showBots = false;
 
     let rows = [];
@@ -253,7 +254,8 @@
 
       const botsEl = document.getElementById('showBots');
       if (botsEl){
-        botsEl.checked = true;
+        // szinkron az induló állapottal
+        botsEl.checked = showBots;
         botsEl.addEventListener('change', async e=>{
           showBots = e.target.checked;
           await buildLeaderboard();
@@ -667,7 +669,7 @@
             row.innerHTML = `
               <div style="flex:1 1 auto">
                 <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
-                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/</g,'&gt;')}</div>
+                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
               </div>`;
             const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
             if (canDelete){
@@ -873,4 +875,3 @@
   </div>
 </body>
 </html>
-
