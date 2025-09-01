@@ -845,13 +845,13 @@
       rows.forEach((r,idx)=>{
         const implied = (100/r.odds);
         const pts = computePoints(r.odds, BASE, O0, A, LO, HI);
-        const tr=document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r.team}</td>
-          <td class="mono">${fmtOdds(r.odds)}</td>
-          <td class="mono">${implied.toFixed(1)}%</td>
-          <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
-          <td class="mono">${pts.toFixed(1)}</td>`;
+const tr=document.createElement('tr');
+tr.innerHTML = `
+  <td>${r.team}</td>
+  <td class="mono">${fmtOdds(r.odds)}</td>
+  <td class="mono">${implied.toFixed(1)}%</td>
+  <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
+  <td class="mono">${pts.toFixed(2)}</td>`;   // ⟵ két tizedes
         tbody.appendChild(tr);
       });
     }
