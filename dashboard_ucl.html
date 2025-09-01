@@ -54,16 +54,10 @@
     .btn-accent:hover{filter:brightness(.95)}
     .btn-accent:focus{outline:2px solid color-mix(in oklab,var(--accent,#3b82f6) 30%,white);outline-offset:2px}
     .btn-icon{width:18px;height:18px;display:inline-block}
-    .rules-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
-    .rules-modal.open{display:flex}
-    .rules-dialog{width:min(900px,92vw);max-height:80vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
-    .rules-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .rules-title{font-weight:800}
-    .rules-close{width:32px;height:32px;border:1px solid var(--line,#e6eaf1);border-radius:8px;background:#eef2ff;cursor:pointer}
-    .rules-body{padding:14px;overflow:auto;line-height:1.5;color:#111;white-space:pre-wrap}
-    .rules-body p{margin:0 0 10px}
-    .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
-    .rules-updated{font-size:12px;color:var(--muted,#64748b)}
+
+    /* Tabella sor kiemelések */
+    .qual-green{background:color-mix(in oklab, #16a34a 12%, white)}
+    .elim-red{background:color-mix(in oklab, #ef4444 10%, white)}
   </style>
 
   <script type="module">
@@ -95,9 +89,10 @@
 
     function fmtTime(ts){try{return ts.toDate().toLocaleString("hu-HU",{hour12:false})}catch{return ""}}
 
+    // "2-1" -> [2,1]
     function parseRes(str){
       const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
-      return m?[parseInt(m[1]),parseInt(m[2])]:null
+      return m?[parseInt(m[1]),parseInt(m[2])]:null;
     }
 
     async function buildComputedTable(){
@@ -106,19 +101,23 @@
       const H2H={};
       const snap=await getDocs(collection(db,"ucl_matches"));
       const matchesForModule=[];
+
       snap.forEach(d=>{
         const m=d.data()||{};
         const A=m.homeTeam||m.home||""; const B=m.awayTeam||m.away||"";
         const r=parseRes(m.result);
         if (A&&B&&m.result) matchesForModule.push({homeTeam:A,awayTeam:B,result:m.result});
+
         const a=S[A], b=S[B]; if(!a||!b||!r) return;
         const [hg,ag]=r;
         a.MP++; b.MP++;
         a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
         b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
+
         if(hg>ag){a.W++;b.L++;a.Pts+=3}
         else if(hg<ag){b.W++;a.L++;b.Pts+=3}
         else{a.D++;b.D++;a.Pts+=1;b.Pts+=1}
+
         const k=[A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
         H2H[k] ||= {[A]:{Pts:0,GF:0,GA:0},[B]:{Pts:0,GF:0,GA:0}};
         if(hg>ag){H2H[k][A].Pts+=3}
@@ -133,6 +132,7 @@
         if(b.W!==a.W) return b.W-a.W;
         if(b.GD!==a.GD) return b.GD-a.GD;
         if(b.GF!==a.GF) return b.GF-a.GF;
+
         const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
         const row=H2H[k];
         if(row){
@@ -142,7 +142,7 @@
           const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);
           if(gdb!==gda) return gdb-gda;
         }
-        return a.team.localeCompare(b.team,'hu')
+        return a.team.localeCompare(b.team,'hu');
       }
 
       const rows=Object.values(S).sort(cmp);
@@ -178,54 +178,66 @@
           </tr>
         </thead>
         <tbody>
-          ${rows.map((r,i)=>`
-            <tr>
-              <td style="text-align:right;padding:8px 10px;color:#64748b;">${i+1}.</td>
-              <td style="padding:8px 10px;display:flex;align-items:center;gap:8px;">
-                ${crestMap[r.team] ? `<img src="${crestMap[r.team]}" alt="" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff;object-fit:contain">` : ""}
-                <strong>${r.team}</strong>
-              </td>
-              <td style="text-align:right;padding:8px 10px;">${r.MP}</td>
-              <td style="text-align:right;padding:8px 10px;">${r.W}</td>
-              <td style="text-align:right;padding:8px 10px;">${r.D}</td>
-              <td style="text-align:right;padding:8px 10px;">${r.L}</td>
-              <td style="text-align:right;padding:8px 10px;">${r.GF}</td>
-              <td style="text-align:right;padding:8px 10px;">${r.GA}</td>
-              <td style="text-align:right;padding:8px 10px;">${r.GD}</td>
-              <td style="text-align:right;padding:8px 10px;font-weight:800;">${r.Pts}</td>
-            </tr>
-          `).join("")}
+          ${rows.map((r,i)=>{
+            const trClass = i<8 ? 'qual-green' : (i>=24 && i<=35 ? 'elim-red' : '');
+            return `
+              <tr class="${trClass}">
+                <td style="text-align:right;padding:8px 10px;color:#64748b;">${i+1}.</td>
+                <td style="padding:8px 10px;display:flex;align-items:center;gap:8px;">
+                  ${crestMap[r.team] ? `<img src="${crestMap[r.team]}" alt="" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff;object-fit:contain">` : ""}
+                  <strong>${r.team}</strong>
+                </td>
+                <td style="text-align:right;padding:8px 10px;">${r.MP}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.W}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.D}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.L}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.GF}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.GA}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.GD}</td>
+                <td style="text-align:right;padding:8px 10px;font-weight:800;">${r.Pts}</td>
+              </tr>`;
+          }).join("")}
         </tbody>
       `;
       wrap.innerHTML="";
       wrap.appendChild(tbl);
     }
 
-    let currentUserEmail=""; let currentUserNick=""; let currentUserRole="user"; let favoriteTeam=""; let chatLastSeen=null;
+    let currentUserEmail=""; let currentUserNick=""; let currentUserRole="user";
+    let favouriteTeamucl=""; let chatLastSeen=null;
 
     document.addEventListener("DOMContentLoaded",()=>{
       onAuthStateChanged(auth,async(user)=>{
         if(!user){window.location.href="login.html";return}
         currentUserEmail=user.email;
+
         const userRef=doc(db,"users",currentUserEmail);
         const userSnap=await getDoc(userRef);
         if(userSnap.exists()){
           const data=userSnap.data();
           currentUserNick=data.nickname||currentUserEmail;
           currentUserRole=data.role||"user";
-          favoriteTeam=data.favoriteTeam||"";
+          favouriteTeamucl=data.favouriteTeamucl || "";
           chatLastSeen=data.chatLastSeen||null;
         }else{
-          currentUserNick=currentUserEmail; currentUserRole="user"; favoriteTeam=""; chatLastSeen=null;
+          currentUserNick=currentUserEmail; currentUserRole="user"; favouriteTeamucl=""; chatLastSeen=null;
         }
+
         document.getElementById("welcome").textContent=`Üdv, ${currentUserNick}!`;
         if(currentUserRole==="admin"){document.getElementById("adminLink").style.display="flex"}
-        if(favoriteTeam){
-          const themeClass="theme-"+favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-");
+
+        // Téma + címer a favouriteTeamucl alapján
+        if(favouriteTeamucl){
+          const themeClass="theme-"+favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-");
           document.body.classList.add(themeClass);
-          const crest=crestMap[favoriteTeam];
-          if(crest){const img=document.getElementById("favCrest"); img.src=crest; img.alt=favoriteTeam; img.hidden=false}
+          const crest=crestMap[favouriteTeamucl];
+          if(crest){
+            const img=document.getElementById("favCrest");
+            img.src=crest; img.alt=favouriteTeamucl; img.hidden=false;
+          }
         }
+
+        // Közelgő BL meccsekhez tipp badge
         try{
           const now=new Date();
           const upcomingSnap=await getDocs(query(collection(db,"ucl_matches"),where("startTime",">=",now)));
@@ -237,16 +249,21 @@
           if(pending>0){badge.textContent=pending;badge.hidden=false}else{badge.hidden=true}
         }catch(e){console.warn(e)}
 
+        // BL tabella számolás + realtime
         await buildComputedTable();
         onSnapshot(collection(db,"ucl_matches"),()=>buildComputedTable());
 
+        // Kedvenc klub FB feed (BL klubokra)
         try{
-          const fbLink=facebookLinks[favoriteTeam];
+          const fbLink=facebookLinks[favouriteTeamucl];
           if(fbLink){
             const fbDiv=document.createElement("div");
             fbDiv.className="fb-wrap";
             fbDiv.innerHTML=`
-              <iframe src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=560&height=540&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
+              <iframe 
+                src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=560&height=540&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
+                scrolling="no" frameborder="0" allowfullscreen="true"
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
             document.getElementById("facebookFeedContainer").appendChild(fbDiv);
           }
         }catch(e){console.warn(e)}
@@ -266,12 +283,15 @@
       const listEl=document.getElementById('chatMessages');
       const inputEl=document.getElementById('chatInput');
       const sendBtn=document.getElementById('chatSendBtn');
+
       function open(){panel.classList.add('open');setTimeout(()=>inputEl?.focus(),50);markSeen()}
       function close(){panel.classList.remove('open')}
       function toggle(){panel.classList.contains('open')?close():open()}
       fab.addEventListener('click',toggle);
       closeBtn.addEventListener('click',close);
+
       let lastSeenMs=chatLastSeen?.toMillis?chatLastSeen.toMillis():0;
+
       const qAll=query(collection(db,'chatMessages'),orderBy('ts','asc'));
       onSnapshot(qAll,snap=>{
         listEl.innerHTML='';
@@ -286,13 +306,16 @@
             const d=docu.data();
             const tsMs=d.ts?.toMillis?.()||0;
             if(tsMs>lastSeenMs) unread++;
+
             const row=document.createElement('div');
             row.className='msg';
             row.innerHTML=`
               <div style="flex:1 1 auto">
-                <div class="meta"><strong>${d.nick||'Ismeretlen'}</strong> • ${d.ts?fmtTime(d.ts):''}</div>
-                <div class="text">${(d.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-              </div>`;
+                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
+                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+              </div>
+            `;
+
             const canDelete=(currentUserRole==='admin')||(d.email===currentUserEmail);
             if(canDelete){
               const del=document.createElement('button');
@@ -304,32 +327,53 @@
             }
             listEl.appendChild(row);
           });
+
           if(!panel.classList.contains('open')&&unread>0){
-            fab.classList.add('has-unread'); fabBadge.textContent=unread>99?'99+':String(unread);
+            fab.classList.add('has-unread');
+            fabBadge.textContent=unread>99?'99+':String(unread);
           }else{
-            fab.classList.remove('has-unread'); fabBadge.textContent='';
+            fab.classList.remove('has-unread');
+            fabBadge.textContent='';
           }
-          setTimeout(()=>{listEl.scrollTop=listEl.scrollHeight},0);
+
+          setTimeout(()=>{listEl.scrollTop=listEl.scrollHeight;},0);
         }
-      },err=>console.warn('chat snapshot error:',err));
-      sendBtn.addEventListener('click',async()=>{
+      }, err => console.warn('chat snapshot error:', err));
+
+      sendBtn.addEventListener('click',async ()=>{
         const txt=(inputEl.value||'').trim();
         if(!txt){inputEl.focus();return}
-        const backup=txt; inputEl.value='';
+        const backup=txt;
+        inputEl.value='';
         try{
-          await addDoc(collection(db,'chatMessages'),{email:currentUserEmail,nick:currentUserNick||'Ismeretlen',text:backup,ts:serverTimestamp()});
+          await addDoc(collection(db,'chatMessages'),{
+            email: currentUserEmail,
+            nick: currentUserNick || 'Ismeretlen',
+            text: backup,
+            ts: serverTimestamp()
+          });
           if(panel.classList.contains('open')) await markSeen();
-        }catch(e){console.warn('Chat send failed:',e); inputEl.value=backup; inputEl.focus()}
+        }catch(e){
+          console.warn('Chat send failed:', e);
+          inputEl.value=backup; inputEl.focus();
+        }
       });
-      inputEl.addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendBtn.click()}});
+
+      inputEl.addEventListener('keydown',(e)=>{
+        if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
+      });
+
       async function markSeen(){
         try{
-          await setDoc(userRef,{chatLastSeen:serverTimestamp()},{merge:true});
-          lastSeenMs=Date.now(); fab.classList.remove('has-unread'); fabBadge.textContent='';
-        }catch(e){console.warn('markSeen failed',e)}
+          await setDoc(userRef,{ chatLastSeen: serverTimestamp() },{ merge:true });
+          lastSeenMs=Date.now();
+          fab.classList.remove('has-unread');
+          fabBadge.textContent='';
+        }catch(e){ console.warn('markSeen failed', e); }
       }
     }
 
+    // Szabályzat modál
     const rulesModal=document.getElementById('rulesModal');
     const openRulesBtn=document.getElementById('openRules');
     const closeRules=document.getElementById('closeRules');
@@ -421,8 +465,10 @@ NB1-re írt szöveg található itt. Szólj, és átírom BL-re a pontozással/d
   </div>
 
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+    </svg>
+  <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
