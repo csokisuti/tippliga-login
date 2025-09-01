@@ -810,13 +810,14 @@
       let Z = q.reduce((a,b)=>a+b,0); if(!Z) Z=1;
       return q.map(x => 100 * x / Z);
     }
-    // ponthoz: BASE * clamp((odds/O0)^A, LO, HI)
-    function computePoints(odds, BASE, O0, A, LO, HI){
-      const o = toNum(odds); if(!o || o<=0) return 0;
-      const ratio = Math.pow(o/Math.max(O0,1e-9), A);
-      const clamped = Math.min(Math.max(ratio, LO), HI);
-      return BASE * clamped;
-    }
+    // puha plafon (soft cap)
+function computePoints(odds, BASE, O0, A, LO, HI, K=1){
+  const o = Number(odds); if(!o || o<=0) return 0;
+  const x = Math.pow(o/Math.max(O0,1e-9), A);
+  const s = 1 - Math.exp( - x / Math.max(K,1e-9) ); // 0..1
+  const factor = LO + (HI - LO) * s;                // LO..HI
+  return BASE * factor;
+}
 
     async function loadScoringSettings(){
       // Opcionális: később beolvasható settingsből.
@@ -845,18 +846,18 @@
       rows.forEach((r,idx)=>{
         const implied = (100/r.odds);
         const pts = computePoints(r.odds, BASE, O0, A, LO, HI);
-        const tr=document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r.team}</td>
-          <td class="mono">${fmtOdds(r.odds)}</td>
-          <td class="mono">${implied.toFixed(1)}%</td>
-          <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
-          <td class="mono">${pts.toFixed(2)}</td>`;
+const tr=document.createElement('tr');
+tr.innerHTML = `
+  <td>${r.team}</td>
+  <td class="mono">${fmtOdds(r.odds)}</td>
+  <td class="mono">${implied.toFixed(1)}%</td>
+  <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
+  <td class="mono">${pts.toFixed(2)}</td>`;   // ⟵ két tizedes
         tbody.appendChild(tr);
       });
     }
 
-    // Bajnok + gólkirály jelöltekre is mentjük a displayPercent/displayPoints értékeket (2 tizedes pont!)
+    // ⬇️ BŐVÍTETT: bajnok + gólkirály jelöltekre is mentjük a displayPercent/displayPoints értékeket
     async function recalcAndSaveAll(){
       const {T, BASE, O0, A, LO, HI} = currentParams();
 
@@ -869,7 +870,7 @@
         for(let i=0;i<rowsCh.length;i++){
           const r = rowsCh[i];
           const displayPercent = Number(shownCh[i].toFixed(1));
-          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(2)); // 2 tizedes
+          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
           await updateDoc(doc(db,'ucl_championCandidates', r.id), {
             displayPercent,
             displayPoints,
@@ -887,7 +888,7 @@
         for(let i=0;i<rowsGb.length;i++){
           const r = rowsGb[i];
           const displayPercent = Number(shownGb[i].toFixed(1));
-          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(2)); // 2 tizedes
+          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
           await updateDoc(doc(db,'ucl_goldenBootCandidates', r.id), {
             displayPercent,
             displayPoints,
