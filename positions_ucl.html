@@ -67,7 +67,7 @@
     .pick-card{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line,#e6eaf1);border-radius:12px;background:#fff;cursor:pointer;transition:transform .08s ease}
     .pick-card:hover{transform:translateY(-1px)}
     .pick-card.selected{background:#ecfdf5;border-color:#16a34a;box-shadow:0 0 0 2px rgba(22,163,74,.15) inset}
-    .pc-crest{width:34px;height:34px;object-fit:contain;border:1px solid var(--line,#e6eaf1);background:#fff;border-radius:6px}
+    .pc-crest{width:34px;height:34px;object-fit:contain;border:1px solid var(--line,#e6eaf1);background:#fff}
     .pc-text{display:flex;flex-direction:column;line-height:1.15}
     .pc-name{font-weight:700}
     .pc-sub{font-size:12px;color:#64748b}
@@ -168,12 +168,12 @@
     let chatLastSeen     = null;
 
     // model
-    let selectedTop8 = [];         // string[]
+    let selectedTop8 = [];
     let championCandidates = [];   // {team, odds?, displayPoints?}
     let goldenCandidates   = [];   // {player, team?, odds?, displayPoints?}
-    let pickedChampion     = "";   // string
-    let pickedGolden       = "";   // player string
-    let teamQuery          = "";   // kereső
+    let pickedChampion     = "";
+    let pickedGolden       = "";
+    let teamQuery          = "";
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -203,7 +203,7 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
-        // Betöltött tippek
+        // korábban mentett Top8
         try{
           const tipDoc = await getDoc(doc(db,"ucl_top8Tips", currentUserEmail));
           if (tipDoc.exists()){
@@ -239,7 +239,6 @@
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
     };
-    // odds normalizálás
     const fromCandidateOdds = c => {
       const direct = toNum(c?.odds);
       if (direct != null) return direct;
@@ -249,19 +248,8 @@
       if (pct != null && pct > 0) return 100 / pct;
       return null;
     };
-    const fmtOdds = v => (v==null ? "—" : toNum(v).toFixed(2));
-
-    // *** ÚJ: pontszám beolvasása + badge formázás ***
-    const pointsFromCandidate = (c) => {
-      // elsődleges: displayPoints (admin számolt clampelt pontja)
-      const fields = ['displayPoints','points','bonusPoints','display_point','display'];
-      for (const f of fields){
-        const n = toNum(c?.[f]);
-        if (n != null) return n;
-      }
-      return null; // ha nincs, badge-ben "—", rendezésnél a lista végére tesszük
-    };
-    const fmtPointsBadge = (p) => (p==null ? "—" : `+${toNum(p).toFixed(1)}%`);
+    const fromDisplayedPoints = c => toNum(c?.displayPoints);
+    const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(1)}`);
 
     /* ===== Accordion ===== */
     function initAccordions(){
@@ -282,26 +270,26 @@
       try{
         const cSnap = await getDocs(collection(db,"ucl_championCandidates"));
         championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }))
-          .filter(x=>x.team)
-          .sort((a,b)=>{
-            const pa = pointsFromCandidate(a); const pb = pointsFromCandidate(b);
-            const sa = (pa==null ? Infinity : pa); const sb = (pb==null ? Infinity : pb);
-            if (sa !== sb) return sa - sb; // emelkedő sorrend
-            return a.team.localeCompare(b.team,"hu");
-          });
+          .filter(x=>x.team);
       }catch{ championCandidates=[]; }
 
       try{
         const gSnap = await getDocs(collection(db,"ucl_goldenBootCandidates"));
         goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }))
-          .filter(x=>x.player)
-          .sort((a,b)=>{
-            const pa = pointsFromCandidate(a); const pb = pointsFromCandidate(b);
-            const sa = (pa==null ? Infinity : pa); const sb = (pb==null ? Infinity : pb);
-            if (sa !== sb) return sa - sb; // emelkedő
-            return a.player.localeCompare(b.player,"hu");
-          });
+          .filter(x=>x.player);
       }catch{ goldenCandidates=[]; }
+
+      // rendezés: pont szerint emelkedő, hiányzó pontok a lista végére
+      const sortByPointsAsc = (a,b,fieldName,labelGetter) => {
+        const pa = toNum(a[fieldName]); const pb = toNum(b[fieldName]);
+        if (pa==null && pb==null) return labelGetter(a).localeCompare(labelGetter(b), 'hu');
+        if (pa==null) return 1;
+        if (pb==null) return -1;
+        if (pa!==pb) return pa - pb;
+        return labelGetter(a).localeCompare(labelGetter(b), 'hu');
+      };
+      championCandidates.sort((a,b)=>sortByPointsAsc(a,b,'displayPoints',x=>x.team));
+      goldenCandidates.sort((a,b)=>sortByPointsAsc(a,b,'displayPoints',x=>x.player));
 
       renderChampionGrid();
       renderGoldenGrid();
@@ -315,18 +303,18 @@
         return;
       }
       championCandidates.forEach(c=>{
-        const odds = fromCandidateOdds(c);
-        const pts  = pointsFromCandidate(c);
+        const pts  = fromDisplayedPoints(c);
+        const odds = fromCandidateOdds(c); // csak mentéshez kompat
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.team = c.team;
         el.dataset.odds = odds==null ? "" : String(odds);
-        el.title = `${pts!=null?`Pont: +${pts.toFixed(1)}%`:""}${odds?`${pts!=null?' • ':''}Odds: ${fmtOdds(odds)}`:""}`;
+        el.dataset.points = pts==null ? "" : String(pts);
         el.innerHTML = `
           <img class="pc-crest" src="${crestFor(c.team)}" alt="">
           <div class="pc-text">
             <div class="pc-name">${c.team}</div>
-            <div class="badge-odds">${fmtPointsBadge(pts)}</div>
+            <div class="badge-odds">${fmtPts(pts)}</div>
           </div>
           <div class="pc-check">✓</div>`;
         el.addEventListener('click', ()=> saveChampionPickWith(c.team, odds));
@@ -344,20 +332,20 @@
       }
       goldenCandidates.forEach(c=>{
         const crest = crestFor(c.team||'') || '';
-        const odds  = fromCandidateOdds(c);
-        const pts   = pointsFromCandidate(c);
+        const pts   = fromDisplayedPoints(c);
+        const odds  = fromCandidateOdds(c); // csak mentéshez kompat
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.player = c.player;
         el.dataset.team = c.team || '';
         el.dataset.odds = odds==null ? "" : String(odds);
-        el.title = `${pts!=null?`Pont: +${pts.toFixed(1)}%`:""}${odds?`${pts!=null?' • ':''}Odds: ${fmtOdds(odds)}`:""}`;
+        el.dataset.points = pts==null ? "" : String(pts);
         el.innerHTML = `
           ${crest? `<img class="pc-crest" src="${crest}" alt="">` : `<div class="pc-crest" style="display:flex;align-items:center;justify-content:center;font-size:16px">⚽</div>`}
           <div class="pc-text">
             <div class="pc-name">${c.player}</div>
             <div class="pc-sub">${c.team || '–'}</div>
-            <div class="badge-odds">${fmtPointsBadge(pts)}</div>
+            <div class="badge-odds">${fmtPts(pts)}</div>
           </div>
           <div class="pc-check">✓</div>`;
         el.addEventListener('click', ()=> saveGoldenPickWith(c.player, c.team||'', odds));
@@ -397,7 +385,7 @@
       document.getElementById("saveStateG")?.classList.remove('show');
     }
 
-    /* ===== Mentések ===== */
+    /* ===== Mentések (kompat a régi odds mezővel) ===== */
     let saveTimerTop8 = null;
     function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 250); }
     async function saveTop8Now(){
@@ -424,14 +412,14 @@
       saveTimerC = setTimeout(async ()=>{
         try{
           const oddsDec = toNum(oddsDecimal);
-          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null; // kompatibilitás
+          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null;
           await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
             email: currentUserEmail,
             nick: currentUserNick || currentUserEmail,
             team,
-            odds: oddsDec,            // fő mező
-            oddsDecimal: oddsDec,     // kompat
-            oddsPercent: oddsPct,     // kompat
+            odds: oddsDec,
+            oddsDecimal: oddsDec,
+            oddsPercent: oddsPct,
             updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateC");
@@ -449,15 +437,15 @@
       saveTimerG = setTimeout(async ()=>{
         try{
           const oddsDec = toNum(oddsDecimal);
-          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null; // kompat
+          const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null;
           await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
             email: currentUserEmail,
             nick: currentUserNick || currentUserEmail,
             player,
             team,
-            odds: oddsDec,            // fő mező
-            oddsDecimal: oddsDec,     // kompat
-            oddsPercent: oddsPct,     // kompat
+            odds: oddsDec,
+            oddsDecimal: oddsDec,
+            oddsPercent: oddsPct,
             updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateG");
