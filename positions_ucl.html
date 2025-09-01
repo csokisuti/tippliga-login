@@ -169,8 +169,8 @@
 
     // model
     let selectedTop8 = [];         // string[]
-    let championCandidates = [];   // {team, odds?, displayPercent?}
-    let goldenCandidates   = [];   // {player, team?, odds?, displayPercent?}
+    let championCandidates = [];   // {team, odds?, displayPoints?}
+    let goldenCandidates   = [];   // {player, team?, odds?, displayPoints?}
     let pickedChampion     = "";   // string
     let pickedGolden       = "";   // player string
     let teamQuery          = "";   // kereső
@@ -239,7 +239,7 @@
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
     };
-    // Adminból érkező odds normalizálása (odds -> oddsDecimal -> 100/percent)
+    // odds normalizálás
     const fromCandidateOdds = c => {
       const direct = toNum(c?.odds);
       if (direct != null) return direct;
@@ -250,7 +250,18 @@
       return null;
     };
     const fmtOdds = v => (v==null ? "—" : toNum(v).toFixed(2));
-    const fmtPercent = v => (v==null ? "—" : `${toNum(v).toFixed(1)}%`);
+
+    // *** ÚJ: pontszám beolvasása + badge formázás ***
+    const pointsFromCandidate = (c) => {
+      // elsődleges: displayPoints (admin számolt clampelt pontja)
+      const fields = ['displayPoints','points','bonusPoints','display_point','display'];
+      for (const f of fields){
+        const n = toNum(c?.[f]);
+        if (n != null) return n;
+      }
+      return null; // ha nincs, badge-ben "—", rendezésnél a lista végére tesszük
+    };
+    const fmtPointsBadge = (p) => (p==null ? "—" : `+${toNum(p).toFixed(1)}%`);
 
     /* ===== Accordion ===== */
     function initAccordions(){
@@ -271,26 +282,29 @@
       try{
         const cSnap = await getDocs(collection(db,"ucl_championCandidates"));
         championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }))
-          .filter(x=>x.team).sort((a,b)=>a.team.localeCompare(b.team,"hu"));
+          .filter(x=>x.team)
+          .sort((a,b)=>{
+            const pa = pointsFromCandidate(a); const pb = pointsFromCandidate(b);
+            const sa = (pa==null ? Infinity : pa); const sb = (pb==null ? Infinity : pb);
+            if (sa !== sb) return sa - sb; // emelkedő sorrend
+            return a.team.localeCompare(b.team,"hu");
+          });
       }catch{ championCandidates=[]; }
 
       try{
         const gSnap = await getDocs(collection(db,"ucl_goldenBootCandidates"));
         goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }))
-          .filter(x=>x.player).sort((a,b)=>a.player.localeCompare(b.player,"hu"));
+          .filter(x=>x.player)
+          .sort((a,b)=>{
+            const pa = pointsFromCandidate(a); const pb = pointsFromCandidate(b);
+            const sa = (pa==null ? Infinity : pa); const sb = (pb==null ? Infinity : pb);
+            if (sa !== sb) return sa - sb; // emelkedő
+            return a.player.localeCompare(b.player,"hu");
+          });
       }catch{ goldenCandidates=[]; }
 
       renderChampionGrid();
       renderGoldenGrid();
-    }
-
-    function displayPercentFor(obj){
-      // Preferált: admin által mentett displayPercent
-      const dp = toNum(obj?.displayPercent);
-      if (dp != null) return dp;
-      // Fallback: implied %
-      const o = fromCandidateOdds(obj);
-      return (o && o>0) ? (100/o) : null;
     }
 
     function renderChampionGrid(){
@@ -302,17 +316,17 @@
       }
       championCandidates.forEach(c=>{
         const odds = fromCandidateOdds(c);
-        const shownPct = displayPercentFor(c);
+        const pts  = pointsFromCandidate(c);
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.team = c.team;
         el.dataset.odds = odds==null ? "" : String(odds);
-        el.title = odds ? `Odds: ${fmtOdds(odds)}` : '';
+        el.title = `${pts!=null?`Pont: +${pts.toFixed(1)}%`:""}${odds?`${pts!=null?' • ':''}Odds: ${fmtOdds(odds)}`:""}`;
         el.innerHTML = `
           <img class="pc-crest" src="${crestFor(c.team)}" alt="">
           <div class="pc-text">
             <div class="pc-name">${c.team}</div>
-            <div class="badge-odds">${fmtPercent(shownPct)}</div>
+            <div class="badge-odds">${fmtPointsBadge(pts)}</div>
           </div>
           <div class="pc-check">✓</div>`;
         el.addEventListener('click', ()=> saveChampionPickWith(c.team, odds));
@@ -330,20 +344,20 @@
       }
       goldenCandidates.forEach(c=>{
         const crest = crestFor(c.team||'') || '';
-        const odds = fromCandidateOdds(c);
-        const shownPct = displayPercentFor(c); // ha később lesz displayPercent a gólkirálynál is, már kezeli
+        const odds  = fromCandidateOdds(c);
+        const pts   = pointsFromCandidate(c);
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.player = c.player;
         el.dataset.team = c.team || '';
         el.dataset.odds = odds==null ? "" : String(odds);
-        el.title = odds ? `Odds: ${fmtOdds(odds)}` : '';
+        el.title = `${pts!=null?`Pont: +${pts.toFixed(1)}%`:""}${odds?`${pts!=null?' • ':''}Odds: ${fmtOdds(odds)}`:""}`;
         el.innerHTML = `
           ${crest? `<img class="pc-crest" src="${crest}" alt="">` : `<div class="pc-crest" style="display:flex;align-items:center;justify-content:center;font-size:16px">⚽</div>`}
           <div class="pc-text">
             <div class="pc-name">${c.player}</div>
             <div class="pc-sub">${c.team || '–'}</div>
-            <div class="badge-odds">${fmtPercent(shownPct)}</div>
+            <div class="badge-odds">${fmtPointsBadge(pts)}</div>
           </div>
           <div class="pc-check">✓</div>`;
         el.addEventListener('click', ()=> saveGoldenPickWith(c.player, c.team||'', odds));
