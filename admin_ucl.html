@@ -118,8 +118,8 @@
       await loadOfficialOrder();
       await loadBonusMarkets();
       await loadOfficialBonus();
-      await loadScoringSettings();   // ⟵ új: betöltjük a pontozási beállításokat
-      renderOddsPreview();           // ⟵ és előnézetet is számolunk
+      await loadScoringSettings();   // betöltjük a pontozási UI-t (ha később settingsből jön)
+      renderOddsPreview();           // és előnézetet is számolunk
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=''}){
@@ -328,7 +328,7 @@
       document.getElementById('saveChampion').onclick = saveOfficialChampion;
       document.getElementById('saveGolden').onclick = saveOfficialGolden;
 
-      // új: odds → % + pont kalkulátor gomb
+      // odds → % + pont kalkulátor gomb
       document.getElementById('recalc').addEventListener('click', recalcAndSaveAll);
       // változtatásra azonnali előnézet
       ['T','BASE','PIVOT','AEXP','LO','HI'].forEach(id=>{
@@ -819,8 +819,7 @@
     }
 
     async function loadScoringSettings(){
-      // opcionális: beolvasható később settingsből, most csak a UI értékei élnek
-      // ha szeretnéd, mentsük is: await setDoc(doc(db,'settings','ucl_odds_display'), {...})
+      // Opcionális: később beolvasható settingsből.
     }
 
     function currentParams(){
@@ -857,26 +856,48 @@
       });
     }
 
+    // ⬇️ BŐVÍTETT: bajnok + gólkirály jelöltekre is mentjük a displayPercent/displayPoints értékeket
     async function recalcAndSaveAll(){
-      const rows = championCandidates.map(c=>({ id:c.id, team:c.team, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
-      if(rows.length===0){ alert('Nincs jelölt mentett oddsszal.'); return; }
       const {T, BASE, O0, A, LO, HI} = currentParams();
-      const shown = computeDisplayedPerc(rows, T);
 
-      // mentés minden jelöltre
-      for(let i=0;i<rows.length;i++){
-        const r = rows[i];
-        const displayPercent = Number(shown[i].toFixed(1)); // pl. 9.4
-        const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
-        await updateDoc(doc(db,'ucl_championCandidates', r.id), {
-          displayPercent,
-          displayPoints,
-          // opcionálisan logoljuk a paramétereket is (trace/debug)
-          _calc: { T, BASE, O0, A, LO, HI, updated: Date.now() }
-        });
+      // --- 1) Bajnok jelöltek ---
+      const rowsCh = championCandidates
+        .map(c=>({ id:c.id, odds: fromCandidateOdds(c) }))
+        .filter(r=>r.odds);
+      if(rowsCh.length>0){
+        const shownCh = computeDisplayedPerc(rowsCh, T);
+        for(let i=0;i<rowsCh.length;i++){
+          const r = rowsCh[i];
+          const displayPercent = Number(shownCh[i].toFixed(1));
+          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
+          await updateDoc(doc(db,'ucl_championCandidates', r.id), {
+            displayPercent,
+            displayPoints,
+            _calc: { T, BASE, O0, A, LO, HI, updated: Date.now() }
+          });
+        }
       }
-      alert('Megjelenített % és Pont mentve a jelöltekhez.');
-      renderOddsPreview();
+
+      // --- 2) Gólkirály jelöltek ---
+      const rowsGb = goldenCandidates
+        .map(c=>({ id:c.id, odds: fromCandidateOdds(c) }))
+        .filter(r=>r.odds);
+      if(rowsGb.length>0){
+        const shownGb = computeDisplayedPerc(rowsGb, T);
+        for(let i=0;i<rowsGb.length;i++){
+          const r = rowsGb[i];
+          const displayPercent = Number(shownGb[i].toFixed(1));
+          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
+          await updateDoc(doc(db,'ucl_goldenBootCandidates', r.id), {
+            displayPercent,
+            displayPoints,
+            _calc: { T, BASE, O0, A, LO, HI, updated: Date.now() }
+          });
+        }
+      }
+
+      alert('Megjelenített % és Pont mentve a jelöltekhez (bajnok + gólkirály).');
+      renderOddsPreview(); // (előnézet most a bajnok-listát mutatja)
     }
 
     window.updateMatch = updateMatch;
