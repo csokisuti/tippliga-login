@@ -845,18 +845,18 @@
       rows.forEach((r,idx)=>{
         const implied = (100/r.odds);
         const pts = computePoints(r.odds, BASE, O0, A, LO, HI);
-const tr=document.createElement('tr');
-tr.innerHTML = `
-  <td>${r.team}</td>
-  <td class="mono">${fmtOdds(r.odds)}</td>
-  <td class="mono">${implied.toFixed(1)}%</td>
-  <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
-  <td class="mono">${pts.toFixed(2)}</td>`;   // ⟵ két tizedes
+        const tr=document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.team}</td>
+          <td class="mono">${fmtOdds(r.odds)}</td>
+          <td class="mono">${implied.toFixed(1)}%</td>
+          <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
+          <td class="mono">${pts.toFixed(2)}</td>`;
         tbody.appendChild(tr);
       });
     }
 
-    // ⬇️ BŐVÍTETT: bajnok + gólkirály jelöltekre is mentjük a displayPercent/displayPoints értékeket
+    // Bajnok + gólkirály jelöltekre is mentjük a displayPercent/displayPoints értékeket (2 tizedes pont!)
     async function recalcAndSaveAll(){
       const {T, BASE, O0, A, LO, HI} = currentParams();
 
@@ -869,7 +869,7 @@ tr.innerHTML = `
         for(let i=0;i<rowsCh.length;i++){
           const r = rowsCh[i];
           const displayPercent = Number(shownCh[i].toFixed(1));
-          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
+          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(2)); // 2 tizedes
           await updateDoc(doc(db,'ucl_championCandidates', r.id), {
             displayPercent,
             displayPoints,
@@ -887,7 +887,7 @@ tr.innerHTML = `
         for(let i=0;i<rowsGb.length;i++){
           const r = rowsGb[i];
           const displayPercent = Number(shownGb[i].toFixed(1));
-          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
+          const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(2)); // 2 tizedes
           await updateDoc(doc(db,'ucl_goldenBootCandidates', r.id), {
             displayPercent,
             displayPoints,
