@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
@@ -47,6 +47,7 @@
     .chip.selected{outline:2px solid color-mix(in oklab, var(--primary) 35%, white)}
     .count{font-size:12px;color:#111;background:#e6f1ff;border:1px solid var(--border);padding:2px 8px;border-radius:999px}
 
+    /* Odds → % + Pont kártya */
     .grid-odds{display:grid;grid-template-columns:280px 1fr;gap:14px}
     @media (max-width:900px){.grid-odds{grid-template-columns:1fr}}
     .panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
@@ -62,13 +63,10 @@
     .muted-note{font-size:12px;color:#64748b;margin-top:6px}
   </style>
 
-  <!-- OCR (képről szöveghez) -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = { apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc", authDomain:"tippliga-4b3af.firebaseapp.com", projectId:"tippliga-4b3af", storageBucket:"tippliga-4b3af.appspot.com", messagingSenderId:"720359845241", appId:"1:720359845241:web:d3d6edcac6b43ebff053a8" };
     const app  = initializeApp(firebaseConfig);
@@ -262,7 +260,7 @@
           </div>
         </div>`});
 
-      /* Odds → % + Pont */
+      /* ÚJ: Odds → % + Pont */
       const cOdds = makeCard({title:'Végső győztes – odds → megjelenített % + pont', hint:'Jelöltek normalizálása + favorit-laposítás', id:'card-odds', open:true, bodyHTML:`
         <div class="grid-odds">
           <div class="panel">
@@ -292,10 +290,10 @@
           </div>
         </div>`});
 
-      /* ÚJ: Tömeges import – Gólkirály jelöltek */
+      /* ÚJ KÁRTYA: Tömeges import – Gólkirály jelöltek (egyszeri) */
       const cBulkGb = makeCard({
         title: 'Tömeges import – Gólkirály jelöltek',
-        hint: 'Beillesztés soronként (Név [Klub] Odds). Klub az előnézetben is választható.',
+        hint: 'Beillesztés soronként (Név [Klub] Odds). Klubot az előnézetben is választhatsz.',
         id: 'card-bulk-gb',
         bodyHTML: `
           <div class="row" style="gap:12px;">
@@ -307,48 +305,18 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
               <label><input type="checkbox" id="gbBulkWipe"> Előtte ÜRÍTSD a jelölteket</label>
               <button id="gbBulkParse" class="btn">Előkészítés</button>
               <button id="gbBulkUpload" class="btn primary" disabled>Feltöltés Firestore-ba</button>
-              <div class="muted">Rugalmas formátum: a sor végén legyen az odds (pl. 16,50 vagy 16.50). Klub megadható szögletes/zárójelben is.</div>
+              <div class="muted">Rugalmas formátum: a sor végén legyen az odds (pl. 16,50 vagy 16.50). Klub megadható [szögletes]/(kerek) zárójelben is.</div>
             </div>
           </div>
           <div id="gbBulkPreview" style="margin-top:12px; overflow:auto"></div>
         `
       });
 
-      /* ÚJ: OCR – Gólkirály jelöltek fotóról */
-      const cOCR = makeCard({
-        title:'Fotóról gólkirály jelöltek (OCR)',
-        hint:'Kép → szöveg → jelöltlista (mentés Firestore-ba)',
-        id:'card-ocr',
-        bodyHTML:`
-          <div class="row">
-            <input type="file" id="ocrImage" accept="image/*" />
-            <button class="btn" id="runOcrBtn">Szöveg kinyerése</button>
-            <span class="muted" id="ocrStatus"></span>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <textarea id="ocrText" rows="6" style="width:100%;max-width:100%" placeholder="A felismert szöveg ide kerül…"></textarea>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <button class="btn" id="parseOcrBtn">Sorok feldolgozása</button>
-            <span class="muted">Elfogadott minták pl.: <code>Név (Klub) 3.50</code> • <code>Név – Klub – 3,50</code> • <code>Név Klub 3.50</code></span>
-          </div>
-          <div style="overflow:auto;margin-top:10px">
-            <table id="ocrPreview">
-              <thead><tr><th>#</th><th>Játékos</th><th>Klub</th><th>Odds</th><th>Mentés?</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <button class="btn primary" id="saveOcrBtn">Jóváhagyott jelöltek mentése</button>
-            <span class="muted" id="saveOcrStatus"></span>
-          </div>`
-      });
-
       document.body.append(wrap);
       wrap.append(
         cAdd.section, cManage.section, cRes.section, cUsers.section, cTable.section,
         cOrder.section, cLock.section,
-        cBonusCh.section, cBonusGb.section, cBulkGb.section, cOCR.section,
+        cBonusCh.section, cBonusGb.section, cBulkGb.section,
         cOfficial.section, cOdds.section
       );
 
@@ -379,11 +347,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       // Bulk import events
       document.getElementById('gbBulkParse').addEventListener('click', bulkGbParse);
       document.getElementById('gbBulkUpload').addEventListener('click', bulkGbUpload);
-
-      // OCR events
-      document.getElementById('runOcrBtn').addEventListener('click', onRunOCR);
-      document.getElementById('parseOcrBtn').addEventListener('click', onParseOCRText);
-      document.getElementById('saveOcrBtn').addEventListener('click', onSaveOCRRows);
     }
 
     /* ===== Meccsek ===== */
@@ -909,6 +872,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     async function recalcAndSaveAll(){
       const {T, BASE, O0, A, LO, HI} = currentParams();
 
+      // Bajnok jelöltek
       const rowsCh = championCandidates.map(c=>({ id:c.id, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
       if(rowsCh.length>0){
         const shownCh = computeDisplayedPerc(rowsCh, T);
@@ -924,6 +888,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         }
       }
 
+      // Gólkirály jelöltek
       const rowsGb = goldenCandidates.map(c=>({ id:c.id, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
       if(rowsGb.length>0){
         const shownGb = computeDisplayedPerc(rowsGb, T);
@@ -945,6 +910,29 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
 
     /* ===== BULK – gólkirály jelöltek ===== */
     let _bulkRows = []; // {player, team, odds}
+    function pickOddsFloat(s){
+      const m = s.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*$/);
+      if(!m) return null;
+      return Number(String(m[1]).replace(',','.'));
+    }
+    function bulkParseLine(line){
+      const clean = line.replace(/\s{2,}/g,' ').trim();
+      if(!clean) return null;
+      const odds = pickOddsFloat(clean);
+      if(!odds) return null;
+      const head = clean.replace(/(\d{1,4}(?:[.,]\d{1,2})?)\s*$/,'').trim();
+
+      // [Klub] vagy (Klub)
+      let m = head.match(/^(.+?)\s*[\[\(]([^)\]]+)[\]\)]\s*$/);
+      if(m){ return { player:m[1].trim(), team: normalizeClubName(m[2].trim()), odds }; }
+
+      // Név – Klub
+      m = head.match(/^(.+?)[–-]\s*(.+)$/);
+      if(m){ return { player:m[1].trim(), team: normalizeClubName(m[2].trim()), odds }; }
+
+      // Egyéb: csak név
+      return { player: head, team:'', odds };
+    }
     const CLUB_ALIASES = new Map([
       ['manchester city','Manchester City'], ['man city','Manchester City'], ['m city','Manchester City'], ['city','Manchester City'],
       ['real madrid','Real Madrid'], ['r madrid','Real Madrid'], ['real','Real Madrid'],
@@ -969,31 +957,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       if(hit) return hit;
       for(const [key,val] of CLUB_ALIASES.entries()){ if(k.includes(key)) return val; }
       return '';
-    }
-    function pickOddsFloat(s){
-      const m = s.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*$/);
-      if(!m) return null;
-      return Number(String(m[1]).replace(',','.'));
-    }
-    function bulkParseLine(line){
-      const clean = line.replace(/\s{2,}/g,' ').trim();
-      if(!clean) return null;
-      const odds = pickOddsFloat(clean);
-      if(!odds) return null;
-      const head = clean.replace(/(\d{1,4}(?:[.,]\d{1,2})?)\s*$/,'').trim();
-
-      // [Klub] vagy (Klub)
-      let m = head.match(/^(.+?)\s*[\[\(]([^)\]]+)[\]\)]\s*$/);
-      if(m){
-        return { player:m[1].trim(), team: normalizeClubName(m[2].trim()), odds };
-      }
-      // Név – Klub
-      m = head.match(/^(.+?)[–-]\s*(.+)$/);
-      if(m){
-        return { player:m[1].trim(), team: normalizeClubName(m[2].trim()), odds };
-      }
-      // Egyéb: csak név
-      return { player: head, team:'', odds };
     }
     function bulkGbParse(){
       const src = (document.getElementById('gbBulkText').value||'').split(/\r?\n/);
@@ -1059,148 +1022,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         saved++;
       }
       alert(`Mentve: ${saved}, kihagyva: ${skipped}`);
-      await loadBonusMarkets();
-    }
-
-    /* ===== OCR – gólkirály jelöltek ===== */
-    let _ocrRows = []; // { player, team, odds, ok }
-    async function onRunOCR(){
-      const f = document.getElementById('ocrImage').files?.[0];
-      const st = document.getElementById('ocrStatus');
-      if(!f){ st.textContent='Válassz képet!'; return; }
-      st.textContent = 'Felismerés folyamatban…';
-      try{
-        const { data } = await Tesseract.recognize(f, 'eng', { logger: ()=>{} });
-        const text = (data?.text || '').trim();
-        document.getElementById('ocrText').value = text;
-        st.textContent = 'Szöveg kész. Ellenőrizd, majd „Sorok feldolgozása”.';
-      }catch(e){
-        console.error(e);
-        st.textContent = 'Hiba az OCR közben.';
-      }
-    }
-    function pickOddsFloatOCR(s){
-      const m = s.match(/(\d{1,4}(?:[.,]\d{1,2})?)/);
-      if(!m) return null;
-      return Number(String(m[1]).replace(',','.'));
-    }
-    function parseOCRTextToRows(text){
-      const out = [];
-      const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-      for(const line of lines){
-        const clean = line.replace(/\s{2,}/g,' ').trim();
-
-        // 1) Név (Klub) 3.50
-        let m = clean.match(/^(.+?)\s*\((.+?)\)\s*(\d+(?:[.,]\d{1,2})?)$/);
-        if(m){
-          const player = m[1].trim();
-          const team   = normalizeClubName(m[2].trim());
-          const odds   = Number(m[3].replace(',','.'));
-          if(player && odds>0) { out.push({player, team, odds, ok:true}); continue; }
-        }
-
-        // 2) Név – Klub – 3,50 / Név - Klub - 3.50
-        m = clean.match(/^(.+?)[–-]\s*(.+?)[–-]\s*(\d+(?:[.,]\d{1,2})?)$/);
-        if(m){
-          const player = m[1].trim();
-          const team   = normalizeClubName(m[2].trim());
-          const odds   = Number(m[3].replace(',','.'));
-          if(player && odds>0) { out.push({player, team, odds, ok:true}); continue; }
-        }
-
-        // 3) Név Klub 3.50  (egyszavas klub alias)
-        m = clean.match(/^(.+?)\s+([A-Za-zÀ-ÿ/\.]+)\s+(\d+(?:[.,]\d{1,2})?)$/);
-        if(m){
-          const player = m[1].trim();
-          const team   = normalizeClubName(m[2].trim());
-          const odds   = Number(m[3].replace(',','.'));
-          if(player && odds>0) { out.push({player, team, odds, ok:true}); continue; }
-        }
-
-        // 4) fallback: a sor végéről odds, a feje lehet "Név (Klub)" vagy csak név
-        const maybeOdds = pickOddsFloatOCR(clean);
-        if(maybeOdds){
-          const head = clean.replace(/(\d+(?:[.,]\d{1,2})?)\s*$/,'').trim();
-          let pm = head.match(/^(.+?)\s*\((.+?)\)\s*$/);
-          if(pm){
-            const player = pm[1].trim();
-            const team = normalizeClubName(pm[2].trim());
-            out.push({player, team, odds: maybeOdds, ok:true}); continue;
-          }
-          out.push({player: head, team:'', odds: maybeOdds, ok:true}); continue;
-        }
-
-        out.push({player: clean, team:'', odds:null, ok:false});
-      }
-      return out;
-    }
-    function renderOcrPreview(){
-      const tb = document.querySelector('#ocrPreview tbody');
-      tb.innerHTML = '';
-      _ocrRows.forEach((r,i)=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td><input value="${r.player||''}" data-i="${i}" data-k="player" style="width:200px"></td>
-          <td>
-            <select data-i="${i}" data-k="team">
-              <option value="">–</option>
-              ${teams.map(t=>`<option value="${t}" ${t===(r.team||'')?'selected':''}>${t}</option>`).join('')}
-            </select>
-          </td>
-          <td><input value="${r.odds??''}" data-i="${i}" data-k="odds" style="width:90px"></td>
-          <td><input type="checkbox" data-i="${i}" data-k="ok" ${r.ok?'checked':''}></td>
-        `;
-        tb.appendChild(tr);
-      });
-      tb.querySelectorAll('input,select').forEach(el=>{
-        el.oninput = ()=>{
-          const i = +el.dataset.i, k = el.dataset.k;
-          let v = el.value;
-          if(k==='odds' && v) v = Number(String(v).replace(',','.'));
-          if(k==='ok') v = el.checked;
-          _ocrRows[i][k] = v;
-        };
-      });
-    }
-    function onParseOCRText(){
-      const txt = document.getElementById('ocrText').value || '';
-      _ocrRows = parseOCRTextToRows(txt);
-      renderOcrPreview();
-    }
-    async function onSaveOCRRows(){
-      const st = document.getElementById('saveOcrStatus');
-      const rows = _ocrRows.filter(r=> r.ok && r.player && r.odds && r.odds>0);
-      if(rows.length===0){ st.textContent='Nincs jóváhagyott tétel.'; return; }
-
-      st.textContent = `Mentés (${rows.length})…`;
-      let saved = 0, skipped = 0;
-
-      const existSnap = await getDocs(collection(db,'ucl_goldenBootCandidates'));
-      const existingByPlayer = new Set(existSnap.docs.map(d=>(d.data()?.player||'').toLowerCase().trim()));
-
-      for(const r of rows){
-        const player = r.player.trim();
-        if(!player || existingByPlayer.has(player.toLowerCase())){ skipped++; continue; }
-        const oddsDec = Number(r.odds);
-        const team = r.team && teams.includes(r.team) ? r.team : '';
-
-        try{
-          await addDoc(collection(db,'ucl_goldenBootCandidates'),{
-            player, team,
-            odds: oddsDec,
-            oddsDecimal: oddsDec,
-            oddsPercent: Math.round(100/oddsDec)
-          });
-          existingByPlayer.add(player.toLowerCase());
-          saved++;
-        }catch(e){
-          console.error(e);
-          skipped++;
-        }
-      }
-
-      st.textContent = `Kész. Mentve: ${saved}, kihagyva: ${skipped}.`;
       await loadBonusMarkets();
     }
 
