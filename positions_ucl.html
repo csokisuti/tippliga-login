@@ -62,7 +62,7 @@
     .save-state{font-size:12px;color:#16a34a;display:none}
     .save-state.show{display:inline-flex}
 
-    /* Pick cards (győztes/gólkirály) */
+    /* Pick cards */
     .grid-cards{padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
     .pick-card{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line,#e6eaf1);border-radius:12px;background:#fff;cursor:pointer;transition:transform .08s ease}
     .pick-card:hover{transform:translateY(-1px)}
@@ -249,7 +249,9 @@
       return null;
     };
     const fromDisplayedPoints = c => toNum(c?.displayPoints);
-    const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(1)}`);
+
+    /* ⟵ KÉT TIZEDES: +pont jelvény formázása */
+    const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}`);
 
     /* ===== Accordion ===== */
     function initAccordions(){
@@ -279,7 +281,7 @@
           .filter(x=>x.player);
       }catch{ goldenCandidates=[]; }
 
-      // rendezés: pont szerint emelkedő, hiányzó pontok a lista végére
+      // rendezés: pont szerint emelkedő (hiányzó a végére)
       const sortByPointsAsc = (a,b,fieldName,labelGetter) => {
         const pa = toNum(a[fieldName]); const pb = toNum(b[fieldName]);
         if (pa==null && pb==null) return labelGetter(a).localeCompare(labelGetter(b), 'hu');
@@ -304,7 +306,7 @@
       }
       championCandidates.forEach(c=>{
         const pts  = fromDisplayedPoints(c);
-        const odds = fromCandidateOdds(c); // csak mentéshez kompat
+        const odds = fromCandidateOdds(c); // kompat mentéshez
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.team = c.team;
@@ -333,7 +335,7 @@
       goldenCandidates.forEach(c=>{
         const crest = crestFor(c.team||'') || '';
         const pts   = fromDisplayedPoints(c);
-        const odds  = fromCandidateOdds(c); // csak mentéshez kompat
+        const odds  = fromCandidateOdds(c);
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.player = c.player;
