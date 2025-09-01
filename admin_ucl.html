@@ -47,10 +47,20 @@
     .chip.selected{outline:2px solid color-mix(in oklab, var(--primary) 35%, white)}
     .count{font-size:12px;color:#111;background:#e6f1ff;border:1px solid var(--border);padding:2px 8px;border-radius:999px}
 
-    .grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
-    @media (max-width:900px){.grid{grid-template-columns:1fr}}
-    .inline-help{font-size:12px;color:#64748b}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:12px}
+    /* Odds → % + Pont kártya */
+    .grid-odds{display:grid;grid-template-columns:280px 1fr;gap:14px}
+    @media (max-width:900px){.grid-odds{grid-template-columns:1fr}}
+    .panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .panel h4{margin:0 0 10px}
+    .help{font-size:12px;color:#64748b}
+    .form-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    .form-row label{min-width:110px;color:#475569;font-size:13px}
+    .num{width:110px}
+    .wide{width:160px}
+    .sticky-bottom{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .tag{font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:999px;background:#fafafa}
+    .mono{font-variant-numeric:tabular-nums}
+    .muted-note{font-size:12px;color:#64748b;margin-top:6px}
   </style>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -71,15 +81,22 @@
     const stripNumPrefix = s => (s||'').replace(/^\s*\d+[\.\)]?\s*/, '');
     const norm = s => stripNumPrefix(s).replace(/\s+/g,' ').trim().toLowerCase();
 
-    const toNum = (v) => { if (v === null || v === undefined || v === '') return null; if (typeof v === 'string') v = v.replace(',', '.'); const n = Number(v); return Number.isFinite(n) ? n : null; };
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === '') return null;
+      if (typeof v === 'string') v = v.replace(',', '.');
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
     const fromCandidateOdds = (c) => {
-      const direct = toNum(c?.odds); if (direct != null) return direct;
-      const dec = toNum(c?.oddsDecimal); if (dec != null) return dec;
-      const pct = toNum(c?.oddsPercent); if (pct != null && pct > 0) return 100 / pct;
+      const direct = toNum(c?.odds);
+      if (direct != null) return direct;
+      const dec = toNum(c?.oddsDecimal);
+      if (dec != null) return dec;
+      const pct = toNum(c?.oddsPercent);
+      if (pct != null && pct > 0) return 100 / pct;
       return null;
     };
     const fmtOdds = (v) => (v==null ? '' : toNum(v).toFixed(2));
-    const fmtPct1 = (v) => (v==null ? '—' : (Math.round(v*10)/10).toFixed(1) + '%');
 
     let championCandidates = [];
     let goldenCandidates   = [];
@@ -101,6 +118,8 @@
       await loadOfficialOrder();
       await loadBonusMarkets();
       await loadOfficialBonus();
+      await loadScoringSettings();   // ⟵ új: betöltjük a pontozási beállításokat
+      renderOddsPreview();           // ⟵ és előnézetet is számolunk
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=''}){
@@ -117,7 +136,7 @@
       const back=document.createElement('button'); back.className='btn'; back.textContent='⬅️ Vissza a dashboardra'; back.onclick=()=>location.href='dashboard_ucl.html';
       const expand=document.createElement('button'); expand.className='btn'; expand.textContent='Mindet nyisd le'; expand.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.add('open'));
       const collapse=document.createElement('button'); collapse.className='btn'; collapse.textContent='Mindet csukd össze'; collapse.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.remove('open'));
-      const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadOfficialOrder(); loadBonusMarkets(); loadOfficialBonus(); };
+      const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadOfficialOrder(); loadBonusMarkets(); loadOfficialBonus(); renderOddsPreview(); };
       left.appendChild(back); right.append(expand, collapse, refresh); document.body.append(top);
 
       const wrap=document.createElement('div'); wrap.className='cards';
@@ -216,34 +235,6 @@
           </table>
         </div>`});
 
-      /* ÚJ: odds → megjelenített % konfigurátor a végső győzteshez */
-      const cMap = makeCard({title:'Végső győztes – odds → megjelenített %', hint:'Jelöltek normalizálása + favorit-laposítás', id:'card-odds-map', open:true, bodyHTML:`
-        <div class="grid">
-          <div class="card" style="margin:0">
-            <div class="card-head"><h3>Beállítás</h3><div class="hint">T = 1.00…2.00 (nagyobb = laposabb, favorit visszafogás)</div></div>
-            <div class="card-body">
-              <div class="row">
-                <label style="display:flex;flex-direction:column;gap:6px">
-                  <span class="inline-help">Laposítási hőmérséklet (T)</span>
-                  <input id="tempInput" type="number" step="0.01" min="1.00" max="2.50" value="1.30" style="width:120px">
-                </label>
-                <span class="pill">Módszer: softmax p^(1/T)</span>
-                <button id="previewMap" class="btn">Előnézet</button>
-                <button id="saveMap" class="btn primary">Számold újra &amp; mentsd</button>
-              </div>
-              <div class="inline-help" style="margin-top:6px">
-                Lépések: (1) Implied p = 1/odds → normalizálás overroundra, (2) p' = p^(1/T), (3) újranormalizálás, (4) % = 100 · p'.
-              </div>
-            </div>
-          </div>
-          <div class="card" style="margin:0;grid-column:span 3">
-            <div class="card-head"><h3>Előnézet</h3><div class="hint">Jelöltek a mentett oddsok alapján</div></div>
-            <div class="card-body">
-              <div id="mapPreview"></div>
-            </div>
-          </div>
-        </div>`});
-
       const cOfficial = makeCard({title:'Hivatalos eredmények – Top 8 / Győztes / Gólkirály', hint:'`ucl_official/current`', id:'card-official', bodyHTML:`
         <div class="card" style="margin:0 0 12px 0">
           <div class="card-head"><h3>Top 8 (sorrend nélkül)</h3><div class="hint"><span id="top8Count" class="count">0/8</span></div></div>
@@ -281,11 +272,42 @@
           </div>
         </div>`});
 
+      /* ÚJ: Odds → % + Pont */
+      const cOdds = makeCard({title:'Végső győztes – odds → megjelenített % + pont', hint:'Jelöltek normalizálása + favorit-laposítás', id:'card-odds', open:true, bodyHTML:`
+        <div class="grid-odds">
+          <div class="panel">
+            <h4>Beállítás</h4>
+            <div class="help">T – hőmérséklet a %-hoz (nagyobb = laposabb). A pontszámhoz: BASE, O<sub>0</sub> (ahol 10 pont), A (görbe), LO/HI clamp.</div>
+            <div class="form-row"><label>Hőmérséklet (T)</label><input id="T" class="num" type="number" step="0.01" value="1.30"></div>
+            <div class="form-row"><label>BASE</label><input id="BASE" class="num" type="number" step="0.1" value="10"></div>
+            <div class="form-row"><label>O<sub>0</sub> (pivot odds)</label><input id="PIVOT" class="num" type="number" step="1" value="65"></div>
+            <div class="form-row"><label>A (exponens)</label><input id="AEXP" class="num" type="number" step="0.01" value="0.33"></div>
+            <div class="form-row"><label>LO (min ×BASE)</label><input id="LO" class="num" type="number" step="0.01" value="0.5"></div>
+            <div class="form-row"><label>HI (max ×BASE)</label><input id="HI" class="num" type="number" step="0.01" value="2.5"></div>
+            <div class="sticky-bottom">
+              <button id="recalc" class="btn primary">Számold újra & mentsd</button>
+              <span class="tag">Implied = 1/odds</span><span class="tag">softmax p^(1/T)</span><span class="tag">clamp pont</span>
+            </div>
+            <div class="muted-note">Lépések: (1) Implied p = 1/odds → normalizálás overroundra, (2) p' = p^(1/T), (3) újranormalizálás, (4) % = 100·p', (5) pont = BASE·clamp((odds/O0)^A, LO, HI).</div>
+          </div>
+          <div class="panel">
+            <h4>Előnézet</h4>
+            <div class="help">Jelöltek a mentett oddsok alapján</div>
+            <div style="overflow:auto">
+              <table id="oddsPreview">
+                <thead><tr><th>Csapat</th><th>Odds (dec)</th><th>Implied % (raw)</th><th>Megjelenített %</th><th>Pont</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>`});
+
       document.body.append(wrap);
       wrap.append(
         cAdd.section, cManage.section, cRes.section, cUsers.section, cTable.section,
         cOrder.section, cLock.section,
-        cBonusCh.section, cBonusGb.section, cMap.section, cOfficial.section
+        cBonusCh.section, cBonusGb.section, cOfficial.section,
+        cOdds.section
       );
 
       document.getElementById('matchForm').addEventListener('submit', onAddMatch);
@@ -302,12 +324,16 @@
       document.getElementById('chAddForm').addEventListener('submit', onAddChampionCandidate);
       document.getElementById('gbAddForm').addEventListener('submit', onAddGoldenCandidate);
 
-      document.getElementById('previewMap').onclick = previewChampionMap;
-      document.getElementById('saveMap').onclick = saveChampionMap;
-
       document.getElementById('saveTop8').onclick = saveOfficialTop8;
       document.getElementById('saveChampion').onclick = saveOfficialChampion;
       document.getElementById('saveGolden').onclick = saveOfficialGolden;
+
+      // új: odds → % + pont kalkulátor gomb
+      document.getElementById('recalc').addEventListener('click', recalcAndSaveAll);
+      // változtatásra azonnali előnézet
+      ['T','BASE','PIVOT','AEXP','LO','HI'].forEach(id=>{
+        document.getElementById(id).addEventListener('input', renderOddsPreview);
+      });
     }
 
     let _matchesCache = [];
@@ -559,9 +585,6 @@
           teamInput.value = opt?.dataset?.team || '';
         };
       }
-
-      // automatikus előnézet frissítés az odds-map kártyán
-      previewChampionMap();
     }
 
     function renderChampionCandidates(){
@@ -601,10 +624,12 @@
               oddsPercent: Math.round(100/oddsDec)
             });
             await loadBonusMarkets();
+            renderOddsPreview();
           } else if(btn.dataset.act==='del'){
             if(!confirm('Törlöd a jelöltet?')) return;
             await deleteDoc(doc(db,'ucl_championCandidates',id));
             await loadBonusMarkets();
+            renderOddsPreview();
           }
         };
       });
@@ -627,6 +652,7 @@
       });
       teamSel.value=''; oddsInp.value='';
       await loadBonusMarkets();
+      renderOddsPreview();
     }
 
     function renderGoldenCandidates(){
@@ -771,71 +797,86 @@
       alert('Gólkirály elmentve.');
     }
 
-    /* ===== Odds → % (champion) ===== */
-    function computeChampionMap(cands, T){
-      // 1) implied probs with overround normalization
-      const items = cands.map(c=>{
-        const o = fromCandidateOdds(c);
-        return { id:c.id, team:c.team, odds:o, p: (o && o>0) ? 1/o : 0 };
-      }).filter(x=>x.team && x.odds && x.p>0);
-      const sumP = items.reduce((s,x)=>s+x.p,0) || 1;
-      items.forEach(x=> x.p = x.p / sumP); // normalize
-
-      // 2) flatten favorites: p' = p^(1/T)
-      const invT = 1/Math.max(1, T||1);
-      items.forEach(x=> x.p2 = Math.pow(x.p, invT));
-      const sumP2 = items.reduce((s,x)=>s+x.p2,0) || 1;
-
-      // 3) final displayed %
-      items.forEach(x=>{
-        x.rawPct = 100 * x.p;
-        x.displayPct = 100 * (x.p2 / sumP2);
+    /* ===== Odds → % + Pont logika ===== */
+    // %-hoz: implied -> norm -> p^(1/T) -> norm -> %
+    function computeDisplayedPerc(rows, T){
+      const ps = rows.map(r=>{
+        const o = toNum(r.odds);
+        return (o && o>0) ? (1/o) : 0;
       });
-
-      // sort by display pct desc for preview
-      items.sort((a,b)=>b.displayPct - a.displayPct);
-      return items;
+      let S = ps.reduce((a,b)=>a+b,0); if(!S) S=1;
+      const p = ps.map(x => x/S);
+      const q = p.map(x => Math.pow(x, 1/Math.max(T, 0.0001)));
+      let Z = q.reduce((a,b)=>a+b,0); if(!Z) Z=1;
+      return q.map(x => 100 * x / Z);
+    }
+    // ponthoz: BASE * clamp((odds/O0)^A, LO, HI)
+    function computePoints(odds, BASE, O0, A, LO, HI){
+      const o = toNum(odds); if(!o || o<=0) return 0;
+      const ratio = Math.pow(o/Math.max(O0,1e-9), A);
+      const clamped = Math.min(Math.max(ratio, LO), HI);
+      return BASE * clamped;
     }
 
-    function previewChampionMap(){
-      const T = toNum(document.getElementById('tempInput').value) || 1.3;
-      const items = computeChampionMap(championCandidates, T);
-      const box = document.getElementById('mapPreview');
-      if(items.length===0){ box.innerHTML = '<div class="muted">Nincs jelölt / odds.</div>'; return; }
-      const rows = items.map(x=>`
-        <tr>
-          <td>${x.team}</td>
-          <td>${fmtOdds(x.odds)}</td>
-          <td>${fmtPct1(x.rawPct)}</td>
-          <td><strong>${fmtPct1(x.displayPct)}</strong></td>
-        </tr>`).join('');
-      box.innerHTML = `
-        <table>
-          <thead><tr><th>Csapat</th><th>Odds (dec)</th><th>Implied % (raw)</th><th>Megjelenített %</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+    async function loadScoringSettings(){
+      // opcionális: beolvasható később settingsből, most csak a UI értékei élnek
+      // ha szeretnéd, mentsük is: await setDoc(doc(db,'settings','ucl_odds_display'), {...})
     }
 
-    async function saveChampionMap(){
-      const T = toNum(document.getElementById('tempInput').value) || 1.3;
-      const items = computeChampionMap(championCandidates, T);
-      if(items.length===0){ alert('Nincs menthető adat.'); return; }
-      // mentés minden érintett dokumentumba
-      const batch = Promise.all(items.map(x=>{
-        return updateDoc(doc(db,'ucl_championCandidates', x.id), {
-          impliedPctRaw: Math.round(x.rawPct*10)/10,
-          displayPercent: Math.round(x.displayPct*10)/10,
-          displayTransform: { method:'softmax_p_pow', temperature: T }
+    function currentParams(){
+      return {
+        T:   toNum(document.getElementById('T').value)    ?? 1.30,
+        BASE:toNum(document.getElementById('BASE').value) ?? 10,
+        O0:  toNum(document.getElementById('PIVOT').value)?? 65,
+        A:   toNum(document.getElementById('AEXP').value) ?? 0.33,
+        LO:  toNum(document.getElementById('LO').value)   ?? 0.5,
+        HI:  toNum(document.getElementById('HI').value)   ?? 2.5,
+      };
+    }
+
+    function renderOddsPreview(){
+      const tbody = document.querySelector('#oddsPreview tbody'); if(!tbody) return;
+      tbody.innerHTML='';
+      const rows = championCandidates.map(c=>({ team:c.team, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
+      if(rows.length===0){ tbody.innerHTML = '<tr><td colspan="5" class="muted">Nincs jelölt</td></tr>'; return; }
+
+      const {T, BASE, O0, A, LO, HI} = currentParams();
+      const shown = computeDisplayedPerc(rows, T);
+
+      rows.forEach((r,idx)=>{
+        const implied = (100/r.odds);
+        const pts = computePoints(r.odds, BASE, O0, A, LO, HI);
+        const tr=document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.team}</td>
+          <td class="mono">${fmtOdds(r.odds)}</td>
+          <td class="mono">${implied.toFixed(1)}%</td>
+          <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
+          <td class="mono">${pts.toFixed(1)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function recalcAndSaveAll(){
+      const rows = championCandidates.map(c=>({ id:c.id, team:c.team, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
+      if(rows.length===0){ alert('Nincs jelölt mentett oddsszal.'); return; }
+      const {T, BASE, O0, A, LO, HI} = currentParams();
+      const shown = computeDisplayedPerc(rows, T);
+
+      // mentés minden jelöltre
+      for(let i=0;i<rows.length;i++){
+        const r = rows[i];
+        const displayPercent = Number(shown[i].toFixed(1)); // pl. 9.4
+        const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
+        await updateDoc(doc(db,'ucl_championCandidates', r.id), {
+          displayPercent,
+          displayPoints,
+          // opcionálisan logoljuk a paramétereket is (trace/debug)
+          _calc: { T, BASE, O0, A, LO, HI, updated: Date.now() }
         });
-      }));
-      try{
-        await batch;
-        alert('Megjelenített % értékek elmentve a jelöltekhez.');
-      }catch(e){
-        console.warn(e);
-        alert('Hiba történt a mentés során.');
       }
-      await loadBonusMarkets();
+      alert('Megjelenített % és Pont mentve a jelöltekhez.');
+      renderOddsPreview();
     }
 
     window.updateMatch = updateMatch;
