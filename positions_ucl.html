@@ -250,6 +250,29 @@
     };
     const fromDisplayedPoints = c => toNum(c?.displayPoints);
 
+    /* odds → pont fallback (azonos képlet az adminnal) */
+    function computePoints(odds, BASE=10, O0=65, A=0.33, LO=0.5, HI=2.5){
+      const o = toNum(odds);
+      if(!o || o<=0) return null;
+      const ratio   = Math.pow(o/Math.max(O0,1e-9), A);
+      const clamped = Math.min(Math.max(ratio, LO), HI);
+      return BASE * clamped;
+    }
+    function candidatePoints(c, scope){ // scope: 'golden' | 'champion'
+      const dp = fromDisplayedPoints(c);
+      if (dp != null) return dp;
+      const odds = fromCandidateOdds(c);
+      const cfg  = (c._calc && c._calc.scope === scope) ? c._calc : {};
+      return computePoints(
+        odds,
+        cfg.BASE ?? 10,
+        cfg.O0   ?? 65,
+        cfg.A    ?? 0.33,
+        cfg.LO   ?? 0.5,
+        cfg.HI   ?? 2.5
+      );
+    }
+
     /* ⟵ KÉT TIZEDES: +pont jelvény formázása */
     const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}`);
 
@@ -281,17 +304,20 @@
           .filter(x=>x.player);
       }catch{ goldenCandidates=[]; }
 
-      // rendezés: pont szerint emelkedő (hiányzó a végére)
-      const sortByPointsAsc = (a,b,fieldName,labelGetter) => {
-        const pa = toNum(a[fieldName]); const pb = toNum(b[fieldName]);
-        if (pa==null && pb==null) return labelGetter(a).localeCompare(labelGetter(b), 'hu');
-        if (pa==null) return 1;
-        if (pb==null) return -1;
-        if (pa!==pb) return pa - pb;
-        return labelGetter(a).localeCompare(labelGetter(b), 'hu');
-      };
-      championCandidates.sort((a,b)=>sortByPointsAsc(a,b,'displayPoints',x=>x.team));
-      goldenCandidates.sort((a,b)=>sortByPointsAsc(a,b,'displayPoints',x=>x.player));
+      // rendezés: valós vagy fallback pont szerint emelkedő (hiányzó a végére)
+      function sortByPointsAsc(arr, scope, labelGetter){
+        arr.sort((a,b)=>{
+          const pa = candidatePoints(a, scope);
+          const pb = candidatePoints(b, scope);
+          if (pa==null && pb==null) return labelGetter(a).localeCompare(labelGetter(b),'hu');
+          if (pa==null) return 1;
+          if (pb==null) return -1;
+          if (pa!==pb) return pa - pb;
+          return labelGetter(a).localeCompare(labelGetter(b),'hu');
+        });
+      }
+      sortByPointsAsc(championCandidates, 'champion', x=>x.team);
+      sortByPointsAsc(goldenCandidates,  'golden',   x=>x.player);
 
       renderChampionGrid();
       renderGoldenGrid();
@@ -305,7 +331,7 @@
         return;
       }
       championCandidates.forEach(c=>{
-        const pts  = fromDisplayedPoints(c);
+        const pts  = candidatePoints(c,'champion');
         const odds = fromCandidateOdds(c); // kompat mentéshez
         const el = document.createElement('div');
         el.className = 'pick-card';
@@ -334,7 +360,7 @@
       }
       goldenCandidates.forEach(c=>{
         const crest = crestFor(c.team||'') || '';
-        const pts   = fromDisplayedPoints(c);
+        const pts   = candidatePoints(c,'golden');
         const odds  = fromCandidateOdds(c);
         const el = document.createElement('div');
         el.className = 'pick-card';
@@ -653,13 +679,13 @@
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
-        <div class="text"><span class="title">Top 8 + bónusz</span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
+        <div class="text"><span class="title">Top 8 + bónusz <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
         </div>
-        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
+        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
