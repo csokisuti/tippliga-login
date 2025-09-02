@@ -30,7 +30,16 @@
     .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
 
-    .match-list{ display:flex; flex-direction:column; gap:12px; padding:12px; }
+    /* Nap blokkok */
+    .day-block{ padding:12px; }
+    .day-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px dashed var(--line,#e6eaf1); border-radius:10px; background:#fafbff; margin-bottom:10px; }
+    .day-title{ font-weight:800; }
+    .dbl-flag{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line,#e6eaf1); background:#fff; color:#334155; }
+    .dbl-flag svg{ width:14px; height:14px; }
+    .dbl-flag.done{ background:#ecfdf5; border-color:#16a34a; color:#166534; }
+    .dbl-flag .muted{ color:#64748b; }
+
+    .match-list{ display:flex; flex-direction:column; gap:12px; }
     .match{ display:grid; grid-template-columns: 1fr auto; gap:12px; padding:12px; border:1px solid var(--line,#e6eaf1); border-radius:12px; background:#fff; }
     @media (max-width: 700px){ .match{ grid-template-columns: 1fr; } }
     .teams{ display:flex; align-items:center; gap:12px; }
@@ -98,53 +107,51 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const db   = getFirestore(app);
 
-    /* Címerek (rövid nevek) */
-    /* Címerek (rövid nevek) – csak a BL mezőnyből */
-const crestMap = {
-  "Ajax": "ucl_crest/ajax.png",
-  "Arsenal": "ucl_crest/arsenal.png",
-  "Atalanta": "ucl_crest/atalanta.png",
-  "Athletic Bilbao": "ucl_crest/athletic.png",
-  "Atlético Madrid": "ucl_crest/atletico.png",
-  "Barcelona": "ucl_crest/barcelona.png",
-  "Bayern München": "ucl_crest/bayern.png",
-  "Benfica": "ucl_crest/benfica.png",
-  "Borussia Dortmund": "ucl_crest/borussia.png",
-  "Bodø/Glimt": "ucl_crest/bodo.png",
-  "Club Bruges": "ucl_crest/brugge.png",
-  "Chelsea": "ucl_crest/chelsea.png",
-  "FC Köbenhavn": "ucl_crest/copenhagen.png",
-  "Eintracht Frankfurt": "ucl_crest/frankfurt.png",
-  "Galatasaray": "ucl_crest/galata.png",
-  "Internazionale": "ucl_crest/inter.png",
-  "Juventus": "ucl_crest/juventus.png",
-  "Bayer Leverkusen": "ucl_crest/leverkusen.png",
-  "Liverpool": "ucl_crest/liverpool.png",
-  "Manchester City": "ucl_crest/mancity.png",
-  "Olympique Marseille": "ucl_crest/marseille.png",
-  "Monaco": "ucl_crest/monaco.png",
-  "Napoli": "ucl_crest/napoli.png",
-  "Newcastle United": "ucl_crest/newcastle.png",
-  "Olympiakosz Pireusz": "ucl_crest/olympiacos.png",
-  "Pafosz": "ucl_crest/pafos.png",
-  "Paris Saint-Germain": "ucl_crest/psg.png",
-  "PSV": "ucl_crest/psv.png",
-  "Qarabag": "ucl_crest/qarabag.png",
-  "Real Madrid": "ucl_crest/real.png",
-  "Slavia Praha": "ucl_crest/slavia.png",
-  "Sporting CP": "ucl_crest/sporting.png",
-  "Tottenham Hotspur": "ucl_crest/tottenham.png",
-  "Union Saint-Gilloise": "ucl_crest/usg.png",
-  "Villarreal": "ucl_crest/villareal.png",
-  "Kajrat Almati": "ucl_crest/kairat.png"
-};
-
+    /* Címerek – BL mezőny */
+    const crestMap = {
+      "Ajax": "ucl_crest/ajax.png",
+      "Arsenal": "ucl_crest/arsenal.png",
+      "Atalanta": "ucl_crest/atalanta.png",
+      "Athletic Bilbao": "ucl_crest/athletic.png",
+      "Atlético Madrid": "ucl_crest/atletico.png",
+      "Barcelona": "ucl_crest/barcelona.png",
+      "Bayern München": "ucl_crest/bayern.png",
+      "Benfica": "ucl_crest/benfica.png",
+      "Borussia Dortmund": "ucl_crest/borussia.png",
+      "Bodø/Glimt": "ucl_crest/bodo.png",
+      "Club Bruges": "ucl_crest/brugge.png",
+      "Chelsea": "ucl_crest/chelsea.png",
+      "FC Köbenhavn": "ucl_crest/copenhagen.png",
+      "Eintracht Frankfurt": "ucl_crest/frankfurt.png",
+      "Galatasaray": "ucl_crest/galata.png",
+      "Internazionale": "ucl_crest/inter.png",
+      "Juventus": "ucl_crest/juventus.png",
+      "Bayer Leverkusen": "ucl_crest/leverkusen.png",
+      "Liverpool": "ucl_crest/liverpool.png",
+      "Manchester City": "ucl_crest/mancity.png",
+      "Olympique Marseille": "ucl_crest/marseille.png",
+      "Monaco": "ucl_crest/monaco.png",
+      "Napoli": "ucl_crest/napoli.png",
+      "Newcastle United": "ucl_crest/newcastle.png",
+      "Olympiakosz Pireusz": "ucl_crest/olympiacos.png",
+      "Pafosz": "ucl_crest/pafos.png",
+      "Paris Saint-Germain": "ucl_crest/psg.png",
+      "PSV": "ucl_crest/psv.png",
+      "Qarabag": "ucl_crest/qarabag.png",
+      "Real Madrid": "ucl_crest/real.png",
+      "Slavia Praha": "ucl_crest/slavia.png",
+      "Sporting CP": "ucl_crest/sporting.png",
+      "Tottenham Hotspur": "ucl_crest/tottenham.png",
+      "Union Saint-Gilloise": "ucl_crest/usg.png",
+      "Villarreal": "ucl_crest/villareal.png",
+      "Kajrat Almati": "ucl_crest/kairat.png"
+    };
     const crestFor = t => crestMap[t] || "";
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
-    /* Odds segédfüggvény – többféle sémát támogat */
+    /* Odds helper – többféle sémát támogat */
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -152,26 +159,37 @@ const crestMap = {
       if (key==="2") return m.odds2 ?? m["odds2"];
       return undefined;
     }
-    const matchRound = m => String(m.round ?? m.roundId ?? "");
 
-    /* ------ TIP-sémák egységes kezelése ------ */
+    /* Forduló továbbra is megy (kompat mentéshez), de duplázás már nap szerint */
+    const matchRound = m => String(m.round ?? m.roundId ?? "");
     const tipChoice = t => (t?.choice ?? t?.tip ?? "");
     const tipDouble = t => !!(t?.double ?? t?.isDouble);
-    const tipRound  = t => String(t?.round ?? t?.roundId ?? "");
     const tipTsMs   = t => t?.updatedAt?.toMillis?.() || t?.createdAt?.toMillis?.() || t?.timestamp?.toMillis?.() || 0;
+
+    /* === Meccsnap kulcsok === */
+    const pad2 = n => String(n).padStart(2,'0');
+    function asDate(v){ return v?.toDate?.() ? v.toDate() : new Date(v); }
+    function dayKeyFromDate(dt){ return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`; }
+    function dayLabel(dayKey){
+      const [y,m,d] = dayKey.split('-').map(Number);
+      const dt = new Date(y, m-1, d);
+      return dt.toLocaleDateString('hu-HU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    }
 
     /* Állapot */
     let currentUserEmail = "";
     let currentUserNick  = "";
     let currentUserRole  = "user";
-    let favouriteTeamucl = "";     // theming
+    let favouriteTeamucl = "";
     let chatLastSeen     = null;
 
     let myTipsByMatch = new Map();
-    let doublesByRound = new Map();
-    let earliestStartByRound = new Map();
-    const isRoundLocked = roundKey => {
-      const first = earliestStartByRound.get(String(roundKey));
+    let doublesByDay  = new Map();            // YYYY-MM-DD -> matchId
+    let earliestStartByDay = new Map();       // YYYY-MM-DD -> Date
+    let matchesByDay = new Map();             // YYYY-MM-DD -> [{match}]
+
+    const isDayLocked = dayKey => {
+      const first = earliestStartByDay.get(dayKey);
       return first ? (new Date() >= first) : false;
     };
 
@@ -190,9 +208,6 @@ const crestMap = {
           chatLastSeen     = d.chatLastSeen || null;
         } else {
           currentUserNick = currentUserEmail;
-          currentUserRole = "user";
-          favouriteTeamucl = "";
-          chatLastSeen = null;
         }
 
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
@@ -211,11 +226,11 @@ const crestMap = {
         try{
           const now = new Date();
 
-          // 1) Közelgő meccsek UCL-ből
+          // 1) Közelgő meccsek (idő szerint)
           const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
           const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
 
-          // 2) Saját tippek UCL-ből (legfrissebb per user+match, bármely sémából)
+          // 2) Saját tippek (legfrissebb per match)
           const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
           const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
           const latestByMatch = new Map();
@@ -227,27 +242,36 @@ const crestMap = {
           }
           myTipsByMatch = latestByMatch;
 
-          // duplák per forduló
-          doublesByRound.clear();
-          for (const t of latestByMatch.values()){
-            if (tipDouble(t) && tipRound(t)){
-              doublesByRound.set(tipRound(t), t.matchId);
-            }
+          // 3) Napok előállítása + meglévő dupla per nap
+          matchesByDay.clear();
+          doublesByDay.clear();
+          for (const m of upcoming){
+            const st = asDate(m.startTime);
+            const dk = dayKeyFromDate(st);
+            if (!matchesByDay.has(dk)) matchesByDay.set(dk, []);
+            matchesByDay.get(dk).push(m);
+
+            const t = myTipsByMatch.get(m.id);
+            if (t && tipDouble(t)) doublesByDay.set(dk, m.id);
+          }
+          // Rendezés napon belül idő szerint
+          for (const arr of matchesByDay.values()){
+            arr.sort((a,b)=> asDate(a.startTime) - asDate(b.startTime));
           }
 
-          // 3) Fordulók lezárása az első kezdéshez kötve
-          earliestStartByRound.clear();
+          // 4) Napi zár idők: a nap első meccse
+          earliestStartByDay.clear();
           const allSnap = await getDocs(query(collection(db,"ucl_matches"), orderBy("startTime","asc")));
           allSnap.forEach(docu=>{
             const m = docu.data();
-            const r = matchRound(m);
-            const start = m.startTime?.toDate ? m.startTime.toDate() : new Date(m.startTime);
-            if (!r || !start) return;
-            const prev = earliestStartByRound.get(r);
-            if (!prev || start < prev) earliestStartByRound.set(r, start);
+            const dt = asDate(m.startTime);
+            if (isNaN(+dt)) return;
+            const dk = dayKeyFromDate(dt);
+            const prev = earliestStartByDay.get(dk);
+            if (!prev || dt < prev) earliestStartByDay.set(dk, dt);
           });
 
-          buildMatchesList(upcoming);
+          buildMatchesList();
           updatePendingBadge(upcoming);
         }catch(e){ console.warn(e); }
 
@@ -268,126 +292,161 @@ const crestMap = {
       if (badge){ if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; } }
     }
 
-    function buildMatchesList(matches){
+    function buildMatchesList(){
       const wrap = document.getElementById("matchList");
       wrap.innerHTML = "";
-      for (const m of matches){
-        const tip = myTipsByMatch.get(m.id) || {};
-        const curChoice = tipChoice(tip);
-        const isDouble  = tipDouble(tip);
 
-        const roundStr = matchRound(m);
-        const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
-        const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
+      // napok időrendben
+      const dayKeys = Array.from(matchesByDay.keys()).sort();
+      for (const dk of dayKeys){
+        const dayBlock = document.createElement('div');
+        dayBlock.className = 'day-block';
+        dayBlock.dataset.day = dk;
 
-        const row = document.createElement("div");
-        row.className = "match";
-        row.dataset.round = String(roundStr);
-        row.dataset.matchId = m.id;
+        const head = document.createElement('div');
+        head.className = 'day-head';
+        head.innerHTML = `
+          <div class="day-title">${dayLabel(dk)}</div>
+          <div class="dbl-flag" id="flag-${dk}">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.39 4.84L20 7.27l-4 3.9.94 5.49L12 14.77 7.06 16.66 8 11.94l-4-3.9 5.61-.43L12 2z"/></svg>
+            <span class="txt">Nincs dupla ezen a napon</span>
+          </div>`;
+        dayBlock.appendChild(head);
 
-        const left = document.createElement("div");
-        left.innerHTML = `
-          <div class="teams">
-            <div class="team"><img class="crest" src="${crestFor(m.homeTeam)||''}" alt=""> <span>${m.homeTeam||''}</span></div>
-            <span class="vs">vs</span>
-            <div class="team"><img class="crest" src="${crestFor(m.awayTeam)||''}" alt=""> <span>${m.awayTeam||''}</span></div>
-          </div>
-          <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
-          <div class="odds">${oddsLine}</div>
-        `;
+        const list = document.createElement('div');
+        list.className = 'match-list';
+        dayBlock.appendChild(list);
 
-        const right = document.createElement("div");
-        right.className = "ctl";
-        const select = document.createElement("select");
-        select.className = "select";
-        select.innerHTML = `<option value="">Válassz tippet</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>`;
-        select.value = curChoice;
+        wrap.appendChild(dayBlock);
 
-        const dblWrap = document.createElement("label");
-        dblWrap.className = "double-wrap";
-        const dbl = document.createElement("input");
-        dbl.type = "checkbox";
-        dbl.checked = isDouble;
-        dbl.dataset.kind = "double";
-        const dblText = document.createElement("span");
-        dblText.textContent = "Dupla";
-        dblWrap.appendChild(dbl);
-        dblWrap.appendChild(dblText);
+        // meccsek a napon
+        const matches = matchesByDay.get(dk) || [];
+        for (const m of matches){
+          const tip = myTipsByMatch.get(m.id) || {};
+          const curChoice = tipChoice(tip);
+          const isDouble  = tipDouble(tip);
+          const roundStr  = matchRound(m);
 
-        const saved = document.createElement("span");
-        saved.className = "save-state";
-        saved.textContent = "Mentve";
+          const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
+          const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
 
-        right.appendChild(select);
-        right.appendChild(dblWrap);
-        right.appendChild(saved);
+          const row = document.createElement('div');
+          row.className = 'match';
+          row.dataset.day = dk;
+          row.dataset.matchId = m.id;
 
-        row.appendChild(left);
-        row.appendChild(right);
-        wrap.appendChild(row);
+          const left = document.createElement('div');
+          left.innerHTML = `
+            <div class="teams">
+              <div class="team"><img class="crest" src="${crestFor(m.homeTeam)||''}" alt=""> <span>${m.homeTeam||''}</span></div>
+              <span class="vs">vs</span>
+              <div class="team"><img class="crest" src="${crestFor(m.awayTeam)||''}" alt=""> <span>${m.awayTeam||''}</span></div>
+            </div>
+            <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
+            <div class="odds">${oddsLine}</div>
+          `;
 
-        if (isRoundLocked(roundStr)) {
-          dbl.disabled = true;
-          dbl.title = "Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).";
+          const right = document.createElement('div');
+          right.className = 'ctl';
+          const select = document.createElement('select');
+          select.className = 'select';
+          select.innerHTML = `<option value="">Válassz tippet</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>`;
+          select.value = curChoice;
+
+          const dblWrap = document.createElement('label');
+          dblWrap.className = 'double-wrap';
+          const dbl = document.createElement('input');
+          dbl.type = 'checkbox';
+          dbl.checked = isDouble;
+          dbl.dataset.kind = 'double';
+          const dblText = document.createElement('span');
+          dblText.textContent = 'Dupla';
+          dblWrap.appendChild(dbl); dblWrap.appendChild(dblText);
+
+          const saved = document.createElement('span');
+          saved.className = 'save-state';
+          saved.textContent = 'Mentve';
+
+          right.appendChild(select);
+          right.appendChild(dblWrap);
+          right.appendChild(saved);
+
+          row.appendChild(left);
+          row.appendChild(right);
+          list.appendChild(row);
+
+          // Ha a nap már zárolt, nem lehet állítani
+          if (isDayLocked(dk)){
+            dbl.disabled = true;
+            dbl.title = "Ezen a napon a duplázás már lezárt (az első meccs elkezdődött).";
+          }
+
+          select.addEventListener('change', async ()=>{ await saveTip(m, select.value, dbl.checked, dk, saved); });
+
+          dbl.addEventListener('change', async ()=>{
+            if (isDayLocked(dk)){
+              const lockedId = doublesByDay.get(dk);
+              dbl.checked = (lockedId === m.id);
+              alert("Ezen a napon a duplázás már lezárt (az első meccs elkezdődött).");
+              return;
+            }
+            if (dbl.checked){
+              reflectDoubleStateForDay(dk, m.id);
+              await enforceSingleDoubleForDay(dk, m.id);
+              doublesByDay.set(dk, m.id);
+              updateDayFlag(dk);
+            }else{
+              if (doublesByDay.get(dk) === m.id) doublesByDay.delete(dk);
+              updateDayFlag(dk);
+            }
+            await saveTip(m, select.value, dbl.checked, dk, saved);
+          });
+
+          // napon belüli konzisztencia
+          const lockedId = doublesByDay.get(dk);
+          if (lockedId && lockedId !== m.id){ dbl.checked = false; }
         }
 
-        select.addEventListener("change", async ()=>{ await saveTip(m, select.value, dbl.checked, saved); });
-
-        dbl.addEventListener("change", async ()=>{
-          const rKey = String(roundStr);
-          if (isRoundLocked(rKey)) {
-            const lockedId = doublesByRound.get(rKey);
-            const shouldBeChecked = lockedId === m.id;
-            dbl.checked = !!shouldBeChecked;
-            alert("Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).");
-            return;
-          }
-          if (dbl.checked){
-            reflectDoubleStateForRound(rKey, m.id);
-            await enforceSingleDouble(rKey, m.id);
-            doublesByRound.set(rKey, m.id);
-          } else {
-            if (doublesByRound.get(rKey) === m.id) doublesByRound.delete(rKey);
-          }
-          await saveTip(m, select.value, dbl.checked, saved);
-        });
-
-        const locked = doublesByRound.get(String(roundStr));
-        if (locked && locked !== m.id){ dbl.checked = false; }
+        updateDayFlag(dk);
       }
     }
 
-    function reflectDoubleStateForRound(roundKey, keepMatchId){
-      const rows = document.querySelectorAll('.match');
-      rows.forEach(row=>{
-        if (row.dataset.round === String(roundKey)){
-          const chk = row.querySelector('input[type="checkbox"][data-kind="double"]');
-          if (!chk) return;
-          chk.checked = (row.dataset.matchId === String(keepMatchId));
-        }
+    function updateDayFlag(dayKey){
+      const flag = document.getElementById(`flag-${dayKey}`);
+      if (!flag) return;
+      const has = !!doublesByDay.get(dayKey);
+      flag.classList.toggle('done', has);
+      flag.querySelector('.txt').textContent = has ? 'Dupla kiválasztva' : 'Nincs dupla ezen a napon';
+    }
+
+    function reflectDoubleStateForDay(dayKey, keepMatchId){
+      document.querySelectorAll(`.match[data-day="${dayKey}"]`).forEach(row=>{
+        const chk = row.querySelector('input[type="checkbox"][data-kind="double"]');
+        if (chk) chk.checked = (row.dataset.matchId === String(keepMatchId));
       });
     }
 
-    // Bármely sémával működik: user összes tippje, és csak ugyanarra a fordulóra nullázzuk a duplát
-    async function enforceSingleDouble(roundKey, keepMatchId){
-      if (!roundKey) return;
+    // Csak az adott nap meccsei között hagyunk meg 1 duplát (adatbázisban is)
+    async function enforceSingleDoubleForDay(dayKey, keepMatchId){
+      const idsForDay = new Set((matchesByDay.get(dayKey) || []).map(m=>m.id));
       const qTips = query(collection(db,"ucl_tips"), where("user","==", currentUserEmail));
       const snap = await getDocs(qTips);
       const tasks = [];
       snap.forEach(docu=>{
         const d = docu.data();
-        const sameRound = tipRound(d) === String(roundKey);
-        if (sameRound && tipDouble(d) && d.matchId !== keepMatchId){
+        if (!d?.matchId) return;
+        if (!idsForDay.has(d.matchId)) return;
+        if (d.matchId !== keepMatchId && (d.double === true || d.isDouble === true)){
           tasks.push(updateDoc(doc(db,"ucl_tips", docu.id), {
-            double:false, isDouble:false, updatedAt: serverTimestamp(), timestamp: serverTimestamp()
+            double:false, isDouble:false, updatedAt: serverTimestamp(), timestamp: serverTimestamp(), day: dayKey
           }));
         }
       });
-      for (const p of tasks) { try{ await p; }catch(e){} }
+      for (const p of tasks){ try{ await p; }catch{} }
     }
 
-    // Mentés: írjuk ki a régi ÉS az új mezőket is
-    async function saveTip(matchObj, choice, isDouble, savedEl){
+    // Mentés: régi és új mezők is + day kulcs
+    async function saveTip(matchObj, choice, isDouble, dayKey, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
       const nowTs = serverTimestamp();
@@ -395,9 +454,10 @@ const crestMap = {
       const tipData = {
         user: currentUserEmail,
         nick: currentUserNick || currentUserEmail,
-        matchId: matchId,
+        matchId,
         round: String(roundStr),
         roundId: String(roundStr),
+        day: dayKey,                     // ÚJ: meccsnap kulcs (YYYY-MM-DD)
         choice: choice || "",
         tip: choice || "",
         double: !!isDouble,
@@ -411,7 +471,7 @@ const crestMap = {
       try{
         const snap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail), where("matchId","==", matchId)));
         if (!snap.empty) existingId = snap.docs[0].id;
-      }catch(e){}
+      }catch{}
 
       try{
         if (existingId){
@@ -435,6 +495,8 @@ const crestMap = {
       const listEl = document.getElementById('chatMessages');
       const inputEl = document.getElementById('chatInput');
       const sendBtn = document.getElementById('chatSendBtn');
+
+      const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
       function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
       function close(){ panel.classList.remove('open'); }
@@ -500,7 +562,6 @@ const crestMap = {
           await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
-          console.warn('Chat send failed:', e);
           inputEl.value = backup; inputEl.focus();
         }
       });
@@ -529,7 +590,7 @@ const crestMap = {
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/>
           </svg>
           Kilépés
         </button>
@@ -555,14 +616,14 @@ const crestMap = {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
         <div class="text">
-          <span class="title">Szezon végi sorrend</span>
-          <span class="desc">Helyezések / fázisok</span>
+          <span class="title">Top 8 + bónusz</span>
+          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
 
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
@@ -572,7 +633,7 @@ const crestMap = {
 
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Eredmények</span>
@@ -582,7 +643,7 @@ const crestMap = {
 
       <a class="nav-card" href="leaderboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Összpontszám</span>
@@ -602,7 +663,7 @@ const crestMap = {
 
       <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -612,15 +673,17 @@ const crestMap = {
     </nav>
 
     <section class="card">
-      <h3>Közelgő meccsek</h3>
-      <div id="matchList" class="match-list"></div>
+      <h3>Közelgő meccsnapok</h3>
+      <div id="matchList"></div>
     </section>
   </div>
 
+  <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
     </svg>
+    <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
