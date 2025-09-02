@@ -84,6 +84,14 @@
     #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
+/* NB1-hez igazított odds méret */
+.match .odds{
+  display:flex;
+  gap:10px;
+  font-size:12px !important; /* hogy semmi ne írja felül */
+  color:#475569;
+  flex-wrap:wrap;
+}
   </style>
 
   <script type="module">
@@ -309,7 +317,7 @@
           <div class="day-title">${dayLabel(dk)}</div>
           <div class="dbl-flag" id="flag-${dk}">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.39 4.84L20 7.27l-4 3.9.94 5.49L12 14.77 7.06 16.66 8 11.94l-4-3.9 5.61-.43L12 2z"/></svg>
-            <span class="txt">Nincs dupla ezen a napon</span>
+            <span class="txt">Ne felejtsd el a mai duplázót ;)</span>
           </div>`;
         dayBlock.appendChild(head);
 
@@ -416,7 +424,7 @@
       if (!flag) return;
       const has = !!doublesByDay.get(dayKey);
       flag.classList.toggle('done', has);
-      flag.querySelector('.txt').textContent = has ? 'Dupla kiválasztva' : 'Nincs dupla ezen a napon';
+      flag.querySelector('.txt').textContent = has ? 'Dupla kiválasztva' : 'Ne felejtsd el a mai duplázót ;)';
     }
 
     function reflectDoubleStateForDay(dayKey, keepMatchId){
