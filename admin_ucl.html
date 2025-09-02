@@ -42,7 +42,6 @@
     .chip.selected{outline:2px solid color-mix(in oklab, var(--primary) 35%, white)}
     .count{font-size:12px;color:#111;background:#e6f1ff;border:1px solid var(--border);padding:2px 8px;border-radius:999px}
 
-    /* Odds → % + Pont kártyák */
     .grid-odds{display:grid;grid-template-columns:280px 1fr;gap:14px}
     @media (max-width:900px){.grid-odds{grid-template-columns:1fr}}
     .panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
@@ -68,12 +67,10 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // UCL 36 csapat
     const teams = [
       "Ajax","Arsenal","Atalanta","Athletic Bilbao","Atlético Madrid","Barcelona","Bayern München","Benfica","Borussia Dortmund","Bodø/Glimt","Club Bruges","Chelsea","FC Köbenhavn","Eintracht Frankfurt","Galatasaray","Internazionale","Juventus","Bayer Leverkusen","Liverpool","Manchester City","Olympique Marseille","Monaco","Napoli","Newcastle United","Olympiakosz Pireusz","Pafosz","Paris Saint-Germain","PSV","Qarabag","Real Madrid","Slavia Praha","Sporting CP","Tottenham Hotspur","Union Saint-Gilloise","Villarreal","Kajrat Almati"
     ];
 
-    // helpers
     function parseOutcome(r){ const p=r.split("-").map(x=>parseInt(x.trim())); if(p.length!==2||isNaN(p[0])||isNaN(p[1])) return ""; if(p[0]>p[1]) return "1"; if(p[0]<p[1]) return "2"; return "X" }
     const stripNumPrefix = s => (s||'').replace(/^\s*\d+[\.\)]?\s*/, '');
     const norm = s => stripNumPrefix(s).replace(/\s+/g,' ').trim().toLowerCase();
@@ -123,7 +120,7 @@
 
       left.appendChild(back);
       right.append(expand, collapse, refresh);
-      top.append(left, right);                    /* <- FIX: gombok bekerülnek a DOM-ba */
+      top.append(left, right);
       document.body.append(top);
 
       const wrap=document.createElement('div'); wrap.className='cards';
@@ -164,7 +161,6 @@
 
       const cUsers = makeCard({title:'Felhasználók kezelése', hint:'Szerepkör váltás, törlés', id:'card-users', bodyHTML:`<ul id="userList" class="list" style="margin:0"></ul>`});
 
-      /* Bónusz piacok – jelöltek szerkesztése */
       const cBonusCh = makeCard({title:'Bónusz piacok – Végső győztes jelöltek', hint:'`ucl_championCandidates` (odds: decimális, pl. 2.00)', id:'card-bonus-ch', bodyHTML:`
         <form id="chAddForm">
           <div class="row">
@@ -198,7 +194,6 @@
           </table>
         </div>`});
 
-      /* Hivatalos eredmények */
       const cOfficial = makeCard({title:'Hivatalos eredmények – Top 8 / Győztes / Gólkirály', hint:'`ucl_official/current`', id:'card-official', bodyHTML:`
         <div class="card" style="margin:0 0 12px 0">
           <div class="card-head"><h3>Top 8 (sorrend nélkül)</h3><div class="hint"><span id="top8Count" class="count">0/8</span></div></div>
@@ -236,7 +231,6 @@
           </div>
         </div>`});
 
-      /* Odds → % + pont – VÉGSŐ GYŐZTES */
       const cOddsCh = makeCard({title:'Végső győztes – odds → megjelenített % + pont', hint:'Jelöltek normalizálása + favorit-laposítás (csak csapatokhoz)', id:'card-odds-ch', open:true, bodyHTML:`
         <div class="grid-odds">
           <div class="panel">
@@ -256,7 +250,7 @@
           </div>
           <div class="panel">
             <h4>Előnézet – Bajnok jelöltek</h4>
-            <div class="help">Jelöltek a mentett oddsok alapján</div>
+            <div class="help">Odds szerint növekvő sorrend</div>
             <div style="overflow:auto">
               <table id="oddsPreview_CH">
                 <thead><tr><th>Csapat</th><th>Odds (dec)</th><th>Implied % (raw)</th><th>Megjelenített %</th><th>Pont</th></tr></thead>
@@ -266,7 +260,6 @@
           </div>
         </div>`});
 
-      /* Odds → % + pont – GÓLKIRÁLY (külön) */
       const cOddsGb = makeCard({title:'Gólkirály – odds → megjelenített % + pont', hint:'Ugyanaz az elv, külön paraméterezve és külön mentés a gólkirály jelöltekre', id:'card-odds-gb', open:true, bodyHTML:`
         <div class="grid-odds">
           <div class="panel">
@@ -282,11 +275,11 @@
               <button id="recalc_GB" class="btn primary">Számold újra & mentsd</button>
               <span class="tag">Implied = 1/odds</span><span class="tag">softmax p^(1/T)</span><span class="tag">clamp pont</span>
             </div>
-            <div class="muted-note">A gomb csak a <em>gólkirály</em> jelöltek dokumentumait frissíti.</div>
+            <div class="muted-note">A gomb csak a gólkirály jelöltek dokumentumait frissíti.</div>
           </div>
           <div class="panel">
             <h4>Előnézet – Gólkirály jelöltek</h4>
-            <div class="help">Jelöltek a mentett oddsok alapján</div>
+            <div class="help">Odds szerint növekvő sorrend</div>
             <div style="overflow:auto">
               <table id="oddsPreview_GB">
                 <thead><tr><th>Játékos</th><th>Klub</th><th>Odds (dec)</th><th>Implied % (raw)</th><th>Megjelenített %</th><th>Pont</th></tr></thead>
@@ -296,7 +289,6 @@
           </div>
         </div>`});
 
-      /* Tömeges import – Gólkirály jelöltek (egyszeri) */
       const cBulkGb = makeCard({
         title: 'Tömeges import – Gólkirály jelöltek',
         hint: 'Beillesztés soronként (Név [Klub] Odds). Klubot az előnézetben is választhatsz.',
@@ -328,7 +320,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         cBulkGb.section
       );
 
-      // Eventek
       document.getElementById('matchForm').addEventListener('submit', onAddMatch);
       const wrh = document.getElementById('withResultHeader');
       if(wrh){ wrh.onclick=()=>{ const c=document.getElementById('withResultContent'); c.style.display = c.style.display==='none' ? 'block':'none'; }; }
@@ -336,7 +327,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       document.getElementById('applyFilters').onclick = renderMatchesFiltered;
       document.getElementById('resetFilters').onclick = ()=>{ document.getElementById('filterRound').value=''; document.getElementById('filterTeam').value=''; renderMatchesFiltered(); };
 
-      // (A lezárás kártya ki lett véve) — csak akkor regisztrálunk, ha létezik gomb
       const saveLockBtn = document.getElementById('saveLock');
       if(saveLockBtn) saveLockBtn.onclick = saveLock;
       const clearLockBtn = document.getElementById('clearLock');
@@ -349,24 +339,20 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       document.getElementById('saveChampion').onclick = saveOfficialChampion;
       document.getElementById('saveGolden').onclick = saveOfficialGolden;
 
-      // Kalkulátor események – bajnok
       document.getElementById('recalc_CH').addEventListener('click', recalcAndSaveChampion);
       ['T_CH','BASE_CH','PIVOT_CH','AEXP_CH','LO_CH','HI_CH'].forEach(id=>{
         const el = document.getElementById(id); if(el) el.addEventListener('input', renderChampionOddsPreview);
       });
 
-      // Kalkulátor események – gólkirály
       document.getElementById('recalc_GB').addEventListener('click', recalcAndSaveGolden);
       ['T_GB','BASE_GB','PIVOT_GB','AEXP_GB','LO_GB','HI_GB'].forEach(id=>{
         const el = document.getElementById(id); if(el) el.addEventListener('input', renderGoldenOddsPreview);
       });
 
-      // Bulk import events
       document.getElementById('gbBulkParse').addEventListener('click', bulkGbParse);
       document.getElementById('gbBulkUpload').addEventListener('click', bulkGbUpload);
     }
 
-    /* ===== Meccsek ===== */
     let _matchesCache = [];
     async function loadMatches(){
       const container = document.getElementById('matchesList');
@@ -479,7 +465,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       await loadResults();
     }
 
-    /* ===== Eredmények kártya ===== */
     async function loadResults(){
       const noC=document.getElementById('noResultContent');
       const withC=document.getElementById('withResultContent');
@@ -520,7 +505,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
 
-    /* ===== Felhasználók ===== */
     async function loadUsers(){
       const list=document.getElementById('userList'); if(!list) return;
       list.innerHTML='';
@@ -548,7 +532,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
 
-    /* ===== Lezárás (Top8) ===== */
     async function loadPositionsLock(){
       const status=document.getElementById('lockStatus'); if(!status) return;
       const snap=await getDoc(doc(db,'settings','positionsLock_ucl'));
@@ -566,7 +549,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     }
     async function clearLock(){ await setDoc(doc(db,'settings','positionsLock_ucl'),{ isLocked:false, lockUntil:null, message:'' }); alert('Lezárás feloldva.'); await loadPositionsLock(); }
 
-    /* ===== Bónusz piacok (jelöltek listák) ===== */
     async function loadBonusMarkets(){
       const cSnap = await getDocs(collection(db,'ucl_championCandidates'));
       championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.team);
@@ -586,7 +568,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         };
       }
 
-      // frissítjük az előnézeteket
       renderChampionOddsPreview();
       renderGoldenOddsPreview();
     }
@@ -594,7 +575,14 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     function renderChampionCandidates(){
       const tbody=document.querySelector('#chTable tbody'); if(!tbody) return;
       tbody.innerHTML='';
-      championCandidates.sort((a,b)=>norm(a.team).localeCompare(norm(b.team),'hu'));
+      championCandidates.sort((a,b)=>{
+        const oa = fromCandidateOdds(a) ?? Number.POSITIVE_INFINITY;
+        const ob = fromCandidateOdds(b) ?? Number.POSITIVE_INFINITY;
+        if(oa===ob){
+          return norm(a.team).localeCompare(norm(b.team),'hu');
+        }
+        return oa - ob;
+      });
       championCandidates.forEach(c=>{
         const currentOdds = fromCandidateOdds(c);
         const tr=document.createElement('tr');
@@ -659,7 +647,14 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     function renderGoldenCandidates(){
       const tbody=document.querySelector('#gbTable tbody'); if(!tbody) return;
       tbody.innerHTML='';
-      goldenCandidates.sort((a,b)=>norm(a.player).localeCompare(norm(b.player),'hu'));
+      goldenCandidates.sort((a,b)=>{
+        const oa = fromCandidateOdds(a) ?? Number.POSITIVE_INFINITY;
+        const ob = fromCandidateOdds(b) ?? Number.POSITIVE_INFINITY;
+        if(oa===ob){
+          return norm(a.player).localeCompare(norm(b.player),'hu');
+        }
+        return oa - ob;
+      });
       goldenCandidates.forEach(c=>{
         const currentOdds = fromCandidateOdds(c);
         const tr=document.createElement('tr');
@@ -705,27 +700,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
 
-    async function onAddGoldenCandidate(e){
-      e.preventDefault();
-      const player = document.getElementById('gbAddPlayer').value.trim();
-      const team = document.getElementById('gbAddTeam').value || '';
-      const oddsDec = toNum(document.getElementById('gbAddOdds').value);
-      if(!player) return alert('Írd be a játékos nevét!');
-      if(oddsDec==null || oddsDec<=0) return alert('Adj meg érvényes decimális oddsot (pl. 3.50)!');
-      if(goldenCandidates.some(c=>norm(c.player)===norm(player))) return alert('Ez a játékos már szerepel a jelöltek között.');
-      await addDoc(collection(db,'ucl_goldenBootCandidates'),{
-        player, team,
-        odds: oddsDec,
-        oddsDecimal: oddsDec,
-        oddsPercent: Math.round(100/oddsDec)
-      });
-      document.getElementById('gbAddPlayer').value='';
-      document.getElementById('gbAddTeam').value='';
-      document.getElementById('gbAddOdds').value='';
-      await loadBonusMarkets();
-    }
-
-    /* ===== Top8 hivatalos ===== */
     function renderTop8Chips(){
       const box = document.getElementById('top8Chips'); if(!box) return;
       box.innerHTML='';
@@ -797,7 +771,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       alert('Gólkirály elmentve.');
     }
 
-    /* ===== Odds → % + Pont közös logika ===== */
     function computeDisplayedPerc(rows, T){
       const ps = rows.map(r=>{
         const o = toNum(r.odds);
@@ -816,9 +789,8 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       return BASE * clamped;
     }
 
-    async function loadScoringSettings(){ /* későbbre hagyva */ }
+    async function loadScoringSettings(){}
 
-    // ---- CH (bajnok) kártya paramok + előnézet + mentés
     function paramsCH(){
       return {
         T:   toNum(document.getElementById('T_CH').value)    ?? 1.30,
@@ -832,20 +804,26 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     function renderChampionOddsPreview(){
       const tbody = document.querySelector('#oddsPreview_CH tbody'); if(!tbody) return;
       tbody.innerHTML='';
-      const rows = championCandidates.map(c=>({ label:c.team, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
-      if(rows.length===0){ tbody.innerHTML = '<tr><td colspan="5" class="muted">Nincs jelölt</td></tr>'; return; }
+      const baseRows = championCandidates.map(c=>({ label:c.team, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
+      if(baseRows.length===0){ tbody.innerHTML = '<tr><td colspan="5" class="muted">Nincs jelölt</td></tr>'; return; }
       const {T, BASE, O0, A, LO, HI} = paramsCH();
-      const shown = computeDisplayedPerc(rows, T);
-      rows.forEach((r,idx)=>{
-        const implied = (100/r.odds);
-        const pts = computePoints(r.odds, BASE, O0, A, LO, HI);
+      const shown = computeDisplayedPerc(baseRows, T);
+      const items = baseRows.map((r,idx)=>({
+        label: r.label,
+        odds: r.odds,
+        implied: 100/r.odds,
+        shown: shown[idx],
+        points: computePoints(r.odds, BASE, O0, A, LO, HI)
+      }));
+      items.sort((a,b)=>a.odds - b.odds);
+      items.forEach(it=>{
         const tr=document.createElement('tr');
         tr.innerHTML = `
-          <td>${r.label}</td>
-          <td class="mono">${fmtOdds(r.odds)}</td>
-          <td class="mono">${implied.toFixed(1)}%</td>
-          <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
-          <td class="mono">${pts.toFixed(2)}</td>`;
+          <td>${it.label}</td>
+          <td class="mono">${fmtOdds(it.odds)}</td>
+          <td class="mono">${it.implied.toFixed(1)}%</td>
+          <td class="mono"><strong>${it.shown.toFixed(1)}%</strong></td>
+          <td class="mono">${it.points.toFixed(2)}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -869,7 +847,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       renderChampionOddsPreview();
     }
 
-    // ---- GB (gólkirály) kártya paramok + előnézet + mentés
     function paramsGB(){
       return {
         T:   toNum(document.getElementById('T_GB').value)    ?? 1.30,
@@ -883,21 +860,28 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     function renderGoldenOddsPreview(){
       const tbody = document.querySelector('#oddsPreview_GB tbody'); if(!tbody) return;
       tbody.innerHTML='';
-      const rows = goldenCandidates.map(c=>({ label:c.player, team:c.team||'', odds: fromCandidateOdds(c) })).filter(r=>r.odds);
-      if(rows.length===0){ tbody.innerHTML = '<tr><td colspan="6" class="muted">Nincs jelölt</td></tr>'; return; }
+      const baseRows = goldenCandidates.map(c=>({ label:c.player, team:c.team||'', odds: fromCandidateOdds(c) })).filter(r=>r.odds);
+      if(baseRows.length===0){ tbody.innerHTML = '<tr><td colspan="6" class="muted">Nincs jelölt</td></tr>'; return; }
       const {T, BASE, O0, A, LO, HI} = paramsGB();
-      const shown = computeDisplayedPerc(rows, T);
-      rows.forEach((r,idx)=>{
-        const implied = (100/r.odds);
-        const pts = computePoints(r.odds, BASE, O0, A, LO, HI);
+      const shown = computeDisplayedPerc(baseRows, T);
+      const items = baseRows.map((r,idx)=>({
+        label: r.label,
+        team: r.team||'–',
+        odds: r.odds,
+        implied: 100/r.odds,
+        shown: shown[idx],
+        points: computePoints(r.odds, BASE, O0, A, LO, HI)
+      }));
+      items.sort((a,b)=>a.odds - b.odds);
+      items.forEach(it=>{
         const tr=document.createElement('tr');
         tr.innerHTML = `
-          <td>${r.label}</td>
-          <td>${r.team||'–'}</td>
-          <td class="mono">${fmtOdds(r.odds)}</td>
-          <td class="mono">${implied.toFixed(1)}%</td>
-          <td class="mono"><strong>${shown[idx].toFixed(1)}%</strong></td>
-          <td class="mono">${pts.toFixed(2)}</td>`;
+          <td>${it.label}</td>
+          <td>${it.team}</td>
+          <td class="mono">${fmtOdds(it.odds)}</td>
+          <td class="mono">${it.implied.toFixed(1)}%</td>
+          <td class="mono"><strong>${it.shown.toFixed(1)}%</strong></td>
+          <td class="mono">${it.points.toFixed(2)}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -921,8 +905,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       renderGoldenOddsPreview();
     }
 
-    /* ===== BULK – gólkirály jelöltek ===== */
-    let _bulkRows = []; // {player, team, odds}
+    let _bulkRows = [];
     function pickOddsFloat(s){
       const m = s.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*$/);
       if(!m) return null;
@@ -935,15 +918,12 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       if(!odds) return null;
       const head = clean.replace(/(\d{1,4}(?:[.,]\d{1,2})?)\s*$/,'').trim();
 
-      // [Klub] vagy (Klub)
       let m = head.match(/^(.+?)\s*[\[\(]([^)\]]+)[\]\)]\s*$/);
       if(m){ return { player:m[1].trim(), team: normalizeClubName(m[2].trim()), odds }; }
 
-      // Név – Klub
       m = head.match(/^(.+?)[–-]\s*(.+)$/);
       if(m){ return { player:m[1].trim(), team: normalizeClubName(m[2].trim()), odds }; }
 
-      // Egyéb: csak név
       return { player: head, team:'', odds };
     }
     const CLUB_ALIASES = new Map([
@@ -1038,7 +1018,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       await loadBonusMarkets();
     }
 
-    /* ===== Window hooks ===== */
     window.updateMatch = updateMatch;
     window.deleteMatch = deleteMatch;
     window.saveLock = saveLock;
