@@ -42,6 +42,7 @@
     .chip.selected{outline:2px solid color-mix(in oklab, var(--primary) 35%, white)}
     .count{font-size:12px;color:#111;background:#e6f1ff;border:1px solid var(--border);padding:2px 8px;border-radius:999px}
 
+    /* Odds → % + Pont kártyák */
     .grid-odds{display:grid;grid-template-columns:280px 1fr;gap:14px}
     @media (max-width:900px){.grid-odds{grid-template-columns:1fr}}
     .panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
@@ -58,6 +59,23 @@
   </style>
 
   <script type="module">
+    /* ========= Globális hibafogók ========= */
+    window.addEventListener('error', (ev) => {
+      console.error('Uncaught error:', ev.error || ev.message);
+      const w = document.createElement('div');
+      w.style.cssText = 'background:#fff7e6;border:1px solid #fed7aa;color:#9a3412;padding:10px;border-radius:10px;margin:0 0 12px';
+      w.textContent = 'Hiba történt a futás során. Részletek a konzolban.';
+      document.body.prepend(w);
+    });
+    window.addEventListener('unhandledrejection', (ev) => {
+      console.error('Unhandled rejection:', ev.reason);
+      const w = document.createElement('div');
+      w.style.cssText = 'background:#fff7e6;border:1px solid #fed7aa;color:#9a3412;padding:10px;border-radius:10px;margin:0 0 12px';
+      w.textContent = 'Nem kezelt ígéret hiba (Promise). Részletek a konzolban.';
+      document.body.prepend(w);
+    });
+
+    /* ========= Firebase ========= */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -67,6 +85,7 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
+    /* ========= Adatok, helper függvények ========= */
     const teams = [
       "Ajax","Arsenal","Atalanta","Athletic Bilbao","Atlético Madrid","Barcelona","Bayern München","Benfica","Borussia Dortmund","Bodø/Glimt","Club Bruges","Chelsea","FC Köbenhavn","Eintracht Frankfurt","Galatasaray","Internazionale","Juventus","Bayer Leverkusen","Liverpool","Manchester City","Olympique Marseille","Monaco","Napoli","Newcastle United","Olympiakosz Pireusz","Pafosz","Paris Saint-Germain","PSV","Qarabag","Real Madrid","Slavia Praha","Sporting CP","Tottenham Hotspur","Union Saint-Gilloise","Villarreal","Kajrat Almati"
     ];
@@ -84,24 +103,7 @@
     let officialChampion = "";
     let officialGolden = { player:"", team:"" };
 
-    onAuthStateChanged(auth, async (user) => {
-      if(!user){ document.body.innerHTML = "<h2 style='padding:20px'>⛔ Nincs jogosultságod az admin felülethez.</h2>"; return }
-      const userSnap = await getDoc(doc(db, "users", user.email));
-      if(!userSnap.exists() || (userSnap.data().role !== "admin")){
-        document.body.innerHTML = "<h2 style='padding:20px'>⛔ Nincs jogosultságod az admin felülethez.</h2>"; return
-      }
-      initUI();
-      await loadMatches();
-      await loadUsers();
-      await loadResults();
-      await loadPositionsLock();
-      await loadBonusMarkets();
-      await loadOfficialBonus();
-      await loadScoringSettings();
-      renderChampionOddsPreview();
-      renderGoldenOddsPreview();
-    });
-
+    /* ========= UI építés ========= */
     function makeCard({title, hint, id, open=false, bodyHTML=''}) {
       const s=document.createElement('section'); s.className='card'; if(id) s.id=id; if(open) s.classList.add('open');
       const h=document.createElement('div'); h.className='card-head'; h.innerHTML = `<h3>${title}</h3><div class="hint">${hint||''}</div>`; h.onclick=()=>s.classList.toggle('open');
@@ -110,13 +112,16 @@
     }
 
     function initUI(){
+      // ha már egyszer felépült, ne duplázzuk
+      if (document.querySelector('.topbar')) return;
+
       const top=document.createElement('div'); top.className='topbar';
       const left=document.createElement('div'); left.className='left';
       const right=document.createElement('div'); right.className='right';
       const back=document.createElement('button'); back.className='btn'; back.textContent='⬅️ Vissza a dashboardra'; back.onclick=()=>location.href='dashboard_ucl.html';
       const expand=document.createElement('button'); expand.className='btn'; expand.textContent='Mindet nyisd le'; expand.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.add('open'));
       const collapse=document.createElement('button'); collapse.className='btn'; collapse.textContent='Mindet csukd össze'; collapse.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.remove('open'));
-      const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadBonusMarkets(); loadOfficialBonus(); renderChampionOddsPreview(); renderGoldenOddsPreview(); };
+      const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches().catch(console.error); loadUsers().catch(console.error); loadResults().catch(console.error); loadPositionsLock().catch(console.error); loadBonusMarkets().catch(console.error); loadOfficialBonus().catch(console.error); renderChampionOddsPreview(); renderGoldenOddsPreview(); };
 
       left.appendChild(back);
       right.append(expand, collapse, refresh);
@@ -250,7 +255,7 @@
           </div>
           <div class="panel">
             <h4>Előnézet – Bajnok jelöltek</h4>
-            <div class="help">Odds szerint növekvő sorrend</div>
+            <div class="help">Odds szerint növekvő sorrend; érvénytelen odds esetén „–”.</div>
             <div style="overflow:auto">
               <table id="oddsPreview_CH">
                 <thead><tr><th>Csapat</th><th>Odds (dec)</th><th>Implied % (raw)</th><th>Megjelenített %</th><th>Pont</th></tr></thead>
@@ -279,7 +284,7 @@
           </div>
           <div class="panel">
             <h4>Előnézet – Gólkirály jelöltek</h4>
-            <div class="help">Odds szerint növekvő sorrend</div>
+            <div class="help">Odds szerint növekvő sorrend; érvénytelen odds esetén „–”.</div>
             <div style="overflow:auto">
               <table id="oddsPreview_GB">
                 <thead><tr><th>Játékos</th><th>Klub</th><th>Odds (dec)</th><th>Implied % (raw)</th><th>Megjelenített %</th><th>Pont</th></tr></thead>
@@ -320,6 +325,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         cBulkGb.section
       );
 
+      // Eventek
       document.getElementById('matchForm').addEventListener('submit', onAddMatch);
       const wrh = document.getElementById('withResultHeader');
       if(wrh){ wrh.onclick=()=>{ const c=document.getElementById('withResultContent'); c.style.display = c.style.display==='none' ? 'block':'none'; }; }
@@ -353,6 +359,51 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       document.getElementById('gbBulkUpload').addEventListener('click', bulkGbUpload);
     }
 
+    /* ========= Auth / jogosultság – UI mindig marad ========= */
+    onAuthStateChanged(auth, async (user) => {
+      initUI(); // UI mindig felépül
+
+      const warn = (msg) => {
+        const w = document.createElement('div');
+        w.style.cssText = 'background:#fff7e6;border:1px solid #fed7aa;color:#9a3412;padding:10px;border-radius:10px;margin:0 0 12px';
+        w.textContent = msg;
+        document.body.prepend(w);
+      };
+
+      if (!user) {
+        warn('Nem vagy bejelentkezve. Az adatok nem fognak betöltődni.');
+        return;
+      }
+
+      let isAdmin = false;
+      try {
+        const userSnap = await getDoc(doc(db, "users", user.email));
+        isAdmin = !!(userSnap.exists() && userSnap.data().role === "admin");
+      } catch (e) {
+        console.error('users/<email> lekérdezés hiba:', e);
+        warn('Nem sikerült lekérdezni a jogosultságot. (Részletek a konzolban.)');
+      }
+
+      if (!isAdmin) {
+        warn('Nincs admin jogosultságod. A szerkesztés korlátozott lehet.');
+        // Nem return-ölünk: a nézet marad
+      }
+
+      // Adatbetöltések védetten
+      try { await loadMatches(); } catch(e){ console.error('loadMatches hiba:', e); warn('Meccsek betöltése sikertelen.'); }
+      try { await loadUsers(); } catch(e){ console.error('loadUsers hiba:', e); }
+      try { await loadResults(); } catch(e){ console.error('loadResults hiba:', e); }
+      try { await loadPositionsLock(); } catch(e){ console.error('loadPositionsLock hiba:', e); }
+      try { await loadBonusMarkets(); } catch(e){ console.error('loadBonusMarkets hiba:', e); warn('Bónusz jelöltek betöltése sikertelen.'); }
+      try { await loadOfficialBonus(); } catch(e){ console.error('loadOfficialBonus hiba:', e); }
+      try { await loadScoringSettings(); } catch(e){ console.error('loadScoringSettings hiba:', e); }
+
+      // Előnézetek akkor is próbálkozzanak
+      try { renderChampionOddsPreview(); } catch(e){ console.error('renderChampionOddsPreview hiba:', e); }
+      try { renderGoldenOddsPreview(); } catch(e){ console.error('renderGoldenOddsPreview hiba:', e); }
+    });
+
+    /* ========= Meccsek ========= */
     let _matchesCache = [];
     async function loadMatches(){
       const container = document.getElementById('matchesList');
@@ -378,7 +429,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     function renderMatchesFiltered(){
       const container = document.getElementById('matchesList');
       if(!container) return;
-      const r = document.getElementById('filterRound').value.trim();
+      const r = (document.getElementById('filterRound').value||'').trim();
       const q = (document.getElementById('filterTeam').value||'').toLowerCase();
       const list = _matchesCache.filter(m=> (!r || String(m.roundId)===r) && (!q || (m.homeTeam||'').toLowerCase().includes(q) || (m.awayTeam||'').toLowerCase().includes(q)) );
       renderMatches(list);
@@ -465,6 +516,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       await loadResults();
     }
 
+    /* ========= Eredmények kártya ========= */
     async function loadResults(){
       const noC=document.getElementById('noResultContent');
       const withC=document.getElementById('withResultContent');
@@ -505,6 +557,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
 
+    /* ========= Felhasználók ========= */
     async function loadUsers(){
       const list=document.getElementById('userList'); if(!list) return;
       list.innerHTML='';
@@ -532,6 +585,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
 
+    /* ========= Lezárás státusz ========= */
     async function loadPositionsLock(){
       const status=document.getElementById('lockStatus'); if(!status) return;
       const snap=await getDoc(doc(db,'settings','positionsLock_ucl'));
@@ -549,6 +603,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     }
     async function clearLock(){ await setDoc(doc(db,'settings','positionsLock_ucl'),{ isLocked:false, lockUntil:null, message:'' }); alert('Lezárás feloldva.'); await loadPositionsLock(); }
 
+    /* ========= Bónusz piacok (jelöltek listák) ========= */
     async function loadBonusMarkets(){
       const cSnap = await getDocs(collection(db,'ucl_championCandidates'));
       championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.team);
@@ -700,6 +755,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
 
+    /* ========= Top8 hivatalos ========= */
     function renderTop8Chips(){
       const box = document.getElementById('top8Chips'); if(!box) return;
       box.innerHTML='';
@@ -771,7 +827,9 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       alert('Gólkirály elmentve.');
     }
 
-    function computeDisplayedPerc(rows, T){
+    /* ========= Odds → % + Pont közös logika ========= */
+    function computeDisplayedPercFromValid(rows, T){
+      // rows: [{odds, idx}] csak ÉRVÉNYES oddsúak
       const ps = rows.map(r=>{
         const o = toNum(r.odds);
         return (o && o>0) ? (1/o) : 0;
@@ -780,17 +838,18 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       const p = ps.map(x => x/S);
       const q = p.map(x => Math.pow(x, 1/Math.max(T, 0.0001)));
       let Z = q.reduce((a,b)=>a+b,0); if(!Z) Z=1;
-      return q.map(x => 100 * x / Z);
+      return q.map(x => 100 * x / Z); // ugyanilyen sorrendben ad vissza
     }
     function computePoints(odds, BASE, O0, A, LO, HI){
-      const o = toNum(odds); if(!o || o<=0) return 0;
+      const o = toNum(odds); if(!o || o<=0) return null;
       const ratio = Math.pow(o/Math.max(O0,1e-9), A);
       const clamped = Math.min(Math.max(ratio, LO), HI);
       return BASE * clamped;
     }
 
-    async function loadScoringSettings(){}
+    async function loadScoringSettings(){ /* későbbre hagyva */ }
 
+    /* ---- CH (bajnok) előnézet: minden jelölt látszik, odds szerint növekvő ---- */
     function paramsCH(){
       return {
         T:   toNum(document.getElementById('T_CH').value)    ?? 1.30,
@@ -804,36 +863,67 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     function renderChampionOddsPreview(){
       const tbody = document.querySelector('#oddsPreview_CH tbody'); if(!tbody) return;
       tbody.innerHTML='';
-      const baseRows = championCandidates.map(c=>({ label:c.team, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
-      if(baseRows.length===0){ tbody.innerHTML = '<tr><td colspan="5" class="muted">Nincs jelölt</td></tr>'; return; }
       const {T, BASE, O0, A, LO, HI} = paramsCH();
-      const shown = computeDisplayedPerc(baseRows, T);
-      const items = baseRows.map((r,idx)=>({
+
+      // Alap sorok: minden jelölt, legyen akár érvényes akár nem az odds
+      const base = championCandidates.map(c=>({ label:c.team, odds: fromCandidateOdds(c) }));
+      console.info('[CH] jelöltek:', base.length);
+
+      if(base.length===0){ tbody.innerHTML = '<tr><td colspan="5" class="muted">Nincs jelölt</td></tr>'; return; }
+
+      // Érvényes oddsú sorok indexeléssel a softmaxhoz
+      const valid = base.map((r,idx)=>({ ...r, idx })).filter(r => toNum(r.odds) && toNum(r.odds) > 0);
+      console.info('[CH] érvényes oddsú jelöltek:', valid.length);
+
+      // Számított „shown%” csak érvényesekre
+      let shownByIdx = new Map();
+      if(valid.length>0){
+        const shown = computeDisplayedPercFromValid(valid, T); // valid sorrendben
+        shown.forEach((v,i)=> shownByIdx.set(valid[i].idx, v));
+      }
+
+      // Rendezés: odds szerint növekvő, az érvénytelenek a végére
+      const items = base.map((r,idx)=>({
         label: r.label,
         odds: r.odds,
-        implied: 100/r.odds,
-        shown: shown[idx],
+        implied: (toNum(r.odds) && toNum(r.odds)>0) ? (100/toNum(r.odds)) : null,
+        shown: shownByIdx.has(idx) ? shownByIdx.get(idx) : null,
         points: computePoints(r.odds, BASE, O0, A, LO, HI)
       }));
-      items.sort((a,b)=>a.odds - b.odds);
+      items.sort((a,b)=>{
+        const oa = toNum(a.odds); const ob = toNum(b.odds);
+        if(!oa && !ob) return a.label.localeCompare(b.label,'hu');
+        if(!oa) return 1;
+        if(!ob) return -1;
+        return oa - ob;
+      });
+
+      if(valid.length===0){
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td colspan="5" class="muted">Nincs érvényes odds, a %-ok és pontok nem számíthatók.</td>`;
+        tbody.appendChild(tr);
+      }
+
       items.forEach(it=>{
         const tr=document.createElement('tr');
         tr.innerHTML = `
           <td>${it.label}</td>
-          <td class="mono">${fmtOdds(it.odds)}</td>
-          <td class="mono">${it.implied.toFixed(1)}%</td>
-          <td class="mono"><strong>${it.shown.toFixed(1)}%</strong></td>
-          <td class="mono">${it.points.toFixed(2)}</td>`;
+          <td class="mono">${toNum(it.odds)? fmtOdds(it.odds) : '–'}</td>
+          <td class="mono">${it.implied!=null? it.implied.toFixed(1)+'%' : '–'}</td>
+          <td class="mono"><strong>${it.shown!=null? it.shown.toFixed(1)+'%' : '–'}</strong></td>
+          <td class="mono">${it.points!=null? it.points.toFixed(2) : '–'}</td>`;
         tbody.appendChild(tr);
       });
     }
+
     async function recalcAndSaveChampion(){
       const {T, BASE, O0, A, LO, HI} = paramsCH();
-      const rows = championCandidates.map(c=>({ id:c.id, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
-      if(rows.length>0){
-        const shown = computeDisplayedPerc(rows, T);
-        for(let i=0;i<rows.length;i++){
-          const r = rows[i];
+      const rows = championCandidates.map(c=>({ id:c.id, odds: fromCandidateOdds(c) }));
+      const valid = rows.map((r,idx)=>({ ...r, idx })).filter(r => toNum(r.odds) && toNum(r.odds)>0);
+      if(valid.length>0){
+        const shown = computeDisplayedPercFromValid(valid, T);
+        for(let i=0;i<valid.length;i++){
+          const r = valid[i];
           const displayPercent = Number(shown[i].toFixed(1));
           const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
           await updateDoc(doc(db,'ucl_championCandidates', r.id), {
@@ -847,6 +937,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       renderChampionOddsPreview();
     }
 
+    /* ---- GB (gólkirály) előnézet: minden jelölt látszik, odds szerint növekvő ---- */
     function paramsGB(){
       return {
         T:   toNum(document.getElementById('T_GB').value)    ?? 1.30,
@@ -860,38 +951,65 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     function renderGoldenOddsPreview(){
       const tbody = document.querySelector('#oddsPreview_GB tbody'); if(!tbody) return;
       tbody.innerHTML='';
-      const baseRows = goldenCandidates.map(c=>({ label:c.player, team:c.team||'', odds: fromCandidateOdds(c) })).filter(r=>r.odds);
-      if(baseRows.length===0){ tbody.innerHTML = '<tr><td colspan="6" class="muted">Nincs jelölt</td></tr>'; return; }
       const {T, BASE, O0, A, LO, HI} = paramsGB();
-      const shown = computeDisplayedPerc(baseRows, T);
-      const items = baseRows.map((r,idx)=>({
+
+      const base = goldenCandidates.map(c=>({ label:c.player, team:c.team||'', odds: fromCandidateOdds(c) }));
+      console.info('[GB] jelöltek:', base.length);
+
+      if(base.length===0){ tbody.innerHTML = '<tr><td colspan="6" class="muted">Nincs jelölt</td></tr>'; return; }
+
+      const valid = base.map((r,idx)=>({ ...r, idx })).filter(r => toNum(r.odds) && toNum(r.odds) > 0);
+      console.info('[GB] érvényes oddsú jelöltek:', valid.length);
+
+      let shownByIdx = new Map();
+      if(valid.length>0){
+        const shown = computeDisplayedPercFromValid(valid, T);
+        shown.forEach((v,i)=> shownByIdx.set(valid[i].idx, v));
+      }
+
+      const items = base.map((r,idx)=>({
         label: r.label,
-        team: r.team||'–',
+        team: r.team || '–',
         odds: r.odds,
-        implied: 100/r.odds,
-        shown: shown[idx],
+        implied: (toNum(r.odds) && toNum(r.odds)>0) ? (100/toNum(r.odds)) : null,
+        shown: shownByIdx.has(idx) ? shownByIdx.get(idx) : null,
         points: computePoints(r.odds, BASE, O0, A, LO, HI)
       }));
-      items.sort((a,b)=>a.odds - b.odds);
+      items.sort((a,b)=>{
+        const oa = toNum(a.odds); const ob = toNum(b.odds);
+        if(!oa && !ob) return a.label.localeCompare(b.label,'hu');
+        if(!oa) return 1;
+        if(!ob) return -1;
+        return oa - ob;
+      });
+
+      if(valid.length===0){
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td colspan="6" class="muted">Nincs érvényes odds, a %-ok és pontok nem számíthatók.</td>`;
+        tbody.appendChild(tr);
+      }
+
       items.forEach(it=>{
         const tr=document.createElement('tr');
         tr.innerHTML = `
           <td>${it.label}</td>
           <td>${it.team}</td>
-          <td class="mono">${fmtOdds(it.odds)}</td>
-          <td class="mono">${it.implied.toFixed(1)}%</td>
-          <td class="mono"><strong>${it.shown.toFixed(1)}%</strong></td>
-          <td class="mono">${it.points.toFixed(2)}</td>`;
+          <td class="mono">${toNum(it.odds)? fmtOdds(it.odds) : '–'}</td>
+          <td class="mono">${it.implied!=null? it.implied.toFixed(1)+'%' : '–'}</td>
+          <td class="mono"><strong>${it.shown!=null? it.shown.toFixed(1)+'%' : '–'}</strong></td>
+          <td class="mono">${it.points!=null? it.points.toFixed(2) : '–'}</td>`;
         tbody.appendChild(tr);
       });
     }
+
     async function recalcAndSaveGolden(){
       const {T, BASE, O0, A, LO, HI} = paramsGB();
-      const rows = goldenCandidates.map(c=>({ id:c.id, odds: fromCandidateOdds(c) })).filter(r=>r.odds);
-      if(rows.length>0){
-        const shown = computeDisplayedPerc(rows, T);
-        for(let i=0;i<rows.length;i++){
-          const r = rows[i];
+      const rows = goldenCandidates.map(c=>({ id:c.id, odds: fromCandidateOdds(c) }));
+      const valid = rows.map((r,idx)=>({ ...r, idx })).filter(r => toNum(r.odds) && toNum(r.odds)>0);
+      if(valid.length>0){
+        const shown = computeDisplayedPercFromValid(valid, T);
+        for(let i=0;i<valid.length;i++){
+          const r = valid[i];
           const displayPercent = Number(shown[i].toFixed(1));
           const displayPoints  = Number(computePoints(r.odds, BASE, O0, A, LO, HI).toFixed(1));
           await updateDoc(doc(db,'ucl_goldenBootCandidates', r.id), {
@@ -905,7 +1023,8 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       renderGoldenOddsPreview();
     }
 
-    let _bulkRows = [];
+    /* ========= BULK – gólkirály jelöltek ========= */
+    let _bulkRows = []; // {player, team, odds}
     function pickOddsFloat(s){
       const m = s.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*$/);
       if(!m) return null;
@@ -918,12 +1037,15 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       if(!odds) return null;
       const head = clean.replace(/(\d{1,4}(?:[.,]\d{1,2})?)\s*$/,'').trim();
 
+      // [Klub] vagy (Klub)
       let m = head.match(/^(.+?)\s*[\[\(]([^)\]]+)[\]\)]\s*$/);
       if(m){ return { player:m[1].trim(), team: normalizeClubName(m[2].trim()), odds }; }
 
+      // Név – Klub
       m = head.match(/^(.+?)[–-]\s*(.+)$/);
       if(m){ return { player:m[1].trim(), team: normalizeClubName(m[2].trim()), odds }; }
 
+      // Egyéb: csak név
       return { player: head, team:'', odds };
     }
     const CLUB_ALIASES = new Map([
@@ -1018,10 +1140,12 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       await loadBonusMarkets();
     }
 
+    /* ========= Window hooks ========= */
     window.updateMatch = updateMatch;
     window.deleteMatch = deleteMatch;
     window.saveLock = saveLock;
     window.clearLock = clearLock;
+
   </script>
 </head>
 <body></body>
