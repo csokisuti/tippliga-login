@@ -50,6 +50,30 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
+    /* ==== Bonus – kompakt inline + popover (nem töri meg a layoutot) ==== */
+    .bonus-inline{ display:flex; align-items:center; gap:8px; justify-content:flex-end; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bonus-pts{ font-weight:700; }
+    .bonus-pct{ font-weight:700; }
+    .bonus-tokens{ color:#64748b; font-size:12px; }
+    .bonus-info{
+      border:1px solid var(--line,#e6eaf1); background:#fff; width:22px; height:22px;
+      border-radius:999px; font-size:12px; line-height:1; cursor:pointer;
+      display:inline-grid; place-items:center;
+    }
+    .bonus-info:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 25%, white); outline-offset:2px; }
+
+    .bonus-pop{ position:fixed; z-index:9999; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px;
+      box-shadow:0 10px 28px rgba(0,0,0,.14); width:min(360px, calc(100vw - 32px)); padding:12px;
+    }
+    .bonus-pop .title{ font-weight:800; margin-bottom:8px; }
+    .bonus-pop .grid{ display:grid; grid-template-columns:130px 1fr; gap:6px 10px; }
+    .btag{ display:inline-flex; gap:6px; align-items:center; font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--line,#e6eaf1); background:#fff; color:#334155; }
+    .btag.ok{ background:#ecfdf5; border-color:#bbf7d0; color:#166534; }
+    .btag.pending{ background:#fffbeb; border-color:#fde68a; color:#a16207; }
+    .btag.no{ background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+    .bonus-pop .muted{ color:#64748b; font-size:12px; }
+    .bonus-backdrop{ position:fixed; inset:0; z-index:9998; background:transparent; }
+
     /* Chat */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
@@ -67,7 +91,6 @@
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
     .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
-
     #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
@@ -96,50 +119,15 @@
     const db = getFirestore(app);
 
     /* ---------- Helper-ek ---------- */
-    /* ---------- Helper-ek ---------- */
-const crestMap = {
-  "Ajax": "ucl_crest/ajax.png",
-  "Arsenal": "ucl_crest/arsenal.png",
-  "Atalanta": "ucl_crest/atalanta.png",
-  "Athletic Bilbao": "ucl_crest/athletic.png",
-  "Atlético Madrid": "ucl_crest/atletico.png",
-  "Barcelona": "ucl_crest/barcelona.png",
-  "Bayern München": "ucl_crest/bayern.png",
-  "Benfica": "ucl_crest/benfica.png",
-  "Borussia Dortmund": "ucl_crest/borussia.png",
-  "Bodø/Glimt": "ucl_crest/bodo.png",
-  "Club Bruges": "ucl_crest/brugge.png",
-  "Chelsea": "ucl_crest/chelsea.png",
-  "FC Köbenhavn": "ucl_crest/copenhagen.png",
-  "Eintracht Frankfurt": "ucl_crest/frankfurt.png",
-  "Galatasaray": "ucl_crest/galata.png",
-  "Internazionale": "ucl_crest/inter.png",
-  "Juventus": "ucl_crest/juventus.png",
-  "Bayer Leverkusen": "ucl_crest/leverkusen.png",
-  "Liverpool": "ucl_crest/liverpool.png",
-  "Manchester City": "ucl_crest/mancity.png",
-  "Olympique Marseille": "ucl_crest/marseille.png",
-  "Monaco": "ucl_crest/monaco.png",
-  "Napoli": "ucl_crest/napoli.png",
-  "Newcastle United": "ucl_crest/newcastle.png",
-  "Olympiakosz Pireusz": "ucl_crest/olympiacos.png",
-  "Pafosz": "ucl_crest/pafos.png",
-  "Paris Saint-Germain": "ucl_crest/psg.png",
-  "PSV": "ucl_crest/psv.png",
-  "Qarabag": "ucl_crest/qarabag.png",
-  "Real Madrid": "ucl_crest/real.png",
-  "Slavia Praha": "ucl_crest/slavia.png",
-  "Sporting CP": "ucl_crest/sporting.png",
-  "Tottenham Hotspur": "ucl_crest/tottenham.png",
-  "Union Saint-Gilloise": "ucl_crest/usg.png",
-  "Villarreal": "ucl_crest/villareal.png",
-  "Kajrat Almati": "ucl_crest/kairat.png"
-};
+    const crestMap = { "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/borussia.png","Bodø/Glimt":"ucl_crest/bodo.png","Club Bruges":"ucl_crest/brugge.png","Chelsea":"ucl_crest/chelsea.png","FC Köbenhavn":"ucl_crest/copenhagen.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png","Galatasaray":"ucl_crest/galata.png","Internazionale":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Bayer Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png","Olympique Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png","Newcastle United":"ucl_crest/newcastle.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png","Pafosz":"ucl_crest/pafos.png","Paris Saint-Germain":"ucl_crest/psg.png","PSV":"ucl_crest/psv.png","Qarabag":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png","Slavia Praha":"ucl_crest/slavia.png","Sporting CP":"ucl_crest/sporting.png","Tottenham Hotspur":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png","Kajrat Almati":"ucl_crest/kairat.png" };
 
     const crestFor = t => crestMap[t] || "";
     const fmt = n => (Number(n)||0).toFixed(2);
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
     const escapeHtml = s => String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const NORM = s => String(s ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const eqTeam = (a,b) => !!a && !!b && NORM(a) === NORM(b);
+    const eqText = (a,b) => NORM(a) === NORM(b);
 
     // odds schema: {odds:{'1','X','2'}} vagy odds1/oddsX/odds2
     function getOdds(m, key){
@@ -149,16 +137,11 @@ const crestMap = {
       if (key==="2") return m.odds2 ?? m["odds2"];
       return undefined;
     }
-    // TIP sémák egységesítése
     const tipChoice = t => t?.choice ?? t?.tip ?? "";
     const tipDouble = t => !!(t?.double ?? t?.isDouble);
     const tipTsMs   = t => t?.updatedAt?.toMillis?.() || t?.createdAt?.toMillis?.() || t?.timestamp?.toMillis?.() || 0;
     const matchRound = m => String(m?.round ?? m?.roundId ?? "");
 
-    // csapatnév eq.
-    const NORM = s => String(s ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const eqTeam = (a,b) => !!a && !!b && NORM(a) === NORM(b);
-    // hivatalos sorrend bármely sémából
     function officialArrayFrom(d){
       if (!d) return [];
       if (Array.isArray(d.order)) return d.order;
@@ -166,17 +149,27 @@ const crestMap = {
       if (Array.isArray(d.positions)) return d.positions.slice().sort((a,b)=>(a.position||0)-(b.position||0)).map(x=>x.team);
       return [];
     }
-    // % → szín
-    function pctColor(pct){ const p=Math.max(0,Math.min(12,pct)); const hue=(p/12)*120; return `hsl(${hue}deg,85%,40%)`; }
+    function pctColor(pct){ const p=Math.max(0,Math.min(100,pct)); const hue=(Math.min(p,12)/12)*120; return `hsl(${hue}deg,85%,40%)`; }
+
+    /* ---------- BÓNUSZ beállítások ---------- */
+    const BONUS_CFG = Object.freeze({
+      winnerPct: 10,          // végső győztes eltalálása
+      topScorerPct: 5,        // gólkirály eltalálása
+      top8PerHitPct: 1,       // Top8 tagság találatonként
+      top8MaxPct: 8           // Top8 bónusz plafon
+    });
 
     /* ---------- Állapot ---------- */
     let currentUserEmail = "", currentUserNick = "", currentUserRole = "user";
     let favouriteTeamucl = "", chatLastSeen = null;
 
     let showAll = false;
-    let rows = [];            // [{nick,email,base,perRound,bonusPct,bonusPts,total}]
+    let rows = [];            // [{nick,email,base,perRound,bonusPct,bonusPts,total, parts:{...}}]
     let roundsAsc = [];       // ["1","2",...]
     let officialOrder = [];   // 12 elem
+
+    let seasonTipsByEmail = {};   // {email:{winnerTeam, topScorer}}
+    let officialAwards = {};      // {winnerTeam, topScorer}
 
     /* ---------- INIT ---------- */
     document.addEventListener("DOMContentLoaded", () => {
@@ -226,14 +219,22 @@ const crestMap = {
 
     /* ---------- Betöltés + számítás ---------- */
     async function buildLeaderboard(){
-      const [matchesSnap, tipsSnap, usersSnap, official_ucl, official_nb, standings_ucl, standings_nb] = await Promise.all([
+      const [
+        matchesSnap, tipsSnap, usersSnap,
+        official_ucl, official_nb,
+        standings_ucl, standings_nb,
+        seasonTipsSnap, bonusTipsSnap, awardsDoc
+      ] = await Promise.all([
         getDocs(collection(db, "ucl_matches")),
         getDocs(collection(db, "ucl_tips")),
         getDocs(collection(db, "users")),
         getDoc(doc(db, "finalStandings_ucl", "official")),
         getDoc(doc(db, "finalStandings", "official")),
         getDocs(collection(db, "standingsTips_ucl")).catch(()=>({empty:true,forEach(){}})),
-        getDocs(collection(db, "standingsTips")).catch(()=>({empty:true,forEach(){}}))
+        getDocs(collection(db, "standingsTips")).catch(()=>({empty:true,forEach(){}})),
+        getDocs(collection(db, "seasonTips_ucl")).catch(()=>({empty:true,forEach(){}})),
+        getDocs(collection(db, "bonusTips_ucl")).catch(()=>({empty:true,forEach(){}})),
+        getDoc(doc(db, "awards_ucl", "official")).catch(()=>({exists:()=>false}))
       ]);
 
       // matches by id
@@ -248,10 +249,26 @@ const crestMap = {
       officialOrder = officialArrayFrom(official_ucl.exists() ? official_ucl.data() : (official_nb.exists() ? official_nb.data() : [])).slice(0,12);
       while (officialOrder.length < 12) officialOrder.push("");
 
+      // official awards (winnerTeam/topScorer), fallback: winner = officialOrder[0]
+      officialAwards = awardsDoc?.exists?.() ? (awardsDoc.data()||{}) : {};
+      if (!officialAwards.winnerTeam && officialOrder[0]) officialAwards.winnerTeam = officialOrder[0];
+
       // standings tips: email -> order[12] (ucl preferált)
       const orderByEmail = {};
       const readStandings = (snap) => { snap.forEach(d=>{ const data=d.data()||{}; let arr=[]; if(Array.isArray(data.order))arr=data.order; else if(Array.isArray(data.teams))arr=data.teams; else if(Array.isArray(data.ranking))arr=data.ranking; orderByEmail[d.id]=(arr||[]).slice(0,12); }); };
       if (standings_ucl && !standings_ucl.empty) readStandings(standings_ucl); else if (standings_nb && !standings_nb.empty) readStandings(standings_nb);
+
+      // season tips: winner/topScorer per user (több gyűjteményből is próbálunk)
+      seasonTipsByEmail = {};
+      const mergeTipDoc = (id, data) => {
+        if (!id || !data) return;
+        const cur = seasonTipsByEmail[id] || {};
+        const winnerTeam = data.winnerTeam || data.winner || cur.winnerTeam || "";
+        const topScorer  = data.topScorer  || data.goldenBoot || cur.topScorer  || "";
+        seasonTipsByEmail[id] = { winnerTeam, topScorer };
+      };
+      seasonTipsSnap?.forEach?.(d => mergeTipDoc(d.id, d.data()));
+      bonusTipsSnap?.forEach?.(d => mergeTipDoc(d.id, d.data()));
 
       // tippek – legutóbbi per user|match (séma-agnosztikusan)
       const latest = new Map();
@@ -287,18 +304,52 @@ const crestMap = {
 
       roundsAsc = Array.from(rounds).sort((a,b)=> (parseInt(a)||0)-(parseInt(b)||0));
 
-      // bónusz: hivatalos 12-eshez képest pozíció-egyezések (1 egyezés = +1%)
-      function calcHits(order, official){
-        let h = 0; for (let i=0;i<12;i++){ if (eqTeam(order?.[i], official?.[i])) h++; } return h;
+      // bónuszrészek számítása
+      function calcTop8Pct(email){
+        const userOrder = orderByEmail[email] || [];
+        const predictedTop8 = userOrder.slice(0,8).filter(Boolean);
+        const officialTop8 = officialOrder.slice(0,8).filter(Boolean);
+        if (!predictedTop8.length || !officialTop8.length) return { hits:0, pct:0 };
+        const setOfficial = new Set(officialTop8.map(NORM));
+        let hits = 0;
+        for (const t of predictedTop8){ if (setOfficial.has(NORM(t))) hits++; }
+        const pct = Math.min(hits * BONUS_CFG.top8PerHitPct, BONUS_CFG.top8MaxPct);
+        return { hits, pct };
+      }
+
+      function calcBonusParts(email, base){
+        const tips = seasonTipsByEmail[email] || {};
+        const winnerPick = tips.winnerTeam || "";
+        const scorerPick = tips.topScorer || "";
+
+        const winnerOfficial = officialAwards.winnerTeam || "";
+        const scorerOfficial = officialAwards.topScorer || "";
+
+        const winnerStatus = winnerOfficial ? (eqTeam(winnerPick, winnerOfficial) ? 'ok' : (winnerPick ? 'no' : 'no')) : 'pending';
+        const scorerStatus = scorerOfficial ? (eqText(scorerPick, scorerOfficial) ? 'ok' : (scorerPick ? 'no' : 'no')) : 'pending';
+
+        const winnerPct = (winnerStatus==='ok') ? BONUS_CFG.winnerPct : 0;
+        const scorerPct = (scorerStatus==='ok') ? BONUS_CFG.topScorerPct : 0;
+
+        const { hits:top8Hits, pct:top8Pct } = calcTop8Pct(email);
+
+        const bonusPct = winnerPct + scorerPct + top8Pct;
+        const bonusPts = Math.round((Number(base)||0) * (bonusPct/100));
+
+        return {
+          bonusPct, bonusPts,
+          parts: {
+            winner: { pct:winnerPct, status:winnerStatus, pick:winnerPick, official:winnerOfficial },
+            topScorer: { pct:scorerPct, status:scorerStatus, pick:scorerPick, official:scorerOfficial },
+            top8: { pct:top8Pct, hits:top8Hits, of:8 }
+          }
+        };
       }
 
       rows = Object.entries(player).map(([nick,obj])=>{
-        const order = orderByEmail[obj.email] || [];
-        const hits = calcHits(order, officialOrder);
-        const bonusPct = hits;
-        const bonusPts = Math.round(obj.base * (bonusPct/100));
+        const { bonusPct, bonusPts, parts } = calcBonusParts(obj.email, obj.base);
         const total = obj.base + bonusPts;
-        return { nick, email: obj.email, base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total };
+        return { nick, email: obj.email, base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total, parts };
       });
 
       rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
@@ -347,13 +398,17 @@ const crestMap = {
         <div class="grid" style="grid-template-columns:70px 1.6fr 140px 180px 140px;">
           ${leftHeader}
           ${rows.map((r,i)=>`
-            <div class="row row-bg">
+            <div class="row row-bg" data-row="${i}">
               <div class="cell left rank">${i+1}.</div>
               <div class="cell left">${escapeHtml(r.nick)}</div>
               <div class="cell left num total">${fmt(r.total)}</div>
               <div class="cell left num">
-                +${r.bonusPts}
-                <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
+                <div class="bonus-inline">
+                  <span class="bonus-pts">+${r.bonusPts}</span>
+                  <span class="bonus-pct" style="color:${pctColor(r.bonusPct)}">( +${r.bonusPct}% )</span>
+                  <span class="bonus-tokens">• 🏆${r.parts.winner.pct}% 👟${r.parts.topScorer.pct}% 📊${r.parts.top8.pct}%</span>
+                  <button class="bonus-info" data-idx="${i}" title="Bónusz részletek" aria-label="Bónusz részletek">ⓘ</button>
+                </div>
               </div>
               <div class="cell left num">${fmt(r.base)}</div>
             </div>
@@ -367,7 +422,7 @@ const crestMap = {
       right.innerHTML = `
         <div class="grid" style="grid-template-columns:${'78px '.repeat(toShow.length)};">
           <div class="hdr">${rightHeader}</div>
-          ${rows.map(r=>{
+          ${rows.map((r,ri)=>{
             const cells = toShow.map((rid, idx)=>{
               const val = r.perRound[rid]||0;
               const isTop = val === maxPerRound[idx] && val !== 0;
@@ -375,7 +430,7 @@ const crestMap = {
                         <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
                       </div>`;
             }).join('');
-            return `<div class="row row-bg">${cells}</div>`;
+            return `<div class="row row-bg" data-row="${ri}">${cells}</div>`;
           }).join('')}
         </div>
       `;
@@ -384,6 +439,86 @@ const crestMap = {
       container.appendChild(left);
       container.appendChild(right);
       mount.appendChild(container);
+
+      // Popover események
+      mount.querySelectorAll('.bonus-info').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          const idx = Number(btn.dataset.idx||0);
+          showBonusPopover(rows[idx], e.clientX, e.clientY);
+        });
+      });
+    }
+
+    /* ---------- Bonus popover ---------- */
+    function showBonusPopover(row, clientX, clientY){
+      // töröljük a korábbit
+      document.querySelectorAll('.bonus-backdrop,.bonus-pop').forEach(n=>n.remove());
+
+      const backdrop = document.createElement('div');
+      backdrop.className = 'bonus-backdrop';
+      backdrop.addEventListener('click', ()=>{ backdrop.remove(); pop.remove(); });
+
+      const pop = document.createElement('div');
+      pop.className = 'bonus-pop';
+
+      const winnerLine = (() => {
+        const st = row.parts.winner.status;
+        const cls = st==='ok'?'ok':(st==='pending'?'pending':'no');
+        const icon = st==='ok'?'✔':(st==='pending'?'🕒':'✖');
+        const off = row.parts.winner.official || '—';
+        const pick = row.parts.winner.pick || '—';
+        return `<span class="btag ${cls}">🏆 ${icon} +${row.parts.winner.pct}%</span>
+                <div>Tip: <strong>${escapeHtml(pick)}</strong> • Hiv.: <strong>${escapeHtml(off)}</strong></div>`;
+      })();
+
+      const scorerLine = (() => {
+        const st = row.parts.topScorer.status;
+        const cls = st==='ok'?'ok':(st==='pending'?'pending':'no');
+        const icon = st==='ok'?'✔':(st==='pending'?'🕒':'✖');
+        const off = row.parts.topScorer.official || '—';
+        const pick = row.parts.topScorer.pick || '—';
+        return `<span class="btag ${cls}">👟 ${icon} +${row.parts.topScorer.pct}%</span>
+                <div>Tip: <strong>${escapeHtml(pick)}</strong> • Hiv.: <strong>${escapeHtml(off)}</strong></div>`;
+      })();
+
+      const top8Line = (() => {
+        const hits = row.parts.top8.hits, of=row.parts.top8.of;
+        return `<span class="btag ok">📊 +${row.parts.top8.pct}%</span>
+                <div>Top8 találat: <strong>${hits}/${of}</strong> (1 találat = +${BONUS_CFG.top8PerHitPct}%, max +${BONUS_CFG.top8MaxPct}%)</div>`;
+      })();
+
+      pop.innerHTML = `
+        <div class="title">${escapeHtml(row.nick)} – Bónusz részletek</div>
+        <div class="grid">
+          <div class="muted">Képlet</div>
+          <div>Alap × (🏆+👟+📊)/100 = <strong>${fmt(row.base)} × ${fmt(row.bonusPct)}% = ${row.bonusPts}</strong></div>
+
+          <div class="muted">Végső győztes</div>
+          <div>${winnerLine}</div>
+
+          <div class="muted">Gólkirály</div>
+          <div>${scorerLine}</div>
+
+          <div class="muted">Top 8 találatok</div>
+          <div>${top8Line}</div>
+
+          <div class="muted">Összes bónusz</div>
+          <div><strong>+${row.bonusPct}%</strong> → <strong>+${row.bonusPts} pont</strong></div>
+        </div>
+      `;
+
+      // pozicionálás: egérhez közel, de a viewporton belül
+      const pad = 10;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      document.body.appendChild(pop);
+      const rect = pop.getBoundingClientRect();
+      let x = clientX + pad, y = clientY + pad;
+      if (x + rect.width > vw - 8) x = vw - rect.width - 8;
+      if (y + rect.height > vh - 8) y = vh - rect.height - 8;
+      pop.style.left = Math.max(8, x) + 'px';
+      pop.style.top  = Math.max(8, y) + 'px';
+      document.body.appendChild(backdrop);
+      document.body.appendChild(pop);
     }
 
     /* ---------- Nav „függő tippek” badge ---------- */
@@ -391,7 +526,6 @@ const crestMap = {
       getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
         getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
-          // legutóbbi tipp per match
           const latestByMatch = new Map();
           tipsSnap.forEach(docu=>{ const t=docu.data(); if(!t?.matchId) return; const cur=latestByMatch.get(t.matchId); if(!cur||tipTsMs(t)>=tipTsMs(cur)) latestByMatch.set(t.matchId,t); });
           const tippedIds = new Set(Array.from(latestByMatch.keys()));
@@ -540,7 +674,7 @@ const crestMap = {
       </a>
       <a class="nav-card" href="leaderboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Z"/></svg>
         </div>
         <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
       </a>
