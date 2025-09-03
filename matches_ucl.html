@@ -179,6 +179,41 @@
       return dt.toLocaleDateString('hu-HU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     }
 
+    /* ===== ÚJ: Duplák stabil felépítése tippekből ===== */
+    async function dayKeyForMatchId(matchId){
+      try{
+        const s = await getDoc(doc(db, "ucl_matches", matchId));
+        if (!s.exists()) return null;
+        const dt = asDate(s.data().startTime);
+        if (isNaN(+dt)) return null;
+        return dayKeyFromDate(dt);
+      }catch{ return null; }
+    }
+
+    async function rebuildDoublesFromTips(tipsArr){
+      doublesByDay.clear();
+      const latestByDay = new Map(); // dayKey -> {matchId, ts}
+
+      const pending = [];
+      for (const t of tipsArr){
+        if (!tipDouble(t)) continue;
+        const ts = tipTsMs(t) || 0;
+        if (t.day){
+          const prev = latestByDay.get(t.day);
+          if (!prev || ts > prev.ts) latestByDay.set(t.day, { matchId:t.matchId, ts });
+        }else{
+          pending.push((async()=>{
+            const dk = await dayKeyForMatchId(t.matchId);
+            if (!dk) return;
+            const prev = latestByDay.get(dk);
+            if (!prev || ts > prev.ts) latestByDay.set(dk, { matchId:t.matchId, ts });
+          })());
+        }
+      }
+      await Promise.all(pending);
+      latestByDay.forEach((v, dk)=> doublesByDay.set(dk, v.matchId));
+    }
+
     /* Állapot */
     let currentUserEmail = "";
     let currentUserNick  = "";
@@ -245,9 +280,13 @@
           }
           myTipsByMatch = latestByMatch;
 
-          // 3) Napok előállítása + meglévő dupla per nap
+          // ÚJ: duplák felépítése a tippekből (akkor is jelezzük, ha a duplázott meccs már elkezdődött)
+          await rebuildDoublesFromTips(tips);
+
+          // 3) Napok előállítása + meglévő dupla per nap (csak az upcoming rendereléshez)
           matchesByDay.clear();
-          doublesByDay.clear();
+          // >>> NEM töröljük a doublesByDay-t itt, mert a tippekből már felépítettük <<<
+
           for (const m of upcoming){
             const st = asDate(m.startTime);
             const dk = dayKeyFromDate(st);
@@ -255,7 +294,10 @@
             matchesByDay.get(dk).push(m);
 
             const t = myTipsByMatch.get(m.id);
-            if (t && tipDouble(t)) doublesByDay.set(dk, m.id);
+            // csak akkor írjuk be, ha még nincs duplánk arra a napra (pl. a duplázott meccs már elindult)
+            if (t && tipDouble(t) && !doublesByDay.has(dk)) {
+              doublesByDay.set(dk, m.id);
+            }
           }
           // Rendezés napon belül idő szerint
           for (const arr of matchesByDay.values()){
@@ -417,9 +459,25 @@
     function updateDayFlag(dayKey){
       const flag = document.getElementById(`flag-${dayKey}`);
       if (!flag) return;
-      const has = !!doublesByDay.get(dayKey);
+
+      const selId = doublesByDay.get(dayKey);
+      const has = !!selId;
       flag.classList.toggle('done', has);
-      flag.querySelector('.txt').textContent = has ? 'Dupla kiválasztva' : 'Ne felejtsd el a mai duplázót ;)';
+
+      if (has){
+        // látszik-e még a kiválasztott meccs a listában?
+        const visibleRow = document.querySelector(`.match[data-day="${dayKey}"][data-match-id="${selId}"], .match[data-day="${dayKey}"][data-matchid="${selId}"]`);
+        const suffix = visibleRow ? '' : ' (már elkezdődött)';
+        flag.querySelector('.txt').textContent = 'Dupla kiválasztva' + suffix;
+        if (!visibleRow){
+          flag.title = 'A kiválasztott dupla meccs már elkezdődött, ezért nem látszik a listában.';
+        } else {
+          flag.removeAttribute('title');
+        }
+      } else {
+        flag.querySelector('.txt').textContent = 'Ne felejtsd el a mai duplázót ;)';
+        flag.removeAttribute('title');
+      }
     }
 
     function reflectDoubleStateForDay(dayKey, keepMatchId){
