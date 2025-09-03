@@ -82,16 +82,11 @@
     .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
     #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
-/* NB1-hez igazított odds méret */
-.match .odds{
-  display:flex;
-  gap:10px;
-  font-size:12px !important; /* hogy semmi ne írja felül */
-  color:#475569;
-  flex-wrap:wrap;
-}
+
+    /* NB1-hez igazított odds méret – minimális override, mást nem piszkálunk */
+    .match .odds{ font-size:12px !important; }
   </style>
 
   <script type="module">
