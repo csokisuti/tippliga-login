@@ -207,18 +207,63 @@
     const eqTeam = (a,b) => !!a && !!b && NORM(a) === NORM(b);
     const eqName = (a,b) => !!a && !!b && NORM(a) === NORM(b);
 
-    // Hivatalos sorrend/Top8 bármely sémából (kompat segéd – itt Top8-hoz nem kell pozíció)
-    function officialArrayFrom(data){
-      if (!data) return [];
-      if (Array.isArray(data.top8)) return data.top8;
-      if (Array.isArray(data.teams)) return data.teams;
-      if (Array.isArray(data.positions)) {
-        return data.positions
-          .slice()
-          .sort((a,b)=>(a.position||0)-(b.position||0))
-          .map(x=>x.team);
+    // --- EREDMÉNY PARSER a tabella számoláshoz ---
+    function parseRes(str){
+      const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
+      return m ? [parseInt(m[1]), parseInt(m[2])] : null;
+    }
+
+    // --- Dashboard-szerű Top8 számítása a ucl_matches alapján ---
+    function deriveTop8FromMatches(allMatches){
+      const teams = Object.keys(crestMap);
+      const S={}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
+      const H2H={};
+
+      (allMatches||[]).forEach(m=>{
+        const A=m.homeTeam||m.home||"";
+        const B=m.awayTeam||m.away||"";
+        const r=parseRes(m.result);
+        const a=S[A], b=S[B];
+        if(!a || !b || !r) return;
+
+        const [hg,ag]=r;
+        a.MP++; b.MP++;
+        a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
+        b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
+
+        if(hg>ag){a.W++;b.L++;a.Pts+=3}
+        else if(hg<ag){b.W++;a.L++;b.Pts+=3}
+        else{a.D++;b.D++;a.Pts+=1;b.Pts+=1}
+
+        const k=[A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        H2H[k] ||= {[A]:{Pts:0,GF:0,GA:0},[B]:{Pts:0,GF:0,GA:0}};
+        if(hg>ag){H2H[k][A].Pts+=3}
+        else if(hg<ag){H2H[k][B].Pts+=3}
+        else{H2H[k][A].Pts+=1;H2H[k][B].Pts+=1}
+        H2H[k][A].GF+=hg; H2H[k][A].GA+=ag;
+        H2H[k][B].GF+=ag; H2H[k][B].GA+=hg;
+      });
+
+      function cmp(a,b){
+        if(b.Pts!==a.Pts) return b.Pts-a.Pts;
+        if(b.W!==a.W) return b.W-a.W;
+        if(b.GD!==a.GD) return b.GD-a.GD;
+        if(b.GF!==a.GF) return b.GF-a.GF;
+
+        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        const row=H2H[k];
+        if(row){
+          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0;
+          if(pb!==pa) return pb-pa;
+          const gda=(row[a.team]?.GF??0)-(row[a.team]?.GA??0);
+          const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);
+          if(gdb!==gda) return gdb-gda;
+        }
+        return a.team.localeCompare(b.team,'hu');
       }
-      return [];
+
+      const rows=Object.values(S).sort(cmp);
+      return rows.slice(0,8).map(r=>r.team);
     }
 
     /* ---------------- Állapot ---------------- */
@@ -234,7 +279,7 @@
     let roundsAsc = [];               // elérhető fordulók
 
     // Bónusz/közösségi (UCL)
-    let officialTop8 = [];                           // ucl_official/current.top8 (vagy fallback táblából)
+    let officialTop8 = [];                           // MOSTANTÓL: a dashboard-szerűen számolt Top8
     let officialChampion = "";                       // ucl_official/current.champion
     let officialGolden = { player:"", team:"" };     // ucl_official/current.goldenBoot
 
@@ -295,7 +340,7 @@
       usersList.innerHTML = "";
 
       if (!officialTop8.length){
-        usersList.innerHTML = `<div style="padding:8px 12px; color:#64748b;">A hivatalos Top 8 még nincs beállítva.</div>`;
+        usersList.innerHTML = `<div style="padding:8px 12px; color:#64748b;">A tabella Top 8 jelenleg nem elérhető.</div>`;
         return;
       }
 
@@ -323,11 +368,12 @@
       const tableBody = document.getElementById("bonusTableBody");
       const display = u.display || u.nick || u.email;
       document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
+      document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
       document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
       document.getElementById("detailPct").textContent = `+${u.pct}%`;
       tableBody.innerHTML = "";
 
-      // 8 sor: hivatalos csapat + benne volt-e a user listájában
+      // 8 sor: tabella csapat + benne volt-e a user listájában
       const set = new Set((u.picks||[]).map(canonTeam));
       (officialTop8 || []).forEach((team, i)=>{
         const t = canonTeam(team);
@@ -711,6 +757,19 @@
         roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
         buildRoundsUI();
 
+        // ---> Top8: mindig a tabella alapján (ucl_matches-ből számolva)
+        officialTop8 = deriveTop8FromMatches(matches);
+        refreshBonusCard();
+
+        // Realtime frissítés, ha változnak a meccsek/eredmények
+        onSnapshot(collection(db,"ucl_matches"), snap=>{
+          const ms = snap.docs.map(d=>({id:d.id, ...d.data()}));
+          // opcionálisan frissíthetnénk a rounds UI-t is, de a Top8-hoz nem szükséges
+          officialTop8 = deriveTop8FromMatches(ms);
+          refreshBonusCard();
+          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
+        });
+
         // Tippek (legfrissebb per user-meccs) – UCL
         tipsByMatch.clear();
         const tipsSnap = await getDocs(collection(db, "ucl_tips"));
@@ -728,32 +787,15 @@
           tipsByMatch.get(tip.matchId).push(tip);
         }
 
-        // Hivatalos UCL eredmények (Top8/győztes/gólkirály) realtime
+        // Győztes/Gólkirály – marad az official doksiból (csak ezek!)
         onSnapshot(doc(db,"ucl_official","current"), snap=>{
           const d = snap.exists() ? snap.data() : {};
-          officialTop8 = Array.isArray(d.top8) ? d.top8.filter(Boolean).slice(0,8) : officialTop8; // ha nincs, marad a fallback
-          officialChampion = d.champion || officialChampion;
-          officialGolden = d.goldenBoot && d.goldenBoot.player ? { player:d.goldenBoot.player, team:d.goldenBoot.team||"" } : officialGolden;
-          refreshBonusCard();
+          // NEM használjuk többé a d.top8-at!
+          officialChampion = d.champion || "";
+          officialGolden = d.goldenBoot && d.goldenBoot.player ? { player:d.goldenBoot.player, team:d.goldenBoot.team||"" } : {player:"",team:""};
           refreshChampionCard();
           refreshGoldenCard();
-          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
         });
-
-        // Fallback Top8 a dashboard táblából, ha még nincs official
-        try{
-          const tabSnap = await getDoc(doc(db,"ucl_table","current"));
-          if (tabSnap.exists()){
-            const data = tabSnap.data() || {};
-            const arr = Array.isArray(data.table) ? data.table : [];
-            const derived = arr.slice(0,8).map(x=> x.team || x.name || x.clubName).filter(Boolean);
-            if (!officialTop8.length && derived.length){
-              officialTop8 = derived;
-              refreshBonusCard();
-              if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
-            }
-          }
-        }catch{}
 
         // Top8 tippek (összes játékos) – realtime
         onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
@@ -947,7 +989,7 @@
         <div class="head">
           <div style="display:flex;flex-direction:column">
             <div id="detailTitle" style="font-weight:800">Top 8 – </div>
-            <div class="bonus-muted">Egyezések a hivatalos Top 8-cal</div>
+            <div class="bonus-muted">Egyezések a tabella Top 8-cal</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <span id="detailCount" class="badge">—/8</span>
@@ -958,7 +1000,7 @@
         <div class="body">
           <table>
             <thead>
-              <tr><th>#</th><th>Hivatalos</th><th>Játékos listájában</th><th>Találat</th></tr>
+              <tr><th>#</th><th>Tabella (Top 8)</th><th>Játékos listájában</th><th>Találat</th></tr>
             </thead>
             <tbody id="bonusTableBody"></tbody>
           </table>
