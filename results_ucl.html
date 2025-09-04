@@ -373,25 +373,50 @@
       document.getElementById("detailPct").textContent = `+${u.pct}%`;
       tableBody.innerHTML = "";
 
-      // 8 sor: tabella csapat + benne volt-e a user listájában
+      // ÚJ: egyező csapatok chip-lista a táblázat fölé
+      const hitsMount = document.getElementById("bonusHits");
+      if (hitsMount){
+        const setForHits = new Set((u.picks||[]).map(canonTeam));
+        const matchesArr = (officialTop8 || [])
+          .map(canonTeam)
+          .filter(t => setForHits.has(t));
+
+        hitsMount.innerHTML = "";
+        if (matchesArr.length){
+          matchesArr.forEach(t=>{
+            const chip = document.createElement("span");
+            chip.className = "sum-chip";
+            chip.textContent = t;
+            hitsMount.appendChild(chip);
+          });
+        } else {
+          const none = document.createElement("span");
+          none.className = "kicker";
+          none.textContent = "Nincs egyező csapat.";
+          hitsMount.appendChild(none);
+        }
+      }
+
+      // 8 sor: tabella csapat + benne volt-e a user listájában (csak egyezőt írunk ki)
       const set = new Set((u.picks||[]).map(canonTeam));
       (officialTop8 || []).forEach((team, i)=>{
         const t = canonTeam(team);
         const ok = set.has(t);
         const tr = document.createElement("tr");
         if (ok) tr.className = "ok";
-        tr.innerHTML = `<td>${i+1}</td><td><strong>${escapeHtml(t)}</strong></td><td>${ok ? t : "—"}</td><td>${ok ? "✅" : "✖"}</td>`;
+        tr.innerHTML = `<td>${i+1}</td><td><strong>${escapeHtml(t)}</strong></td><td>${ok ? escapeHtml(t) : "—"}</td><td>${ok ? "✅" : "✖"}</td>`;
         tableBody.appendChild(tr);
       });
     }
 
     /* ---------------- Győztes kártya + modál ---------------- */
     function refreshChampionCard(){
-      const offEl = document.getElementById("champOfficial");
+      // Frissítsd az összes azonosítóval jelölt elemet (fő + modál)
+      document.querySelectorAll("#champOfficial").forEach(offEl=>{
+        offEl.textContent = officialChampion || "—";
+      });
       const mineEl = document.getElementById("champMine");
       const winnersEl = document.getElementById("champWinners");
-
-      if (offEl) offEl.textContent = officialChampion || "—";
 
       const me = championTips.find(t => t.email === currentUserEmail);
       if (mineEl) mineEl.textContent = me?.team || "—";
@@ -423,12 +448,14 @@
 
     /* ---------------- Gólkirály kártya + modál ---------------- */
     function refreshGoldenCard(){
-      const offEl = document.getElementById("goldenOfficial");
+      // Frissítsd az összes azonosítóval jelölt elemet (fő + modál)
+      const offStr = officialGolden.player ? `${officialGolden.player}${officialGolden.team?` (${officialGolden.team})`:''}` : "—";
+      document.querySelectorAll("#goldenOfficial").forEach(offEl=>{
+        offEl.textContent = offStr;
+      });
+
       const mineEl = document.getElementById("goldenMine");
       const winnersEl = document.getElementById("goldenWinners");
-
-      const offStr = officialGolden.player ? `${officialGolden.player}${officialGolden.team?` (${officialGolden.team})`:''}` : "—";
-      if (offEl) offEl.textContent = offStr;
 
       const me = goldenTips.find(t => eqName(t.email, currentUserEmail));
       if (mineEl) mineEl.textContent = me ? `${me.player}${me.team?` (${me.team})`:''}` : "—";
@@ -998,6 +1025,9 @@
           </div>
         </div>
         <div class="body">
+          <!-- ÚJ: egyező csapatok chip-lista -->
+          <div id="bonusHits" class="summary" style="margin-top:0"></div>
+
           <table>
             <thead>
               <tr><th>#</th><th>Tabella (Top 8)</th><th>Játékos listájában</th><th>Találat</th></tr>
