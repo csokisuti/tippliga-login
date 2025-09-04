@@ -114,6 +114,10 @@
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
+
+    /* extra blokk a nem egyező pickeknek */
+    .extra-picks{ padding:10px 12px; border-top:1px dashed var(--line,#e6eaf1); color:#374151; }
+    .extra-picks ul{ margin:6px 0 0 16px; }
   </style>
 
   <script type="module">
@@ -279,7 +283,7 @@
     let roundsAsc = [];               // elérhető fordulók
 
     // Bónusz/közösségi (UCL)
-    let officialTop8 = [];                           // MOSTANTÓL: a dashboard-szerűen számolt Top8
+    let officialTop8 = [];                           // MOSTANTÓL: a tabella alapján számolt Top 8
     let officialChampion = "";                       // ucl_official/current.champion
     let officialGolden = { player:"", team:"" };     // ucl_official/current.goldenBoot
 
@@ -364,48 +368,92 @@
       if (me) renderDetail(me);
     }
 
-    // >>> JAVÍTOTT <<<
-    // A „Találat” oszlop mostantól halmazegyezést mutat (bárhol szerepel-e a csapat a játékos Top 8-ában),
-    // miközben a „Játékos listájában” oszlop mindig az adott i. helyre leadott picket írja ki.
+    // === ÚJRENDEZETT, IDOMULÓ RÉSZLETEZŐ ===
     function renderDetail(u){
       const tableBody = document.getElementById("bonusTableBody");
       const display = u.display || u.nick || u.email;
       document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
-      document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
+      document.querySelector('#bonusOverlay .bonus-muted').textContent =
+        'Egyezések a tabella Top 8-cal • zöld sor = pontos (pozíciós) egyezés • egyezések felül';
+
+      // számlálók
+      const {correct,total,pct} = calcTop8(u.picks, officialTop8);
+      document.getElementById("detailCount").textContent = `${correct}/${total}`;
+      document.getElementById("detailPct").textContent = `+${pct}%`;
+
       tableBody.innerHTML = "";
 
-      // Fejléc számlálók frissítése az aktuális officialTop8 alapján
-      const {correct,total,pct} = calcTop8(u.picks, officialTop8);
-      const cntEl = document.getElementById("detailCount");
-      const pctEl = document.getElementById("detailPct");
-      if (cntEl) cntEl.textContent = `${correct}/${total}`;
-      if (pctEl) pctEl.textContent = `+${pct}%`;
-
-      // normalizált hivatalos és pickek (mindig 8 sor)
+      // normalizált hivatalos és a játékos pickjei
       const official = (officialTop8 || []).map(canonTeam);
-      const picks = Array.from({length:8}, (_,i)=> canonTeam((u.picks||[])[i] || ""));
+      const picks = (u.picks || []).map(canonTeam);
+      const officialSet = new Set(official);
 
-      // gyors kereső: melyik helyen van egy csapat a játékos listájában?
+      // gyors lookup: csapat -> játékosnál hányadik helyen
       const indexByTeam = new Map();
       picks.forEach((p, idx) => { if (p) indexByTeam.set(p, idx); });
 
-      const pickSet = new Set(picks.filter(Boolean));
+      // sorobjektumok: tabella pozíció, csapat; játékosnál hol van; egyezés?
+      const rows = official.map((team, i) => {
+        const anyIdx = indexByTeam.has(team) ? indexByTeam.get(team) : -1;
+        return {
+          pos: i+1,
+          team,
+          anyIdx,
+          match: anyIdx >= 0,
+          posMatch: anyIdx === i
+        };
+      });
 
-      official.forEach((team, i)=>{
-        const userPickAtI = picks[i] || "";                 // i. helyre leadott pick (mindig látszik)
-        const ok = pickSet.has(team);                       // találat: csapat bárhol benne van
-        const where = indexByTeam.has(team) ? indexByTeam.get(team)+1 : null;
+      // egyezések felül, azon belül eredeti tabella-sorrend
+      rows.sort((a,b)=> (b.match - a.match) || (a.pos - b.pos));
 
+      rows.forEach(r => {
         const tr = document.createElement("tr");
-        if (ok) tr.className = "ok";
+        if (r.posMatch) tr.className = "ok";
+
+        const playerCell =
+          r.match
+            ? `${escapeHtml(r.team)} <span class="kicker">(a ${r.anyIdx+1}. helyen)</span>`
+            : "—";
+
+        const hitCell =
+          r.match
+            ? `✅${r.posMatch ? "" : ` <span class="kicker">(nem pozícióra)</span>`}`
+            : "✖";
+
         tr.innerHTML = `
-          <td>${i+1}</td>
-          <td><strong>${escapeHtml(team)}</strong></td>
-          <td>${userPickAtI ? escapeHtml(userPickAtI) : "—"}</td>
-          <td>${ok ? `✅${(where && where !== i+1) ? `<span class="kicker"> (a ${where}. helyen)</span>` : ""}` : "✖"}</td>
+          <td>${r.pos}</td>
+          <td><strong>${escapeHtml(r.team)}</strong></td>
+          <td>${playerCell}</td>
+          <td>${hitCell}</td>
         `;
         tableBody.appendChild(tr);
       });
+
+      // extra blokk: a játékos olyan pickjei, amelyek nincsenek a tabella Top 8-ban
+      const extras = picks
+        .map((p, idx) => ({p, idx}))
+        .filter(x => x.p && !officialSet.has(x.p));
+
+      const container = document.querySelector("#bonusOverlay .body");
+      // távolítsuk el az előző extra-blokkot
+      container.querySelector(".extra-picks")?.remove();
+
+      const extraDiv = document.createElement("div");
+      extraDiv.className = "extra-picks";
+      if (extras.length){
+        extraDiv.innerHTML = `
+          <div class="bonus-muted" style="margin-bottom:4px">
+            A játékos eltérő tippjei (nincsenek a tabella Top 8-ban):
+          </div>
+          <ul>
+            ${extras.map(x=>`<li>${x.idx+1}. hely: <b>${escapeHtml(x.p)}</b></li>`).join("")}
+          </ul>
+        `;
+      } else {
+        extraDiv.innerHTML = `<div class="bonus-muted">Minden tippje a tabella Top 8-ban szerepel.</div>`;
+      }
+      container.appendChild(extraDiv);
     }
 
     /* ---------------- Győztes kártya + modál ---------------- */
@@ -809,7 +857,7 @@
           tipsByMatch.get(tip.matchId).push(tip);
         }
 
-        // Győztes/Gólkirály – official doksi
+        // Győztes/Gólkirály – marad az official doksiból (csak ezek!)
         onSnapshot(doc(db,"ucl_official","current"), snap=>{
           const d = snap.exists() ? snap.data() : {};
           officialChampion = d.champion || "";
