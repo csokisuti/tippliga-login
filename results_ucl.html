@@ -407,29 +407,44 @@
       if (me) renderDetail(me);
     }
 
-    function renderDetail(u){
+ function renderDetail(u){
   const tableBody = document.getElementById("bonusTableBody");
   const display = u.display || u.nick || u.email;
   document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
   document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
   document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
-  document.getElementById("detailPct").textContent = `+${u.pct}%`;
+  document.getElementById("detailPct").textContent   = `+${u.pct}%`;
 
-  // Bal oszlop: hivatalos Top 8 (kitöltve 8 sorra)
+  // Hivatalos Top 8 (8 sorra kitöltve)
   const off = (officialTop8 || []).map(canonTeam);
-  const off8 = Array.from({length:8}, (_,i)=> off[i] || "—");
+  const off8 = Array.from({length: 8}, (_, i) => off[i] || "—");
 
-  // Jobb oszlop: a játékos saját Top 8 tippjei (szintén 8 sorra kitöltve)
+  // Játékos saját Top 8 tippjei
   const picks = (u.picks || []).map(canonTeam);
-  const picks8 = Array.from({length:8}, (_,i)=> picks[i] || "—");
+  const used  = new Set();
 
-  const officialSet = new Set(off);
+  // Nem egyező tippek (ABC szerint), ezeket később osztjuk szét a maradék sorokba
+  const unmatched = picks
+    .filter(p => !off.includes(p))
+    .sort((a,b) => a.localeCompare(b, "hu"));
 
   tableBody.innerHTML = "";
+
   for (let i = 0; i < 8; i++){
-    const left  = off8[i];
-    const right = picks8[i];
-    const hit   = right !== "—" && officialSet.has(right);
+    const left = off8[i];
+    let right = "—";
+    let hit   = false;
+
+    // Ha a játékos tippje tartalmazza az aktuális hivatalos csapatot,
+    // akkor ugyanabba a sorba kerüljön (találat)
+    if (left !== "—" && picks.includes(left) && !used.has(left)){
+      right = left;
+      hit   = true;
+      used.add(left);
+    } else if (unmatched.length){
+      // Különben töltsük fel a maradék sorokat a nem egyező tippekkel
+      right = unmatched.shift();
+    }
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
