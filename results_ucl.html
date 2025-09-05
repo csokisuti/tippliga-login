@@ -407,23 +407,35 @@
       if (me) renderDetail(me);
     }
 
+    /* 🔧 JAVÍTOTT: mindig mutatjuk a játékos 1–8 saját tippjeit; a ✅ unordered egyezés */
     function renderDetail(u){
       const tableBody = document.getElementById("bonusTableBody");
       const display = u.display || u.nick || u.email;
+
       document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
       document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
       document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
       document.getElementById("detailPct").textContent = `+${u.pct}%`;
+
       tableBody.innerHTML = "";
 
-      const set = new Set((u.picks||[]).map(canonTeam));
-      (officialTop8 || []).forEach((team, i)=>{
-        const t = canonTeam(team);
-        const ok = set.has(t);
+      const picksOrdered = Array.isArray(u.picks) ? u.picks.map(canonTeam) : [];
+      const picksSet = new Set(picksOrdered);
+
+      for (let i = 0; i < 8; i++){
+        const off = canonTeam(officialTop8[i] || "—");
+        const userPickAtPos = picksOrdered[i] || "—";
+        const ok = off !== "—" && picksSet.has(off);
+
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${i+1}</td><td><strong>${escapeHtml(t)}</strong></td><td>${ok ? t : "—"}</td><td>${ok ? "✅" : "✖"}</td>`;
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td><strong>${escapeHtml(off)}</strong></td>
+          <td>${escapeHtml(userPickAtPos)}</td>
+          <td>${ok ? "✅" : "✖"}</td>
+        `;
         tableBody.appendChild(tr);
-      });
+      }
     }
 
     /* ---------------- Győztes kártya + modál ---------------- */
@@ -633,7 +645,7 @@
 
         const tipsWrap = document.createElement("div"); tipsWrap.className = "tips";
         const mTips = tipsByMatch.get(m.id) || [];
-        const hasStarted = ko && ko <= now;
+        const hasStarted = ko && ko <= new Date();
 
         if (!mTips.length){
           tipsWrap.appendChild(kicker("Ehhez a meccshez még nincs leadott tipp."));
@@ -856,7 +868,6 @@
           const empty = document.createElement('div');
           empty.className = 'chat-empty';
           empty.textContent = 'Még nincs üzenet. Légy te az első!';
-          listEl.appendChild(empty);
         } else {
           let unread = 0;
           snap.forEach(docu=>{
