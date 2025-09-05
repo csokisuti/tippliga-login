@@ -39,11 +39,22 @@
 
     /* Bónusz kártyák + modál */
     .bonus-wrap{ display:flex; align-items:center; gap:16px; padding:12px; }
-    .bonus-wrap > .right{ margin-left:auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
     .bonus-muted{ color:#64748b; font-size:12px }
     .bonus-title{ font-size:20px; font-weight:800 }
     .bonus-bar{ height:8px; background:#eef2ff; border-radius:999px; overflow:hidden; width:280px; }
     .bonus-bar>div{ height:100%; background:#16a34a }
+
+    /* 🔧 Részletek gomb: kicsi és jobb szélen */
+    .bonus-wrap > .right{
+      margin-left:auto;
+      display:flex; align-items:center; gap:12px;
+      flex-wrap:nowrap; min-width:0; flex:1 1 auto;
+    }
+    .bonus-wrap .right .btn-accent{
+      flex:0 0 auto; width:auto !important;
+      min-height:32px; padding:6px 10px; font-size:14px; border-radius:8px;
+      margin-left:auto;
+    }
 
     .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; padding:20px; z-index:1000 }
     .modal{ background:#fff; border-radius:16px; width:min(1000px,100%); overflow:hidden; display:flex; }
@@ -183,7 +194,6 @@
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
     function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-    // Odds: támogatjuk az {odds:{"1":..,"X":..,"2":..}} és az odds1/oddsX/odds2 sémát is
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -191,15 +201,10 @@
       if (key==="2") return m.odds2 ?? m["odds2"];
       return undefined;
     }
-
-    // Tip mezők: 'choice' vs 'tip', és 'double' vs 'isDouble'
     function tipChoice(t){ return t.choice ?? t.tip ?? ""; }
     function tipDouble(t){ return !!(t.double ?? t.isDouble); }
-
-    // Forduló mező: 'round' vagy 'roundId'
     function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
 
-    // --- csapatnév-normalizálás + kanonikus megjelenítés ---
     const TEAM_NAMES = Object.keys(crestMap);
     const NORM = s => String(s||"").trim().toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g,'');
@@ -208,13 +213,11 @@
     const eqTeam = (a,b) => !!a && !!b && NORM(a) === NORM(b);
     const eqName = (a,b) => !!a && !!b && NORM(a) === NORM(b);
 
-    // --- EREDMÉNY PARSER a tabella számoláshoz ---
     function parseRes(str){
       const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
       return m ? [parseInt(m[1]), parseInt(m[2])] : null;
     }
 
-    // --- Dashboard-szerű Top8 számítása a ucl_matches alapján ---
     function deriveTop8FromMatches(allMatches){
       const teams = Object.keys(crestMap);
       const S={}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
@@ -267,7 +270,7 @@
       return rows.slice(0,8).map(r=>r.team);
     }
 
-    /* ====== Pontszámítás (a positions oldallal egyezően) ====== */
+    /* ====== Pontszámítás (positions-szel egyezően) ====== */
     const toNum = v => {
       if (v === null || v === undefined || v === '') return null;
       if (typeof v === 'string') v = v.replace(',', '.');
@@ -311,35 +314,32 @@
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
-    let favouriteTeamucl = "";   // UCL téma
+    let favouriteTeamucl = "";
     let chatLastSeen = null;
 
-    let matches = [];                 // összes meccs (UCL)
-    let tipsByMatch = new Map();      // matchId -> [{...tipp}]
-    let nickByEmail = {};             // email -> nick
-    let roundsAsc = [];               // elérhető fordulók
+    let matches = [];
+    let tipsByMatch = new Map();
+    let nickByEmail = {};
+    let roundsAsc = [];
 
-    // Bónusz/közösségi (UCL)
-    let officialTop8 = [];                           // tabellából számolva
-    let officialChampion = "";                       // ucl_official/current.champion
-    let officialGolden = { player:"", team:"" };     // ucl_official/current.goldenBoot
+    let officialTop8 = [];
+    let officialChampion = "";
+    let officialGolden = { player:"", team:"" };
 
-    let top8Tips = [];       // {email,nick,picks:[]}
-    let championTips = [];   // {email,nick,team}
-    let goldenTips = [];     // {email,nick,player,team}
+    let top8Tips = [];
+    let championTips = [];
+    let goldenTips = [];
 
-    // jelöltek a %-hoz
-    let championCandidates = []; // {team, odds...}
-    let goldenCandidates   = []; // {player, team, odds...}
+    let championCandidates = [];
+    let goldenCandidates   = [];
 
     let bonusOverlayOpen = false;
 
-    // Top8 találatok számítása
     function calcTop8(picks, official){
       const set = new Set((picks||[]).map(canonTeam));
       let correct = 0;
       (official||[]).forEach(t => { if (set.has(canonTeam(t))) correct++; });
-      return { correct, total: (official||[]).length || 8, pct: correct }; // 1 találat = +1%
+      return { correct, total: (official||[]).length || 8, pct: correct };
     }
 
     /* ---------------- Top 8 bónusz UI ---------------- */
@@ -347,8 +347,6 @@
       const bonusCount = document.getElementById("bonusCount");
       const bonusPct = document.getElementById("bonusPct");
       const bonusBarFill = document.getElementById("bonusBarFill");
-
-      if (!bonusCount || !bonusPct || !bonusBarFill) return;
 
       if (!officialTop8.length){
         bonusCount.textContent = "—/8";
@@ -418,7 +416,6 @@
       document.getElementById("detailPct").textContent = `+${u.pct}%`;
       tableBody.innerHTML = "";
 
-      // 8 sor: tabella csapat + benne volt-e a user listájában
       const set = new Set((u.picks||[]).map(canonTeam));
       (officialTop8 || []).forEach((team, i)=>{
         const t = canonTeam(team);
@@ -546,7 +543,6 @@
         o.value = r; o.textContent = `${r}. forduló`;
         sel.appendChild(o);
       });
-      // URL ?round=
       const url = new URL(location.href);
       const qRound = url.searchParams.get("round");
       sel.value = qRound && roundsAsc.includes(qRound) ? qRound : (roundsAsc[roundsAsc.length-1] || "");
@@ -565,7 +561,6 @@
       hdr.textContent = `${roundId}. forduló`;
       card.appendChild(hdr);
 
-      // forduló meccsei időrendben
       const list = matches.filter(m => matchRound(m) === String(roundId))
                           .sort((a,b)=> (a.startTime?.toDate?.()||0) - (b.startTime?.toDate?.()||0));
 
@@ -575,14 +570,13 @@
         return;
       }
 
-      // Összegző chippek (lezárt meccsekből)
-      const summary = {};  // nick -> pont
+      const summary = {};
       const breakdown = {};
       const now = new Date();
 
       list.forEach(m=>{
         const mTips = tipsByMatch.get(m.id) || [];
-        if (!m.outcome) return; // csak ha ismert a kimenetel
+        if (!m.outcome) return;
         mTips.forEach(t=>{
           const pick = tipChoice(t);
           const correct = pick && (pick === m.outcome);
@@ -614,7 +608,6 @@
       }
       card.appendChild(summaryDiv);
 
-      // Meccsek listája
       list.forEach(m=>{
         const div = document.createElement("div");
         div.className = "match";
@@ -687,14 +680,12 @@
 
     /* ---------------- INIT ---------------- */
     document.addEventListener("DOMContentLoaded", () => {
-      // Modál gombok
       const bonusOverlayEl = document.getElementById("bonusOverlay");
       document.getElementById("bonusDetailsBtn").addEventListener("click", openBonusModal);
       document.getElementById("bonusClose").addEventListener("click", closeBonusModal);
       bonusOverlayEl.addEventListener("click", (e)=> { if (e.target === bonusOverlayEl) closeBonusModal(); });
       document.getElementById("userSearch").addEventListener("input", (e)=> renderUsersList(e.target.value));
 
-      // Győztes/Gólkirály modálok
       document.getElementById("champDetailsBtn").addEventListener("click", openChampModal);
       document.getElementById("champClose").addEventListener("click", closeChampModal);
       document.getElementById("goldenDetailsBtn").addEventListener("click", openGoldenModal);
@@ -706,7 +697,6 @@
         if (!user) { window.location.href = "login_ucl.html"; return; }
         currentUserEmail = user.email;
 
-        // felhasználó
         const userRef = doc(db, "users", currentUserEmail);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
@@ -724,7 +714,6 @@
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
         if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
 
-        // THEME UCL szerint
         if (favouriteTeamucl) {
           const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
           document.body.classList.add(themeClass);
@@ -732,11 +721,9 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
-        // Becenevek
         const usersSnap = await getDocs(collection(db, "users"));
         usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
 
-        // Meccsek (UCL)
         const matchesSnap = await getDocs(collection(db, "ucl_matches"));
         matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
 
@@ -745,11 +732,9 @@
         roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
         buildRoundsUI();
 
-        // ---> Top8: mindig a tabella alapján (ucl_matches-ből számolva)
         officialTop8 = deriveTop8FromMatches(matches);
         refreshBonusCard();
 
-        // Realtime frissítés, ha változnak a meccsek/eredmények
         onSnapshot(collection(db,"ucl_matches"), snap=>{
           const ms = snap.docs.map(d=>({id:d.id, ...d.data()}));
           officialTop8 = deriveTop8FromMatches(ms);
@@ -757,10 +742,9 @@
           if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
         });
 
-        // Tippek (legfrissebb per user-meccs) – UCL
         tipsByMatch.clear();
         const tipsSnapAll = await getDocs(collection(db, "ucl_tips"));
-        const latest = new Map(); // key: user|match -> tip
+        const latest = new Map();
         tipsSnapAll.forEach(d => {
           const t = d.data(); if (!t?.matchId || !t?.user) return;
           const k = t.user + "|" + t.matchId;
@@ -774,7 +758,6 @@
           tipsByMatch.get(tip.matchId).push(tip);
         }
 
-        // Jelöltek a %-okhoz
         try{
           const cSnap = await getDocs(collection(db,"ucl_championCandidates"));
           championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.team);
@@ -784,7 +767,6 @@
           goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
         }catch{ goldenCandidates=[]; }
 
-        // Győztes/Gólkirály – official
         onSnapshot(doc(db,"ucl_official","current"), snap=>{
           const d = snap.exists() ? snap.data() : {};
           officialChampion = d.champion || "";
@@ -793,7 +775,6 @@
           refreshGoldenCard();
         });
 
-        // Top8 tippek – realtime
         onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
           top8Tips = snap.docs.map(d=>{
             const t=d.data()||{};
@@ -804,7 +785,6 @@
           if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
         });
 
-        // Győztes tippek – realtime
         onSnapshot(collection(db,"ucl_championPickTips"), snap=>{
           championTips = snap.docs.map(d=>{
             const t=d.data()||{}; const email=t.email || d.id;
@@ -813,7 +793,6 @@
           refreshChampionCard();
         });
 
-        // Gólkirály tippek – realtime
         onSnapshot(collection(db,"ucl_goldenBootTips"), snap=>{
           goldenTips = snap.docs.map(d=>{
             const t=d.data()||{}; const email=t.email || d.id;
@@ -832,7 +811,6 @@
       });
     });
 
-    /* ---- Meccstipp badge az értesítéshez (közelgő, még nincs tipp) ---- */
     async function updatePendingBadge(email){
       try{
         const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date())));
