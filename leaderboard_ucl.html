@@ -64,6 +64,28 @@
     .ok{ color:#15803d; font-weight:700; }
     .wrong{ color:#b91c1c; font-weight:700; }
 
+    /* Chat – visszaállított NB1 stílusok */
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
+    .chat-fab.has-unread .fab-badge{ display:inline-block; }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel.open{ display:flex; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .chat-title{ font-weight:800; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+    #chatClose:hover{ filter:brightness(0.95); }
+    .chat-list{ overflow:auto; padding:8px 10px; }
+    .chat-empty{ color:var(--muted); font-size:13px; padding:8px 10px; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start; }
+    .msg .meta{ font-size:12px; color:var(--muted); margin-bottom:2px; }
+    .msg .text{ white-space:pre-wrap; word-break:break-word; }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
+    .msg:hover .del{ display:inline-block; }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatInput::placeholder{ color:#6b7280; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
+
     /* Hiba sáv */
     .error-banner{ position:fixed; top:8px; left:50%; transform:translateX(-50%); background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:8px 12px; border-radius:10px; z-index:2000; max-width:90vw; font-size:13px; display:none }
   </style>
@@ -129,7 +151,7 @@
       return [];
     }
 
-    /* ---- Pont %-k (champion/golden/top8) segédek ---- */
+    /* ---- Bónusz %-k (champion/golden/top8) segédek ---- */
     const toNum = v => {
       if (v === null || v === undefined || v === '') return null;
       if (typeof v === 'string') v = v.replace(',', '.');
@@ -404,13 +426,16 @@
         return m === -Infinity ? 0 : m;
       });
 
-      // Bal – NB1-féle bal blokk (5 oszlop)
+      // Bal – NB1-féle bal blokk, KÜLÖN bónusz oszlopokkal
       const leftHeader = `
         <div class="hdr">
           <div class="cell left rank">Hely</div>
           <div class="cell left">Játékos</div>
           <div class="cell left num">Összesen</div>
-          <div class="cell left num">Bónusz (pont + %)</div>
+          <div class="cell left num">Bónusz pont</div>
+          <div class="cell left num">🏆 Győztes %</div>
+          <div class="cell left num">👟 Gólkirály %</div>
+          <div class="cell left num">📊 Top8 %</div>
           <div class="cell left num">Alap pont</div>
         </div>`;
 
@@ -418,13 +443,13 @@
 
       const container = document.createElement('div'); container.className = 'table-wrap';
 
-      // Bal blokk szélesség – egyezzen az NB1 mintával
+      // Bal blokk szélesség – kiszélesítve a plusz oszlopok miatt
       const left = document.createElement('div');
       left.className = 'left';
-      left.style.minWidth = '900px';
-      left.style.maxWidth = '900px';
+      left.style.minWidth = '1200px';
+      left.style.maxWidth = '1200px';
       left.innerHTML = `
-        <div class="grid" style="grid-template-columns:70px 2.8fr 130px 170px 120px;">
+        <div class="grid" style="grid-template-columns:70px 2.6fr 120px 120px 110px 110px 110px 120px;">
           ${leftHeader}
           ${rows.map((r,i)=> renderLeftRow(r,i)).join('')}
         </div>
@@ -463,18 +488,15 @@
           <span class="name-text">${escapeHtml(r.nick)}</span>
         </div>`;
 
-      // breakdown tooltip a bónusz %-hoz
-      const bonusTitle = `Győztes: +${fmt(r.parts.champPct||0)}%\nGólkirály: +${fmt(r.parts.goldenPct||0)}%\nTop 8: +${fmt(r.parts.top8Pct||0)}%`;
-
       return `
         <div class="row row-bg">
           <div class="cell left rank">${i+1}.</div>
           <div class="cell left">${nameHtml}</div>
           <div class="cell left num total">${fmt(r.total)}</div>
-          <div class="cell left num" title="${escapeHtml(bonusTitle)}">
-            +${fmtInt(r.bonusPts)}
-            <span style="color:${pctColor(r.bonusPct)}"> ( +${fmt(r.bonusPct)}% )</span>
-          </div>
+          <div class="cell left num">+${fmtInt(r.bonusPts)}</div>
+          <div class="cell left num" style="color:${pctColor(r.parts.champPct||0)}">+${fmt(r.parts.champPct||0)}%</div>
+          <div class="cell left num" style="color:${pctColor(r.parts.goldenPct||0)}">+${fmt(r.parts.goldenPct||0)}%</div>
+          <div class="cell left num" style="color:${pctColor(r.parts.top8Pct||0)}">+${fmt(r.parts.top8Pct||0)}%</div>
           <div class="cell left num">${fmt(r.base)}</div>
         </div>
       `;
@@ -673,13 +695,15 @@
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
     <div class="chat-head">
       <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" class="btn" aria-label="Bezárás">✕</button>
+      <button id="chatClose" class="close-x" aria-label="Bezárás">✕</button>
     </div>
     <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
     <div id="chatComposer">
       <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
-      <button id="chatSendBtn" class="btn" style="background:var(--accent);color:#fff;border:1px solid var(--line);">Küldés</button>
+      <button id="chatSendBtn">Küldés</button>
     </div>
   </section>
+
+  <div id="errBanner" class="error-banner" role="status" aria-live="polite" style="display:none;"></div>
 </body>
 </html>
