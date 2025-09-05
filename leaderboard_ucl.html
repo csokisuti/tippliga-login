@@ -40,14 +40,12 @@
     .hdr .cell{ font-weight:700; background:#f7f8fc; }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
-    /* Bal, ragadós rész – csak 3 oszlop: hely, játékos, összesen */
     .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line,#e6eaf1); }
     .left .cell{ background:#fff; }
     .rank{ text-align:right; color:#64748b; white-space:nowrap; }
     .num{ text-align:right; white-space:nowrap; }
     .total{ font-weight:800; }
 
-    /* Jobb – előbb bónusz & alap oszlopok, utána a fordulók */
     .round-cell{ min-width:78px; text-align:right; }
     .stat-cell{ min-width:120px; text-align:right; }
     .pct{ font-variant-numeric: tabular-nums; }
@@ -55,6 +53,9 @@
     .round-link{ display:block; color:inherit; text-decoration:none; }
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
+
+    /* Hiba sáv */
+    .error-banner{ position:fixed; top:8px; left:50%; transform:translateX(-50%); background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:8px 12px; border-radius:10px; z-index:2000; max-width:90vw; font-size:13px; display:none }
 
     /* Chat */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
@@ -88,6 +89,16 @@
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    /* ---------- Globális hiba-kezelés ---------- */
+    function showErr(msg){
+      const b = document.getElementById('errBanner');
+      if (!b) return;
+      b.textContent = 'Hiba: ' + (msg?.message || msg || 'ismeretlen');
+      b.style.display = 'block';
+    }
+    window.addEventListener('unhandledrejection', e => { console.error(e.reason); showErr(e.reason?.message || String(e.reason)); });
+    window.addEventListener('error', e => { console.error(e.error || e.message); showErr(e.error?.message || e.message || 'Ismeretlen hiba'); });
+
     /* ---------- Firebase ---------- */
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -100,6 +111,11 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    /* ---------- Safe Firestore segédek ---------- */
+    const emptySnap = () => ({ empty:true, size:0, docs:[], forEach(){ /* noop */ } });
+    const safeGetDocs = (colRef) => getDocs(colRef).catch(err => { console.warn('getDocs fail', colRef?.id, err); return emptySnap(); });
+    const safeGetDoc  = (docRef) => getDoc(docRef).catch(err => { console.warn('getDoc fail', docRef?.id, err); return { exists:()=>false, data:()=>({}) }; });
 
     /* ---------- Helper-ek ---------- */
     const crestMap = { "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/borussia.png","Bodø/Glimt":"ucl_crest/bodo.png","Club Bruges":"ucl_crest/brugge.png","Chelsea":"ucl_crest/chelsea.png","FC Köbenhavn":"ucl_crest/copenhagen.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png","Galatasaray":"ucl_crest/galata.png","Internazionale":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Bayer Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png","Olympique Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png","Newcastle United":"ucl_crest/newcastle.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png","Pafosz":"ucl_crest/pafos.png","Paris Saint-Germain":"ucl_crest/psg.png","PSV":"ucl_crest/psv.png","Qarabag":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png","Slavia Praha":"ucl_crest/slavia.png","Sporting CP":"ucl_crest/sporting.png","Tottenham Hotspur":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png","Kajrat Almati":"ucl_crest/kairat.png" };
@@ -124,7 +140,7 @@
       return [];
     }
 
-    /* ---- A results_ucl „Bónuszok – összegzés” képletjei (egy-az-egyben) ---- */
+    /* ---- Pont %-k kiszámítása a results_ucl képleteivel egyezően ---- */
     const toNum = v => {
       if (v === null || v === undefined || v === '') return null;
       if (typeof v === 'string') v = v.replace(',', '.');
@@ -152,7 +168,7 @@
       const dp = fromDisplayedPoints(c);
       if (dp != null) return dp;
       const odds = fromCandidateOdds(c);
-      const cfg  = (c._calc && c._calc.scope === scope) ? c._calc : {};
+      const cfg  = (c?._calc && c._calc.scope === scope) ? c._calc : {};
       return computePoints(
         odds,
         cfg.BASE ?? 10,
@@ -162,8 +178,6 @@
         cfg.HI   ?? 2.5
       );
     }
-
-    /* ---- Fix Top8 bónusz paraméterek ---- */
     const BONUS_TOP8 = Object.freeze({ perHitPct: 1, maxPct: 8 });
 
     /* ---------- Állapot ---------- */
@@ -186,32 +200,36 @@
         if (!user) { window.location.href = "login_ucl.html"; return; }
         currentUserEmail = user.email;
 
-        const userRef = doc(db, "users", currentUserEmail);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()){
-          const d = userSnap.data();
-          currentUserNick  = d.nickname || currentUserEmail;
-          currentUserRole  = d.role || "user";
-          favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeen     = d.chatLastSeen || null;
-        }else{
-          currentUserNick = currentUserEmail;
+        try{
+          const userRef = doc(db, "users", currentUserEmail);
+          const userSnap = await safeGetDoc(userRef);
+          if (userSnap.exists()){
+            const d = userSnap.data();
+            currentUserNick  = d.nickname || currentUserEmail;
+            currentUserRole  = d.role || "user";
+            favouriteTeamucl = d.favouriteTeamucl || "";
+            chatLastSeen     = d.chatLastSeen || null;
+          }else{
+            currentUserNick = currentUserEmail;
+          }
+          document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
+          if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
+
+          if (favouriteTeamucl) {
+            const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+            document.body.classList.add(themeClass);
+            const crest = crestFor(favouriteTeamucl);
+            if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
+          }
+
+          await buildLeaderboard();
+          updatePendingBadge();
+          initChat(userRef);
+
+          if (window.hideLoader) hideLoader();
+        }catch(err){
+          showErr(err);
         }
-        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
-
-        if (favouriteTeamucl) {
-          const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
-          const crest = crestFor(favouriteTeamucl);
-          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
-        }
-
-        await buildLeaderboard();
-        updatePendingBadge();
-        initChat(userRef);
-
-        if (window.hideLoader) hideLoader();
       });
 
       document.getElementById("logout").addEventListener("click", () => {
@@ -227,139 +245,142 @@
 
     /* ---------- Betöltés + számítás ---------- */
     async function buildLeaderboard(){
-      const [
-        matchesSnap, tipsSnap, usersSnap,
-        official_ucl, official_nb,
-        standings_ucl, standings_nb,
-        seasonTipsSnap, bonusTipsSnap, awardsDoc,
-        champCandsSnap, goldenCandsSnap
-      ] = await Promise.all([
-        getDocs(collection(db, "ucl_matches")),
-        getDocs(collection(db, "ucl_tips")),
-        getDocs(collection(db, "users")),
-        getDoc(doc(db, "finalStandings_ucl", "official")),
-        getDoc(doc(db, "finalStandings", "official")),
-        getDocs(collection(db, "standingsTips_ucl")).catch(()=>({empty:true,forEach(){}})),
-        getDocs(collection(db, "standingsTips")).catch(()=>({empty:true,forEach(){}})),
-        getDocs(collection(db, "seasonTips_ucl")).catch(()=>({empty:true,forEach(){}})),
-        getDocs(collection(db, "bonusTips_ucl")).catch(()=>({empty:true,forEach(){}})),
-        getDoc(doc(db, "awards_ucl", "official")).catch(()=>({exists:()=>false})),
-        getDocs(collection(db,"ucl_championCandidates")).catch(()=>({empty:true,docs:[]))),
-        getDocs(collection(db,"ucl_goldenBootCandidates")).catch(()=>({empty:true,docs:[])))
-      ]);
+      try{
+        const [
+          matchesSnap, tipsSnap, usersSnap,
+          official_ucl, official_nb,
+          standings_ucl, standings_nb,
+          seasonTipsSnap, bonusTipsSnap, awardsDoc,
+          champCandsSnap, goldenCandsSnap
+        ] = await Promise.all([
+          safeGetDocs(collection(db, "ucl_matches")),
+          safeGetDocs(collection(db, "ucl_tips")),
+          safeGetDocs(collection(db, "users")),
+          safeGetDoc(doc(db, "finalStandings_ucl", "official")),
+          safeGetDoc(doc(db, "finalStandings", "official")),
+          safeGetDocs(collection(db, "standingsTips_ucl")),
+          safeGetDocs(collection(db, "standingsTips")),
+          safeGetDocs(collection(db, "seasonTips_ucl")),
+          safeGetDocs(collection(db, "bonusTips_ucl")),
+          safeGetDoc(doc(db, "awards_ucl", "official")),
+          safeGetDocs(collection(db,"ucl_championCandidates")),
+          safeGetDocs(collection(db,"ucl_goldenBootCandidates"))
+        ]);
 
-      // matches by id
-      const matches = {};
-      matchesSnap.forEach(d => matches[d.id] = { id:d.id, ...d.data() });
+        // matches by id
+        const matches = {};
+        matchesSnap.forEach(d => matches[d.id] = { id:d.id, ...d.data() });
 
-      // users nick
-      const usersMap = {};
-      usersSnap.forEach(d => { const u = d.data(); if (u?.email) usersMap[u.email] = u.nickname || u.email; });
+        // users nick
+        const usersMap = {};
+        usersSnap.forEach(d => { const u = d.data(); if (u?.email) usersMap[u.email] = u.nickname || u.email; });
 
-      // official order + awards
-      officialOrder = officialArrayFrom(official_ucl.exists() ? official_ucl.data() : (official_nb.exists() ? official_nb.data() : [])).slice(0,12);
-      while (officialOrder.length < 12) officialOrder.push("");
-      officialAwards = awardsDoc?.exists?.() ? (awardsDoc.data()||{}) : {};
-      if (!officialAwards.winnerTeam && officialOrder[0]) officialAwards.winnerTeam = officialOrder[0];
+        // official order + awards
+        officialOrder = officialArrayFrom(official_ucl.exists() ? official_ucl.data() : (official_nb.exists() ? official_nb.data() : [])).slice(0,12);
+        while (officialOrder.length < 12) officialOrder.push("");
+        officialAwards = awardsDoc?.exists?.() ? (awardsDoc.data()||{}) : {};
+        if (!officialAwards.winnerTeam && officialOrder[0]) officialAwards.winnerTeam = officialOrder[0];
 
-      // standings tips: email -> order[12]
-      const orderByEmail = {};
-      const readStandings = (snap) => { snap.forEach(d=>{ const data=d.data()||{}; let arr=[]; if(Array.isArray(data.order))arr=data.order; else if(Array.isArray(data.teams))arr=data.teams; else if(Array.isArray(data.ranking))arr=data.ranking; orderByEmail[d.id]=(arr||[]).slice(0,12); }); };
-      if (standings_ucl && !standings_ucl.empty) readStandings(standings_ucl); else if (standings_nb && !standings_nb.empty) readStandings(standings_nb);
+        // standings tips: email -> order[12]
+        const orderByEmail = {};
+        const readStandings = (snap) => { snap.forEach(d=>{ const data=d.data()||{}; let arr=[]; if(Array.isArray(data.order))arr=data.order; else if(Array.isArray(data.teams))arr=data.teams; else if(Array.isArray(data.ranking))arr=data.ranking; orderByEmail[d.id]=(arr||[]).slice(0,12); }); };
+        if (standings_ucl && !standings_ucl.empty) readStandings(standings_ucl); else if (standings_nb && !standings_nb.empty) readStandings(standings_nb);
 
-      // season tips (winner/topScorer)
-      seasonTipsByEmail = {};
-      const mergeTipDoc = (id, data) => {
-        if (!id || !data) return;
-        const cur = seasonTipsByEmail[id] || {};
-        const winnerTeam = data.winnerTeam || data.winner || cur.winnerTeam || "";
-        const topScorer  = data.topScorer  || data.goldenBoot || cur.topScorer  || "";
-        seasonTipsByEmail[id] = { winnerTeam, topScorer };
-      };
-      seasonTipsSnap?.forEach?.(d => mergeTipDoc(d.id, d.data()));
-      bonusTipsSnap?.forEach?.(d => mergeTipDoc(d.id, d.data()));
+        // season tips (winner/topScorer)
+        seasonTipsByEmail = {};
+        const mergeTipDoc = (id, data) => {
+          if (!id || !data) return;
+          const cur = seasonTipsByEmail[id] || {};
+          const winnerTeam = data.winnerTeam || data.winner || cur.winnerTeam || "";
+          const topScorer  = data.topScorer  || data.goldenBoot || cur.topScorer  || "";
+          seasonTipsByEmail[id] = { winnerTeam, topScorer };
+        };
+        seasonTipsSnap?.forEach?.(d => mergeTipDoc(d.id, d.data()));
+        bonusTipsSnap?.forEach?.(d => mergeTipDoc(d.id, d.data()));
 
-      // candidates (same as results_ucl)
-      championCandidates = champCandsSnap?.docs?.map(d=>({ id:d.id, ...(d.data()||{}) })) || [];
-      goldenCandidates   = goldenCandsSnap?.docs?.map(d=>({ id:d.id, ...(d.data()||{}) })) || [];
+        // candidates
+        championCandidates = champCandsSnap?.docs?.map(d=>({ id:d.id, ...(d.data()||{}) })) || [];
+        goldenCandidates   = goldenCandsSnap?.docs?.map(d=>({ id:d.id, ...(d.data()||{}) })) || [];
 
-      // tippek – legutóbbi per user|match
-      const latest = new Map();
-      tipsSnap.forEach(docu=>{
-        const t = docu.data(); if (!t?.matchId || !t?.user) return;
-        const k = t.user + "|" + t.matchId;
-        const cur = latest.get(k);
-        if (!cur || tipTsMs(t) >= tipTsMs(cur)) latest.set(k, { id:docu.id, ...t });
-      });
+        // tippek – legutóbbi per user|match
+        const latest = new Map();
+        tipsSnap.forEach(docu=>{
+          const t = docu.data(); if (!t?.matchId || !t?.user) return;
+          const k = t.user + "|" + t.matchId;
+          const cur = latest.get(k);
+          if (!cur || tipTsMs(t) >= tipTsMs(cur)) latest.set(k, { id:docu.id, ...t });
+        });
 
-      // pontszámítás
-      const player = {}; // nick -> {base, perRound, email}
-      const rounds = new Set();
+        // pontszámítás
+        const player = {}; // nick -> {base, perRound, email}
+        const rounds = new Set();
 
-      for (const tip of latest.values()){
-        const m = matches[tip.matchId]; if (!m) continue;
-        const roundId = matchRound(m); if (!roundId) continue;
-        rounds.add(roundId);
+        for (const tip of latest.values()){
+          const m = matches[tip.matchId]; if (!m) continue;
+          const roundId = matchRound(m); if (!roundId) continue;
+          rounds.add(roundId);
 
-        if (!m.outcome) continue;                    // csak lezárt meccs
-        const pick = tipChoice(tip); if (!pick) continue;
+          if (!m.outcome) continue;                    // csak lezárt meccs
+          const pick = tipChoice(tip); if (!pick) continue;
 
-        const correct = pick === m.outcome;
-        const ov = (m?.odds && m.odds[pick]!=null) ? m.odds[pick] : (pick==="1"?m.odds1:(pick==="X"?m.oddsX:m.odds2));
-        const mult = tipDouble(tip) ? 2 : 1;
-        const pts = (correct && ov) ? Number(ov) * mult : 0;
+          const correct = pick === m.outcome;
+          const ov = (m?.odds && m.odds[pick]!=null) ? m.odds[pick] : (pick==="1"?m.odds1:(pick==="X"?m.oddsX:m.odds2));
+          const mult = tipDouble(tip) ? 2 : 1;
+          const pts = (correct && ov) ? Number(ov) * mult : 0;
 
-        const nick = usersMap[tip.user] || tip.user;
-        if (!player[nick]) player[nick] = { base:0, perRound:{}, email: tip.user };
-        player[nick].base += pts;
-        player[nick].perRound[roundId] = (player[nick].perRound[roundId]||0) + pts;
+          const nick = usersMap[tip.user] || tip.user;
+          if (!player[nick]) player[nick] = { base:0, perRound:{}, email: tip.user };
+          player[nick].base += pts;
+          player[nick].perRound[roundId] = (player[nick].perRound[roundId]||0) + pts;
+        }
+
+        roundsAsc = Array.from(rounds).sort((a,b)=> (parseInt(a)||0)-(parseInt(b)||0));
+
+        // bónuszrészek (külön oszlopok)
+        function top8Pct(email){
+          const userOrder = orderByEmail[email] || [];
+          const predictedTop8 = userOrder.slice(0,8).filter(Boolean);
+          const officialTop8 = officialOrder.slice(0,8).filter(Boolean);
+          if (!predictedTop8.length || !officialTop8.length) return 0;
+          const setOfficial = new Set(officialTop8.map(NORM));
+          let hits = 0;
+          for (const t of predictedTop8){ if (setOfficial.has(NORM(t))) hits++; }
+          return Math.min(hits * BONUS_TOP8.perHitPct, BONUS_TOP8.maxPct);
+        }
+        function champBonusPct(email){
+          const pick = seasonTipsByEmail[email]?.winnerTeam || "";
+          const official = officialAwards.winnerTeam || "";
+          if (!pick || !official || !eqTeam(pick, official)) return 0;
+          const c = championCandidates.find(x => eqTeam(x.team, pick));
+          const pct = candidatePoints(c,'champion');
+          return toNum(pct) ?? 0;
+        }
+        function goldenBonusPct(email){
+          const pick = seasonTipsByEmail[email]?.topScorer || "";
+          const official = officialAwards.topScorer || "";
+          if (!pick || !official || !eqText(pick, official)) return 0;
+          const c = goldenCandidates.find(x => eqText(x.player, pick));
+          const pct = candidatePoints(c,'golden');
+          return toNum(pct) ?? 0;
+        }
+
+        rows = Object.entries(player).map(([nick,obj])=>{
+          const champPct = champBonusPct(obj.email);
+          const goldenPct = goldenBonusPct(obj.email);
+          const top8 = top8Pct(obj.email);
+          const bonusPct = (champPct || 0) + (goldenPct || 0) + (top8 || 0);
+          const bonusPts = Math.round((Number(obj.base)||0) * (bonusPct/100));
+          const total = obj.base + bonusPts;
+          return { nick, email: obj.email, base: obj.base, perRound: obj.perRound,
+                  parts: { champPct, goldenPct, top8Pct: top8 },
+                  bonusPct, bonusPts, total };
+        });
+
+        rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
+        renderTable();
+      }catch(err){
+        showErr(err);
       }
-
-      roundsAsc = Array.from(rounds).sort((a,b)=> (parseInt(a)||0)-(parseInt(b)||0));
-
-      // bónuszrészek számítása (külön oszlopok)
-      function top8Pct(email){
-        const userOrder = orderByEmail[email] || [];
-        const predictedTop8 = userOrder.slice(0,8).filter(Boolean);
-        const officialTop8 = officialOrder.slice(0,8).filter(Boolean);
-        if (!predictedTop8.length || !officialTop8.length) return 0;
-        const setOfficial = new Set(officialTop8.map(NORM));
-        let hits = 0;
-        for (const t of predictedTop8){ if (setOfficial.has(NORM(t))) hits++; }
-        return Math.min(hits * BONUS_TOP8.perHitPct, BONUS_TOP8.maxPct);
-      }
-
-      function champBonusPct(email){
-        const pick = seasonTipsByEmail[email]?.winnerTeam || "";
-        const official = officialAwards.winnerTeam || "";
-        if (!pick || !official || !eqTeam(pick, official)) return 0;
-        const c = championCandidates.find(x => eqTeam(x.team, pick));
-        const pct = candidatePoints(c,'champion');
-        return toNum(pct) ?? 0;
-      }
-      function goldenBonusPct(email){
-        const pick = seasonTipsByEmail[email]?.topScorer || "";
-        const official = officialAwards.topScorer || "";
-        if (!pick || !official || !eqText(pick, official)) return 0;
-        const c = goldenCandidates.find(x => eqText(x.player, pick));
-        const pct = candidatePoints(c,'golden');
-        return toNum(pct) ?? 0;
-      }
-
-      rows = Object.entries(player).map(([nick,obj])=>{
-        const champPct = champBonusPct(obj.email);
-        const goldenPct = goldenBonusPct(obj.email);
-        const top8 = top8Pct(obj.email);
-        const bonusPct = (champPct || 0) + (goldenPct || 0) + (top8 || 0);
-        const bonusPts = Math.round((Number(obj.base)||0) * (bonusPct/100));
-        const total = obj.base + bonusPts;
-        return { nick, email: obj.email, base: obj.base, perRound: obj.perRound,
-                 parts: { champPct, goldenPct, top8Pct: top8 },
-                 bonusPct, bonusPts, total };
-      });
-
-      rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
-      renderTable();
     }
 
     function renderTable(){
@@ -383,7 +404,6 @@
         return m === -Infinity ? 0 : m;
       });
 
-      /* Bal: hely, játékos, összesen */
       const leftHeader = `
         <div class="hdr">
           <div class="cell rank">Hely</div>
@@ -391,7 +411,6 @@
           <div class="cell num">Összesen</div>
         </div>`;
 
-      /* Jobb: stat oszlopok + fordulók */
       const statHeader = `
         <div class="cell stat-cell num">Alap pont</div>
         <div class="cell stat-cell num">Bónusz pont</div>
@@ -457,11 +476,11 @@
       mount.appendChild(container);
     }
 
-    /* ---------- Nav „függő tippek” badge ---------- */
+    /* ---------- Pending badge ---------- */
     function updatePendingBadge(){
-      getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+      safeGetDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+        safeGetDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
           const latestByMatch = new Map();
           tipsSnap.forEach(docu=>{ const t=docu.data(); if(!t?.matchId) return; const cur=latestByMatch.get(t.matchId); if(!cur||tipTsMs(t)>=tipTsMs(cur)) latestByMatch.set(t.matchId,t); });
           const tippedIds = new Set(Array.from(latestByMatch.keys()));
@@ -554,6 +573,7 @@
       async function markSeen(){
         try{
           await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+          lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
         }catch(e){}
@@ -562,6 +582,8 @@
   </script>
 </head>
 <body>
+  <div id="errBanner" class="error-banner" role="status" aria-live="polite"></div>
+
   <div class="layout">
     <!-- Fejléc -->
     <div class="header">
