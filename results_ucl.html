@@ -407,36 +407,40 @@
       if (me) renderDetail(me);
     }
 
-    /* 🔧 JAVÍTOTT: mindig mutatjuk a játékos 1–8 saját tippjeit; a ✅ unordered egyezés */
     function renderDetail(u){
-      const tableBody = document.getElementById("bonusTableBody");
-      const display = u.display || u.nick || u.email;
+  const tableBody = document.getElementById("bonusTableBody");
+  const display = u.display || u.nick || u.email;
+  document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
+  document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
+  document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
+  document.getElementById("detailPct").textContent = `+${u.pct}%`;
 
-      document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
-      document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
-      document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
-      document.getElementById("detailPct").textContent = `+${u.pct}%`;
+  // Bal oszlop: hivatalos Top 8 (kitöltve 8 sorra)
+  const off = (officialTop8 || []).map(canonTeam);
+  const off8 = Array.from({length:8}, (_,i)=> off[i] || "—");
 
-      tableBody.innerHTML = "";
+  // Jobb oszlop: a játékos saját Top 8 tippjei (szintén 8 sorra kitöltve)
+  const picks = (u.picks || []).map(canonTeam);
+  const picks8 = Array.from({length:8}, (_,i)=> picks[i] || "—");
 
-      const picksOrdered = Array.isArray(u.picks) ? u.picks.map(canonTeam) : [];
-      const picksSet = new Set(picksOrdered);
+  const officialSet = new Set(off);
 
-      for (let i = 0; i < 8; i++){
-        const off = canonTeam(officialTop8[i] || "—");
-        const userPickAtPos = picksOrdered[i] || "—";
-        const ok = off !== "—" && picksSet.has(off);
+  tableBody.innerHTML = "";
+  for (let i = 0; i < 8; i++){
+    const left  = off8[i];
+    const right = picks8[i];
+    const hit   = right !== "—" && officialSet.has(right);
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td><strong>${escapeHtml(off)}</strong></td>
-          <td>${escapeHtml(userPickAtPos)}</td>
-          <td>${ok ? "✅" : "✖"}</td>
-        `;
-        tableBody.appendChild(tr);
-      }
-    }
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td><strong>${escapeHtml(left)}</strong></td>
+      <td>${escapeHtml(right)}</td>
+      <td>${hit ? "✅" : "✖"}</td>
+    `;
+    tableBody.appendChild(tr);
+  }
+}
 
     /* ---------------- Győztes kártya + modál ---------------- */
     function refreshChampionCard(){
@@ -645,7 +649,7 @@
 
         const tipsWrap = document.createElement("div"); tipsWrap.className = "tips";
         const mTips = tipsByMatch.get(m.id) || [];
-        const hasStarted = ko && ko <= new Date();
+        const hasStarted = ko && ko <= now;
 
         if (!mTips.length){
           tipsWrap.appendChild(kicker("Ehhez a meccshez még nincs leadott tipp."));
@@ -868,6 +872,7 @@
           const empty = document.createElement('div');
           empty.className = 'chat-empty';
           empty.textContent = 'Még nincs üzenet. Légy te az első!';
+          listEl.appendChild(empty);
         } else {
           let unread = 0;
           snap.forEach(docu=>{
