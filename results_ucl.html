@@ -161,7 +161,7 @@
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
     function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-    // Odds: támogatjuk az {odds:{"1":..,"X":..,"2":..}} és az odds1/oddsX/odds2 sémát is
+    // Odds helper
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -170,20 +170,18 @@
       return undefined;
     }
 
-    // Tip mezők: 'choice' vs 'tip', és 'double' vs 'isDouble'
-    function tipChoice(t){ return t.choice ?? t.tip ?? ""; }
-    function tipDouble(t){ return !!(t.double ?? t.isDouble); }
+    // Tip mezők
+    const tipChoice = t => t.choice ?? t.tip ?? "";
+    const tipDouble = t => !!(t.double ?? t.isDouble);
+    const matchRound = m => String(m.round ?? m.roundId ?? "");
 
-    // Forduló mező: 'round' vagy 'roundId'
-    function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
-
-    // Eredmény parser a tabellához
+    // Eredmény parser
     function parseRes(str){
       const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
       return m ? [parseInt(m[1]), parseInt(m[2])] : null;
     }
 
-    // Tabella Top8 számítása ucl_matches alapján (dashboard-kompat)
+    // Tabella Top8 számítás
     function deriveTop8FromMatches(allMatches){
       const teams = Object.keys(crestMap);
       const S={}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
@@ -236,6 +234,45 @@
       return rows.slice(0,8).map(r=>r.team);
     }
 
+    /* ======= positions_ucl képlet átvéve (pont/%) ======= */
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === '') return null;
+      if (typeof v === 'string') v = v.replace(',', '.');
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const fromCandidateOdds = c => {
+      const direct = toNum(c?.odds);
+      if (direct != null) return direct;
+      const dec = toNum(c?.oddsDecimal);
+      if (dec != null) return dec;
+      const pct = toNum(c?.oddsPercent);
+      if (pct != null && pct > 0) return 100 / pct;
+      return null;
+    };
+    const fromDisplayedPoints = c => toNum(c?.displayPoints);
+    function computePoints(odds, BASE=10, O0=65, A=0.33, LO=0.5, HI=2.5){
+      const o = toNum(odds);
+      if(!o || o<=0) return null;
+      const ratio   = Math.pow(o/Math.max(O0,1e-9), A);
+      const clamped = Math.min(Math.max(ratio, LO), HI);
+      return BASE * clamped; // ezt tekintjük +%-nak is
+    }
+    function candidatePoints(c, scope){ // scope: 'golden' | 'champion'
+      const dp = fromDisplayedPoints(c);
+      if (dp != null) return dp;
+      const odds = fromCandidateOdds(c);
+      const cfg  = (c?._calc && c._calc.scope === scope) ? c._calc : {};
+      return computePoints(
+        odds,
+        cfg.BASE ?? 10,
+        cfg.O0   ?? 65,
+        cfg.A    ?? 0.33,
+        cfg.LO   ?? 0.5,
+        cfg.HI   ?? 2.5
+      );
+    }
+
     /* ---------------- Állapot ---------------- */
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -248,28 +285,33 @@
     let nickByEmail = {};             // email -> nick
     let roundsAsc = [];               // elérhető fordulók
 
-    // Bónusz-konfig (positions-szel egyező)
-    const bonusCfg = { top8PerHitPct: 1, championPct: 0, goldenPct: 0 };
+    // Top8
+    let officialTop8 = []; // tabellából számolt
 
-    // Bónusz/közösségi (UCL)
-    let officialTop8 = [];                           // tabellából számolt Top8
-    let officialChampion = "";                       // ucl_official/current.champion
-    let officialGolden = { player:"", team:"" };     // ucl_official/current.goldenBoot
+    // Champion/Golden – official + jelöltek (positions logikához)
+    let officialChampion = "";
+    let officialGolden = { player:"", team:"" };
+    let championCandidates = [];
+    let goldenCandidates = [];
+    let champWinPct = 0;   // a hivatalos győzteshez tartozó +% (positions szerinti)
+    let goldenWinPct = 0;  // a hivatalos gólkirályhoz tartozó +%
 
-    let top8Tips = [];       // {email,nick,picks:[]}
-    let championTips = [];   // {email,nick,team}
-    let goldenTips = [];     // {email,nick,player,team}
+    // Tippek
+    let top8Tips = [];
+    let championTips = [];
+    let goldenTips = [];
 
     let bonusOverlayOpen = false;
     let champOverlayOpen = false;
     let goldenOverlayOpen = false;
 
-    // Top8 találatok számítása
+    // Top8 találatok
     function calcTop8(picks, official){
       const set = new Set((picks||[]).map(canonTeam));
       let correct = 0;
       (official||[]).forEach(t => { if (set.has(canonTeam(t))) correct++; });
-      return { correct, total: (official||[]).length || 8, pct: correct * (Number(bonusCfg.top8PerHitPct)||1) };
+      // 1 találat = +1%
+      return { correct, total: (official||[]).length || 8, pct: correct };
     }
 
     /* ---------------- Top 8 bónusz UI ---------------- */
@@ -304,10 +346,7 @@
       ov.style.display = "flex"; bonusOverlayOpen = true;
       renderUsersList(document.getElementById("userSearch")?.value || "");
     }
-    function closeBonusModal(){
-      const ov = document.getElementById("bonusOverlay");
-      ov.style.display = "none"; bonusOverlayOpen = false;
-    }
+    function closeBonusModal(){ document.getElementById("bonusOverlay").style.display = "none"; bonusOverlayOpen = false; }
 
     function renderUsersList(filter=""){
       const usersList = document.getElementById("usersList");
@@ -339,7 +378,7 @@
       if (me) renderDetail(me);
     }
 
-    // Top8 részletek – egyezések felül; hiányzó sorokba a játékos eltérő tippjei kerülnek
+    // Top8 részletek
     function renderDetail(u){
       const tableBody = document.getElementById("bonusTableBody");
       const display = u.display || u.nick || u.email;
@@ -354,7 +393,7 @@
       const picksCanon = (u.picks||[]).map(canonTeam);
       const officialCanon = (officialTop8||[]).map(canonTeam);
 
-      // matched rows + queue of unmatched user picks
+      // eltérő tippek listája (amikkel pótoljuk a hiányzó sorokat)
       const unmatchedPicks = picksCanon.filter(p => !officialCanon.includes(p));
 
       const matched = [];
@@ -364,7 +403,6 @@
         if (ok){
           matched.push({ pos: idx+1, off: t, user: t, hit: true });
         }else{
-          // helyettesítsük egy eltérő tippel, ha van
           const repl = unmatchedPicks.shift() || "—";
           missed.push({ pos: idx+1, off: t, user: repl, hit: false });
         }
@@ -381,7 +419,7 @@
       });
     }
 
-    /* ---------------- Győztes kártya + modál (Top8-hoz igazított) ---------------- */
+    /* ---------------- Győztes (positions képlet) ---------------- */
     function openChampModal(){
       document.getElementById("champOverlay").style.display = "flex";
       champOverlayOpen = true;
@@ -394,11 +432,10 @@
       const term = (filter||"").toLowerCase().trim();
       usersList.innerHTML = "";
 
-      // építsünk user listát a championTips alapján
       const rows = championTips.map(t=>{
         const display = nickByEmail[t.email] || t.nick || t.email;
         const hit = officialChampion && eqTeam(t.team, officialChampion);
-        const pct = hit ? (Number(bonusCfg.championPct)||0) : 0;
+        const pct = hit ? (toNum(champWinPct)||0) : 0;
         return { email:t.email, display, pick:t.team||"", hit, pct };
       }).filter(u => !term || (u.display||"").toLowerCase().includes(term) || (u.email||"").toLowerCase().includes(term))
         .sort((a,b)=> (b.hit - a.hit) || (a.display||"").localeCompare(b.display||""));
@@ -408,7 +445,7 @@
         row.className = "userrow";
         row.onclick = ()=> renderChampDetail(u.email, u.display);
         row.innerHTML = `<span class="name">${escapeHtml(u.display)}</span>
-                         <span class="badge">${u.hit ? `+${u.pct}%` : "+0%"}</span>`;
+                         <span class="badge">${u.hit ? `+${fmt(u.pct)}%` : "+0%"}</span>`;
         usersList.appendChild(row);
       });
 
@@ -426,11 +463,11 @@
       const pick = tip?.team || "";
       const off = officialChampion || "—";
       const hit = officialChampion && eqTeam(pick, officialChampion);
-      const pct = hit ? (Number(bonusCfg.championPct)||0) : 0;
+      const pct = hit ? (toNum(champWinPct)||0) : 0;
 
       headTitle.textContent = `Végső győztes – ${displayName}`;
       headCount.textContent = hit ? "találat" : "nincs találat";
-      headPct.textContent = `+${pct}%`;
+      headPct.textContent = `+${fmt(pct)}%`;
 
       tableBody.innerHTML = "";
       const tr = document.createElement("tr");
@@ -441,7 +478,7 @@
       tableBody.appendChild(tr);
     }
 
-    /* ---------------- Gólkirály kártya + modál (Top8-hoz igazított) ---------------- */
+    /* ---------------- Gólkirály (positions képlet) ---------------- */
     function openGoldenModal(){
       document.getElementById("goldenOverlay").style.display = "flex";
       goldenOverlayOpen = true;
@@ -458,8 +495,9 @@
         const display = nickByEmail[t.email] || t.nick || t.email;
         const offPlayer = officialGolden.player || "";
         const hit = offPlayer && eqName(t.player, offPlayer);
-        const pct = hit ? (Number(bonusCfg.goldenPct)||0) : 0;
-        return { email:t.email, display, pick:`${t.player||""}${t.team?` (${t.team})`:''}`, hit, pct };
+        const pct = hit ? (toNum(goldenWinPct)||0) : 0;
+        const pickStr = `${t.player||""}${t.team?` (${t.team})`:''}`;
+        return { email:t.email, display, pick:pickStr, hit, pct };
       }).filter(u => !term || (u.display||"").toLowerCase().includes(term) || (u.email||"").toLowerCase().includes(term))
         .sort((a,b)=> (b.hit - a.hit) || (a.display||"").localeCompare(b.display||""));
 
@@ -468,7 +506,7 @@
         row.className = "userrow";
         row.onclick = ()=> renderGoldenDetail(u.email, u.display);
         row.innerHTML = `<span class="name">${escapeHtml(u.display)}</span>
-                         <span class="badge">${u.hit ? `+${u.pct}%` : "+0%"}</span>`;
+                         <span class="badge">${u.hit ? `+${fmt(u.pct)}%` : "+0%"}</span>`;
         usersList.appendChild(row);
       });
 
@@ -486,11 +524,11 @@
       const pickStr = tip ? `${tip.player||""}${tip.team?` (${tip.team})`:''}` : "";
       const offStr = officialGolden.player ? `${officialGolden.player}${officialGolden.team?` (${officialGolden.team})`:''}` : "—";
       const hit = officialGolden.player && eqName(tip?.player||"", officialGolden.player);
-      const pct = hit ? (Number(bonusCfg.goldenPct)||0) : 0;
+      const pct = hit ? (toNum(goldenWinPct)||0) : 0;
 
       headTitle.textContent = `Gólkirály – ${displayName}`;
       headCount.textContent = hit ? "találat" : "nincs találat";
-      headPct.textContent = `+${pct}%`;
+      headPct.textContent = `+${fmt(pct)}%`;
 
       tableBody.innerHTML = "";
       const tr = document.createElement("tr");
@@ -501,7 +539,7 @@
       tableBody.appendChild(tr);
     }
 
-    /* ---------------- Forduló eredmények ---------------- */
+    /* ---------------- Forduló eredmények (változatlan) ---------------- */
     function buildRoundsUI(){
       const sel = document.getElementById("roundSelect");
       sel.innerHTML = "";
@@ -510,7 +548,6 @@
         o.value = r; o.textContent = `${r}. forduló`;
         sel.appendChild(o);
       });
-      // URL-ben ?round= param támogatás
       const url = new URL(location.href);
       const qRound = url.searchParams.get("round");
       sel.value = qRound && roundsAsc.includes(qRound) ? qRound : (roundsAsc[roundsAsc.length-1] || "");
@@ -529,7 +566,6 @@
       hdr.textContent = `${roundId}. forduló`;
       card.appendChild(hdr);
 
-      // forduló meccsei időrendben
       const list = matches.filter(m => matchRound(m) === String(roundId))
                           .sort((a,b)=> (a.startTime?.toDate?.()||0) - (b.startTime?.toDate?.()||0));
 
@@ -539,14 +575,13 @@
         return;
       }
 
-      // Összegző chippek (lezárt meccsekből)
-      const summary = {};  // nick -> pont
+      const summary = {};
       const breakdown = {};
       const now = new Date();
 
       list.forEach(m=>{
         const mTips = tipsByMatch.get(m.id) || [];
-        if (!m.outcome) return; // csak ha ismert a kimenetel
+        if (!m.outcome) return;
         mTips.forEach(t=>{
           const pick = tipChoice(t);
           const correct = pick && (pick === m.outcome);
@@ -578,7 +613,6 @@
       }
       card.appendChild(summaryDiv);
 
-      // Meccsek listája
       list.forEach(m=>{
         const div = document.createElement("div");
         div.className = "match";
@@ -648,6 +682,217 @@
     function divEmpty(text){ const d=document.createElement("div"); d.className="empty"; d.textContent=text; return d; }
     function kicker(text){ const d=document.createElement("div"); d.className="kicker"; d.textContent=text; return d; }
     function hiddenInfo(text){ const d=document.createElement("div"); d.className="hidden-info"; d.textContent=text; return d; }
+
+    /* ---------------- Champion/Golden összegző kártyák ---------------- */
+    function refreshChampionSummary(){
+      const offEl = document.getElementById("champOfficialSummary");
+      const mineEl = document.getElementById("champMineSummary");
+      const pctEl = document.getElementById("champSumPct");
+
+      if (offEl) offEl.textContent = officialChampion || "—";
+
+      const me = championTips.find(t => t.email === currentUserEmail);
+      const mine = me?.team || "";
+      if (mineEl) mineEl.textContent = mine || "—";
+
+      const hit = officialChampion && mine && eqTeam(mine, officialChampion);
+      pctEl.textContent = hit ? `+${fmt(champWinPct)}%` : "+0%";
+    }
+
+    function refreshGoldenSummary(){
+      const offEl = document.getElementById("goldenOfficialSummary");
+      const mineEl = document.getElementById("goldenMineSummary");
+      const pctEl = document.getElementById("goldenSumPct");
+
+      const offStr = officialGolden.player ? `${officialGolden.player}${officialGolden.team?` (${officialGolden.team})`:''}` : "—";
+      if (offEl) offEl.textContent = offStr;
+
+      const me = goldenTips.find(t => t.email === currentUserEmail);
+      const mineStr = me ? `${me.player||""}${me.team?` (${me.team})`:''}` : "";
+      if (mineEl) mineEl.textContent = mineStr || "—";
+
+      const hit = officialGolden.player && me?.player && eqName(me.player, officialGolden.player);
+      pctEl.textContent = hit ? `+${fmt(goldenWinPct)}%` : "+0%";
+    }
+
+    /* ---------------- INIT ---------------- */
+    document.addEventListener("DOMContentLoaded", () => {
+      // Modál gombok
+      document.getElementById("bonusDetailsBtn").addEventListener("click", openBonusModal);
+      document.getElementById("bonusClose").addEventListener("click", closeBonusModal);
+      document.getElementById("userSearch").addEventListener("input", (e)=> renderUsersList(e.target.value));
+
+      document.getElementById("champDetailsBtn").addEventListener("click", openChampModal);
+      document.getElementById("champClose").addEventListener("click", closeChampModal);
+      document.getElementById("champUserSearch").addEventListener("input", (e)=> renderChampUsersList(e.target.value));
+
+      document.getElementById("goldenDetailsBtn").addEventListener("click", openGoldenModal);
+      document.getElementById("goldenClose").addEventListener("click", closeGoldenModal);
+      document.getElementById("goldenUserSearch").addEventListener("input", (e)=> renderGoldenUsersList(e.target.value));
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "login_ucl.html"; return; }
+        currentUserEmail = user.email;
+
+        // felhasználó
+        const userRef = doc(db, "users", currentUserEmail);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const d = userSnap.data();
+          currentUserNick = d.nickname || currentUserEmail;
+          currentUserRole = d.role || "user";
+          favouriteTeamucl = d.favouriteTeamucl || "";
+          chatLastSeen = d.chatLastSeen || null;
+        } else {
+          currentUserNick = currentUserEmail;
+          currentUserRole = "user";
+          favouriteTeamucl = "";
+          chatLastSeen = null;
+        }
+        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
+        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
+
+        // THEME UCL szerint
+        if (favouriteTeamucl) {
+          const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+          document.body.classList.add(themeClass);
+          const crest = crestMap[favouriteTeamucl];
+          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
+        }
+
+        // Becenevek
+        const usersSnap = await getDocs(collection(db, "users"));
+        usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
+
+        // Meccsek
+        const matchesSnap = await getDocs(collection(db, "ucl_matches"));
+        matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+        const roundSet = new Set();
+        matches.forEach(m => { const r = matchRound(m); if (r) roundSet.add(r); });
+        roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
+        buildRoundsUI();
+
+        // Top8
+        officialTop8 = deriveTop8FromMatches(matches);
+        refreshBonusCard();
+        onSnapshot(collection(db,"ucl_matches"), snap=>{
+          const ms = snap.docs.map(d=>({id:d.id, ...d.data()}));
+          officialTop8 = deriveTop8FromMatches(ms);
+          refreshBonusCard();
+          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
+        });
+
+        // Tippek (legfrissebb per user-meccs)
+        tipsByMatch.clear();
+        const tipsSnap = await getDocs(collection(db, "ucl_tips"));
+        const latest = new Map();
+        tipsSnap.forEach(d => {
+          const t = d.data(); if (!t?.matchId || !t?.user) return;
+          const k = t.user + "|" + t.matchId;
+          const cur = latest.get(k);
+          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
+          const ts = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
+          if (!cur || ts >= curTs) latest.set(k, { id:d.id, ...t });
+        });
+        for (const tip of latest.values()){
+          if (!tipsByMatch.has(tip.matchId)) tipsByMatch.set(tip.matchId, []);
+          tipsByMatch.get(tip.matchId).push(tip);
+        }
+
+        // Jelöltek (positions logika miatt)
+        try{
+          const cSnap = await getDocs(collection(db,"ucl_championCandidates"));
+          championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }));
+        }catch{ championCandidates=[]; }
+        try{
+          const gSnap = await getDocs(collection(db,"ucl_goldenBootCandidates"));
+          goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }));
+        }catch{ goldenCandidates=[]; }
+
+        // Hivatalos győztes/gólkirály
+        onSnapshot(doc(db,"ucl_official","current"), snap=>{
+          const d = snap.exists() ? snap.data() : {};
+          officialChampion = d.champion || "";
+          officialGolden = d.goldenBoot && d.goldenBoot.player ? { player:d.goldenBoot.player, team:d.goldenBoot.team||"" } : {player:"",team:""};
+
+          // positions szerinti +% meghatározása a Hivataloshoz
+          const chC = championCandidates.find(x => eqTeam(x.team, officialChampion));
+          champWinPct = chC ? (candidatePoints(chC,'champion') || 0) : 0;
+
+          const gbC = goldenCandidates.find(x => eqName(x.player, officialGolden.player));
+          goldenWinPct = gbC ? (candidatePoints(gbC,'golden') || 0) : 0;
+
+          // összegző kártyák frissítése
+          refreshChampionSummary();
+          refreshGoldenSummary();
+
+          // ha modál nyitva, listák újrarender
+          if (champOverlayOpen) renderChampUsersList(document.getElementById("champUserSearch")?.value || "");
+          if (goldenOverlayOpen) renderGoldenUsersList(document.getElementById("goldenUserSearch")?.value || "");
+        });
+
+        // Top8 tippek – realtime
+        onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
+          top8Tips = snap.docs.map(d=>{
+            const t=d.data()||{};
+            const email = t.email || d.id;
+            return { email, nick: nickByEmail[email] || t.nick || email, picks: Array.isArray(t.picks)? t.picks.slice(0,8):[] };
+          });
+          refreshBonusCard();
+          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
+        });
+
+        // Győztes tippek – realtime
+        onSnapshot(collection(db,"ucl_championPickTips"), snap=>{
+          championTips = snap.docs.map(d=>{
+            const t=d.data()||{}; const email=t.email || d.id;
+            return { email, nick: nickByEmail[email] || t.nick || email, team: t.team || "" };
+          });
+          refreshChampionSummary();
+          if (champOverlayOpen) renderChampUsersList(document.getElementById("champUserSearch")?.value || "");
+        });
+
+        // Gólkirály tippek – realtime
+        onSnapshot(collection(db,"ucl_goldenBootTips"), snap=>{
+          goldenTips = snap.docs.map(d=>{
+            const t=d.data()||{}; const email=t.email || d.id;
+            return { email, nick: nickByEmail[email] || t.nick || email, player: t.player || "", team: t.team || "" };
+          });
+          refreshGoldenSummary();
+          if (goldenOverlayOpen) renderGoldenUsersList(document.getElementById("goldenUserSearch")?.value || "");
+        });
+
+        updatePendingBadge(currentUserEmail);
+        initChat(userRef);
+        if (window.hideLoader) hideLoader();
+      });
+
+      document.getElementById("logout").addEventListener("click", () => {
+        signOut(auth).then(() => window.location.href = "login_ucl.html");
+      });
+    });
+
+    /* ---- Meccstipp badge az értesítéshez ---- */
+    async function updatePendingBadge(email){
+      try{
+        const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date())));
+        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+        const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
+        const latestByMatch = new Map();
+        tipsSnap.forEach(x=>{
+          const t=x.data(); if(!t?.matchId) return;
+          const cur=latestByMatch.get(t.matchId);
+          const ts=(t.updatedAt?.toMillis?.()||t.createdAt?.toMillis?.()||t.timestamp?.toMillis?.()||0);
+          const cts=(cur?.updatedAt?.toMillis?.()||cur?.createdAt?.toMillis?.()||cur?.timestamp?.toMillis?.()||0);
+          if(!cur || ts>=cts) latestByMatch.set(t.matchId,t);
+        });
+        const tippedIds = new Set(Array.from(latestByMatch.keys()));
+        const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+        const badge = document.getElementById("tipsBadge");
+        if (badge){ if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; } }
+      }catch{}
+    }
 
     /* ---------------- Chat ---------------- */
     function initChat(userRef){
@@ -741,179 +986,6 @@
         }catch(e){}
       }
     }
-
-    /* ---------------- INIT ---------------- */
-    document.addEventListener("DOMContentLoaded", () => {
-      // Modál gombok
-      const bonusOverlayEl = document.getElementById("bonusOverlay");
-      document.getElementById("bonusDetailsBtn").addEventListener("click", openBonusModal);
-      document.getElementById("bonusClose").addEventListener("click", closeBonusModal);
-      bonusOverlayEl.addEventListener("click", (e)=> { if (e.target === bonusOverlayEl) closeBonusModal(); });
-      document.getElementById("userSearch").addEventListener("input", (e)=> renderUsersList(e.target.value));
-
-      // Győztes/Gólkirály modálok
-      document.getElementById("champDetailsBtn").addEventListener("click", openChampModal);
-      document.getElementById("champClose").addEventListener("click", closeChampModal);
-      document.getElementById("goldenDetailsBtn").addEventListener("click", openGoldenModal);
-      document.getElementById("goldenClose").addEventListener("click", closeGoldenModal);
-
-      // Keresők a két új modálhoz
-      document.getElementById("champUserSearch").addEventListener("input", (e)=> renderChampUsersList(e.target.value));
-      document.getElementById("goldenUserSearch").addEventListener("input", (e)=> renderGoldenUsersList(e.target.value));
-
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "login_ucl.html"; return; }
-        currentUserEmail = user.email;
-
-        // felhasználó
-        const userRef = doc(db, "users", currentUserEmail);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const d = userSnap.data();
-          currentUserNick = d.nickname || currentUserEmail;
-          currentUserRole = d.role || "user";
-          favouriteTeamucl = d.favouriteTeamucl || "";   // UCL kedvenc
-          chatLastSeen = d.chatLastSeen || null;
-        } else {
-          currentUserNick = currentUserEmail;
-          currentUserRole = "user";
-          favouriteTeamucl = "";
-          chatLastSeen = null;
-        }
-        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
-
-        // THEME UCL szerint
-        if (favouriteTeamucl) {
-          const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
-          const crest = crestMap[favouriteTeamucl];
-          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
-        }
-
-        // Becenevek
-        const usersSnap = await getDocs(collection(db, "users"));
-        usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
-
-        // Meccsek (UCL)
-        const matchesSnap = await getDocs(collection(db, "ucl_matches"));
-        matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-
-        const roundSet = new Set();
-        matches.forEach(m => { const r = matchRound(m); if (r) roundSet.add(r); });
-        roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
-        buildRoundsUI();
-
-        // Top8: tabella alapján
-        officialTop8 = deriveTop8FromMatches(matches);
-        refreshBonusCard();
-
-        // Realtime frissítés Top8-hoz
-        onSnapshot(collection(db,"ucl_matches"), snap=>{
-          const ms = snap.docs.map(d=>({id:d.id, ...d.data()}));
-          officialTop8 = deriveTop8FromMatches(ms);
-          refreshBonusCard();
-          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
-        });
-
-        // Tippek (legfrissebb per user-meccs) – UCL
-        tipsByMatch.clear();
-        const tipsSnap = await getDocs(collection(db, "ucl_tips"));
-        const latest = new Map(); // key: user|match -> tip
-        tipsSnap.forEach(d => {
-          const t = d.data(); if (!t?.matchId || !t?.user) return;
-          const k = t.user + "|" + t.matchId;
-          const cur = latest.get(k);
-          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
-          const ts = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
-          if (!cur || ts >= curTs) latest.set(k, { id:d.id, ...t });
-        });
-        for (const tip of latest.values()){
-          if (!tipsByMatch.has(tip.matchId)) tipsByMatch.set(tip.matchId, []);
-          tipsByMatch.get(tip.matchId).push(tip);
-        }
-
-        // Bónusz %-ok (positions-szel egyezően, ha van ilyen doksi)
-        onSnapshot(doc(db,"ucl_bonus","current"), snap=>{
-          const b = snap.exists() ? (snap.data()||{}) : {};
-          const toNum = v => (v==null ? undefined : Number(v));
-          bonusCfg.top8PerHitPct = toNum(b.top8PerHitPct ?? b.top8PerHit ?? b.top8) ?? 1;
-          bonusCfg.championPct   = toNum(b.championPct   ?? b.champion)   ?? 0;
-          bonusCfg.goldenPct     = toNum(b.goldenPct     ?? b.goldenBootPct ?? b.golden) ?? 0;
-          refreshBonusCard();
-          if (champOverlayOpen) renderChampUsersList(document.getElementById("champUserSearch")?.value || "");
-          if (goldenOverlayOpen) renderGoldenUsersList(document.getElementById("goldenUserSearch")?.value || "");
-        });
-
-        // Hivatalos győztes/gólkirály
-        onSnapshot(doc(db,"ucl_official","current"), snap=>{
-          const d = snap.exists() ? snap.data() : {};
-          officialChampion = d.champion || "";
-          officialGolden = d.goldenBoot && d.goldenBoot.player ? { player:d.goldenBoot.player, team:d.goldenBoot.team||"" } : {player:"",team:""};
-          // ha modál nyitva, frissítsük a részleteket
-          if (champOverlayOpen) renderChampUsersList(document.getElementById("champUserSearch")?.value || "");
-          if (goldenOverlayOpen) renderGoldenUsersList(document.getElementById("goldenUserSearch")?.value || "");
-        });
-
-        // Top8 tippek – realtime
-        onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
-          top8Tips = snap.docs.map(d=>{
-            const t=d.data()||{};
-            const email = t.email || d.id;
-            return { email, nick: nickByEmail[email] || t.nick || email, picks: Array.isArray(t.picks)? t.picks.slice(0,8):[] };
-          });
-          refreshBonusCard();
-          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
-        });
-
-        // Győztes tippek – realtime
-        onSnapshot(collection(db,"ucl_championPickTips"), snap=>{
-          championTips = snap.docs.map(d=>{
-            const t=d.data()||{}; const email=t.email || d.id;
-            return { email, nick: nickByEmail[email] || t.nick || email, team: t.team || "" };
-          });
-          if (champOverlayOpen) renderChampUsersList(document.getElementById("champUserSearch")?.value || "");
-        });
-
-        // Gólkirály tippek – realtime
-        onSnapshot(collection(db,"ucl_goldenBootTips"), snap=>{
-          goldenTips = snap.docs.map(d=>{
-            const t=d.data()||{}; const email=t.email || d.id;
-            return { email, nick: nickByEmail[email] || t.nick || email, player: t.player || "", team: t.team || "" };
-          });
-          if (goldenOverlayOpen) renderGoldenUsersList(document.getElementById("goldenUserSearch")?.value || "");
-        });
-
-        updatePendingBadge(currentUserEmail);
-        initChat(userRef);
-        if (window.hideLoader) hideLoader();
-      });
-
-      document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login_ucl.html");
-      });
-    });
-
-    /* ---- Meccstipp badge az értesítéshez (közelgő, még nincs tipp) ---- */
-    async function updatePendingBadge(email){
-      try{
-        const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date())));
-        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", email)));
-        const latestByMatch = new Map();
-        tipsSnap.forEach(x=>{
-          const t=x.data(); if(!t?.matchId) return;
-          const cur=latestByMatch.get(t.matchId);
-          const ts=(t.updatedAt?.toMillis?.()||t.createdAt?.toMillis?.()||t.timestamp?.toMillis?.()||0);
-          const cts=(cur?.updatedAt?.toMillis?.()||cur?.createdAt?.toMillis?.()||cur?.timestamp?.toMillis?.()||0);
-          if(!cur || ts>=cts) latestByMatch.set(t.matchId,t);
-        });
-        const tippedIds = new Set(Array.from(latestByMatch.keys()));
-        const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-        const badge = document.getElementById("tipsBadge");
-        if (badge){ if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; } }
-      }catch{}
-    }
   </script>
 </head>
 <body>
@@ -1006,8 +1078,9 @@
           <div class="bonus-muted">Hivatalos győztes és kik találták el.</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div>Hivatalos: <b id="champOfficial">—</b></div>
-          <div>Saját tipp: <b id="champMine">—</b></div>
+          <div>Hivatalos: <b id="champOfficialSummary">—</b></div>
+          <div>Saját tipp: <b id="champMineSummary">—</b></div>
+          <span id="champSumPct" class="badge">+0%</span>
           <button id="champDetailsBtn" class="btn-accent">Részletek</button>
         </div>
       </div>
@@ -1018,8 +1091,9 @@
           <div class="bonus-muted">Hivatalos gólkirály és kik találták el.</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div>Hivatalos: <b id="goldenOfficial">—</b></div>
-          <div>Saját tipp: <b id="goldenMine">—</b></div>
+          <div>Hivatalos: <b id="goldenOfficialSummary">—</b></div>
+          <div>Saját tipp: <b id="goldenMineSummary">—</b></div>
+          <span id="goldenSumPct" class="badge">+0%</span>
           <button id="goldenDetailsBtn" class="btn-accent">Részletek</button>
         </div>
       </div>
@@ -1067,7 +1141,7 @@
     </div>
   </div>
 
-  <!-- Győztes modál – Top8 formátum -->
+  <!-- Győztes modál -->
   <div id="champOverlay" class="overlay" role="dialog" aria-modal="true" aria-label="Végső győztes – részletek">
     <div class="modal">
       <aside class="aside">
@@ -1079,7 +1153,7 @@
         <div class="head">
           <div style="display:flex;flex-direction:column">
             <div id="champDetailTitle" style="font-weight:800">Végső győztes – </div>
-            <div class="bonus-muted">Találat esetén bónusz a positions szerinti %-kal</div>
+            <div class="bonus-muted">Találat esetén a positions oldalon látható +%-kal</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <span id="champDetailCount" class="badge">—</span>
@@ -1099,7 +1173,7 @@
     </div>
   </div>
 
-  <!-- Gólkirály modál – Top8 formátum -->
+  <!-- Gólkirály modál -->
   <div id="goldenOverlay" class="overlay" role="dialog" aria-modal="true" aria-label="Gólkirály – részletek">
     <div class="modal">
       <aside class="aside">
@@ -1111,7 +1185,7 @@
         <div class="head">
           <div style="display:flex;flex-direction:column">
             <div id="goldenDetailTitle" style="font-weight:800">Gólkirály – </div>
-            <div class="bonus-muted">Találat esetén bónusz a positions szerinti %-kal</div>
+            <div class="bonus-muted">Találat esetén a positions oldalon látható +%-kal</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <span id="goldenDetailCount" class="badge">—</span>
