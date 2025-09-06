@@ -338,7 +338,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       document.body.append(wrap);
       wrap.append(
         cAdd.section, cManage.section, cRes.section, cUsers.section,
-        cLock.section,            <!-- 🔒 ide került a lezárás kártya -->
+        cLock.section,
         cBonusCh.section, cBonusGb.section,
         cOfficial.section,
         cOddsCh.section,
@@ -486,12 +486,19 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     async function onAddMatch(e){
       e.preventDefault();
       const startTime = Timestamp.fromDate(new Date(document.getElementById('startTime').value));
+      const home = document.getElementById('homeTeam').value;
+      const away = document.getElementById('awayTeam').value;
+      const round = document.getElementById('roundId').value;
+      const o1 = parseFloat(document.getElementById('odds1').value);
+      const oX = parseFloat(document.getElementById('oddsX').value);
+      const o2 = parseFloat(document.getElementById('odds2').value);
+
       await addDoc(collection(db,'ucl_matches'),{
-        homeTeam: homeTeam.value,
-        awayTeam: awayTeam.value,
+        homeTeam: home,
+        awayTeam: away,
         startTime,
-        roundId: roundId.value,
-        odds: {"1":parseFloat(odds1.value),"X":parseFloat(oddsX.value),"2":parseFloat(odds2.value)}
+        roundId: round,
+        odds: {"1":o1,"X":oX,"2":o2}
       });
       alert('UCL meccs mentve');
       e.target.reset();
