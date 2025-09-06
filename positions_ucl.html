@@ -29,6 +29,21 @@
     .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;line-height:1}
     .pill-badge[hidden]{display:none!important}
 
+    /* Élő visszaszámláló kinézet */
+    .pill-badge.countdown{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-variant-numeric: tabular-nums;
+      letter-spacing:.2px;
+    }
+    .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
+    @keyframes pulse{
+      0%{ transform:scale(1) }
+      50%{ transform:scale(1.06) }
+      100%{ transform:scale(1) }
+    }
+    .blink{ animation:blink 1s steps(2,start) infinite }
+    @keyframes blink{ to{ opacity:.2 } }
+
     /* Cards + accordion */
     .card{background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
     .card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd;cursor:pointer;gap:12px}
@@ -76,64 +91,21 @@
     .pc-check{margin-left:auto;font-weight:800;opacity:0}
     .pick-card.selected .pc-check{opacity:1;color:#16a34a}
 
-    /* Chat FAB */
-    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
-    .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
-    .chat-fab.has-unread .fab-badge{display:inline-block}
-    .chat-panel{position:fixed;right:22px;bottom:86px;z-index:998;width:380px;max-width:calc(100vw - 32px);max-height:70vh;display:none;flex-direction:column;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.14)}
-    .chat-panel.open{display:flex}
-    .chat-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .chat-title{font-weight:800}
-    #chatClose{width:28px;height:28px;border-radius:8px;font-size:18px;line-height:28px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#111;border:1px solid var(--line,#e6eaf1);cursor:pointer}
-    #chatClose:hover{filter:brightness(.95)}
-    .chat-list{overflow:auto;padding:8px 10px}
-    .chat-empty{color:#64748b;font-size:13px;padding:8px 10px}
-    .msg{padding:8px 10px;border-bottom:1px solid var(--line,#e6eaf1);display:flex;gap:8px;align-items:flex-start}
-    .msg .meta{font-size:12px;color:#64748b;margin-bottom:2px}
-    .msg .text{white-space:pre-wrap;word-break:break-word}
-    .msg .del{margin-left:auto;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:2px 8px;border-radius:8px;font-size:12px;cursor:pointer;display:none}
-    .msg:hover .del{display:inline-block}
-
-    .btn-accent{min-height:40px;padding:10px 14px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(15,23,42,.08)}
-    .btn-accent:hover{filter:brightness(.95)}
-    .btn-icon{width:18px;height:18px;display:inline-block}
-
     /* Határidő sáv + lock szürkeítés */
     .deadline-banner{
-      margin:8px 0 0;
-      padding:10px 12px;
-      border:1px solid var(--line,#e6eaf1);
-      border-radius:10px;
-      background:#f8fafc;
-      color:#0f172a;
-      display:flex; align-items:center; gap:8px; font-weight:600;
-    }
+      margin:8px 0 0;padding:10px 12px;border:1px solid var(--line,#e6eaf1);
+      border-radius:10px;background:#f8fafc;color:#0f172a;
+      display:flex;align-items:center;gap:8px;font-weight:600}
     .deadline-banner .em{font-weight:800}
-    .deadline-banner.locked{
-      background:#fff7ed; color:#7c2d12; border-color:#fed7aa;
-    }
-    body.locked .pool,
-    body.locked .selected-wrap,
-    body.locked .grid-cards{
-      filter:grayscale(.2);
-      opacity:.6;
-    }
-    body.locked .team-chip,
-    body.locked .selected-chip,
-    body.locked .pick-card{
-      pointer-events:none;
-      cursor:not-allowed;
-    }
+    .deadline-banner.locked{background:#fff7ed;color:#7c2d12;border-color:#fed7aa}
+    body.locked .pool, body.locked .selected-wrap, body.locked .grid-cards{filter:grayscale(.2);opacity:.6}
+    body.locked .team-chip, body.locked .selected-chip, body.locked .pick-card{pointer-events:none;cursor:not-allowed}
   </style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore, doc, getDoc, setDoc,
-      collection, getDocs, addDoc, deleteDoc, serverTimestamp,
-      query, where, orderBy, onSnapshot
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -201,8 +173,8 @@
 
     // model
     let selectedTop8 = [];
-    let championCandidates = [];   // {team, odds?, displayPoints?}
-    let goldenCandidates   = [];   // {player, team?, odds?, displayPoints?}
+    let championCandidates = [];
+    let goldenCandidates   = [];
     let pickedChampion     = "";
     let pickedGolden       = "";
     let teamQuery          = "";
@@ -210,35 +182,61 @@
     /* 🔒 Pozíciós lezárás állapot */
     let POS_LOCK = { active:false, text:'', info:'', until:null };
 
-    /* NAV visszaszámláló */
+    /* ===== NAV Top8 visszaszámláló ===== */
     let navCdTimer = null;
+
+    function formatCountdown(ms){
+      const total = Math.max(0, Math.floor(ms/1000));
+      const d = Math.floor(total/86400);
+      const h = Math.floor((total%86400)/3600);
+      const m = Math.floor((total%3600)/60);
+      const s = total%60;
+      const H = String(h).padStart(2,'0');
+      const M = String(m).padStart(2,'0');
+      const S = String(s).padStart(2,'0');
+      const labelHTML = d>0
+        ? `<span class="mono">${d}n</span> <span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
+        : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
+      const aria = d>0
+        ? `${d} nap ${h} óra ${m} perc ${s} másodperc`
+        : `${h} óra ${m} perc ${s} másodperc`;
+      return { d, h, m, s, labelHTML, aria };
+    }
+
     function startNavTop8Countdown(until){
       clearInterval(navCdTimer);
       const el = document.getElementById('top8CountdownNav');
-      if (!el) return;
+      if (!el){ return; }
 
-      // nincs határidő vagy már zárva → badge elrejt
-      if (!until || POS_LOCK.active){ el.hidden = true; return; }
+      el.classList.add('countdown'); // biztos ami biztos
+
+      if (!until || POS_LOCK.active){
+        el.hidden = true;
+        return;
+      }
 
       function tick(){
-        const ms = until - new Date();
-        if (ms <= 0){ el.hidden = true; clearInterval(navCdTimer); return; }
+        const now = new Date();
+        const ms = until - now;
+        if (ms <= 0){
+          el.hidden = true;
+          clearInterval(navCdTimer);
+          return;
+        }
+        const { labelHTML, aria, m } = formatCountdown(ms);
+        el.innerHTML = labelHTML;
+        el.setAttribute('aria-live','polite');
+        el.setAttribute('aria-label', `Visszaszámláló: ${aria}`);
+        el.title = `Határidő: ${until.toLocaleString('hu-HU')}`;
 
-        const s  = Math.floor(ms/1000);
-        const d  = Math.floor(s/86400);
-        const h  = Math.floor((s%86400)/3600);
-        const m  = Math.floor((s%3600)/60);
-        const ss = s%60;
-
-        // rövid formátum a pillhez
-        el.textContent = d > 0
-          ? `${d}n`
-          : `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
-        el.hidden = false;
+        // 5 perc alatt dobjunk finom pulzálást
+        if (ms <= 5*60*1000){ el.classList.add('urgent'); }
+        else { el.classList.remove('urgent'); }
       }
 
       tick();
       navCdTimer = setInterval(tick, 1000);
+      el.hidden = false;
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -292,7 +290,7 @@
         initAccordions();
         initSearch();
         initChat(userRef);
-        updatePendingBadge(); // → ez a Meccstippek kártya badge-ét (tipsBadge) kezeli
+        updatePendingBadge();
         if (window.hideLoader) hideLoader();
       });
 
@@ -326,7 +324,7 @@
       const clamped = Math.min(Math.max(ratio, LO), HI);
       return BASE * clamped;
     }
-    function candidatePoints(c, scope){ // scope: 'golden' | 'champion'
+    function candidatePoints(c, scope){
       const dp = fromDisplayedPoints(c);
       if (dp != null) return dp;
       const odds = fromCandidateOdds(c);
@@ -388,7 +386,7 @@
         banner.hidden = false;
       }
 
-      // Test lock osztály + kereső tiltás
+      // Interakciók
       document.body.classList.toggle('locked', POS_LOCK.active);
       const s = document.getElementById('teamSearch');
       if (s) s.disabled = POS_LOCK.active;
@@ -400,7 +398,7 @@
         updateBadges();
       }
 
-      // NAV visszaszámláló
+      // NAV visszaszámláló (élő)
       startNavTop8Countdown(POS_LOCK.active ? null : POS_LOCK.until);
     }
 
@@ -432,7 +430,6 @@
           .filter(x=>x.player);
       }catch{ goldenCandidates=[]; }
 
-      // rendezés pont szerint
       function sortByPointsAsc(arr, scope, labelGetter){
         arr.sort((a,b)=>{
           const pa = candidatePoints(a, scope);
@@ -545,7 +542,7 @@
     let saveTimerTop8 = null;
     function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 250); }
     async function saveTop8Now(){
-      if (POS_LOCK.active) return;            /* 🔒 guard */
+      if (POS_LOCK.active) return;
       const saved = document.getElementById("saveStateTop8");
       try{
         await setDoc(doc(db,"ucl_top8Tips", currentUserEmail), {
@@ -562,7 +559,7 @@
 
     let saveTimerC = null;
     function saveChampionPickWith(team, oddsDecimal){
-      if (POS_LOCK.active) return;            /* 🔒 guard */
+      if (POS_LOCK.active) return;
       clearTimeout(saveTimerC);
       pickedChampion = team;
       highlightChampionCard();
@@ -588,7 +585,7 @@
 
     let saveTimerG = null;
     function saveGoldenPickWith(player, team, oddsDecimal){
-      if (POS_LOCK.active) return;            /* 🔒 guard */
+      if (POS_LOCK.active) return;
       clearTimeout(saveTimerG);
       pickedGolden = player;
       highlightGoldenCard();
@@ -648,14 +645,14 @@
       document.getElementById("saveStateTop8").classList.toggle("show", false);
     }
     function toggleSelect(team){
-      if (POS_LOCK.active) return;            /* 🔒 guard */
+      if (POS_LOCK.active) return;
       if (selectedTop8.includes(team)){ removeTeam(team); return; }
       if (selectedTop8.length>=8) return;
       selectedTop8.push(team);
       renderPool(); renderSelected(); autoSaveTop8();
     }
     function removeTeam(team){
-      if (POS_LOCK.active) return;            /* 🔒 guard */
+      if (POS_LOCK.active) return;
       selectedTop8 = selectedTop8.filter(t=>t!==team);
       renderPool(); renderSelected(); autoSaveTop8();
     }
@@ -674,7 +671,7 @@
         : '<span class="dot" title="Még nincs tipp">–</span><span class="status-text">Nincs tipp</span>';
     }
 
-    /* ===== Meccstippek badge (Meccstippek kártyán) ===== */
+    /* ===== Meccstippek badge ===== */
     function updatePendingBadge(){
       getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -687,7 +684,7 @@
           });
           const tippedIds = new Set(Array.from(latestByMatch.keys()));
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-          const badge = document.getElementById("tipsBadge"); // a Meccstippek nav-kártyán
+          const badge = document.getElementById("tipsBadge");
           if (badge){
             if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
           }
@@ -812,7 +809,7 @@
         <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
       </a>
 
-      <!-- Top 8 + bónusz NAV – IDE kerül a visszaszámláló badge -->
+      <!-- Top 8 + bónusz – élő visszaszámláló pill -->
       <a class="nav-card" href="positions_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
@@ -820,13 +817,13 @@
         <div class="text">
           <span class="title">
             Top 8 + bónusz
-            <span id="top8CountdownNav" class="pill-badge" hidden></span>
+            <span id="top8CountdownNav" class="pill-badge countdown" hidden></span>
           </span>
           <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
 
-      <!-- Meccstippek NAV – IDE kerül vissza a tipsBadge számláló -->
+      <!-- Meccstippek – piros szám badge -->
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
@@ -863,7 +860,7 @@
       </a>
     </nav>
 
-    <!-- Határidő / zárás sáv (mindig látszik) -->
+    <!-- Határidő / zárás sáv -->
     <div id="deadlineBanner" class="deadline-banner" hidden>Betöltés…</div>
 
     <!-- 1) Top 8 -->
