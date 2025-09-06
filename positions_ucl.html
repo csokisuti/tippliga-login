@@ -87,7 +87,7 @@
     .pc-text{display:flex;flex-direction:column;line-height:1.15}
     .pc-name{font-weight:700}
     .pc-sub{font-size:12px;color:#64748b}
-    .badge-odds{font-size:12px;background:#eef2ff;border:1px solid var(--line,#e6eaf1);padding:2px 6px;border-radius:999px;margin-top:4px;display:inline-block}
+    .badge-{font-size:12px;background:#eef2ff;border:1px solid var(--line,#e6eaf1);padding:2px 6px;border-radius:999px;margin-top:4px;display:inline-block}
     .pc-check{margin-left:auto;font-weight:800;opacity:0}
     .pick-card.selected .pc-check{opacity:1;color:#16a34a}
 
@@ -349,8 +349,7 @@
         cfg.HI   ?? 2.5
       );
     }
-    const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}`);
-
+    
     /* ===== 🔒 Lezárás + határidő ===== */
     async function loadPositionsLockAndApply(){
       try{
@@ -950,5 +949,6 @@
   </section>
 </body>
 </html>
+
 
 
