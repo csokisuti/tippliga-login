@@ -9,135 +9,113 @@
   <script src="loader.js" defer></script>
 
   <style>
-    :root{
-      --c1:70px;   /* Hely */
-      --c2:240px;  /* Játékos */
-      --c3:120px;  /* Összesen */
-      --c4:140px;  /* Bónusz % */
-      --c5:150px;  /* Alap pont */
-      --roundW:90px;
+    :root{ --line:#e6eaf1; --muted:#64748b; --accent:#3b82f6; --rowh:48px; --hdrh:44px; }
 
-      --line: #e6eaf1;
-      --muted: #64748b;
-      --accent: #3b82f6;
-    }
+    .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
 
-    .layout{display:flex;flex-direction:column;gap:16px;max-width:1200px;margin:0 auto;padding:20px}
-    .header{display:flex;align-items:center;justify-content:space-between}
-    .header-left{display:flex;align-items:center;gap:12px}
-    .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line);background:#fff}
-    .welcome{color:var(--muted);margin:4px 0 0}
+    /* Header / nav – egységes */
+    .header{ display:flex; align-items:center; justify-content:space-between; }
+    .header-left{ display:flex; align-items:center; gap:12px; }
+    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line); background:#fff; }
+    .welcome{ color:var(--muted); margin:4px 0 0; }
 
-    .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
-    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05)}
-    .nav-card .icon-wrap{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent) 15%,white);color:var(--accent)}
-    .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
-    .nav-card .title{font-weight:800}
-    .nav-card .desc{color:var(--muted);font-size:12px}
-    .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;line-height:1;vertical-align:middle}
-    .pill-badge[hidden]{display:none!important}
+    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
+    @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent) 15%, white); color:var(--accent); }
+    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
+    .nav-card .title{ font-weight:800; }
+    .nav-card .desc{ color:var(--muted); font-size:12px; }
+    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
+    .pill-badge[hidden]{ display:none !important; }
 
-    .btn{border:0;background:#e5e7eb;color:#111;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
-    .muted{color:var(--muted)}
+    .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; }
+    .muted{ color:var(--muted); }
 
-    .card{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
-    .subhdr{background:#f7f9fd;border-bottom:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    /* Kártya */
+    .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
+    .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
-    .tbl-wrap{overflow:auto}
-    table.rank{border-collapse:separate;border-spacing:0;min-width:980px;table-layout:fixed}
-    table.rank col.col-rank{width:var(--c1)}
-    table.rank col.col-player{width:var(--c2)}
-    table.rank col.col-total{width:var(--c3)}
-    table.rank col.col-bonus{width:var(--c4)}
-    table.rank col.col-base{width:var(--c5)}
-    .col-round{width:var(--roundW)}
+    /* TÁBLÁZAT – NB1 stílus */
+    .table-wrap{ display:flex; }
+    .grid{ display:grid; }
+    .hdr, .row{ display:contents; }
+    .cell{ padding:8px 12px; border-bottom:1px solid var(--line); background:#fff; display:flex; align-items:center; gap:8px; box-sizing:border-box; height:var(--rowh); overflow:hidden; }
+    .hdr .cell{ font-weight:700; background:#f7f8fc; height:var(--hdrh); }
+    .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
-    table.rank thead th, table.rank tbody td{
-      padding:10px 12px;
-      background:#fff;
-      border-bottom:1px solid var(--line);
-      white-space:nowrap;
-    }
-    table.rank thead th{
-      position:sticky;top:0;background:#f7f8fc;z-index:5;
-    }
+    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
+    .left .cell{ background:#fff; }
 
-    /* VERTIKÁLIS OSZLOPVÁLASZTÓK */
-    table.rank th:not(:last-child), table.rank td:not(:last-child){
-      border-right:1px solid var(--line);
-    }
-    tbody tr:nth-child(even) td{ background:#fcfdff }
-    .num{text-align:right}
+    .rank{ text-align:right; color:#64748b; white-space:nowrap; }
+    .num{ text-align:right; white-space:nowrap; }
+    .total{ font-weight:800; }
+    .round-cell{ min-width:78px; text-align:right; }
+    .round-link{ display:block; color:inherit; text-decoration:none; }
+    .round-link:hover{ text-decoration:underline; }
+    .top{ background:#fff8e1 !important; font-weight:700; }
 
-    /* Sticky bal oldali blokkok */
-    .sticky-1,.sticky-2,.sticky-3,.sticky-4,.sticky-5{position:sticky;left:0;z-index:4;background:inherit}
-    .sticky-2{left:var(--c1)}
-    .sticky-3{left:calc(var(--c1) + var(--c2))}
-    .sticky-4{left:calc(var(--c1) + var(--c2) + var(--c3))}
-    .sticky-5{left:calc(var(--c1) + var(--c2) + var(--c3) + var(--c4))}
-    .sticky-border{box-shadow:1px 0 0 0 var(--line)}
+    /* Név + címer – NB1 */
+    .name-wrap{ display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; min-width:0; }
+    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
+    .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
 
-    .player-cell{display:flex;align-items:center;gap:8px}
-    .player-cell img{width:22px;height:22px;object-fit:contain;border-radius:4px;border:1px solid var(--line);background:#fff}
-    .player-cell span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:260px}
-
-    .top{background:#fff8e1!important;font-weight:700}
-    .round-link{color:inherit;text-decoration:none}
-    .round-link:hover{text-decoration:underline}
-
-    /* BÓNUSZ CHIP – mindig látszódjon, különüljön el */
-    .bonus-cell{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    /* BÓNUSZ gomb – erősebb kontraszt + pont ( % ) felirattal */
+    .bonus-cell{ justify-content:flex-end; }
     .bonus-chip{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:6px 10px;border:1px solid color-mix(in oklab, var(--accent) 25%, var(--line));
-      border-radius:999px;
-      background:color-mix(in oklab, var(--accent) 8%, #ffffff);
-      cursor:pointer;font-weight:800;
-      box-shadow:0 2px 8px rgba(0,0,0,.06);
-      transition:transform .06s ease, box-shadow .12s ease, background .12s ease;
+      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      padding:7px 11px; border-radius:999px; font-weight:800; line-height:1;
+      background:color-mix(in oklab, var(--accent) 18%, #ffffff);
+      border:1px solid color-mix(in oklab, var(--accent) 45%, #ffffff);
+      box-shadow:0 3px 10px rgba(0,0,0,.10);
+      cursor:pointer; user-select:none;
+      transition:transform .06s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
     }
     .bonus-chip:hover{
       transform:translateY(-1px);
-      box-shadow:0 4px 14px rgba(0,0,0,.10);
-      background:color-mix(in oklab, var(--accent) 12%, #ffffff);
+      background:color-mix(in oklab, var(--accent) 24%, #ffffff);
+      border-color:color-mix(in oklab, var(--accent) 55%, #ffffff);
+      box-shadow:0 6px 16px rgba(0,0,0,.16);
     }
-    .bonus-chip .pct{letter-spacing:.2px}
-    .bonus-chip[data-pct="0"]{opacity:.9}
+    .bonus-chip svg{ opacity:.9 }
 
-    /* Bonus popover (RÖVID – nincs Top8-táblázat itt) */
-    .bonus-backdrop{position:fixed;inset:0;z-index:9998;background:transparent}
-    .bonus-pop{position:fixed;z-index:9999;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.14);width:min(420px,calc(100vw - 32px));padding:12px}
-    .bonus-pop .title{font-weight:800;margin-bottom:8px}
-    .grid2{display:grid;grid-template-columns:130px 1fr;gap:6px 10px}
-    .btag{display:inline-flex;gap:6px;align-items:center;font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#334155}
-    .btag.ok{background:#ecfdf5;border-color:#bbf7d0;color:#166534}
-    .btag.pending{background:#fffbeb;border-color:#fde68a;color:#a16207}
-    .btag.no{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-    .muted-xs{color:var(--muted);font-size:12px}
+    /* Bonus popover (rövid összefoglaló – itt NINCS 8-as táblázat) */
+    .bonus-backdrop{ position:fixed; inset:0; z-index:9998; background:transparent; }
+    .bonus-pop{
+      position:fixed; z-index:9999; width:min(460px, calc(100vw - 32px));
+      background:#fff; border:1px solid var(--line); border-radius:12px;
+      box-shadow:0 14px 40px rgba(0,0,0,.22); padding:12px;
+    }
+    .bonus-pop .title{ font-weight:800; margin-bottom:8px; }
+    .grid2{ display:grid; grid-template-columns:140px 1fr; gap:8px 12px; }
+    .btag{ display:inline-flex; gap:6px; align-items:center; font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:#fff; color:#334155; }
+    .btag.ok{ background:#ecfdf5; border-color:#bbf7d0; color:#166534; }
+    .btag.pending{ background:#fffbeb; border-color:#fde68a; color:#a16207; }
+    .btag.no{ background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+    .muted-xs{ color:var(--muted); font-size:12px; }
 
-    /* Chat */
-    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
-    .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
-    .chat-fab.has-unread .fab-badge{display:inline-block}
-    .chat-panel{position:fixed;right:22px;bottom:86px;z-index:998;width:380px;max-width:calc(100vw - 32px);max-height:70vh;display:none;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.14)}
-    .chat-panel.open{display:flex}
-    .chat-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:#f7f9fd}
-    .chat-title{font-weight:800}
-    #chatClose{width:28px;height:28px;border-radius:8px;font-size:18px;line-height:28px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#111;border:1px solid var(--line);cursor:pointer}
-    #chatClose:hover{filter:brightness(.95)}
-    .chat-list{overflow:auto;padding:8px 10px}
-    .chat-empty{color:var(--muted);font-size:13px;padding:8px 10px}
-    .msg{padding:8px 10px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:flex-start}
-    .msg .meta{font-size:12px;color:var(--muted);margin-bottom:2px}
-    .msg .text{white-space:pre-wrap;word-break:break-word}
-    .msg .del{margin-left:auto;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:2px 8px;border-radius:8px;font-size:12px;cursor:pointer;display:none}
-    .msg:hover .del{display:inline-block}
-    #chatComposer{display:flex;gap:8px;align-items:center;padding:10px;border-top:1px solid var(--line);background:#fff}
-    #chatInput{background:#fff;color:#111;border:1px solid var(--line);height:40px;padding:8px 10px;border-radius:10px;font-size:14px;outline:none;width:100%;box-sizing:border-box}
-    #chatInput::placeholder{color:#6b7280}
-    #chatSendBtn{min-width:90px;padding:8px 12px;border-radius:10px;background:var(--accent);color:#fff;border:0;font-weight:600;cursor:pointer}
+    /* Chat – egységes */
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
+    .chat-fab.has-unread .fab-badge{ display:inline-block; }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel.open{ display:flex; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .chat-title{ font-weight:800; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+    #chatClose:hover{ filter:brightness(0.95); }
+    .chat-list{ overflow:auto; padding:8px 10px; }
+    .chat-empty{ color:var(--muted); font-size:13px; padding:8px 10px; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start; }
+    .msg .meta{ font-size:12px; color:var(--muted); margin-bottom:2px; }
+    .msg .text{ white-space:pre-wrap; word-break:break-word; }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
+    .msg:hover .del{ display:inline-block; }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatInput::placeholder{ color:#6b7280; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
   </style>
 
   <script type="module">
@@ -162,6 +140,7 @@
     const NORM=s=>String(s??"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
     const eqTeam=(a,b)=>!!a&&!!b&&NORM(a)===NORM(b);
     const eqText=(a,b)=>NORM(a)===NORM(b);
+    const pctColor=p=>`hsl(${Math.max(0,Math.min(25,p))/25*120}deg,85%,38%)`;
 
     const teamColorMap={
       "Arsenal":"#c3002f","Barcelona":"#a50044","Bayern München":"#dc052d","Benfica":"#d20a0a","Borussia Dortmund":"#111827",
@@ -172,7 +151,7 @@
       "Slavia Praha":"#d00027","FC Köbenhavn":"#004a98","Eintracht Frankfurt":"#111111","Olympique Marseille":"#009fe3",
       "Olympiakosz Pireusz":"#c8102e","Qarabag":"#1f2937","Pafosz":"#1f2937","Kajrat Almati":"#1f2937","Bodø/Glimt":"#1f2937","Club Bruges":"#1f2937"
     };
-    const colorForTeam=t=>teamColorMap[t]||"#374151";
+    const colorForTeam=t=>teamColorMap[t]||"#111827";
 
     function getOdds(m,key){
       if(m?.odds&&(key in m.odds))return m.odds[key];
@@ -203,19 +182,19 @@
       const rows=Object.values(S).sort(cmp);return rows.slice(0,8).map(r=>r.team)
     }
 
-    /* ---- Bonus számítási szabályok ---- */
+    /* ---- Bonus szabályok (MARAD) ---- */
     const BONUS_CFG=Object.freeze({winnerPct:10,topScorerPct:5,top8PerHitPct:1,top8MaxPct:8});
 
     let currentUserEmail="",currentUserNick="",currentUserRole="user",favouriteTeamucl="",chatLastSeen=null;
 
-    /* Állapot a ranglistához – ugyanazokat az adatokat kérjük le, mint a results oldalon */
+    /* Állapot – BL kollekciók */
     let usersMap={}, usersFavUcl={};
     let matchesById={}, roundsAsc=[];
     let officialTop8=[], officialChampion="", officialGoldenPlayer="";
     let top8TipsByEmail={}, championPickByEmail={}, goldenPickByEmail={};
-    let latestTipsByUserMatch=new Map(); // meccspontokhoz
+    let latestTipsByUserMatch=new Map();
 
-    let rows=[]; // renderhez
+    let rows=[];
 
     document.addEventListener("DOMContentLoaded",()=>{
       onAuthStateChanged(auth,async(user)=>{
@@ -250,29 +229,28 @@
           recomputeRows(); renderTable();
         });
 
-        /* TIPS – meccspontokhoz csak a legutóbbit tartjuk */
-        const tipsSnapAll=await getDocs(collection(db,"ucl_tips"));
-        latestTipsByUserMatch=collectLatestTips(tipsSnapAll);
+        /* TIPS – utolsó verzió */
+        const tipsAll=await getDocs(collection(db,"ucl_tips"));
+        latestTipsByUserMatch=collectLatestTips(tipsAll);
         onSnapshot(collection(db,"ucl_tips"), snap=>{
           latestTipsByUserMatch=collectLatestTips(snap);
           recomputeRows(); renderTable();
         });
 
-        /* OFFICIAL (ugyanúgy, mint results-on) */
+        /* OFFICIAL */
         onSnapshot(doc(db,"ucl_official","current"), snap=>{
           const d=snap.exists()?snap.data():{};
           officialChampion=d.champion||"";
-          officialGoldenPlayer = (d.goldenBoot && d.goldenBoot.player) ? d.goldenBoot.player : (d.topScorer||"");
+          officialGoldenPlayer=(d.goldenBoot&&d.goldenBoot.player)?d.goldenBoot.player:"";
           recomputeRows(); renderTable();
         });
 
-        /* TOP8/CHAMP/GOLDEN tippek – ugyanazok a collectionök, mint a results oldalon */
+        /* TOP8/CHAMP/GOLDEN tippek */
         onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
           top8TipsByEmail={};
           snap.forEach(docu=>{
             const t=docu.data()||{};const email=t.email||docu.id;
-            const picks=Array.isArray(t.picks)?t.picks.slice(0,8):[];
-            top8TipsByEmail[email]=picks;
+            top8TipsByEmail[email]=(Array.isArray(t.picks)?t.picks.slice(0,8):[]);
           });
           recomputeRows(); renderTable();
         });
@@ -322,16 +300,15 @@
       const offTop8=(officialTop8||[]).slice(0,8).filter(Boolean);
       if(!userPicks.length||!offTop8.length)return{hits:0,pct:0};
       const setOfficial=new Set(offTop8.map(NORM));let hits=0;
-      for(const t of userPicks){if(setOfficial.has(NORM(t)))hits++}
+      for(const t of userPicks){ if(setOfficial.has(NORM(t))) hits++; }
       const pct=Math.min(hits*BONUS_CFG.top8PerHitPct,BONUS_CFG.top8MaxPct);
       return{hits,pct};
     }
 
     function recomputeRows(){
-      // base pontok (meccsekből)
       const perPlayer={}; // nick -> {base, perRound, email}
       for(const tip of latestTipsByUserMatch.values()){
-        const m=matchesById[tip.matchId];if(!m)continue;
+        const m=matchesById[tip.matchId]; if(!m)continue;
         const roundId=matchRound(m)||""; if(!roundId)continue;
         if(!m.outcome)continue;
         const pick=tipChoice(tip); if(!pick)continue;
@@ -342,12 +319,10 @@
         perPlayer[nick].base+=pts; perPlayer[nick].perRound[roundId]=(perPlayer[nick].perRound[roundId]||0)+pts;
       }
 
-      // bonus % (csak % kell a táblába)
       rows=Object.entries(perPlayer).map(([nick,obj])=>{
         const email=obj.email;
 
         const {pct:top8Pct, hits:top8Hits}=calcTop8Pct(email);
-
         const champPick = championPickByEmail[email] || "";
         const goldenPick = goldenPickByEmail[email] || "";
 
@@ -376,7 +351,7 @@
       rows.sort((a,b)=>b.total-a.total||a.nick.localeCompare(b.nick));
     }
 
-    /* ---------------- Render ---------------- */
+    /* ---------------- Render – NB1 kinézet ---------------- */
     function renderTable(){
       const mount=document.getElementById("tableMount");
       const mode=mount.dataset.mode==="all"?"all":"last";
@@ -395,78 +370,89 @@
 
       const maxPerRound=toShow.map(r=>{let m=-Infinity;rows.forEach(row=>{m=Math.max(m,row.perRound[r]||0)});return m===-Infinity?0:m});
 
-      const table=document.createElement("table");
-      table.className="rank";
+      const leftHeader = `
+        <div class="hdr">
+          <div class="cell left rank">Hely</div>
+          <div class="cell left">Játékos</div>
+          <div class="cell left num">Összesen</div>
+          <div class="cell left num">Bónusz (pont + %)</div>
+          <div class="cell left num">Alap pont</div>
+        </div>`;
 
-      const colgroup=document.createElement("colgroup");
-      colgroup.innerHTML=`
-        <col class="col-rank"><col class="col-player"><col class="col-total"><col class="col-bonus"><col class="col-base">
-        ${toShow.map(()=>`<col class="col-round">`).join("")}
+      const rightHeader = toShow.map(r=>`<div class="cell round-cell"><a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
+
+      const container=document.createElement('div'); container.className='table-wrap';
+
+      /* LEFT (sticky) – NB1 grid szélességek */
+      const left=document.createElement('div');
+      left.className='left';
+      left.style.minWidth='900px';
+      left.style.maxWidth='900px';
+      left.innerHTML=`
+        <div class="grid" style="grid-template-columns:70px 2.8fr 130px 190px 120px;">
+          ${leftHeader}
+          ${rows.map((r,i)=> renderLeftRow(r,i)).join('')}
+        </div>
       `;
-      table.appendChild(colgroup);
 
-      const thead=document.createElement("thead");
-      thead.innerHTML=`
-        <tr>
-          <th class="sticky-1 sticky-border">Hely</th>
-          <th class="sticky-2 sticky-border">Játékos</th>
-          <th class="num sticky-3 sticky-border">Összesen</th>
-          <th class="num sticky-4 sticky-border">Bónusz %</th>
-          <th class="num sticky-5 sticky-border">Alap pont</th>
-          ${toShow.map(r=>`<th class="num">F${r}</th>`).join('')}
-        </tr>`;
-      table.appendChild(thead);
+      /* RIGHT (scroll) */
+      const right=document.createElement('div');
+      right.style.overflow='auto';
+      right.style.flex='1';
+      right.innerHTML=`
+        <div class="grid" style="grid-template-columns:${'78px '.repeat(toShow.length)};">
+          <div class="hdr">${rightHeader}</div>
+          ${rows.map(r=>{
+            const cells=toShow.map((rid,idx)=>{
+              const val=r.perRound[rid]||0;
+              const isTop=val===maxPerRound[idx]&&val!==0;
+              return `<div class="cell round-cell num ${isTop?'top':''}">
+                        <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
+                      </div>`;
+            }).join('');
+            return `<div class="row row-bg">${cells}</div>`;
+          }).join('')}
+        </div>
+      `;
 
-      const tbody=document.createElement("tbody");
-      rows.forEach((r,i)=>{
-        const tr=document.createElement("tr");
+      mount.innerHTML='';
+      container.appendChild(left);
+      container.appendChild(right);
+      mount.appendChild(container);
 
-        const tdRank=document.createElement("td");tdRank.className="sticky-1 sticky-border";tdRank.textContent=(i+1)+".";
-        const tdPlayer=document.createElement("td");tdPlayer.className="sticky-2 sticky-border";
-        const crest=crestFor(r.fav);
-        tdPlayer.innerHTML=`<div class="player-cell">${crest?`<img src="${crest}" alt="">`:""}<span style="color:${colorForTeam(r.fav)}">${escapeHtml(r.nick)}</span></div>`;
-
-        const tdTot=document.createElement("td");tdTot.className="num sticky-3 sticky-border";tdTot.innerHTML=`<span class="total">${fmt(r.total)}</span>`;
-
-        const tdBonus=document.createElement("td");tdBonus.className="num sticky-4 sticky-border bonus-cell";
-        tdBonus.innerHTML=`
-          <button class="bonus-chip bonus-toggle" data-idx="${i}" data-pct="${r.bonusPct}" aria-expanded="false" title="Bónusz részletek">
-            <span class="pct">+${r.bonusPct}%</span>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" style="margin-left:2px"><path d="M7 10l5 5 5-5z"/></svg>
-          </button>
-        `;
-
-        const tdBase=document.createElement("td");tdBase.className="num sticky-5 sticky-border";tdBase.textContent=fmt(r.base);
-
-        tr.appendChild(tdRank);tr.appendChild(tdPlayer);tr.appendChild(tdTot);tr.appendChild(tdBonus);tr.appendChild(tdBase);
-
-        toShow.forEach((rid,idx)=>{
-          const val=r.perRound[rid]||0;
-          const isTop=val===maxPerRound[idx]&&val!==0;
-          const td=document.createElement("td");td.className="num"+(isTop?" top":"");
-          td.innerHTML=`<a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?" ⭐":""}</a>`;
-          tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody);
-
-      mount.innerHTML="";
-      const wrap=document.createElement("div");wrap.className="tbl-wrap";wrap.appendChild(table);
-      mount.appendChild(wrap);
-
-      mount.querySelectorAll(".bonus-toggle").forEach(btn=>{
+      // Bonus chip katt
+      mount.querySelectorAll(".bonus-chip").forEach(btn=>{
         btn.addEventListener("click",()=>{
           const idx=Number(btn.dataset.idx||0);
           const rect=btn.getBoundingClientRect();
-          const expanded=btn.getAttribute("aria-expanded")==="true";
-          if(expanded){closeBonusPopover();return}
-          document.querySelectorAll('.bonus-toggle[aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'));
-          btn.setAttribute("aria-expanded","true");
           showBonusPopover(rows[idx],rect.right,rect.bottom);
-        })
+        });
       });
+    }
+
+    function renderLeftRow(r,i){
+      const crest = r.fav && crestFor(r.fav) ? `<img class="name-crest" src="${crestFor(r.fav)}" alt="${escapeHtml(r.fav)}">` : "";
+      const color = colorForTeam(r.fav);
+      const nameHtml = `
+        <div class="name-wrap">
+          ${crest||""}
+          <span class="name-text" style="color:${color}">${escapeHtml(r.nick)}</span>
+        </div>`;
+
+      return `
+        <div class="row row-bg">
+          <div class="cell left rank">${i+1}.</div>
+          <div class="cell left">${nameHtml}</div>
+          <div class="cell left num total">${fmt(r.total)}</div>
+          <div class="cell left num bonus-cell">
+            <button class="bonus-chip" data-idx="${i}" title="Bónusz részletek">
+              +${fmt(r.bonusPts)} <span style="opacity:.9">(+${r.bonusPct}%)</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+          </div>
+          <div class="cell left num">${fmt(r.base)}</div>
+        </div>
+      `;
     }
 
     /* ---------------- Bonus popover (rövid) ---------------- */
@@ -486,22 +472,21 @@
         <div class="title">${escapeHtml(row.nick)} – Bónusz összefoglaló</div>
         <div class="grid2">
           <div class="muted-xs">Képlet</div>
-          <div><strong>${fmt(row.base)} × ${row.bonusPct}% = ${fmt(row.bonusPts)}</strong></div>
+          <div><strong>${fmt(row.base)} × ${row.bonusPct}% = +${fmt(row.bonusPts)}</strong></div>
 
           <div class="muted-xs">Végső győztes</div>
-          <div><span class="btag ${clW}">🏆 ${icW} +${row.parts.winner.pct}%</span> <div class="muted-xs">Tipp: <strong>${escapeHtml(row.parts.winner.pick||'—')}</strong> • Hiv.: <strong>${escapeHtml(row.parts.winner.official||'—')}</strong></div></div>
+          <div><span class="btag ${clW}">🏆 ${icW} +${row.parts.winner.pct}%</span><div class="muted-xs">Tipp: <strong>${escapeHtml(row.parts.winner.pick||'—')}</strong> • Hiv.: <strong>${escapeHtml(row.parts.winner.official||'—')}</strong></div></div>
 
           <div class="muted-xs">Gólkirály</div>
-          <div><span class="btag ${clG}">👟 ${icG} +${row.parts.topScorer.pct}%</span> <div class="muted-xs">Tipp: <strong>${escapeHtml(row.parts.topScorer.pick||'—')}</strong> • Hiv.: <strong>${escapeHtml(row.parts.topScorer.official||'—')}</strong></div></div>
+          <div><span class="btag ${clG}">👟 ${icG} +${row.parts.topScorer.pct}%</span><div class="muted-xs">Tipp: <strong>${escapeHtml(row.parts.topScorer.pick||'—')}</strong> • Hiv.: <strong>${escapeHtml(row.parts.topScorer.official||'—')}</strong></div></div>
 
           <div class="muted-xs">Top 8 találatok</div>
           <div><span class="btag ok">📊 +${row.parts.top8.pct}%</span> <span class="muted-xs">(${row.parts.top8.hits}/8)</span>
-            <div class="muted-xs" style="margin-top:6px">A részletes 8-as táblázat az <strong>Eredmények</strong> oldalon látható.</div>
+            <div class="muted-xs" style="margin-top:6px">A részletes 8-as bontás az <strong>Eredmények</strong> oldalon látható.</div>
           </div>
         </div>
       `;
 
-      // Pozícionálás
       const pad=8;const vw=window.innerWidth,vh=window.innerHeight;
       document.body.appendChild(pop);
       const r=pop.getBoundingClientRect();
@@ -510,15 +495,15 @@
       if(y+r.height>vh-8)y=vh-r.height-8;
       pop.style.left=Math.max(8,x)+"px";
       pop.style.top=Math.max(8,y)+"px";
+
       document.body.appendChild(backdrop);
     }
 
     function closeBonusPopover(){
       document.querySelectorAll(".bonus-backdrop,.bonus-pop").forEach(n=>n.remove());
-      document.querySelectorAll('.bonus-toggle[aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'));
     }
 
-    /* ---------------- Pending badge ---------------- */
+    /* ---------------- Nav „függő tippek” badge ---------------- */
     function updatePendingBadge(){
       getDocs(query(collection(db,"ucl_matches"),where("startTime",">=",new Date()))).then(upcomingSnap=>{
         const upcoming=upcomingSnap.docs.map(d=>({id:d.id,...d.data()}));
@@ -565,7 +550,7 @@
         try{await addDoc(collection(db,'chatMessages'),{email:currentUserEmail,nick:currentUserNick||'Ismeretlen',text:backup,ts:serverTimestamp()});if(panel.classList.contains('open'))await markSeen()}catch(e){inputEl.value=backup;inputEl.focus()}
       });
       inputEl.addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendBtn.click()}})
-      async function markSeen(){try{await setDoc(userRef,{chatLastSeen:serverTimestamp()},{merge:true});fab.classList.remove('has-unread');fabBadge.textContent=''}catch(e){}}
+      async function markSeen(){try{await setDoc(userRef,{chatLastSeen:serverTimestamp()},{merge:true});lastSeenMs=Date.now();fab.classList.remove('has-unread');fabBadge.textContent=''}catch(e){}}
     }
   </script>
 </head>
@@ -602,13 +587,13 @@
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
-        <div class="text"><span class="title">Szezon végi sorrend</span><span class="desc">12 csapat – húzd a helyekre</span></div>
+        <div class="text"><span class="title">Top 8 + bónusz <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
         </div>
-        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
+        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -623,11 +608,15 @@
         <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
       </a>
       <a class="nav-card" href="profile_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
+        </div>
         <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
       </a>
       <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg>
+        </div>
         <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
       </a>
     </nav>
@@ -639,15 +628,13 @@
         <span id="rangeLabel" class="muted">Alap: az utolsó 5 forduló látszik</span>
       </div>
       <div id="tableMount" data-mode="last"></div>
-      <div style="padding:8px 12px;font-size:12px;color:var(--muted)">⭐ = adott forduló legmagasabb pontja</div>
+      <div style="padding:8px 12px; font-size:12px; color:var(--muted)">⭐ = adott forduló legmagasabb pontja</div>
     </section>
   </div>
 
   <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
-    </svg>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
@@ -662,7 +649,5 @@
       <button id="chatSendBtn">Küldés</button>
     </div>
   </section>
-
-  <div class="bonus-backdrop" hidden></div>
 </body>
 </html>
