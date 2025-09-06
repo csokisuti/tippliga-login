@@ -22,11 +22,11 @@
     @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05)}
-    .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white);color:var(--accent,#3b82f6)}
+    .nav-card .icon-wrap{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white);color:var(--accent,#3b82f6)}
     .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
     .nav-card .title{font-weight:800}
     .nav-card .desc{color:var(--muted,#64748b);font-size:12px}
-    .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;line-height:1;vertical-align:middle}
+    .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;line-height:1}
     .pill-badge[hidden]{display:none!important}
 
     /* Élő visszaszámláló kinézet */
@@ -36,7 +36,11 @@
       letter-spacing:.2px;
     }
     .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+    @keyframes pulse{
+      0%{ transform:scale(1) }
+      50%{ transform:scale(1.06) }
+      100%{ transform:scale(1) }
+    }
     .blink{ animation:blink 1s steps(2,start) infinite }
     @keyframes blink{ to{ opacity:.2 } }
 
@@ -49,6 +53,14 @@
     .card.open .card-body{display:block}
     .arrow{transition:transform .18s ease}
     .card.open .arrow{transform:rotate(180deg)}
+
+    /* Kártya leírás */
+    .card-desc{
+      margin:10px 14px 0;
+      color:var(--muted,#64748b);
+      font-size:14px;
+      line-height:1.5;
+    }
 
     /* Status pill */
     .status{display:inline-flex;align-items:center;gap:6px;font-size:12px}
@@ -108,7 +120,7 @@
     .btn-accent:focus{outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white);outline-offset:2px}
     .btn-icon{width:18px;height:18px;display:inline-block}
 
-    /* === Chat (a működő oldalról 1:1) === */
+    /* CHAT – teljes (jó) verzió */
     .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
     .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
     .chat-fab.has-unread .fab-badge{display:inline-block}
@@ -119,7 +131,7 @@
     #chatClose{width:28px;height:28px;border-radius:8px;font-size:18px;line-height:28px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#111;border:1px solid var(--line,#e6eaf1);cursor:pointer}
     #chatClose:hover{filter:brightness(.95)}
     .chat-list{overflow:auto;padding:8px 10px}
-    .chat-empty{color:var(--muted,#64748b);font-size:13px;padding:8px 10px}
+    .chat-empty{color:#64748b;font-size:13px;padding:8px 10px}
     .msg{padding:8px 10px;border-bottom:1px solid var(--line,#e6eaf1);display:flex;gap:8px;align-items:flex-start}
     .msg .meta{font-size:12px;color:var(--muted,#64748b);margin-bottom:2px}
     .msg .text{white-space:pre-wrap;word-break:break-word}
@@ -318,7 +330,7 @@
 
         initAccordions();
         initSearch();
-        initChat(userRef);          // ← ugyanaz, mint a jó oldalon
+        initChat(userRef);
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
       });
@@ -721,102 +733,90 @@
       });
     }
 
-    /* ===== Chat (jó oldalról) ===== */
+    /* ===== Chat ===== */
     function initChat(userRef){
-      const fab=document.getElementById('chatToggle');
-      const fabBadge=document.getElementById('chatFabBadge');
-      const panel=document.getElementById('chatPanel');
-      const closeBtn=document.getElementById('chatClose');
-      const listEl=document.getElementById('chatMessages');
-      const inputEl=document.getElementById('chatInput');
-      const sendBtn=document.getElementById('chatSendBtn');
+      const fab = document.getElementById('chatToggle');
+      const fabBadge = document.getElementById('chatFabBadge');
+      const panel = document.getElementById('chatPanel');
+      const closeBtn = document.getElementById('chatClose');
+      const listEl = document.getElementById('chatMessages');
+      const inputEl = document.getElementById('chatInput');
+      const sendBtn = document.getElementById('chatSendBtn');
 
-      function open(){panel.classList.add('open');setTimeout(()=>inputEl?.focus(),50);markSeen()}
-      function close(){panel.classList.remove('open')}
-      function toggle(){panel.classList.contains('open')?close():open()}
-      fab.addEventListener('click',toggle);
-      closeBtn.addEventListener('click',close);
+      function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
+      function close(){ panel.classList.remove('open'); }
+      fab.addEventListener('click', ()=> panel.classList.contains('open') ? close() : open());
+      closeBtn.addEventListener('click', close);
 
-      let lastSeenMs=chatLastSeen?.toMillis?chatLastSeen.toMillis():0;
+      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
 
-      const qAll=query(collection(db,'chatMessages'),orderBy('ts','asc'));
-      onSnapshot(qAll,snap=>{
-        listEl.innerHTML='';
-        if(snap.empty){
-          const empty=document.createElement('div');
-          empty.className='chat-empty';
-          empty.textContent='Még nincs üzenet. Légy te az első!';
+      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
+      onSnapshot(qAll, snap => {
+        listEl.innerHTML = '';
+        if (snap.empty){
+          const empty = document.createElement('div');
+          empty.className = 'chat-empty';
+          empty.textContent = 'Még nincs üzenet. Légy te az első!';
           listEl.appendChild(empty);
-        }else{
-          let unread=0;
+        } else {
+          let unread = 0;
           snap.forEach(docu=>{
-            const d=docu.data();
-            const tsMs=d.ts?.toMillis?.()||0;
-            if(tsMs>lastSeenMs) unread++;
+            const d = docu.data();
+            const tsMs = d.ts?.toMillis?.() || 0;
+            if (tsMs > lastSeenMs) unread++;
 
-            const row=document.createElement('div');
-            row.className='msg';
-            row.innerHTML=`
+            const row = document.createElement('div');
+            row.className = 'msg';
+            row.innerHTML = `
               <div style="flex:1 1 auto">
                 <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
                 <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-              </div>
-            `;
-
-            const canDelete=(currentUserRole==='admin')||(d.email===currentUserEmail);
-            if(canDelete){
-              const del=document.createElement('button');
-              del.className='del';
-              del.textContent='Törlés';
-              del.title='Üzenet törlése';
-              del.addEventListener('click',async()=>{try{await deleteDoc(doc(db,'chatMessages',docu.id))}catch(e){console.warn('Del failed',e)}});
+              </div>`;
+            const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
+            if (canDelete){
+              const del = document.createElement('button');
+              del.className = 'del';
+              del.textContent = 'Törlés';
+              del.title = 'Üzenet törlése';
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch{} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
           });
 
-          if(!panel.classList.contains('open')&&unread>0){
+          if (!panel.classList.contains('open') && unread > 0){
             fab.classList.add('has-unread');
-            fabBadge.textContent=unread>99?'99+':String(unread);
-          }else{
+            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
+          } else {
             fab.classList.remove('has-unread');
-            fabBadge.textContent='';
+            fabBadge.textContent = '';
           }
 
-          setTimeout(()=>{listEl.scrollTop=listEl.scrollHeight;},0);
+          setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
         }
-      }, err => console.warn('chat snapshot error:', err));
+      });
 
-      sendBtn.addEventListener('click',async ()=>{
-        const txt=(inputEl.value||'').trim();
-        if(!txt){inputEl.focus();return}
-        const backup=txt;
-        inputEl.value='';
+      document.getElementById('chatSendBtn').addEventListener('click', async ()=>{
+        const txt = (inputEl.value || '').trim();
+        if (!txt){ inputEl.focus(); return; }
+        const backup = txt;
+        inputEl.value = '';
         try{
-          await addDoc(collection(db,'chatMessages'),{
-            email: currentUserEmail,
-            nick: currentUserNick || 'Ismeretlen',
-            text: backup,
-            ts: serverTimestamp()
-          });
-          if(panel.classList.contains('open')) await markSeen();
-        }catch(e){
-          console.warn('Chat send failed:', e);
-          inputEl.value=backup; inputEl.focus();
+          await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
+          if (panel.classList.contains('open')) await markSeen();
+        }catch{
+          inputEl.value = backup; inputEl.focus();
         }
       });
-
-      inputEl.addEventListener('keydown',(e)=>{
-        if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
-      });
+      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); document.getElementById('chatSendBtn').click(); } });
 
       async function markSeen(){
         try{
-          await setDoc(userRef,{ chatLastSeen: serverTimestamp() },{ merge:true });
-          lastSeenMs=Date.now();
+          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+          lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
-          fabBadge.textContent='';
-        }catch(e){ console.warn('markSeen failed', e); }
+          fabBadge.textContent = '';
+        }catch{}
       }
     }
   </script>
@@ -883,7 +883,7 @@
       </a>
       <a class="nav-card" href="leaderboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2z"/></svg>
         </div>
         <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
       </a>
@@ -895,7 +895,7 @@
       </a>
       <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 0 0 1 4-4Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg>
         </div>
         <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
       </a>
@@ -915,6 +915,7 @@
         </div>
       </div>
       <div class="card-body">
+        <p class="card-desc">Tippeld meg mely csapatok kerülnek be a csoport első 8 helyezettjei köz. Minden jó tipp +1% a végső pontszámodhoz.</p>
         <div class="top8-wrap">
           <div class="col">
             <h4>Összes csapat</h4>
@@ -930,31 +931,33 @@
       </div>
     </section>
 
-    <!-- 2) Végső győztes -->
+    <!-- 2) BL győztese -->
     <section id="card-champion" class="card">
       <div class="card-head" role="button" aria-expanded="false">
-        <div class="card-title">Végső győztes jelöltek</div>
+        <div class="card-title">BL győztese</div>
         <div class="card-meta">
           <span class="status" id="stChampion"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
           <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </div>
       </div>
       <div class="card-body">
+        <p class="card-desc">Tippeld meg ki lesz a végső győztes! Helyes tipp esetén a csapat neve mellett szereplő %, hozzáadódik a végső pontszámhoz.</p>
         <div id="chGrid" class="grid-cards"></div>
         <div class="save-row"><span id="saveStateC" class="save-state">Mentve</span></div>
       </div>
     </section>
 
-    <!-- 3) Gólkirály -->
+    <!-- 3) BL gólkirálya -->
     <section id="card-golden" class="card">
       <div class="card-head" role="button" aria-expanded="false">
-        <div class="card-title">Gólkirály jelöltek</div>
+        <div class="card-title">BL gólkirálya</div>
         <div class="card-meta">
           <span class="status" id="stGolden"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
           <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </div>
       </div>
       <div class="card-body">
+        <p class="card-desc">Tippeld meg ki lesz a gólkirály! Helyes tipp esetén a játékos neve mellett szereplő % hozzáadódik a végső pontszámhoz.</p>
         <div id="gbGrid" class="grid-cards"></div>
         <div class="save-row"><span id="saveStateG" class="save-state">Mentve</span></div>
       </div>
