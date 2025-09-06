@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
@@ -83,11 +83,10 @@
 
     let championCandidates = [];
     let goldenCandidates   = [];
-    let officialTop8 = [];
     let officialChampion = "";
     let officialGolden = { player:"", team:"" };
 
-    // --- GLOBÁLIS hibafogók (segít a diagnosztikában) ---
+    // globális hibafogók
     window.onerror = (msg,src,lin,col,err)=>{ console.error('window.onerror',msg,src,lin,col,err); };
     window.onunhandledrejection = (ev)=>{ console.error('Unhandled promise rejection:', ev.reason||ev); };
 
@@ -133,7 +132,7 @@
       const wrap=document.createElement('div'); wrap.className='cards';
 
       const teamOpts = teams.map(t=>`<option value="${t}">${t}</option>`).join('');
-      const cAdd = makeCard({title:'Új UCL meccs hozzáadása', hint:'Gyors űrlap', id:'card-add', open:true, bodyHTML:`
+      const cAdd = makeCard({title:'Új UCL meccs hozzáadása', hint:'Gyors űrlap', id:'card-add', bodyHTML:`
         <form id="matchForm">
           <div class="row">
             <select id="homeTeam" required><option value="">Hazai csapat</option>${teamOpts}</select>
@@ -167,6 +166,26 @@
         </div>`});
 
       const cUsers = makeCard({title:'Felhasználók kezelése', hint:'Szerepkör váltás, törlés', id:'card-users', bodyHTML:`<ul id="userList" class="list" style="margin:0"></ul>`});
+
+      /* 🔒 Pozíciós tipp lezárás (UCL) */
+      const cLock = makeCard({
+        title:'Pozíciós tipp lezárás (Top8 + Győztes + Gólkirály)',
+        hint:'Azonnal vagy időpontra – settings/positionsLock_ucl',
+        id:'card-lock',
+        bodyHTML:`
+          <div class="muted">Itt szabályozható a BL pozíciós tippek (Top8), a végső győztes és a gólkirály módosíthatósága.</div>
+          <div class="row" style="margin-top:8px">
+            <label><input type="checkbox" id="lockNow"> Azonnali lezárás</label>
+            <span class="muted">vagy</span>
+            <label>Automatikus zárás időpontja: <input type="datetime-local" id="lockUntil"></label>
+          </div>
+          <div class="row"><input type="text" id="lockMessage" placeholder="Opcionális üzenet" style="flex:1;"></div>
+          <div class="row">
+            <button id="saveLock" class="btn primary">Lezárás beállítása</button>
+            <button id="clearLock" class="btn danger">Lezárás feloldása</button>
+            <span id="lockStatus" class="muted"></span>
+          </div>`
+      });
 
       /* Bónusz piacok – jelöltek szerkesztése */
       const cBonusCh = makeCard({title:'Bónusz piacok – Végső győztes jelöltek', hint:'`ucl_championCandidates` (odds: decimális, pl. 2.00)', id:'card-bonus-ch', bodyHTML:`
@@ -202,46 +221,40 @@
           </table>
         </div>`});
 
-      /* Hivatalos eredmények */
-      const cOfficial = makeCard({title:'Hivatalos eredmények – Top 8 / Győztes / Gólkirály', hint:'`ucl_official/current`', id:'card-official', bodyHTML:`
-        <div class="card" style="margin:0 0 12px 0">
-          <div class="card-head"><h3>Top 8 (sorrend nélkül)</h3><div class="hint"><span id="top8Count" class="count">0/8</span></div></div>
-          <div class="card-body">
-            <div class="row">
-              <div style="flex:1">
-                <div class="muted" style="margin-bottom:6px">Kattints a csapatokra a kiválasztáshoz/kivételhez (max. 8).</div>
-                <div id="top8Chips" class="chips"></div>
+      /* Hivatalos eredmények – Győztes & Gólkirály */
+      const cOfficial = makeCard({
+        title:'Hivatalos eredmények – Győztes / Gólkirály',
+        hint:'`ucl_official/current`',
+        id:'card-official',
+        bodyHTML: `
+          <div class="card" style="margin:0 0 12px 0">
+            <div class="card-head"><h3>Végső győztes</h3></div>
+            <div class="card-body">
+              <div class="row">
+                <select id="officialChampion"><option value="">Válassz csapatot</option>${teamOpts}</select>
+                <button id="saveChampion" class="btn primary">Győztes mentése</button>
+                <button id="clearChampion" class="btn">Alaphelyzet</button>
               </div>
-            </div>
-            <div class="row" style="margin-top:10px">
-              <button id="saveTop8" class="btn primary">Top 8 mentése</button>
+              <div class="muted" style="margin-top:6px">Bármely csapat kiválasztható (nem kötött a jelöltekhez).</div>
             </div>
           </div>
-        </div>
-        <div class="card" style="margin:0 0 12px 0">
-          <div class="card-head"><h3>Végső győztes</h3></div>
-          <div class="card-body">
-            <div class="row">
-              <select id="officialChampion"><option value="">Válassz csapatot</option>${teamOpts}</select>
-              <button id="saveChampion" class="btn primary">Győztes mentése</button>
+
+          <div class="card" style="margin:0">
+            <div class="card-head"><h3>Gólkirály</h3></div>
+            <div class="card-body">
+              <div class="row">
+                <select id="officialGoldenPlayer"><option value="">Válassz játékost (jelöltek)</option></select>
+                <input id="officialGoldenTeam" placeholder="Klub (betöltve a jelöltből)" readonly>
+                <button id="saveGolden" class="btn primary">Gólkirály mentése</button>
+                <button id="clearGolden" class="btn">Alaphelyzet</button>
+              </div>
+              <div class="muted" style="margin-top:6px">A játékost a jelöltek közül válaszd ki; a klub mező automatikusan kitöltődik.</div>
             </div>
-            <div class="muted" style="margin-top:6px">Bármely csapat kiválasztható (nem kötött a jelöltekhez).</div>
-          </div>
-        </div>
-        <div class="card" style="margin:0">
-          <div class="card-head"><h3>Gólkirály</h3></div>
-          <div class="card-body">
-            <div class="row">
-              <select id="officialGoldenPlayer"><option value="">Válassz játékost (jelöltek)</option></select>
-              <input id="officialGoldenTeam" placeholder="Klub (betöltve a jelöltből)" readonly>
-              <button id="saveGolden" class="btn primary">Gólkirály mentése</button>
-            </div>
-            <div class="muted" style="margin-top:6px">A játékost a jelöltek közül válaszd ki; a klub mező automatikusan kitöltődik.</div>
-          </div>
-        </div>`});
+          </div>`
+      });
 
       /* Odds → % + pont – VÉGSŐ GYŐZTES */
-      const cOddsCh = makeCard({title:'Végső győztes – odds → megjelenített % + pont', hint:'Jelöltek normalizálása + favorit-laposítás (csak csapatokhoz)', id:'card-odds-ch', open:true, bodyHTML:`
+      const cOddsCh = makeCard({title:'Végső győztes – odds → megjelenített % + pont', hint:'Jelöltek normalizálása + favorit-laposítás (csak csapatokhoz)', id:'card-odds-ch', bodyHTML:`
         <div class="grid-odds">
           <div class="panel">
             <h4>Beállítás</h4>
@@ -270,8 +283,8 @@
           </div>
         </div>`});
 
-      /* Odds → % + pont – GÓLKIRÁLY (külön) */
-      const cOddsGb = makeCard({title:'Gólkirály – odds → megjelenített % + pont', hint:'Ugyanaz az elv, külön paraméterezve és külön mentés a gólkirály jelöltekre', id:'card-odds-gb', open:true, bodyHTML:`
+      /* Odds → % + pont – GÓLKIRÁLY */
+      const cOddsGb = makeCard({title:'Gólkirály – odds → megjelenített % + pont', hint:'Ugyanaz az elv, külön paraméterezve és külön mentés a gólkirály jelöltekre', id:'card-odds-gb', bodyHTML:`
         <div class="grid-odds">
           <div class="panel">
             <h4>Beállítás</h4>
@@ -300,7 +313,7 @@
           </div>
         </div>`});
 
-      /* Tömeges import – Gólkirály jelöltek (egyszeri) */
+      /* Tömeges import – Gólkirály jelöltek */
       const cBulkGb = makeCard({
         title: 'Tömeges import – Gólkirály jelöltek',
         hint: 'Beillesztés soronként (Név [Klub] Odds). Klubot az előnézetben is választhatsz.',
@@ -325,6 +338,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       document.body.append(wrap);
       wrap.append(
         cAdd.section, cManage.section, cRes.section, cUsers.section,
+        cLock.section,            <!-- 🔒 ide került a lezárás kártya -->
         cBonusCh.section, cBonusGb.section,
         cOfficial.section,
         cOddsCh.section,
@@ -345,13 +359,15 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       const clearLockBtn = document.getElementById('clearLock');
       if(clearLockBtn) clearLockBtn.onclick = clearLock;
 
-      // IMPORTANT: globális handlerekre kötünk
+      // Jelölt add-form handlerek
       document.getElementById('chAddForm').addEventListener('submit', window.onAddChampionCandidate);
       document.getElementById('gbAddForm').addEventListener('submit', window.onAddGoldenCandidate);
 
-      document.getElementById('saveTop8').onclick = saveOfficialTop8;
+      // Hivatalos eredmények események
       document.getElementById('saveChampion').onclick = saveOfficialChampion;
-      document.getElementById('saveGolden').onclick = saveOfficialGolden;
+      document.getElementById('saveGolden').onclick   = saveOfficialGolden;
+      document.getElementById('clearChampion').onclick = clearOfficialChampion;
+      document.getElementById('clearGolden').onclick   = clearOfficialGolden;
 
       // Kalkulátor események – bajnok
       document.getElementById('recalc_CH').addEventListener('click', recalcAndSaveChampion);
@@ -552,7 +568,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
 
-    /* ===== Lezárás (Top8) ===== */
+    /* ===== Lezárás (Top8/bonus) UCL ===== */
     async function loadPositionsLock(){
       const status=document.getElementById('lockStatus'); if(!status) return;
       const snap=await getDoc(doc(db,'settings','positionsLock_ucl'));
@@ -561,7 +577,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       if(isLocked || timeLocked){ status.textContent = `ZÁRVA ${timeLocked&&until?`(határidő: ${until.toLocaleString('hu-HU')})`:'(azonnali zárás)'}${msg?` – ${msg}`:''}`; status.className='warn' } else { status.textContent='Jelenleg nyitva.'; status.className='ok' }
     }
     async function saveLock(){
-      const lockNow=document.getElementById('lockNow').checked; const untilStr=document.getElementById('lockUntil').value; const message=document.getElementById('lockMessage').value.trim();
+      const lockNow=document.getElementById('lockNow')?.checked; const untilStr=document.getElementById('lockUntil')?.value; const message=document.getElementById('lockMessage')?.value?.trim()||'';
       let docObj={ isLocked:!!lockNow, message: message||'' };
       if(untilStr){ const dt=new Date(untilStr); if(isNaN(+dt)) return alert('Hibás dátum/idő.'); docObj.lockUntil = Timestamp.fromDate(dt) } else { docObj.lockUntil = null }
       await setDoc(doc(db,'settings','positionsLock_ucl'), docObj);
@@ -580,6 +596,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
       renderGoldenCandidates();
 
+      // Gólkirály szekció legördülő feltöltése
       const sel = document.getElementById('officialGoldenPlayer');
       if(sel){
         sel.innerHTML = '<option value="">Válassz játékost (jelöltek)</option>' + goldenCandidates.map(c=>`<option value="${c.player}" data-team="${c.team||''}">${c.player}${c.team?` (${c.team})`:''}</option>`).join('');
@@ -590,7 +607,6 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         };
       }
 
-      // frissítjük az előnézeteket
       renderChampionOddsPreview();
       renderGoldenOddsPreview();
     }
@@ -648,7 +664,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
 
-    // --- GLOBÁLIS add-form handlerek (megoldja a "not defined" hibát) ---
+    // globális add-form handlerek
     window.onAddChampionCandidate = async function onAddChampionCandidate(e){
       e.preventDefault();
       const teamSel = document.getElementById('chAddTeam');
@@ -744,47 +760,18 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       await loadBonusMarkets();
     };
 
-    /* ===== Top8 hivatalos ===== */
-    function renderTop8Chips(){
-      const box = document.getElementById('top8Chips'); if(!box) return;
-      box.innerHTML='';
-      const set = new Set(officialTop8);
-      teams.forEach(t=>{
-        const div=document.createElement('div');
-        div.className='chip' + (set.has(t)?' selected':'');
-        div.textContent = t;
-        div.onclick = ()=>{
-          if(set.has(t)){ set.delete(t) }
-          else{
-            if(set.size>=8) return;
-            set.add(t);
-          }
-          officialTop8 = Array.from(set);
-          renderTop8Chips();
-          updateTop8Count();
-        };
-        box.appendChild(div);
-      });
-      updateTop8Count();
-    }
-    function updateTop8Count(){
-      const el=document.getElementById('top8Count'); if(el) el.textContent = `${officialTop8.length}/8`;
-    }
-
+    /* ===== Hivatalos bónuszok ===== */
     async function loadOfficialBonus(){
       const ref=doc(db,'ucl_official','current');
       const snap=await getDoc(ref);
       if(snap.exists()){
         const d=snap.data()||{};
-        officialTop8 = Array.isArray(d.top8)? d.top8.filter(x=>teams.includes(x)).slice(0,8): [];
         officialChampion = teams.includes(d.champion)? d.champion : "";
         officialGolden = d.goldenBoot && d.goldenBoot.player ? { player:d.goldenBoot.player, team:d.goldenBoot.team||"" } : { player:"", team:"" };
       }else{
-        officialTop8 = [];
         officialChampion = "";
         officialGolden = { player:"", team:"" };
       }
-      renderTop8Chips();
       const chSel = document.getElementById('officialChampion'); if(chSel) chSel.value = officialChampion || "";
       const gbSel = document.getElementById('officialGoldenPlayer'); if(gbSel) {
         gbSel.value = officialGolden.player || "";
@@ -792,18 +779,19 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         document.getElementById('officialGoldenTeam').value = opt?.dataset?.team || officialGolden.team || "";
       }
     }
-
-    async function saveOfficialTop8(){
-      if(officialTop8.length!==8) return alert('Pontosan 8 csapatot válassz ki a Top 8-hoz.');
-      await setDoc(doc(db,'ucl_official','current'),{ top8: officialTop8 },{ merge:true });
-      alert('Top 8 elmentve.');
-    }
     async function saveOfficialChampion(){
       const val = document.getElementById('officialChampion').value || "";
       if(!val) return alert('Válassz csapatot!');
       await setDoc(doc(db,'ucl_official','current'),{ champion: val },{ merge:true });
       officialChampion = val;
       alert('Győztes elmentve.');
+    }
+    async function clearOfficialChampion(){
+      await setDoc(doc(db,'ucl_official','current'), { champion: "" }, { merge:true });
+      officialChampion = "";
+      const chSel = document.getElementById('officialChampion');
+      if (chSel) chSel.value = "";
+      alert('Végső győztes törölve.');
     }
     async function saveOfficialGolden(){
       const playerSel = document.getElementById('officialGoldenPlayer');
@@ -814,6 +802,15 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       officialGolden = { player, team };
       document.getElementById('officialGoldenTeam').value = team;
       alert('Gólkirály elmentve.');
+    }
+    async function clearOfficialGolden(){
+      await setDoc(doc(db,'ucl_official','current'), { goldenBoot: null }, { merge:true });
+      officialGolden = { player:"", team:"" };
+      const gpSel = document.getElementById('officialGoldenPlayer');
+      const teamInp = document.getElementById('officialGoldenTeam');
+      if (gpSel) gpSel.value = "";
+      if (teamInp) teamInp.value = "";
+      alert('Gólkirály törölve.');
     }
 
     /* ===== Odds → % + Pont közös logika ===== */
@@ -837,7 +834,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
 
     async function loadScoringSettings(){}
 
-    // ---- CH (bajnok) kártya paramok + előnézet + mentés
+    // CH kalkulátor
     function paramsCH(){
       return {
         T:   toNum(document.getElementById('T_CH').value)    ?? 1.30,
@@ -894,7 +891,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       renderChampionOddsPreview();
     }
 
-    // ---- GB (gólkirály) kártya paramok + előnézet + mentés
+    // GB kalkulátor
     function paramsGB(){
       return {
         T:   toNum(document.getElementById('T_GB').value)    ?? 1.30,
@@ -1021,14 +1018,14 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${i+1}</td>
-          <td><input value="\${r.player}" data-i="${i}" data-k="player" style="width:220px"></td>
+          <td><input value="${r.player}" data-i="${i}" data-k="player" style="width:220px"></td>
           <td>
             <select data-i="${i}" data-k="team">
               <option value="">–</option>
               ${teams.map(t=>`<option value="${t}" ${t===(r.team||'')?'selected':''}>${t}</option>`).join('')}
             </select>
           </td>
-          <td><input value="\${r.odds}" data-i="${i}" data-k="odds" style="width:90px"></td>`;
+          <td><input value="${r.odds}" data-i="${i}" data-k="odds" style="width:90px"></td>`;
         tb.appendChild(tr);
       });
       host.innerHTML=''; host.appendChild(table);
@@ -1042,7 +1039,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
     }
     async function bulkGbUpload(){
-      const wipe = document.getElementById('gbBulkWipe').checked;
+      const wipe = document.getElementById('gbBulkWipe')?.checked;
       if(wipe){
         const snap = await getDocs(collection(db,'ucl_goldenBootCandidates'));
         for(const d of snap.docs){ await deleteDoc(doc(db,'ucl_goldenBootCandidates', d.id)); }
