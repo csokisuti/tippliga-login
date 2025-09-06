@@ -2,34 +2,45 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
-  <title>UCL TippLiga – Összesített ranglista</title>
+  <title>BL TippLiga – Összesített ranglista</title>
 
   <link rel="stylesheet" href="style-themed.css" />
   <link rel="stylesheet" href="style.css">
   <script src="loader.js" defer></script>
 
   <style>
-    :root{ --line:#e6eaf1; --muted:#64748b; --accent:#3b82f6; --rowh:48px; --hdrh:44px; }
     .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
 
     .header{ display:flex; align-items:center; justify-content:space-between; }
     .header-left{ display:flex; align-items:center; gap:12px; }
-    .welcome{ color:var(--muted); margin:4px 0 0; }
+    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
+
+    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
+    @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
+    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
+    .nav-card .title{ font-weight:800; }
+    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
+    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
+    .pill-badge[hidden]{ display:none !important; }
 
     .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; }
-    .muted{ color:var(--muted); }
+    .muted{ color:#64748b; }
 
-    .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
-    .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
+    .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line,#e6eaf1); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
     .table-wrap{ display:flex; }
     .grid{ display:grid; }
     .hdr, .row{ display:contents; }
-    .cell{ padding:8px 12px; border-bottom:1px solid var(--line); background:#fff; display:flex; align-items:center; gap:8px; box-sizing:border-box; height:var(--rowh); overflow:hidden; }
-    .hdr .cell{ font-weight:700; background:#f7f8fc; height:var(--hdrh); }
+    .cell{ padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#fff; }
+    .hdr .cell{ font-weight:700; background:#f7f8fc; }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
-    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
+    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line,#e6eaf1); }
     .left .cell{ background:#fff; }
     .rank{ text-align:right; color:#64748b; white-space:nowrap; }
     .num{ text-align:right; white-space:nowrap; }
@@ -39,35 +50,51 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    .name-wrap{ display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; min-width:0; }
-    .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
-
-    /* --- Bónusz lenyíló gomb + lebegő panel --- */
-    .bonus-btn{
-      width:24px; height:24px; border-radius:999px; border:1px solid var(--line);
-      background:#f8fafc; display:inline-flex; align-items:center; justify-content:center;
-      cursor:pointer; margin-left:6px;
+    /* ==== Bonus – inline és lebegő breakdown ==== */
+    .bonus-inline{ display:flex; align-items:center; gap:8px; justify-content:flex-end; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bonus-pts{ font-weight:700; }
+    .bonus-pct{ font-weight:700; }
+    .bonus-toggle{
+      border:1px solid var(--line,#e6eaf1); background:#fff; width:22px; height:22px;
+      border-radius:999px; font-size:12px; line-height:1; cursor:pointer;
+      display:inline-grid; place-items:center; padding:0;
     }
-    .bonus-btn svg{ width:14px; height:14px; transition: transform .18s ease; }
-    .bonus-btn[aria-expanded="true"] svg{ transform: rotate(180deg); }
+    .bonus-toggle svg{ width:14px; height:14px; transition:transform .18s ease; }
+    .bonus-toggle[aria-expanded="true"] svg{ transform:rotate(180deg); }
 
-    .bonus-card{
-      position:fixed; z-index:1200; display:none;
-      width:min(340px, calc(100vw - 32px));
-      background:#fff; border:1px solid var(--line); border-radius:12px;
-      box-shadow:0 14px 36px rgba(0,0,0,.18);
+    .bonus-pop{ position:fixed; z-index:9999; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px;
+      box-shadow:0 10px 28px rgba(0,0,0,.14); width:min(360px, calc(100vw - 32px)); padding:12px;
     }
-    .bonus-card.open{ display:block; }
-    .bonus-card .head{ padding:10px 12px; border-bottom:1px solid var(--line); background:#f7f9fd; font-weight:800; }
-    .bonus-card .body{ padding:10px 12px; display:grid; grid-template-columns:1fr; gap:8px; }
-    .bonus-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
-    .bonus-row .tag{ display:inline-flex; align-items:center; gap:6px; font-weight:700; }
-    .bonus-row .pct{ font-variant-numeric: tabular-nums; font-weight:800; }
-    .legend{ font-size:12px; color:var(--muted); padding:0 12px 10px; }
+    .bonus-pop .title{ font-weight:800; margin-bottom:8px; }
+    .bonus-pop .grid{ display:grid; grid-template-columns:130px 1fr; gap:6px 10px; }
+    .btag{ display:inline-flex; gap:6px; align-items:center; font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--line,#e6eaf1); background:#fff; color:#334155; }
+    .btag.ok{ background:#ecfdf5; border-color:#bbf7d0; color:#166534; }
+    .btag.pending{ background:#fffbeb; border-color:#fde68a; color:#a16207; }
+    .btag.no{ background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+    .bonus-pop .muted{ color:#64748b; font-size:12px; }
+    .bonus-backdrop{ position:fixed; inset:0; z-index:9998; background:transparent; }
 
-    .ok{ color:#15803d; font-weight:700; }
-    .wrong{ color:#b91c1c; font-weight:700; }
-    .dbl{ font-weight:800; }
+    /* Chat */
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
+    .chat-fab.has-unread .fab-badge{ display:inline-block; }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel.open{ display:flex; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .chat-title{ font-weight:800; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
+    #chatClose:hover{ filter:brightness(0.95); }
+    .chat-list{ overflow:auto; padding:8px 10px; }
+    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
+    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
+    .msg .text{ white-space:pre-wrap; word-break:break-word; }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
+    .msg:hover .del{ display:inline-block; }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatInput::placeholder{ color:#6b7280; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
   </style>
 
   <script type="module">
@@ -78,12 +105,6 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    /* ------------------ UCL NAMESPACE ------------------ */
-    const NS = "ucl";
-    const col = (name) => `${NS}_${name}`;
-    const settingsDocId = `${NS}_leaderboardConfig`;
-    const localLiveKey = `${NS}_liveStandingsOrder`;
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -97,19 +118,18 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    /* ---- util ---- */
+    /* ---------- Helper-ek ---------- */
+    const crestMap = { "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/borussia.png","Bodø/Glimt":"ucl_crest/bodo.png","Club Bruges":"ucl_crest/brugge.png","Chelsea":"ucl_crest/chelsea.png","FC Köbenhavn":"ucl_crest/copenhagen.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png","Galatasaray":"ucl_crest/galata.png","Internazionale":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Bayer Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png","Olympique Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png","Newcastle United":"ucl_crest/newcastle.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png","Pafosz":"ucl_crest/pafos.png","Paris Saint-Germain":"ucl_crest/psg.png","PSV":"ucl_crest/psv.png","Qarabag":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png","Slavia Praha":"ucl_crest/slavia.png","Sporting CP":"ucl_crest/sporting.png","Tottenham Hotspur":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png","Kajrat Almati":"ucl_crest/kairat.png" };
+
+    const crestFor = t => crestMap[t] || "";
     const fmt = n => (Number(n)||0).toFixed(2);
-    const fmtInt = n => (Number(n)||0).toFixed(0);
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
     const escapeHtml = s => String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const NORM = s => String(s ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const eqTeam = (a,b) => !!a && !!b && NORM(a) === NORM(b);
     const eqText = (a,b) => NORM(a) === NORM(b);
-    const pctColor = p => `hsl(${Math.max(0,Math.min(12,p))/12*120}deg,85%,40%)`;
-    const tipChoice = t => t.choice ?? t.tip ?? "";
-    function tipDouble(t){ return !!(t.double ?? t.isDouble); }
-    const matchRound = m => String(m.round ?? m.roundId ?? m.matchday ?? m.md ?? "");
 
+    // odds schema: {odds:{'1','X','2'}} vagy odds1/oddsX/odds2
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -117,227 +137,166 @@
       if (key==="2") return m.odds2 ?? m["odds2"];
       return undefined;
     }
+    const tipChoice = t => t?.choice ?? t?.tip ?? "";
+    const tipDouble = t => !!(t?.double ?? t?.isDouble);
+    const tipTsMs   = t => t?.updatedAt?.toMillis?.() || t?.createdAt?.toMillis?.() || t?.timestamp?.toMillis?.() || 0;
+    const matchRound = m => String(m?.round ?? m?.roundId ?? "");
 
-    /* ---- élő sorrend localStorage-ból (UCL) ---- */
-    function readLiveOrderFromLocal(){
-      try{
-        const raw = localStorage.getItem(localLiveKey);
-        if (!raw) return [];
-        const arr = JSON.parse(raw);
-        if (!Array.isArray(arr)) return [];
-        return arr.slice(0,32).map(x => String(x||""));
-      }catch{ return []; }
+    function officialArrayFrom(d){
+      if (!d) return [];
+      if (Array.isArray(d.order)) return d.order;
+      if (Array.isArray(d.teams)) return d.teams;
+      if (Array.isArray(d.positions)) return d.positions.slice().sort((a,b)=>(a.position||0)-(b.position||0)).map(x=>x.team);
+      return [];
     }
+    function pctColor(pct){ const p=Math.max(0,Math.min(100,pct)); const hue=(Math.min(p,12)/12)*120; return `hsl(${hue}deg,85%,40%)`; }
 
-    /* ---- Bónusz %-k (winner/golden/top8) – rugalmas számítás ---- */
-    const toNum = v => {
-      if (v === null || v === undefined || v === '') return null;
-      if (typeof v === 'string') v = v.replace(',', '.');
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    };
-    const fromCandidateOdds = c => {
-      const direct = toNum(c?.odds);
-      if (direct != null) return direct;
-      const dec = toNum(c?.oddsDecimal);
-      if (dec != null) return dec;
-      const pct = toNum(c?.oddsPercent);
-      if (pct != null && pct > 0) return 100 / pct;
-      return null;
-    };
-    const fromDisplayedPoints = c => toNum(c?.displayPoints);
-    function computePoints(odds, BASE=10, O0=65, A=0.33, LO=0.5, HI=2.5){
-      const o = toNum(odds);
-      if(!o || o<=0) return null;
-      const ratio   = Math.pow(o/Math.max(O0,1e-9), A);
-      const clamped = Math.min(Math.max(ratio, LO), HI);
-      return BASE * clamped; // %-pont
-    }
-    function candidatePoints(c, scope){
-      const dp = fromDisplayedPoints(c);
-      if (dp != null) return dp;
-      const odds = fromCandidateOdds(c);
-      const cfg  = (c?._calc && c._calc.scope === scope) ? c._calc : {};
-      return computePoints(
-        odds,
-        cfg.BASE ?? 10,
-        cfg.O0   ?? 65,
-        cfg.A    ?? 0.33,
-        cfg.LO   ?? 0.5,
-        cfg.HI   ?? 2.5
-      );
-    }
-    const BONUS_TOP8 = Object.freeze({ perHitPct: 1, maxPct: 8 });
+    /* ---------- BÓNUSZ beállítások ---------- */
+    const BONUS_CFG = Object.freeze({
+      winnerPct: 10,
+      topScorerPct: 5,
+      top8PerHitPct: 1,
+      top8MaxPct: 8
+    });
 
-    /* ---- Állapot ---- */
-    let currentUserEmail = "";
-    let currentUserNick = "";
-    let currentUserRole = "user";
+    /* ---------- Állapot ---------- */
+    let currentUserEmail = "", currentUserNick = "", currentUserRole = "user";
+    let favouriteTeamucl = "", chatLastSeen = null;
 
-    let showAllView = false;
-    let showBots = false;
-
+    let showAll = false;
     let rows = [];
     let roundsAsc = [];
-    let usersInfo = {};
-    let matchesCache = {};
-    let botPickStore = {};
+    let officialOrder = [];
 
     let seasonTipsByEmail = {};
     let officialAwards = {};
-    let officialOrder = [];
-    let championCandidates = [];
-    let goldenCandidates = [];
 
-    // Admin beállítás – SZÁMOLÁSRA HAT
-    let LB_MODE = "full";      // "full" | "fromRound"
-    let LB_START = 1;
-
-    /* ---------------- INIT ---------------- */
+    /* ---------- INIT ---------- */
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "login.html"; return; }
+        if (!user) { window.location.href = "login_ucl.html"; return; }
         currentUserEmail = user.email;
 
+        // user + téma
         const userRef = doc(db, "users", currentUserEmail);
         const userSnap = await getDoc(userRef);
-        currentUserNick = userSnap.exists() ? (userSnap.data().nickname || user.email) : user.email;
-        currentUserRole = userSnap.exists() ? (userSnap.data().role || "user") : "user";
+        if (userSnap.exists()){
+          const d = userSnap.data();
+          currentUserNick  = d.nickname || currentUserEmail;
+          currentUserRole  = d.role || "user";
+          favouriteTeamucl = d.favouriteTeamucl || "";
+          chatLastSeen     = d.chatLastSeen || null;
+        }else{
+          currentUserNick = currentUserEmail;
+        }
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink")?.style?.setProperty('display','flex');
+        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
 
-        // Leaderboard config (UCL)
-        const lbSnap = await getDoc(doc(db,"settings", settingsDocId));
-        if (lbSnap.exists()){
-          const cfg = lbSnap.data()||{};
-          LB_MODE  = (cfg.mode==="fromRound") ? "fromRound" : "full";
-          LB_START = Math.max(1, Number(cfg.startFrom)||1);
+        if (favouriteTeamucl) {
+          const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+          document.body.classList.add(themeClass);
+          const crest = crestFor(favouriteTeamucl);
+          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
         await buildLeaderboard();
-        updateControlsText();
+        updatePendingBadge();
+        initChat(userRef);
 
         if (window.hideLoader) hideLoader();
       });
 
       document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login.html");
+        signOut(auth).then(() => window.location.href = "login_ucl.html");
       });
 
       document.getElementById('toggleAll').addEventListener('click', ()=>{
-        showAllView = !showAllView;
-        updateControlsText();
+        showAll = !showAll;
+        document.getElementById('toggleAll').textContent = showAll ? 'Csak az utolsó 5 forduló' : 'Mutasd az összes fordulót';
         renderTable();
       });
 
-      const botsEl = document.getElementById('showBots');
-      if (botsEl){
-        botsEl.checked = showBots;
-        botsEl.addEventListener('change', async e=>{
-          showBots = e.target.checked;
-          await buildLeaderboard();
-        });
-      }
-
-      document.addEventListener('click', (e)=>{
-        const btn = e.target.closest('[data-bonus]');
-        if (btn){ openBonusCard(btn.getAttribute('data-bonus'), btn); }
-        if (e.target.matches('[data-bonus-close]')){ closeBonusCard(); }
-        if (!e.target.closest('#bonusCard')) closeBonusCard();
-      });
-      window.addEventListener('keydown', e=>{ if (e.key==='Escape') { closeBonusCard(); }});
-      window.addEventListener('resize', ()=>{ closeBonusCard(); });
-      window.addEventListener('scroll', ()=>{ closeBonusCard(); });
+      // lebegő breakdown bezárás globálisan
+      window.addEventListener('scroll', closeBonusPopover, {passive:true});
+      window.addEventListener('resize', closeBonusPopover);
+      document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeBonusPopover(); });
     });
 
-    function updateControlsText(){
-      const btn = document.getElementById('toggleAll');
-      const rangeLabel = document.getElementById('rangeLabel');
-      btn.textContent = showAllView ? 'Csak az utolsó 5 forduló' : 'Mutasd az összes fordulót';
-      rangeLabel.textContent =
-        (LB_MODE==='fromRound'
-          ? `Számolás: ${LB_START}. fordulótól • Nézet: ${showAllView ? 'összes forduló' : 'utolsó 5 forduló'}`
-          : `Számolás: teljes szezon • Nézet: ${showAllView ? 'összes forduló' : 'utolsó 5 forduló'}`);
-    }
-
-    /* ---------------- Adatok betöltése és SZÁMÍTÁS (UCL) ---------------- */
+    /* ---------- Betöltés + számítás ---------- */
     async function buildLeaderboard(){
       const [
         matchesSnap, tipsSnap, usersSnap,
-        standingsTipsSnap, seasonTipsSnap, bonusTipsSnap,
-        awardsDoc, champCandsSnap, goldenCandsSnap
+        official_ucl, official_nb,
+        standings_ucl, standings_nb,
+        seasonTipsSnap, bonusTipsSnap, awardsDoc
       ] = await Promise.all([
-        getDocs(collection(db, col("matches"))),
-        getDocs(collection(db, col("tips"))),
+        getDocs(collection(db, "ucl_matches")),
+        getDocs(collection(db, "ucl_tips")),
         getDocs(collection(db, "users")),
-        getDocs(collection(db, col("standingsTips"))).catch(()=>({empty:true, forEach(){}})),
-        getDocs(collection(db, col("seasonTips"))).catch(()=>({empty:true, forEach(){}})),
-        getDocs(collection(db, col("bonusTips"))).catch(()=>({empty:true, forEach(){}})),
-        getDoc(doc(db, col("awards"), "official")).catch(()=>({exists:()=>false, data:()=>({})})),
-        getDocs(collection(db, col("championCandidates"))).catch(()=>({empty:true, docs:[]})),
-        getDocs(collection(db, col("goldenBootCandidates"))).catch(()=>({empty:true, docs:[]}))
+        getDoc(doc(db, "finalStandings_ucl", "official")),
+        getDoc(doc(db, "finalStandings", "official")),
+        getDocs(collection(db, "standingsTips_ucl")).catch(()=>({empty:true,forEach(){}})),
+        getDocs(collection(db, "standingsTips")).catch(()=>({empty:true,forEach(){}})),
+        getDocs(collection(db, "seasonTips_ucl")).catch(()=>({empty:true,forEach(){}})),
+        getDocs(collection(db, "bonusTips_ucl")).catch(()=>({empty:true,forEach(){}})),
+        getDoc(doc(db, "awards_ucl", "official")).catch(()=>({exists:()=>false}))
       ]);
 
-      matchesCache = {};
-      matchesSnap.forEach(d => matchesCache[d.id] = { id:d.id, ...d.data() });
+      // matches by id
+      const matches = {};
+      matchesSnap.forEach(d => matches[d.id] = { id:d.id, ...d.data() });
 
-      usersInfo = {};
-      usersSnap.forEach(d => { const u = d.data(); if (u?.email) usersInfo[u.email] = { nick: u.nickname || u.email }; });
+      // users nick
+      const usersMap = {};
+      usersSnap.forEach(d => { const u = d.data(); if (u?.email) usersMap[u.email] = u.nickname || u.email; });
 
-      // UCL "official" adatok: győztes, gólkirály, top8Teams, (opcionálisan officialOrder – pl. power ranking / élő elo)
+      // official order (ucl elsődleges, ha nincs akkor fallback NB)
+      officialOrder = officialArrayFrom(official_ucl.exists() ? official_ucl.data() : (official_nb.exists() ? official_nb.data() : [])).slice(0,12);
+      while (officialOrder.length < 12) officialOrder.push("");
+
+      // official awards (winnerTeam/topScorer), fallback: winner = officialOrder[0]
       officialAwards = awardsDoc?.exists?.() ? (awardsDoc.data()||{}) : {};
-      officialOrder = Array.isArray(officialAwards.order) ? officialAwards.order.slice() : [];
-      const liveOrder = readLiveOrderFromLocal();
-      const refOrder = liveOrder.filter(Boolean).length ? liveOrder : officialOrder;
+      if (!officialAwards.winnerTeam && officialOrder[0]) officialAwards.winnerTeam = officialOrder[0];
 
+      // standings tips: email -> order[12] (ucl preferált)
       const orderByEmail = {};
-      standingsTipsSnap?.forEach?.(d=>{
-        const data = d.data() || {};
-        let arr = [];
-        if (Array.isArray(data.order)) arr = data.order;
-        else if (Array.isArray(data.teams)) arr = data.teams;
-        else if (Array.isArray(data.ranking)) arr = data.ranking;
-        orderByEmail[d.id] = (arr || []).slice();
-      });
+      const readStandings = (snap) => { snap.forEach(d=>{ const data=d.data()||{}; let arr=[]; if(Array.isArray(data.order))arr=data.order; else if(Array.isArray(data.teams))arr=data.teams; else if(Array.isArray(data.ranking))arr=data.ranking; orderByEmail[d.id]=(arr||[]).slice(0,12); }); };
+      if (standings_ucl && !standings_ucl.empty) readStandings(standings_ucl); else if (standings_nb && !standings_nb.empty) readStandings(standings_nb);
 
-      // Season picks (winner / topScorer / top8)
+      // season tips: winner/topScorer per user (több gyűjteményből is próbálunk)
       seasonTipsByEmail = {};
       const mergeTipDoc = (id, data) => {
         if (!id || !data) return;
         const cur = seasonTipsByEmail[id] || {};
         const winnerTeam = data.winnerTeam || data.winner || cur.winnerTeam || "";
         const topScorer  = data.topScorer  || data.goldenBoot || cur.topScorer  || "";
-        const top8       = Array.isArray(data.top8) ? data.top8 : (Array.isArray(cur.top8) ? cur.top8 : []);
-        seasonTipsByEmail[id] = { winnerTeam, topScorer, top8 };
+        seasonTipsByEmail[id] = { winnerTeam, topScorer };
       };
       seasonTipsSnap?.forEach?.(d => mergeTipDoc(d.id, d.data()));
       bonusTipsSnap?.forEach?.(d => mergeTipDoc(d.id, d.data()));
 
-      championCandidates = champCandsSnap?.docs?.map(d=>({ id:d.id, ...(d.data()||{}) })) || [];
-      goldenCandidates   = goldenCandsSnap?.docs?.map(d=>({ id:d.id, ...(d.data()||{}) })) || [];
-
-      // Utolsó tipp verzió
+      // tippek – legutóbbi per user|match (séma-agnosztikusan)
       const latest = new Map();
       tipsSnap.forEach(docu=>{
         const t = docu.data(); if (!t?.matchId || !t?.user) return;
         const k = t.user + "|" + t.matchId;
-        const cur = latest.get(k);
-        const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
-        const ts = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
-        if (!cur || ts >= curTs) latest.set(k, { id:docu.id, ...t });
+        the:
+        {
+          const cur = latest.get(k);
+          if (!cur || tipTsMs(t) >= tipTsMs(cur)) { latest.set(k, { id:docu.id, ...t }); }
+        }
       });
 
+      // pontszámítás
       const player = {};
       const rounds = new Set();
 
-      // SZÁMOLÁS: admin beállítás szerint szűrjük a fordulókat
       for (const tip of latest.values()){
-        const m = matchesCache[tip.matchId]; if (!m) continue;
+        const m = matches[tip.matchId]; if (!m) continue;
         const roundId = matchRound(m); if (!roundId) continue;
-        if (LB_MODE === "fromRound" && (parseInt(roundId)||0) < LB_START) continue;
-
         rounds.add(roundId);
-        if (!m.outcome) continue;
+
+        if (!m.outcome) continue;                    // csak lezárt meccs
         const pick = tipChoice(tip); if (!pick) continue;
 
         const correct = pick === m.outcome;
@@ -345,8 +304,7 @@
         const mult = tipDouble(tip) ? 2 : 1;
         const pts = (correct && ov) ? Number(ov) * mult : 0;
 
-        const info = usersInfo[tip.user] || { nick: tip.user };
-        const nick = info.nick;
+        const nick = usersMap[tip.user] || tip.user;
         if (!player[nick]) player[nick] = { base:0, perRound:{}, email: tip.user };
         player[nick].base += pts;
         player[nick].perRound[roundId] = (player[nick].perRound[roundId]||0) + pts;
@@ -354,126 +312,72 @@
 
       roundsAsc = Array.from(rounds).sort((a,b)=> (parseInt(a)||0)-(parseInt(b)||0));
 
-      // Top8% (UCL: negyeddöntős csapatok)
-      function top8Pct(email){
-        const userTop8 = (seasonTipsByEmail[email]?.top8 && seasonTipsByEmail[email].top8.length)
-          ? seasonTipsByEmail[email].top8
-          : (orderByEmail[email] || []).slice(0,8);
-        const officialTop8 = Array.isArray(officialAwards.top8Teams) && officialAwards.top8Teams.length
-          ? officialAwards.top8Teams
-          : (refOrder || []).slice(0,8);
-        if (!userTop8.length || !officialTop8.length) return 0;
+      // bónuszrészek számítása (régi képlet – ezt kértél vissza)
+      function calcTop8Pct(email){
+        const userOrder = orderByEmail[email] || [];
+        const predictedTop8 = userOrder.slice(0,8).filter(Boolean);
+        const officialTop8 = officialOrder.slice(0,8).filter(Boolean);
+        if (!predictedTop8.length || !officialTop8.length) return { hits:0, pct:0 };
         const setOfficial = new Set(officialTop8.map(NORM));
         let hits = 0;
-        for (const t of userTop8){ if (setOfficial.has(NORM(t))) hits++; }
-        return Math.min(hits * BONUS_TOP8.perHitPct, BONUS_TOP8.maxPct);
+        for (const t of predictedTop8){ if (setOfficial.has(NORM(t))) hits++; }
+        const pct = Math.min(hits * BONUS_CFG.top8PerHitPct, BONUS_CFG.top8MaxPct);
+        return { hits, pct };
       }
-      // Győztes %
-      function champBonusPct(email){
-        const pick = seasonTipsByEmail[email]?.winnerTeam || "";
-        const official = officialAwards.winnerTeam || officialAwards.winner || "";
-        if (!pick || !official || !eqTeam(pick, official)) return 0;
-        const c = championCandidates.find(x => eqTeam(x.team, pick));
-        const pct = candidatePoints(c,'champion');
-        return toNum(pct) ?? 0;
-      }
-      // Gólkirály %
-      function goldenBonusPct(email){
-        const pick = seasonTipsByEmail[email]?.topScorer || "";
-        const official = officialAwards.topScorer || "";
-        if (!pick || !official || !eqText(pick, official)) return 0;
-        const c = goldenCandidates.find(x => eqText(x.player, pick));
-        const pct = candidatePoints(c,'golden');
-        return toNum(pct) ?? 0;
+
+      function calcBonusParts(email, base){
+        const tips = seasonTipsByEmail[email] || {};
+        const winnerPick = tips.winnerTeam || "";
+        const scorerPick = tips.topScorer || "";
+
+        const winnerOfficial = officialAwards.winnerTeam || "";
+        const scorerOfficial = officialAwards.topScorer || "";
+
+        const winnerStatus = winnerOfficial ? (eqTeam(winnerPick, winnerOfficial) ? 'ok' : (winnerPick ? 'no' : 'no')) : 'pending';
+        const scorerStatus = scorerOfficial ? (eqText(scorerPick, scorerOfficial) ? 'ok' : (scorerPick ? 'no' : 'no')) : 'pending';
+
+        const winnerPct = (winnerStatus==='ok') ? BONUS_CFG.winnerPct : 0;
+        const scorerPct = (scorerStatus==='ok') ? BONUS_CFG.topScorerPct : 0;
+
+        const { hits:top8Hits, pct:top8Pct } = calcTop8Pct(email);
+
+        const bonusPct = winnerPct + scorerPct + top8Pct;
+        const bonusPts = Math.round((Number(base)||0) * (bonusPct/100));
+
+        return {
+          bonusPct, bonusPts,
+          parts: {
+            winner: { pct:winnerPct, status:winnerStatus, pick:winnerPick, official:winnerOfficial },
+            topScorer: { pct:scorerPct, status:scorerStatus, pick:scorerPick, official:scorerOfficial },
+            top8: { pct:top8Pct, hits:top8Hits, of:8 }
+          }
+        };
       }
 
       rows = Object.entries(player).map(([nick,obj])=>{
-        const champPct = champBonusPct(obj.email);
-        const goldenPct = goldenBonusPct(obj.email);
-        const top8 = top8Pct(obj.email);
-        const bonusPct = (champPct || 0) + (goldenPct || 0) + (top8 || 0);
-        const bonusPts = Math.round(obj.base * (bonusPct/100));
+        const { bonusPct, bonusPts, parts } = calcBonusParts(obj.email, obj.base);
         const total = obj.base + bonusPts;
-        return {
-          nick, email: obj.email,
-          base: obj.base, perRound: obj.perRound,
-          parts: { champPct, goldenPct, top8Pct: top8 },
-          bonusPct, bonusPts, total, isBot:false
-        };
+        return { nick, email: obj.email, base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total, parts };
       });
-
-      if (showBots){
-        const botRows = addBotRows(matchesCache, roundsAsc);
-        rows = rows.concat(botRows);
-      }
 
       rows.sort((a,b)=> b.total - a.total || a.nick.localeCompare(b.nick));
       renderTable();
     }
 
-    function addBotRows(matches, roundsAsc){
-      botPickStore = {};
-      const bots = [];
-      function calcForBot(type){
-        let base = 0; const perRound = {}; const byRound = {};
-        for (const r of roundsAsc){
-          const ms = Object.values(matches).filter(m=>matchRound(m)===r && m.outcome);
-          if (!ms.length) continue;
-          const tips = ms.map(m=>{
-            let pick="", odds=0;
-            const o1=getOdds(m,"1"), oX=getOdds(m,"X"), o2=getOdds(m,"2");
-            if (type==="Evidens Elek"){
-              const min = Math.min(o1||Infinity,oX||Infinity,o2||Infinity);
-              if (min===o1){ pick="1"; odds=o1; } else if (min===oX){ pick="X"; odds=oX; } else if (min===o2){ pick="2"; odds=o2; }
-            } else if (type==="Hazai Hugó"){ pick="1"; odds=o1; }
-            else if (type==="Ikszes Ilona"){ pick="X"; odds=oX; }
-            else if (type==="Vendég Vendel"){ pick="2"; odds=o2; }
-            return {m,pick,odds};
-          });
-          let bestIdx=-1, bestVal=-1;
-          tips.forEach((t,i)=>{
-            if (!t || !t.m) return;
-            let val=0;
-            const o1=getOdds(t.m,"1"), oX=getOdds(t.m,"X"), o2=getOdds(t.m,"2");
-            if (type==="Evidens Elek"){ val = Math.min(o1||Infinity,oX||Infinity,o2||Infinity); if (!isFinite(val)) val=-1; }
-            else if (type==="Hazai Hugó"){ val = o1||0; }
-            else if (type==="Ikszes Ilona"){ val = oX||0; }
-            else if (type==="Vendég Vendel"){ val = o2||0; }
-            if (val>bestVal){ bestVal=val; bestIdx=i; }
-          });
-          const list = [];
-          tips.forEach((t,i)=>{
-            if (!t.pick || !t.odds) return;
-            const doubled = i===bestIdx;
-            const correct = t.m.outcome===t.pick;
-            const mult = doubled?2:1;
-            if (correct){ base += t.odds*mult; perRound[r] = (perRound[r]||0)+t.odds*mult; }
-            else { perRound[r] = (perRound[r]||0)+0; }
-            list.push({
-              matchId: t.m.id,
-              homeTeam: t.m.homeTeam || t.m.home || "",
-              awayTeam: t.m.awayTeam || t.m.away || "",
-              pick: t.pick, odds: t.odds || 0, doubled, correct, outcome: t.m.outcome || ""
-            });
-          });
-          if (list.length) byRound[r]=list;
-        }
-        return {base, perRound, byRound};
-      }
-      ["Evidens Elek","Hazai Hugó","Ikszes Ilona","Vendég Vendel"].forEach(name=>{
-        const {base, perRound, byRound} = calcForBot(name);
-        bots.push({ nick:name, email:"", base, perRound, bonusPct:0, bonusPts:0, total:base, isBot:true, parts:{champPct:0,goldenPct:0,top8Pct:0} });
-        botPickStore[name] = byRound;
-      });
-      return bots;
-    }
-
     function renderTable(){
       const mount = document.getElementById('tableMount');
-      if (!rows.length){ mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>"; return; }
+      if (!rows.length){
+        mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>";
+        return;
+      }
 
       const roundsDesc = roundsAsc.slice().reverse();
-      const toShow = showAllView ? roundsDesc : roundsDesc.slice(0, 5);
+      const toShow = showAll ? roundsDesc : roundsDesc.slice(0,5);
+
+      const rangeLabel = document.getElementById('rangeLabel');
+      rangeLabel.textContent = showAll
+        ? "Teljes nézet: minden forduló látszik (balról jobbra: legutóbbi → régebbi)"
+        : (toShow.length ? `Csak az utolsó ${toShow.length} forduló látszik (balról jobbra: F${toShow[0]} → …)` : "Nincs még lezárt forduló.");
 
       const maxPerRound = toShow.map(r=>{
         let m = -Infinity;
@@ -490,18 +394,34 @@
           <div class="cell left num">Alap pont</div>
         </div>`;
 
-      const rightHeader = toShow.map(r=>`<div class="cell round-cell"><a class="round-link" href="results-ucl.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
+      const rightHeader = toShow.map(r=>`<div class="cell round-cell"><a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
 
       const container = document.createElement('div'); container.className = 'table-wrap';
 
       const left = document.createElement('div');
       left.className = 'left';
-      left.style.minWidth = '900px';
-      left.style.maxWidth = '900px';
+      left.style.minWidth = '720px';
+      left.style.maxWidth = '720px';
       left.innerHTML = `
-        <div class="grid" style="grid-template-columns:70px 2.8fr 130px 200px 120px;">
+        <div class="grid" style="grid-template-columns:70px 1.6fr 140px 200px 140px;">
           ${leftHeader}
-          ${rows.map((r,i)=> renderLeftRow(r,i)).join('')}
+          ${rows.map((r,i)=>`
+            <div class="row row-bg" data-row="${i}">
+              <div class="cell left rank">${i+1}.</div>
+              <div class="cell left">${escapeHtml(r.nick)}</div>
+              <div class="cell left num total">${fmt(r.total)}</div>
+              <div class="cell left num">
+                <div class="bonus-inline">
+                  <span class="bonus-pts">+${r.bonusPts}</span>
+                  <span class="bonus-pct" style="color:${pctColor(r.bonusPct)}">( +${r.bonusPct}% )</span>
+                  <button class="bonus-toggle" data-idx="${i}" aria-expanded="false" title="Bónusz részletek" aria-label="Bónusz részletek">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="cell left num">${fmt(r.base)}</div>
+            </div>
+          `).join('')}
         </div>
       `;
 
@@ -511,15 +431,15 @@
       right.innerHTML = `
         <div class="grid" style="grid-template-columns:${'78px '.repeat(toShow.length)};">
           <div class="hdr">${rightHeader}</div>
-          ${rows.map(r=>{
+          ${rows.map((r,ri)=>{
             const cells = toShow.map((rid, idx)=>{
               const val = r.perRound[rid]||0;
               const isTop = val === maxPerRound[idx] && val !== 0;
               return `<div class="cell round-cell num ${isTop?'top':''}">
-                        <a class="round-link" href="results-ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
+                        <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
                       </div>`;
             }).join('');
-            return `<div class="row row-bg">${cells}</div>`;
+            return `<div class="row row-bg" data-row="${ri}">${cells}</div>`;
           }).join('')}
         </div>
       `;
@@ -528,72 +448,202 @@
       container.appendChild(left);
       container.appendChild(right);
       mount.appendChild(container);
+
+      // Bonus toggle események
+      mount.querySelectorAll('.bonus-toggle').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          const idx = Number(btn.dataset.idx||0);
+          const rect = btn.getBoundingClientRect();
+          const x = rect.right, y = rect.bottom;
+          const expanded = btn.getAttribute('aria-expanded') === 'true';
+          if (expanded) { closeBonusPopover(); return; }
+          document.querySelectorAll('.bonus-toggle[aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'));
+          btn.setAttribute('aria-expanded','true');
+          showBonusPopover(rows[idx], x, y, btn);
+        });
+      });
     }
 
-    function renderLeftRow(r,i){
-      const bonusPctStr = `+${fmt(r.bonusPct)}%`;
-      const bonusPctCol = `style="color:${pctColor(r.bonusPct)}"`;
+    /* ---------- Bonus popover ---------- */
+    function showBonusPopover(row, clientX, clientY, anchorEl){
+      closeBonusPopover();
 
-      return `
-        <div class="row row-bg">
-          <div class="cell left rank">${i+1}.</div>
-          <div class="cell left"><div class="name-wrap"><span class="name-text">${escapeHtml(r.nick)}</span></div></div>
-          <div class="cell left num total">${fmt(r.total)}</div>
-          <div class="cell left num">
-            +${fmtInt(r.bonusPts)}
-            <span ${bonusPctCol}> ( ${bonusPctStr} )</span>
-            ${r.isBot ? '' : `<button class="bonus-btn" data-bonus="${escapeHtml(r.nick)}" aria-label="Bónusz bontás" aria-expanded="false" title="Részletek">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
-            </button>`}
-          </div>
-          <div class="cell left num">${fmt(r.base)}</div>
+      const backdrop = document.createElement('div');
+      backdrop.className = 'bonus-backdrop';
+      backdrop.addEventListener('click', closeBonusPopover);
+
+      const pop = document.createElement('div');
+      pop.className = 'bonus-pop';
+
+      const winnerLine = (() => {
+        const st = row.parts.winner.status;
+        const cls = st==='ok'?'ok':(st==='pending'?'pending':'no');
+        const icon = st==='ok'?'✔':(st==='pending'?'🕒':'✖');
+        const off = row.parts.winner.official || '—';
+        const pick = row.parts.winner.pick || '—';
+        return `<span class="btag ${cls}">🏆 ${icon} +${row.parts.winner.pct}%</span>
+                <div>Tip: <strong>${escapeHtml(pick)}</strong> • Hiv.: <strong>${escapeHtml(off)}</strong></div>`;
+      })();
+
+      const scorerLine = (() => {
+        const st = row.parts.topScorer.status;
+        const cls = st==='ok'?'ok':(st==='pending'?'pending':'no');
+        const icon = st==='ok'?'✔':(st==='pending'?'🕒':'✖');
+        const off = row.parts.topScorer.official || '—';
+        const pick = row.parts.topScorer.pick || '—';
+        return `<span class="btag ${cls}">👟 ${icon} +${row.parts.topScorer.pct}%</span>
+                <div>Tip: <strong>${escapeHtml(pick)}</strong> • Hiv.: <strong>${escapeHtml(off)}</strong></div>`;
+      })();
+
+      const top8Line = (() => {
+        const hits = row.parts.top8.hits, of=row.parts.top8.of;
+        return `<span class="btag ok">📊 +${row.parts.top8.pct}%</span>
+                <div>Top8 találat: <strong>${hits}/${of}</strong> (1 találat = +${BONUS_CFG.top8PerHitPct}%, max +${BONUS_CFG.top8MaxPct}%)</div>`;
+      })();
+
+      pop.innerHTML = `
+        <div class="title">${escapeHtml(row.nick)} – Bónusz részletek</div>
+        <div class="grid">
+          <div class="muted">Képlet</div>
+          <div>Alap × (🏆+👟+📊)/100 = <strong>${fmt(row.base)} × ${fmt(row.bonusPct)}% = ${row.bonusPts}</strong></div>
+
+          <div class="muted">Végső győztes</div>
+          <div>${winnerLine}</div>
+
+          <div class="muted">Gólkirály</div>
+          <div>${scorerLine}</div>
+
+          <div class="muted">Top 8 találatok</div>
+          <div>${top8Line}</div>
+
+          <div class="muted">Összes bónusz</div>
+          <div><strong>+${row.bonusPct}%</strong> → <strong>+${row.bonusPts} pont</strong></div>
         </div>
       `;
+
+      // Pozicionálás: a gombhoz viszonyítva
+      const pad = 8;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      document.body.appendChild(pop);
+      const rect = pop.getBoundingClientRect();
+      let x = clientX + pad, y = clientY + pad;
+      if (x + rect.width > vw - 8) x = vw - rect.width - 8;
+      if (y + rect.height > vh - 8) y = vh - rect.height - 8;
+      pop.style.left = Math.max(8, x) + 'px';
+      pop.style.top  = Math.max(8, y) + 'px';
+      document.body.appendChild(backdrop);
+      document.body.appendChild(pop);
+
+      pop.dataset.anchor = '1';
+      pop.dataset.nick = row.nick;
     }
 
-    /* ---- Bónusz lebegő panel ---- */
-    function openBonusCard(nick, anchorEl){
-      const row = rows.find(r=>r.nick===nick);
-      if (!row) return;
-
-      const pop = document.getElementById('bonusCard');
-      const head = pop.querySelector('.head');
-      const body = pop.querySelector('.body');
-      head.textContent = `${nick} – bónusz bontás (UCL)`;
-      const items = [
-        { icon:'🏆', label:'Győztes', val: row.parts?.champPct || 0 },
-        { icon:'👟', label:'Gólkirály', val: row.parts?.goldenPct || 0 },
-        { icon:'📊', label:'Top8', val: row.parts?.top8Pct || 0 },
-      ];
-      body.innerHTML = items.map(it=>`
-        <div class="bonus-row">
-          <div class="tag">${it.icon} ${it.label}</div>
-          <div class="pct" style="color:${pctColor(it.val)}">+${fmt(it.val)}%</div>
-        </div>
-      `).join('') + `<div class="legend">Összesen: <strong>+${fmt(row.bonusPct)}%</strong> → <strong>+${fmtInt(row.bonusPts)}</strong> pont</div>`;
-
-      // pozícionálás
-      pop.style.top = '0px'; pop.style.left = '0px';
-      pop.classList.add('open');
-      const r = anchorEl.getBoundingClientRect();
-      const margin = 10;
-      const pw = pop.offsetWidth, ph = pop.offsetHeight;
-      let top = r.bottom + 8;
-      let left = Math.min(Math.max(margin, r.right - pw), window.innerWidth - pw - margin);
-      if (top + ph > window.innerHeight - margin) top = r.top - ph - 8;
-      if (top < margin) top = margin;
-      if (left < margin) left = margin;
-      pop.style.top  = `${Math.round(top)}px`;
-      pop.style.left = `${Math.round(left)}px`;
-
-      // aria állapot
-      document.querySelectorAll('[data-bonus][aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'));
-      anchorEl.setAttribute('aria-expanded','true');
+    function closeBonusPopover(){
+      document.querySelectorAll('.bonus-backdrop,.bonus-pop').forEach(n=>n.remove());
+      document.querySelectorAll('.bonus-toggle[aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'));
     }
-    function closeBonusCard(){
-      const pop = document.getElementById('bonusCard');
-      pop.classList.remove('open');
-      document.querySelectorAll('[data-bonus][aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'));
+
+    /* ---------- Nav „függő tippek” badge ---------- */
+    function updatePendingBadge(){
+      getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+        getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+          const latestByMatch = new Map();
+          tipsSnap.forEach(docu=>{ const t=docu.data(); if(!t?.matchId) return; const cur=latestByMatch.get(t.matchId); if(!cur||tipTsMs(t)>=tipTsMs(cur)) latestByMatch.set(t.matchId,t); });
+          const tippedIds = new Set(Array.from(latestByMatch.keys()));
+          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+          const badge = document.getElementById("tipsBadge");
+          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+        });
+      });
+    }
+
+    /* ---------- Chat ---------- */
+    function initChat(userRef){
+      const fab = document.getElementById('chatToggle');
+      const fabBadge = document.getElementById('chatFabBadge');
+      const panel = document.getElementById('chatPanel');
+      const closeBtn = document.getElementById('chatClose');
+      const listEl = document.getElementById('chatMessages');
+      const inputEl = document.getElementById('chatInput');
+      const sendBtn = document.getElementById('chatSendBtn');
+
+      function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
+      function close(){ panel.classList.remove('open'); }
+      function toggle(){ panel.classList.contains('open') ? close() : open(); }
+      fab.addEventListener('click', toggle);
+      closeBtn.addEventListener('click', close);
+
+      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
+
+      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
+      onSnapshot(qAll, snap => {
+        listEl.innerHTML = '';
+        if (snap.empty){
+          const empty = document.createElement('div');
+          empty.className = 'chat-empty';
+          empty.textContent = 'Még nincs üzenet. Légy te az első!';
+          listEl.appendChild(empty);
+        } else {
+          let unread = 0;
+          snap.forEach(docu=>{
+            const d = docu.data();
+            const tsMs = d.ts?.toMillis?.() || 0;
+            if (tsMs > lastSeenMs) unread++;
+
+            const row = document.createElement('div');
+            row.className = 'msg';
+            row.innerHTML = `
+              <div style="flex:1 1 auto">
+                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
+                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+              </div>
+            `;
+            const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
+            if (canDelete){
+              const del = document.createElement('button');
+              del.className = 'del';
+              del.textContent = 'Törlés';
+              del.title = 'Üzenet törlése';
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){} });
+              row.appendChild(del);
+            }
+            listEl.appendChild(row);
+          });
+
+          if (!panel.classList.contains('open') && unread > 0){
+            fab.classList.add('has-unread');
+            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
+          } else {
+            fab.classList.remove('has-unread');
+            fabBadge.textContent = '';
+          }
+
+          setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
+        }
+      });
+
+      sendBtn.addEventListener('click', async ()=>{
+        const txt = (inputEl.value || '').trim();
+        if (!txt){ inputEl.focus(); return; }
+        const backup = txt;
+        inputEl.value = '';
+        try{
+          await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
+          if (panel.classList.contains('open')) await markSeen();
+        }catch(e){
+          inputEl.value = backup; inputEl.focus();
+        }
+      });
+      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
+
+      async function markSeen(){
+        try{
+          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+          fab.classList.remove('has-unread');
+          fabBadge.textContent = '';
+        }catch(e){}
+      }
     }
   </script>
 </head>
@@ -602,13 +652,14 @@
     <!-- Fejléc -->
     <div class="header">
       <div class="header-left">
+        <img id="favCrest" class="fav-crest" alt="" hidden>
         <div>
-          <h1>UCL TippLiga</h1>
+          <h1>BL TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
       </div>
       <div>
-        <button id="logout" class="btn" aria-label="Kilépés" style="background:var(--accent);color:#fff;border:1px solid var(--line);">
+        <button id="logout" class="btn" aria-label="Kilépés" style="background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
           </svg>
@@ -617,25 +668,80 @@
       </div>
     </div>
 
+    <!-- UCL nav -->
+    <nav class="nav-grid">
+      <a class="nav-card" href="dashboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg>
+        </div>
+        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
+      </a>
+      <a class="nav-card" href="positions_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
+        </div>
+        <div class="text"><span class="title">Szezon végi sorrend</span><span class="desc">12 csapat – húzd a helyekre</span></div>
+      </a>
+      <a class="nav-card" href="matches_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
+        </div>
+        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
+      </a>
+      <a class="nav-card" href="results_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg>
+        </div>
+        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
+      </a>
+      <a class="nav-card" href="leaderboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2-2Z"/></svg>
+        </div>
+        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
+      </a>
+      <a class="nav-card" href="profile_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg></div>
+        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
+      </a>
+      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg></div>
+        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
+      </a>
+    </nav>
+
     <!-- Ranglista -->
     <section class="card">
       <div class="subhdr">
         <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
-        <label style="display:flex; align-items:center; gap:6px; font-size:14px; user-select:none;">
-          <input type="checkbox" id="showBots">
-          Mutasd a gépi tippelőket (Elek, Hugó, Ilona, Vendel)
-        </label>
-        <span id="rangeLabel" class="muted"></span>
+        <span id="rangeLabel" class="muted">Alap: az utolsó 5 forduló látszik</span>
       </div>
       <div id="tableMount"></div>
       <div style="padding:8px 12px; font-size:12px; color:#64748b;">⭐ = adott forduló legmagasabb pontja</div>
     </section>
   </div>
 
-  <!-- Bónusz breakdown popover -->
-  <div id="bonusCard" class="bonus-card" role="dialog" aria-modal="false" aria-hidden="true">
-    <div class="head">Bónusz bontás</div>
-    <div class="body"></div>
-  </div>
+  <!-- Chat -->
+  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+    </svg>
+    <span id="chatFabBadge" class="fab-badge"></span>
+  </button>
+
+  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
+    <div class="chat-head">
+      <div class="chat-title">Közösségi chat</div>
+      <button id="chatClose" aria-label="Bezárás">✕</button>
+    </div>
+    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
+    <div id="chatComposer">
+      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
+      <button id="chatSendBtn">Küldés</button>
+    </div>
+  </section>
+
+  <!-- Bonus popover -->
+  <div class="bonus-backdrop" hidden></div>
 </body>
 </html>
