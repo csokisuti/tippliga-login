@@ -27,6 +27,20 @@
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; }
     .pill-badge[hidden]{ display:none !important; }
 
+    /* === NAV visszaszámláló kinézet (Top8) === */
+    .pill-badge.countdown{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-variant-numeric: tabular-nums;
+      letter-spacing:.2px;
+    }
+    .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
+    @keyframes pulse{
+      0%{ transform:scale(1) } 50%{ transform:scale(1.06) } 100%{ transform:scale(1) }
+    }
+    .blink{ animation:blink 1s steps(2,start) infinite }
+    @keyframes blink{ to{ opacity:.2 } }
+    /* ======================================== */
+
     .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
 
@@ -179,6 +193,55 @@
       return dt.toLocaleDateString('hu-HU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     }
 
+    /* ===== NAV Top8 visszaszámláló (ugyanaz mint positions oldalon) ===== */
+    let navCdTimer = null;
+    function formatCountdown(ms){
+      const total = Math.max(0, Math.floor(ms/1000));
+      const d = Math.floor(total/86400);
+      const h = Math.floor((total%86400)/3600);
+      const m = Math.floor((total%3600)/60);
+      const s = total%60;
+      const H = String(h).padStart(2,'0');
+      const M = String(m).padStart(2,'0');
+      const S = String(s).padStart(2,'0');
+      const labelHTML = d>0
+        ? `<span class="mono">${d}n&nbsp;</span><span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
+        : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
+      const aria = d>0
+        ? `${d} nap ${h} óra ${m} perc ${s} másodperc`
+        : `${h} óra ${m} perc ${s} másodperc`;
+      return { labelHTML, aria };
+    }
+    function startNavTop8Countdown(until){
+      clearInterval(navCdTimer);
+      const el = document.getElementById('top8CountdownNav');
+      if (!el){ return; }
+      el.classList.add('countdown');
+      if (!until){
+        el.hidden = true;
+        return;
+      }
+      function tick(){
+        const ms = until - new Date();
+        if (ms <= 0){
+          el.hidden = true;
+          clearInterval(navCdTimer);
+          return;
+        }
+        const { labelHTML, aria } = formatCountdown(ms);
+        el.innerHTML = labelHTML;
+        el.setAttribute('aria-live','polite');
+        el.setAttribute('aria-label', `Visszaszámláló: ${aria}`);
+        el.title = `Határidő: ${until.toLocaleString('hu-HU')}`;
+        if (ms <= 5*60*1000){ el.classList.add('urgent'); }
+        else { el.classList.remove('urgent'); }
+      }
+      tick();
+      navCdTimer = setInterval(tick, 1000);
+      el.hidden = false;
+    }
+    /* =================================================================== */
+
     /* ===== ÚJ: Duplák stabil felépítése tippekből ===== */
     async function dayKeyForMatchId(matchId){
       try{
@@ -261,6 +324,22 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
+        /* === Top8 határidő beolvasása + számláló indítása === */
+        try{
+          const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
+          let until = null, isLocked = false;
+          if (snap.exists()){
+            const d = snap.data() || {};
+            until = d.lockUntil?.toDate?.() || null;
+            const now = new Date();
+            isLocked = !!d.isLocked || (until && now >= until);
+          }
+          startNavTop8Countdown(isLocked ? null : until);
+        }catch{
+          startNavTop8Countdown(null);
+        }
+        /* ==================================================== */
+
         try{
           const now = new Date();
 
@@ -280,13 +359,11 @@
           }
           myTipsByMatch = latestByMatch;
 
-          // ÚJ: duplák felépítése a tippekből (akkor is jelezzük, ha a duplázott meccs már elkezdődött)
+          // ÚJ: duplák felépítése a tippekből
           await rebuildDoublesFromTips(tips);
 
-          // 3) Napok előállítása + meglévő dupla per nap (csak az upcoming rendereléshez)
+          // 3) Napok előállítása + meglévő dupla per nap
           matchesByDay.clear();
-          // >>> NEM töröljük a doublesByDay-t itt, mert a tippekből már felépítettük <<<
-
           for (const m of upcoming){
             const st = asDate(m.startTime);
             const dk = dayKeyFromDate(st);
@@ -294,12 +371,10 @@
             matchesByDay.get(dk).push(m);
 
             const t = myTipsByMatch.get(m.id);
-            // csak akkor írjuk be, ha még nincs duplánk arra a napra (pl. a duplázott meccs már elindult)
             if (t && tipDouble(t) && !doublesByDay.has(dk)) {
               doublesByDay.set(dk, m.id);
             }
           }
-          // Rendezés napon belül idő szerint
           for (const arr of matchesByDay.values()){
             arr.sort((a,b)=> asDate(a.startTime) - asDate(b.startTime));
           }
@@ -465,7 +540,6 @@
       flag.classList.toggle('done', has);
 
       if (has){
-        // látszik-e még a kiválasztott meccs a listában?
         const visibleRow = document.querySelector(`.match[data-day="${dayKey}"][data-match-id="${selId}"], .match[data-day="${dayKey}"][data-matchid="${selId}"]`);
         const suffix = visibleRow ? '' : ' (már elkezdődött)';
         flag.querySelector('.txt').textContent = 'Dupla kiválasztva' + suffix;
@@ -677,7 +751,10 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
         <div class="text">
-          <span class="title">Szezon végi sorrend</span>
+          <span class="title">
+            Szezon végi sorrend
+            <span id="top8CountdownNav" class="pill-badge countdown" hidden></span>
+          </span>
           <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
@@ -704,7 +781,7 @@
 
       <a class="nav-card" href="leaderboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2z"/></svg>
         </div>
         <div class="text">
           <span class="title">Összpontszám</span>
@@ -760,4 +837,3 @@
   </section>
 </body>
 </html>
-
