@@ -30,6 +30,18 @@
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
+    /* Countdown badge a Top8-hoz */
+    .pill-badge.countdown{
+      background:#111827;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-variant-numeric: tabular-nums;
+      letter-spacing:.2px;
+    }
+    .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
+    @keyframes pulse{ 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
+    .blink{ animation:blink 1s steps(2,start) infinite }
+    @keyframes blink{ to{ opacity:.2 } }
+
     /* Gombok */
     .btn{ border:1px solid var(--line); background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; box-shadow:0 6px 18px rgba(0,0,0,.08); }
     .btn-accent{ background:var(--accent); color:#fff; border:1px solid var(--line); }
@@ -66,11 +78,11 @@
     .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
     .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
 
-    /* BÓNUSZ gomb – ugyanaz, mint a Kilépés (btn btn-accent) */
+    /* BÓNUSZ gomb */
     .bonus-cell{ justify-content:flex-end; }
     .bonus-chip{ display:inline-flex; align-items:center; gap:6px; }
 
-    /* Bonus popover (rövid összefoglaló) */
+    /* Bonus popover */
     .bonus-backdrop{ position:fixed; inset:0; z-index:9998; background:transparent; }
     .bonus-pop{
       position:fixed; z-index:9999; width:min(460px, calc(100vw - 32px));
@@ -160,7 +172,7 @@
       const rows=Object.values(S).sort(cmp);return rows.slice(0,8).map(r=>r.team)
     }
 
-    /* ---- Bonus szabályok (MARAD) ---- */
+    /* ---- Bonus szabályok ---- */
     const BONUS_CFG=Object.freeze({winnerPct:10,topScorerPct:5,top8PerHitPct:1,top8MaxPct:8});
 
     let currentUserEmail="",currentUserNick="",currentUserRole="user",favouriteTeamucl="",chatLastSeen=null;
@@ -173,6 +185,56 @@
     let latestTipsByUserMatch=new Map();
 
     let rows=[];
+
+    /* ===== Top8 visszaszámláló a NAV-hoz ===== */
+    let POS_LOCK={active:false,until:null};
+    let navCdTimer=null;
+
+    function formatCountdown(ms){
+      const total=Math.max(0,Math.floor(ms/1000));
+      const d=Math.floor(total/86400);
+      const h=Math.floor((total%86400)/3600);
+      const m=Math.floor((total%3600)/60);
+      const s=total%60;
+      const H=String(h).padStart(2,"0"), M=String(m).padStart(2,"0"), S=String(s).padStart(2,"0");
+      const labelHTML=d>0
+        ? `<span class="mono">${d}n&nbsp;</span><span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
+        : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
+      const aria=d>0?`${d} nap ${h} óra ${m} perc ${s} másodperc`:`${h} óra ${m} perc ${s} másodperc`;
+      return {labelHTML,aria,msLeft:total*1000};
+    }
+    function startNavTop8Countdown(until){
+      clearInterval(navCdTimer);
+      const el=document.getElementById("top8CountdownNav");
+      if(!el){return}
+      if(!until || POS_LOCK.active){ el.hidden=true; return; }
+      function tick(){
+        const ms=until-new Date();
+        if(ms<=0){ el.hidden=true; clearInterval(navCdTimer); return; }
+        const {labelHTML,aria,msLeft}=formatCountdown(ms);
+        el.innerHTML=labelHTML;
+        el.setAttribute("aria-live","polite");
+        el.setAttribute("aria-label",`Visszaszámláló: ${aria}`);
+        el.title=`Határidő: ${until.toLocaleString('hu-HU')}`;
+        if(msLeft<=5*60*1000){ el.classList.add("urgent"); } else { el.classList.remove("urgent"); }
+        el.hidden=false;
+      }
+      tick(); navCdTimer=setInterval(tick,1000);
+    }
+    async function loadPositionsLockAndApply(){
+      try{
+        const snap=await getDoc(doc(db,"settings","positionsLock_ucl"));
+        let until=null,active=false;
+        if(snap.exists()){
+          const d=snap.data()||{};
+          until=d.lockUntil?.toDate?.()||null;
+          const now=new Date(); const timeLocked=until && now>=until;
+          active=!!d.isLocked || timeLocked;
+        }
+        POS_LOCK={active,until};
+      }catch{ POS_LOCK={active:false,until:null}; }
+      startNavTop8Countdown(POS_LOCK.active?null:POS_LOCK.until);
+    }
 
     document.addEventListener("DOMContentLoaded",()=>{
       onAuthStateChanged(auth,async(user)=>{
@@ -192,6 +254,9 @@
           const crest=crestFor(favouriteTeamucl);
           if(crest){const img=document.getElementById("favCrest");img.src=crest;img.alt=favouriteTeamucl;img.hidden=false}
         }
+
+        /* NAV Top8 countdown betöltése */
+        await loadPositionsLockAndApply();
 
         /* USERS */
         const usersSnap=await getDocs(collection(db,"users"));
@@ -361,7 +426,7 @@
 
       const container=document.createElement('div'); container.className='table-wrap';
 
-      /* LEFT (sticky) – NB1 grid szélességek */
+      /* LEFT (sticky) */
       const left=document.createElement('div');
       left.className='left';
       left.style.minWidth='900px';
@@ -409,36 +474,32 @@
     }
 
     function renderLeftRow(r,i){
-  const crest = r.fav && crestFor(r.fav)
-    ? `<img class="name-crest" src="${crestFor(r.fav)}" alt="${escapeHtml(r.fav)}">`
-    : "";
+      const crest = r.fav && crestFor(r.fav)
+        ? `<img class="name-crest" src="${crestFor(r.fav)}" alt="${escapeHtml(r.fav)}">`
+        : "";
+      const nameHtml = `
+        <div class="name-wrap">
+          ${crest || ""}
+          <span class="name-text">${escapeHtml(r.nick)}</span>
+        </div>
+      `;
+      return `
+        <div class="row row-bg">
+          <div class="cell left rank">${i+1}.</div>
+          <div class="cell left">${nameHtml}</div>
+          <div class="cell left num total">${fmt(r.total)}</div>
+          <div class="cell left num bonus-cell">
+            <button class="btn btn-accent bonus-chip" data-idx="${i}" title="Bónusz részletek">
+              +${fmt(r.bonusPts)} <span style="opacity:.9">(+${r.bonusPct}%)</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="margin-left:4px"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+          </div>
+          <div class="cell left num">${fmt(r.base)}</div>
+        </div>
+      `;
+    }
 
-  // NB1-es stílus: nincs háttér, csak a név félkövérrel
-  const nameHtml = `
-    <div class="name-wrap">
-      ${crest || ""}
-      <span class="name-text">${escapeHtml(r.nick)}</span>
-    </div>
-  `;
-
-  return `
-    <div class="row row-bg">
-      <div class="cell left rank">${i+1}.</div>
-      <div class="cell left">${nameHtml}</div>
-      <div class="cell left num total">${fmt(r.total)}</div>
-      <div class="cell left num bonus-cell">
-        <button class="btn btn-accent bonus-chip" data-idx="${i}" title="Bónusz részletek">
-          +${fmt(r.bonusPts)} <span style="opacity:.9">(+${r.bonusPct}%)</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="margin-left:4px"><path d="M7 10l5 5 5-5z"/></svg>
-        </button>
-      </div>
-      <div class="cell left num">${fmt(r.base)}</div>
-    </div>
-  `;
-}
-
-
-    /* ---------------- Bonus popover (rövid) ---------------- */
+    /* ---------------- Bonus popover ---------------- */
     function showBonusPopover(row,clientX,clientY){
       closeBonusPopover();
 
@@ -570,13 +631,22 @@
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
-        <div class="text"><span class="title">Szezon végi sorrend <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
+        <div class="text">
+          <span class="title">
+            Szezon végi sorrend
+            <span id="top8CountdownNav" class="pill-badge countdown" hidden></span>
+          </span>
+          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
+        </div>
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
         </div>
-        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
+        <div class="text">
+          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
+          <span class="desc">Közelgő meccsek & tippek</span>
+        </div>
       </a>
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -617,7 +687,7 @@
 
   <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
@@ -634,5 +704,3 @@
   </section>
 </body>
 </html>
-
-
