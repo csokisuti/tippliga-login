@@ -28,6 +28,18 @@
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
+    /* Élő visszaszámláló megjelenítés (Top8) */
+    .pill-badge.countdown{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-variant-numeric: tabular-nums;
+      letter-spacing:.2px;
+      background:#111827; /* sötétebb kapszula a countdownnak */
+    }
+    .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
+    @keyframes pulse{ 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
+    .blink{ animation:blink 1s steps(2,start) infinite }
+    @keyframes blink{ to{ opacity:.2 } }
+
     .btn-accent{ min-height:40px; padding:10px 14px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(0,0,0,.08); }
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
@@ -310,6 +322,77 @@
     }
     const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}%`);
 
+    /* ===== Top8 visszaszámláló NAV-hoz ===== */
+    let POS_LOCK = { active:false, until:null };
+    let navCdTimer = null;
+
+    function formatCountdown(ms){
+      const total = Math.max(0, Math.floor(ms/1000));
+      const d = Math.floor(total/86400);
+      const h = Math.floor((total%86400)/3600);
+      const m = Math.floor((total%3600)/60);
+      const s = total%60;
+      const H = String(h).padStart(2,'0');
+      const M = String(m).padStart(2,'0');
+      const S = String(s).padStart(2,'0');
+      const labelHTML = d>0
+        ? `<span class="mono">${d}n&nbsp;</span><span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
+        : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
+      const aria = d>0
+        ? `${d} nap ${h} óra ${m} perc ${s} másodperc`
+        : `${h} óra ${m} perc ${s} másodperc`;
+      return { labelHTML, aria, msLeft: total*1000 };
+    }
+
+    function startNavTop8Countdown(until){
+      clearInterval(navCdTimer);
+      const el = document.getElementById('top8CountdownNav');
+      if (!el){ return; }
+
+      if (!until || POS_LOCK.active){
+        el.hidden = true;
+        return;
+      }
+
+      function tick(){
+        const ms = until - new Date();
+        if (ms <= 0){
+          el.hidden = true;
+          clearInterval(navCdTimer);
+          return;
+        }
+        const { labelHTML, aria, msLeft } = formatCountdown(ms);
+        el.innerHTML = labelHTML;
+        el.setAttribute('aria-live','polite');
+        el.setAttribute('aria-label', `Visszaszámláló: ${aria}`);
+        el.title = `Határidő: ${until.toLocaleString('hu-HU')}`;
+        if (msLeft <= 5*60*1000){ el.classList.add('urgent'); }
+        else { el.classList.remove('urgent'); }
+        el.hidden = false;
+      }
+
+      tick();
+      navCdTimer = setInterval(tick, 1000);
+    }
+
+    async function loadPositionsLockAndApply(){
+      try{
+        const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
+        let until=null, active=false;
+        if(snap.exists()){
+          const d = snap.data()||{};
+          until = d.lockUntil?.toDate?.() || null;
+          const now = new Date();
+          const timeLocked = until && now >= until;
+          active = !!d.isLocked || timeLocked;
+        }
+        POS_LOCK = { active, until };
+      }catch{
+        POS_LOCK = { active:false, until:null };
+      }
+      startNavTop8Countdown(POS_LOCK.active ? null : POS_LOCK.until);
+    }
+
     /* ---------------- Állapot ---------------- */
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -407,55 +490,52 @@
       if (me) renderDetail(me);
     }
 
- function renderDetail(u){
-  const tableBody = document.getElementById("bonusTableBody");
-  const display = u.display || u.nick || u.email;
-  document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
-  document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
-  document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
-  document.getElementById("detailPct").textContent   = `+${u.pct}%`;
+    function renderDetail(u){
+      const tableBody = document.getElementById("bonusTableBody");
+      const display = u.display || u.nick || u.email;
+      document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
+      document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
+      document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
+      document.getElementById("detailPct").textContent   = `+${u.pct}%`;
 
-  // Hivatalos Top 8 (8 sorra kitöltve)
-  const off = (officialTop8 || []).map(canonTeam);
-  const off8 = Array.from({length: 8}, (_, i) => off[i] || "—");
+      // Hivatalos Top 8 (8 sorra kitöltve)
+      const off = (officialTop8 || []).map(canonTeam);
+      const off8 = Array.from({length: 8}, (_, i) => off[i] || "—");
 
-  // Játékos saját Top 8 tippjei
-  const picks = (u.picks || []).map(canonTeam);
-  const used  = new Set();
+      // Játékos saját Top 8 tippjei
+      const picks = (u.picks || []).map(canonTeam);
+      const used  = new Set();
 
-  // Nem egyező tippek (ABC szerint), ezeket később osztjuk szét a maradék sorokba
-  const unmatched = picks
-    .filter(p => !off.includes(p))
-    .sort((a,b) => a.localeCompare(b, "hu"));
+      // Nem egyező tippek (ABC szerint)
+      const unmatched = picks
+        .filter(p => !off.includes(p))
+        .sort((a,b) => a.localeCompare(b, "hu"));
 
-  tableBody.innerHTML = "";
+      tableBody.innerHTML = "";
 
-  for (let i = 0; i < 8; i++){
-    const left = off8[i];
-    let right = "—";
-    let hit   = false;
+      for (let i = 0; i < 8; i++){
+        const left = off8[i];
+        let right = "—";
+        let hit   = false;
 
-    // Ha a játékos tippje tartalmazza az aktuális hivatalos csapatot,
-    // akkor ugyanabba a sorba kerüljön (találat)
-    if (left !== "—" && picks.includes(left) && !used.has(left)){
-      right = left;
-      hit   = true;
-      used.add(left);
-    } else if (unmatched.length){
-      // Különben töltsük fel a maradék sorokat a nem egyező tippekkel
-      right = unmatched.shift();
+        if (left !== "—" && picks.includes(left) && !used.has(left)){
+          right = left;
+          hit   = true;
+          used.add(left);
+        } else if (unmatched.length){
+          right = unmatched.shift();
+        }
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td><strong>${escapeHtml(left)}</strong></td>
+          <td>${escapeHtml(right)}</td>
+          <td>${hit ? "✅" : "✖"}</td>
+        `;
+        tableBody.appendChild(tr);
+      }
     }
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${i+1}</td>
-      <td><strong>${escapeHtml(left)}</strong></td>
-      <td>${escapeHtml(right)}</td>
-      <td>${hit ? "✅" : "✖"}</td>
-    `;
-    tableBody.appendChild(tr);
-  }
-}
 
     /* ---------------- Győztes kártya + modál ---------------- */
     function refreshChampionCard(){
@@ -660,6 +740,8 @@
           <div class="meta">
             Kezdés: ${koStr || "-"} • Eredmény: ${escapeHtml(m.result || "-")} • Kimenetel: <b>${escapeHtml(m.outcome || "-")}</b>
           </div>
+        */
+
         `;
 
         const tipsWrap = document.createElement("div"); tipsWrap.className = "tips";
@@ -751,6 +833,9 @@
           const crest = crestMap[favouriteTeamucl];
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
+
+        /* NAV Top8 countdown betöltése */
+        await loadPositionsLockAndApply();
 
         const usersSnap = await getDocs(collection(db, "users"));
         usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
@@ -934,7 +1019,7 @@
         if (!txt){ inputEl.focus(); return; }
         const backup = txt;
         inputEl.value = '';
-        try{
+               try{
           await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
@@ -988,13 +1073,22 @@
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
-        <div class="text"><span class="title">Szezon végi sorrend <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
+        <div class="text">
+          <span class="title">
+            Szezon végi sorrend
+            <span id="top8CountdownNav" class="pill-badge countdown" hidden></span>
+          </span>
+          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
+        </div>
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
         </div>
-        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
+        <div class="text">
+          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
+          <span class="desc">Közelgő meccsek & tippek</span>
+        </div>
       </a>
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -1191,4 +1285,3 @@
   </section>
 </body>
 </html>
-
