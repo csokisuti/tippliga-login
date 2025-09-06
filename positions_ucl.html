@@ -206,9 +206,8 @@
       const M = String(m).padStart(2,'0');
       const S = String(s).padStart(2,'0');
       const labelHTML = d>0
-        /* ⬇️ ITT a kért szóköz a nap és az 'n' között */
-        ? `<span class="mono">${d} n</span> <span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
-        : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
+  ? `<span class="mono">${d}n</span> <span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
+  : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
       const aria = d>0
         ? `${d} nap ${h} óra ${m} perc ${s} másodperc`
         : `${h} óra ${m} perc ${s} másodperc`;
@@ -951,3 +950,4 @@
   </section>
 </body>
 </html>
+
