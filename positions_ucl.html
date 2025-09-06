@@ -17,6 +17,7 @@
     .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
     .welcome{color:var(--muted,#64748b);margin:4px 0 0}
 
+    /* NAV */
     .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
     @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -38,7 +39,7 @@
     .arrow{transition:transform .18s ease}
     .card.open .arrow{transform:rotate(180deg)}
 
-    /* Status pill (grey / green check) */
+    /* Status pill */
     .status{display:inline-flex;align-items:center;gap:6px;font-size:12px}
     .dot{width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:#e2e8f0;color:#fff}
     .dot.ok{background:#16a34a}
@@ -96,6 +97,34 @@
     .btn-accent{min-height:40px;padding:10px 14px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(15,23,42,.08)}
     .btn-accent:hover{filter:brightness(.95)}
     .btn-icon{width:18px;height:18px;display:inline-block}
+
+    /* === ÚJ: Határidő sáv + lock szürkeítés === */
+    .deadline-banner{
+      margin:8px 0 0;
+      padding:10px 12px;
+      border:1px solid var(--line,#e6eaf1);
+      border-radius:10px;
+      background:#f8fafc;
+      color:#0f172a;
+      display:flex; align-items:center; gap:8px; font-weight:600;
+    }
+    .deadline-banner .em{font-weight:800}
+    .deadline-banner.locked{
+      background:#fff7ed; color:#7c2d12; border-color:#fed7aa;
+    }
+    /* Szürkeített interaktív részek lezáráskor */
+    body.locked .pool,
+    body.locked .selected-wrap,
+    body.locked .grid-cards{
+      filter:grayscale(.2);
+      opacity:.6;
+    }
+    body.locked .team-chip,
+    body.locked .selected-chip,
+    body.locked .pick-card{
+      pointer-events:none;
+      cursor:not-allowed;
+    }
   </style>
 
   <script type="module">
@@ -176,7 +205,7 @@
     let teamQuery          = "";
 
     /* 🔒 Pozíciós lezárás állapot */
-    let POS_LOCK = { active:false, text:'' };
+    let POS_LOCK = { active:false, text:'', info:'' };
 
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
@@ -215,7 +244,7 @@
           }
         }catch{}
 
-        /* 🔒 betöltjük a lezárást, mielőtt a gridekhez nyúlnánk */
+        /* 🔒 először a lock + határidő */
         await loadPositionsLockAndApply();
 
         await loadMarkets();
@@ -256,7 +285,6 @@
     };
     const fromDisplayedPoints = c => toNum(c?.displayPoints);
 
-    /* odds → pont fallback (azonos képlet az adminnal) */
     function computePoints(odds, BASE=10, O0=65, A=0.33, LO=0.5, HI=2.5){
       const o = toNum(odds);
       if(!o || o<=0) return null;
@@ -278,53 +306,75 @@
         cfg.HI   ?? 2.5
       );
     }
-
-    /* ⟵ KÉT TIZEDES: +pont jelvény formázása */
     const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}`);
 
-    /* 🔒 Lezárás betöltése + UI alkalmazása */
+    /* ===== 🔒 Lezárás + határidő ===== */
     async function loadPositionsLockAndApply(){
       try{
         const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
-        let active=false, text='';
+        let active=false, text='', info='';
+        let until=null, msg='';
         if(snap.exists()){
           const d = snap.data()||{};
-          const until = d.lockUntil?.toDate?.() || null;
+          until = d.lockUntil?.toDate?.() || null;
+          msg   = d.message || '';
           const now = new Date();
           const timeLocked = until && now >= until;
           active = !!d.isLocked || timeLocked;
+
           if (active){
-            text = `🔒 Lezárva ${timeLocked&&until?`(határidő: ${until.toLocaleString('hu-HU')})`:'(azonnali zárás)'}${d.message?` – ${d.message}`:''}`;
+            text = `🔒 Lezárva ${timeLocked&&until?`(határidő: ${until.toLocaleString('hu-HU')})`:'(azonnali zárás)'}${msg?` – ${msg}`:''}`;
           }
+
+          if (until && !active){
+            info = `⏳ Határidő: <span class="em">${until.toLocaleString('hu-HU')}</span> – utána lezárjuk a tippeket.${msg?` ${msg}`:''}`;
+          } else if (active){
+            info = text; // locked szöveg megy a sávba
+          } else {
+            info = 'Nyitva – nincs beállított határidő.';
+          }
+        } else {
+          active = false;
+          text   = '';
+          info   = 'Nyitva – nincs beállított határidő.';
         }
-        POS_LOCK = { active, text };
+        POS_LOCK = { active, text, info };
       }catch{
-        POS_LOCK = { active:false, text:'' };
+        POS_LOCK = { active:false, text:'', info:'Nyitva – nincs beállított határidő.' };
       }
       applyLockUI();
     }
 
+    function ensureDeadlineBanner(){
+      let banner = document.getElementById('deadlineBanner');
+      if(!banner){
+        banner = document.createElement('div');
+        banner.id = 'deadlineBanner';
+        banner.className = 'deadline-banner';
+        const host = document.querySelector('.layout');
+        const anchor = host?.querySelector('#card-top8');
+        if (host && anchor) host.insertBefore(banner, anchor);
+      }
+      return banner;
+    }
+
     function applyLockUI(){
-      // Banner
-      let banner = document.getElementById('lockBanner');
+      // Sáv frissítése (mindig látszik)
+      const banner = ensureDeadlineBanner();
+      banner.innerHTML = POS_LOCK.info;
+      banner.classList.toggle('locked', POS_LOCK.active);
+      banner.hidden = false;
+
+      // Test lock osztály + kereső tiltás
+      document.body.classList.toggle('locked', POS_LOCK.active);
+      const s = document.getElementById('teamSearch');
+      if (s) s.disabled = POS_LOCK.active;
+
+      // státusz-pillák
       if (POS_LOCK.active){
-        if(!banner){
-          banner = document.createElement('div');
-          banner.id = 'lockBanner';
-          banner.style.cssText = 'margin:8px 0 0;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff7ed;color:#7c2d12;font-weight:600';
-          const host = document.querySelector('.layout');
-          const anchor = host?.querySelector('#card-top8');
-          if (host && anchor) host.insertBefore(banner, anchor);
-        }
-        banner.textContent = POS_LOCK.text || '🔒 Lezárva';
-        banner.hidden = false;
-        const s = document.getElementById('teamSearch'); if (s) s.disabled = true;
-        // státuszok átírása
         document.querySelectorAll('.status .status-text').forEach(el=> el.textContent='Lezárva');
       } else {
-        if(banner) banner.hidden = true;
-        const s = document.getElementById('teamSearch'); if (s) s.disabled = false;
-        updateBadges(); // visszaállítjuk az aktuális állapot kijelzést
+        updateBadges(); // normál "Kész / Nincs tipp"
       }
     }
 
@@ -356,7 +406,7 @@
           .filter(x=>x.player);
       }catch{ goldenCandidates=[]; }
 
-      // rendezés: valós vagy fallback pont szerint emelkedő (hiányzó a végére)
+      // rendezés pont szerint
       function sortByPointsAsc(arr, scope, labelGetter){
         arr.sort((a,b)=>{
           const pa = candidatePoints(a, scope);
@@ -384,7 +434,7 @@
       }
       championCandidates.forEach(c=>{
         const pts  = candidatePoints(c,'champion');
-        const odds = fromCandidateOdds(c); // kompat mentéshez
+        const odds = fromCandidateOdds(c);
         const el = document.createElement('div');
         el.className = 'pick-card';
         el.dataset.team = c.team;
@@ -465,7 +515,7 @@
       document.getElementById("saveStateG")?.classList.remove('show');
     }
 
-    /* ===== Mentések (kompat a régi odds mezővel) ===== */
+    /* ===== Mentések ===== */
     let saveTimerTop8 = null;
     function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 250); }
     async function saveTop8Now(){
@@ -769,6 +819,9 @@
         <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
       </a>
     </nav>
+
+    <!-- Határidő / zárás sáv (mindig látszik) -->
+    <div id="deadlineBanner" class="deadline-banner" hidden>Betöltés…</div>
 
     <!-- 1) Top 8 -->
     <section id="card-top8" class="card">
