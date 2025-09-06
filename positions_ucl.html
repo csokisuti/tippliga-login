@@ -46,13 +46,6 @@
     .dot svg{width:14px;height:14px}
     .count{font-size:12px;color:#111;background:#e6f1ff;border:1px solid var(--line,#e6eaf1);padding:2px 8px;border-radius:999px}
 
-    /* === ÚJ: visszaszámláló pill === */
-    .countdown-pill{
-      font-size:12px;color:#111;background:#fff4e6;border:1px solid var(--line,#e6eaf1);
-      padding:2px 8px;border-radius:999px;white-space:nowrap
-    }
-    .countdown-pill.soon{ background:#fee2e2 }
-
     /* Top8 – dupla lista */
     .top8-wrap{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
     @media (max-width:800px){.top8-wrap{grid-template-columns:1fr}}
@@ -105,18 +98,42 @@
     .btn-accent:hover{filter:brightness(.95)}
     .btn-icon{width:18px;height:18px;display:inline-block}
 
-    /* === Határidő sáv + lock szürkeítés === */
-    .deadline-banner{margin:8px 0 0;padding:10px 12px;border:1px solid var(--line,#e6eaf1);border-radius:10px;background:#f8fafc;color:#0f172a;display:flex;align-items:center;gap:8px;font-weight:600}
+    /* Határidő sáv + lock szürkeítés */
+    .deadline-banner{
+      margin:8px 0 0;
+      padding:10px 12px;
+      border:1px solid var(--line,#e6eaf1);
+      border-radius:10px;
+      background:#f8fafc;
+      color:#0f172a;
+      display:flex; align-items:center; gap:8px; font-weight:600;
+    }
     .deadline-banner .em{font-weight:800}
-    .deadline-banner.locked{background:#fff7ed;color:#7c2d12;border-color:#fed7aa}
-    body.locked .pool, body.locked .selected-wrap, body.locked .grid-cards{filter:grayscale(.2);opacity:.6}
-    body.locked .team-chip, body.locked .selected-chip, body.locked .pick-card{pointer-events:none;cursor:not-allowed}
+    .deadline-banner.locked{
+      background:#fff7ed; color:#7c2d12; border-color:#fed7aa;
+    }
+    body.locked .pool,
+    body.locked .selected-wrap,
+    body.locked .grid-cards{
+      filter:grayscale(.2);
+      opacity:.6;
+    }
+    body.locked .team-chip,
+    body.locked .selected-chip,
+    body.locked .pick-card{
+      pointer-events:none;
+      cursor:not-allowed;
+    }
   </style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getFirestore, doc, getDoc, setDoc,
+      collection, getDocs, addDoc, deleteDoc, serverTimestamp,
+      query, where, orderBy, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -184,36 +201,44 @@
 
     // model
     let selectedTop8 = [];
-    let championCandidates = [];
-    let goldenCandidates   = [];
+    let championCandidates = [];   // {team, odds?, displayPoints?}
+    let goldenCandidates   = [];   // {player, team?, odds?, displayPoints?}
     let pickedChampion     = "";
     let pickedGolden       = "";
     let teamQuery          = "";
 
-    /* 🔒 Lezárás állapot */
+    /* 🔒 Pozíciós lezárás állapot */
     let POS_LOCK = { active:false, text:'', info:'', until:null };
 
-    /* visszaszámláló */
-    let countdownTimer = null;
-    function startCountdown(until){
-      clearInterval(countdownTimer);
-      const el = document.getElementById('cdTop8');
-      if (!until || POS_LOCK.active){ if(el) el.hidden = true; return; }
-      function render(){
+    /* NAV visszaszámláló */
+    let navCdTimer = null;
+    function startNavTop8Countdown(until){
+      clearInterval(navCdTimer);
+      const el = document.getElementById('top8CountdownNav');
+      if (!el) return;
+
+      // nincs határidő vagy már zárva → badge elrejt
+      if (!until || POS_LOCK.active){ el.hidden = true; return; }
+
+      function tick(){
         const ms = until - new Date();
-        if (ms <= 0){ el.hidden = true; clearInterval(countdownTimer); return; }
+        if (ms <= 0){ el.hidden = true; clearInterval(navCdTimer); return; }
+
         const s  = Math.floor(ms/1000);
         const d  = Math.floor(s/86400);
         const h  = Math.floor((s%86400)/3600);
         const m  = Math.floor((s%3600)/60);
         const ss = s%60;
-        let txt = (d>0? `${d}n `:"") + String(h).padStart(2,'0')+":"+String(m).padStart(2,'0')+":"+String(ss).padStart(2,'0');
-        el.textContent = txt;
+
+        // rövid formátum a pillhez
+        el.textContent = d > 0
+          ? `${d}n`
+          : `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
         el.hidden = false;
-        el.classList.toggle('soon', ms < 3600_000); // < 1 óra => pirosas háttér
       }
-      render();
-      countdownTimer = setInterval(render, 1000);
+
+      tick();
+      navCdTimer = setInterval(tick, 1000);
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -253,7 +278,7 @@
           }
         }catch{}
 
-        /* 🔒 lock + határidő */
+        /* 🔒 először a lock + határidő */
         await loadPositionsLockAndApply();
 
         await loadMarkets();
@@ -267,7 +292,7 @@
         initAccordions();
         initSearch();
         initChat(userRef);
-        updatePendingBadge();
+        updatePendingBadge(); // → ez a Meccstippek kártya badge-ét (tipsBadge) kezeli
         if (window.hideLoader) hideLoader();
       });
 
@@ -301,12 +326,19 @@
       const clamped = Math.min(Math.max(ratio, LO), HI);
       return BASE * clamped;
     }
-    function candidatePoints(c, scope){
+    function candidatePoints(c, scope){ // scope: 'golden' | 'champion'
       const dp = fromDisplayedPoints(c);
       if (dp != null) return dp;
       const odds = fromCandidateOdds(c);
       const cfg  = (c._calc && c._calc.scope === scope) ? c._calc : {};
-      return computePoints(odds, cfg.BASE ?? 10, cfg.O0 ?? 65, cfg.A ?? 0.33, cfg.LO ?? 0.5, cfg.HI ?? 2.5);
+      return computePoints(
+        odds,
+        cfg.BASE ?? 10,
+        cfg.O0   ?? 65,
+        cfg.A    ?? 0.33,
+        cfg.LO   ?? 0.5,
+        cfg.HI   ?? 2.5
+      );
     }
     const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}`);
 
@@ -314,7 +346,8 @@
     async function loadPositionsLockAndApply(){
       try{
         const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
-        let active=false, text='', info='', until=null, msg='';
+        let active=false, text='', info='';
+        let until=null, msg='';
         if(snap.exists()){
           const d = snap.data()||{};
           until = d.lockUntil?.toDate?.() || null;
@@ -335,7 +368,9 @@
             info = 'Nyitva – nincs beállított határidő.';
           }
         } else {
-          active = false; text=''; info='Nyitva – nincs beállított határidő.'; until=null;
+          active = false;
+          text   = '';
+          info   = 'Nyitva – nincs beállított határidő.';
         }
         POS_LOCK = { active, text, info, until };
       }catch{
@@ -344,37 +379,29 @@
       applyLockUI();
     }
 
-    function ensureDeadlineBanner(){
-      let banner = document.getElementById('deadlineBanner');
-      if(!banner){
-        banner = document.createElement('div');
-        banner.id = 'deadlineBanner';
-        banner.className = 'deadline-banner';
-        const host = document.querySelector('.layout');
-        const anchor = host?.querySelector('#card-top8');
-        if (host && anchor) host.insertBefore(banner, anchor);
-      }
-      return banner;
-    }
-
     function applyLockUI(){
-      const banner = ensureDeadlineBanner();
-      banner.innerHTML = POS_LOCK.info;
-      banner.classList.toggle('locked', POS_LOCK.active);
-      banner.hidden = false;
+      // Határidő sáv
+      const banner = document.getElementById('deadlineBanner');
+      if (banner){
+        banner.innerHTML = POS_LOCK.info || '';
+        banner.classList.toggle('locked', POS_LOCK.active);
+        banner.hidden = false;
+      }
 
+      // Test lock osztály + kereső tiltás
       document.body.classList.toggle('locked', POS_LOCK.active);
       const s = document.getElementById('teamSearch');
       if (s) s.disabled = POS_LOCK.active;
 
+      // státusz-pillák
       if (POS_LOCK.active){
         document.querySelectorAll('.status .status-text').forEach(el=> el.textContent='Lezárva');
       } else {
         updateBadges();
       }
 
-      // visszaszámláló frissítése
-      startCountdown(POS_LOCK.until);
+      // NAV visszaszámláló
+      startNavTop8Countdown(POS_LOCK.active ? null : POS_LOCK.until);
     }
 
     /* ===== Accordion ===== */
@@ -391,18 +418,21 @@
       inp.addEventListener('input', ()=>{ teamQuery = inp.value; renderPool(); });
     }
 
-    /* ===== Markets ===== */
+    /* ===== Markets => kártyák render ===== */
     async function loadMarkets(){
       try{
         const cSnap = await getDocs(collection(db,"ucl_championCandidates"));
-        championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.team);
+        championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }))
+          .filter(x=>x.team);
       }catch{ championCandidates=[]; }
 
       try{
         const gSnap = await getDocs(collection(db,"ucl_goldenBootCandidates"));
-        goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
+        goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) }))
+          .filter(x=>x.player);
       }catch{ goldenCandidates=[]; }
 
+      // rendezés pont szerint
       function sortByPointsAsc(arr, scope, labelGetter){
         arr.sort((a,b)=>{
           const pa = candidatePoints(a, scope);
@@ -480,13 +510,14 @@
       highlightGoldenCard();
     }
 
-    /* ===== Saját pickek ===== */
+    /* ===== Saját pickek beolvasása + UI kijelölés ===== */
     async function hydrateChampionPick(){
       try{
         const chDoc = await getDoc(doc(db,"ucl_championPickTips", currentUserEmail));
         pickedChampion = (chDoc.exists() && chDoc.data().team) ? chDoc.data().team : "";
       }catch{ pickedChampion = ""; }
-      highlightChampionCard(); updateBadges();
+      highlightChampionCard();
+      updateBadges();
     }
     function highlightChampionCard(){
       document.querySelectorAll('#chGrid .pick-card').forEach(el=>{
@@ -500,7 +531,8 @@
         const gbDoc = await getDoc(doc(db,"ucl_goldenBootTips", currentUserEmail));
         pickedGolden = (gbDoc.exists() && gbDoc.data().player) ? gbDoc.data().player : "";
       }catch{ pickedGolden = ""; }
-      highlightGoldenCard(); updateBadges();
+      highlightGoldenCard();
+      updateBadges();
     }
     function highlightGoldenCard(){
       document.querySelectorAll('#gbGrid .pick-card').forEach(el=>{
@@ -513,7 +545,7 @@
     let saveTimerTop8 = null;
     function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 250); }
     async function saveTop8Now(){
-      if (POS_LOCK.active) return;
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       const saved = document.getElementById("saveStateTop8");
       try{
         await setDoc(doc(db,"ucl_top8Tips", currentUserEmail), {
@@ -530,17 +562,23 @@
 
     let saveTimerC = null;
     function saveChampionPickWith(team, oddsDecimal){
-      if (POS_LOCK.active) return;
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       clearTimeout(saveTimerC);
       pickedChampion = team;
-      highlightChampionCard(); updateBadges();
+      highlightChampionCard();
+      updateBadges();
       saveTimerC = setTimeout(async ()=>{
         try{
           const oddsDec = toNum(oddsDecimal);
           const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null;
           await setDoc(doc(db,"ucl_championPickTips", currentUserEmail), {
-            email: currentUserEmail, nick: currentUserNick || currentUserEmail,
-            team, odds: oddsDec, oddsDecimal: oddsDec, oddsPercent: oddsPct, updatedAt: serverTimestamp()
+            email: currentUserEmail,
+            nick: currentUserNick || currentUserEmail,
+            team,
+            odds: oddsDec,
+            oddsDecimal: oddsDec,
+            oddsPercent: oddsPct,
+            updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateC");
           s.classList.add("show"); setTimeout(()=>s.classList.remove("show"), 1100);
@@ -550,17 +588,24 @@
 
     let saveTimerG = null;
     function saveGoldenPickWith(player, team, oddsDecimal){
-      if (POS_LOCK.active) return;
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       clearTimeout(saveTimerG);
       pickedGolden = player;
-      highlightGoldenCard(); updateBadges();
+      highlightGoldenCard();
+      updateBadges();
       saveTimerG = setTimeout(async ()=>{
         try{
           const oddsDec = toNum(oddsDecimal);
           const oddsPct = (oddsDec && oddsDec>0) ? (100/oddsDec) : null;
           await setDoc(doc(db,"ucl_goldenBootTips", currentUserEmail), {
-            email: currentUserEmail, nick: currentUserNick || currentUserEmail,
-            player, team, odds: oddsDec, oddsDecimal: oddsDec, oddsPercent: oddsPct, updatedAt: serverTimestamp()
+            email: currentUserEmail,
+            nick: currentUserNick || currentUserEmail,
+            player,
+            team,
+            odds: oddsDec,
+            oddsDecimal: oddsDec,
+            oddsPercent: oddsPct,
+            updatedAt: serverTimestamp()
           }, { merge:true });
           const s = document.getElementById("saveStateG");
           s.classList.add("show"); setTimeout(()=>s.classList.remove("show"), 1100);
@@ -573,7 +618,8 @@
       const pool = document.getElementById("pool");
       pool.innerHTML = "";
       const q = norm(teamQuery);
-      const notSelected = TEAMS.filter(t => !selectedTop8.includes(t)).filter(t => !q || norm(t).includes(q));
+      const notSelected = TEAMS.filter(t => !selectedTop8.includes(t))
+        .filter(t => !q || norm(t).includes(q));
       for (const team of notSelected){
         const chip = document.createElement("div");
         chip.className = "team-chip";
@@ -602,14 +648,14 @@
       document.getElementById("saveStateTop8").classList.toggle("show", false);
     }
     function toggleSelect(team){
-      if (POS_LOCK.active) return;
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       if (selectedTop8.includes(team)){ removeTeam(team); return; }
       if (selectedTop8.length>=8) return;
       selectedTop8.push(team);
       renderPool(); renderSelected(); autoSaveTop8();
     }
     function removeTeam(team){
-      if (POS_LOCK.active) return;
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       selectedTop8 = selectedTop8.filter(t=>t!==team);
       renderPool(); renderSelected(); autoSaveTop8();
     }
@@ -628,7 +674,7 @@
         : '<span class="dot" title="Még nincs tipp">–</span><span class="status-text">Nincs tipp</span>';
     }
 
-    /* ===== Meccs badge a MECCSTIPPEK menüpontra ===== */
+    /* ===== Meccstippek badge (Meccstippek kártyán) ===== */
     function updatePendingBadge(){
       getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -641,7 +687,7 @@
           });
           const tippedIds = new Set(Array.from(latestByMatch.keys()));
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-          const badge = document.getElementById("tipsBadge"); // ← MOST már a Meccstippek kártyán van
+          const badge = document.getElementById("tipsBadge"); // a Meccstippek nav-kártyán
           if (badge){
             if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
           }
@@ -766,15 +812,21 @@
         <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
       </a>
 
-      <!-- Itt NINCS már match-badge -->
+      <!-- Top 8 + bónusz NAV – IDE kerül a visszaszámláló badge -->
       <a class="nav-card" href="positions_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
-        <div class="text"><span class="title">Top 8 + bónusz</span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
+        <div class="text">
+          <span class="title">
+            Top 8 + bónusz
+            <span id="top8CountdownNav" class="pill-badge" hidden></span>
+          </span>
+          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
+        </div>
       </a>
 
-      <!-- A match-badge IDE került -->
+      <!-- Meccstippek NAV – IDE kerül vissza a tipsBadge számláló -->
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
@@ -820,8 +872,6 @@
         <div class="card-title">Top 8 tipp</div>
         <div class="card-meta">
           <span class="count" id="top8Count">0/8</span>
-          <!-- ÚJ: visszaszámláló pill -->
-          <span id="cdTop8" class="countdown-pill" hidden title="Hátralévő idő a lezárásig"></span>
           <span class="status" id="stTop8"><span class="dot">–</span><span class="status-text">Nincs tipp</span></span>
           <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </div>
