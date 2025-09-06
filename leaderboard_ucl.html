@@ -30,7 +30,12 @@
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
-    .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; }
+    /* Gombok */
+    .btn{ border:1px solid var(--line); background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; box-shadow:0 6px 18px rgba(0,0,0,.08); }
+    .btn-accent{ background:var(--accent); color:#fff; border:1px solid var(--line); }
+    .btn-accent:hover{ filter:brightness(.95); }
+    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent) 30%, white); outline-offset:2px; }
+
     .muted{ color:var(--muted); }
 
     /* Kártya */
@@ -61,26 +66,11 @@
     .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
     .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
 
-    /* BÓNUSZ gomb – erősebb kontraszt + pont ( % ) felirattal */
+    /* BÓNUSZ gomb – ugyanaz, mint a Kilépés (btn btn-accent) */
     .bonus-cell{ justify-content:flex-end; }
-    .bonus-chip{
-      display:inline-flex; align-items:center; justify-content:center; gap:6px;
-      padding:7px 11px; border-radius:999px; font-weight:800; line-height:1;
-      background:color-mix(in oklab, var(--accent) 18%, #ffffff);
-      border:1px solid color-mix(in oklab, var(--accent) 45%, #ffffff);
-      box-shadow:0 3px 10px rgba(0,0,0,.10);
-      cursor:pointer; user-select:none;
-      transition:transform .06s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
-    }
-    .bonus-chip:hover{
-      transform:translateY(-1px);
-      background:color-mix(in oklab, var(--accent) 24%, #ffffff);
-      border-color:color-mix(in oklab, var(--accent) 55%, #ffffff);
-      box-shadow:0 6px 16px rgba(0,0,0,.16);
-    }
-    .bonus-chip svg{ opacity:.9 }
+    .bonus-chip{ display:inline-flex; align-items:center; gap:6px; }
 
-    /* Bonus popover (rövid összefoglaló – itt NINCS 8-as táblázat) */
+    /* Bonus popover (rövid összefoglaló) */
     .bonus-backdrop{ position:fixed; inset:0; z-index:9998; background:transparent; }
     .bonus-pop{
       position:fixed; z-index:9999; width:min(460px, calc(100vw - 32px));
@@ -140,18 +130,6 @@
     const NORM=s=>String(s??"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
     const eqTeam=(a,b)=>!!a&&!!b&&NORM(a)===NORM(b);
     const eqText=(a,b)=>NORM(a)===NORM(b);
-    const pctColor=p=>`hsl(${Math.max(0,Math.min(25,p))/25*120}deg,85%,38%)`;
-
-    const teamColorMap={
-      "Arsenal":"#c3002f","Barcelona":"#a50044","Bayern München":"#dc052d","Benfica":"#d20a0a","Borussia Dortmund":"#111827",
-      "Chelsea":"#034694","Internazionale":"#0c5fa9","Juventus":"#111111","Liverpool":"#d00027","Manchester City":"#6cabdd",
-      "Paris Saint-Germain":"#004170","Real Madrid":"#0a2463","Tottenham Hotspur":"#132257","Bayer Leverkusen":"#e32219",
-      "Atalanta":"#1b5fa7","Napoli":"#00a2e0","PSV":"#cc0000","Sporting CP":"#00824b","Galatasaray":"#a90432","Ajax":"#d31145",
-      "Villarreal":"#1f2937","Athletic Bilbao":"#e11d48","Union Saint-Gilloise":"#1f2937","Monaco":"#c8102e","Newcastle United":"#111111",
-      "Slavia Praha":"#d00027","FC Köbenhavn":"#004a98","Eintracht Frankfurt":"#111111","Olympique Marseille":"#009fe3",
-      "Olympiakosz Pireusz":"#c8102e","Qarabag":"#1f2937","Pafosz":"#1f2937","Kajrat Almati":"#1f2937","Bodø/Glimt":"#1f2937","Club Bruges":"#1f2937"
-    };
-    const colorForTeam=t=>teamColorMap[t]||"#111827";
 
     function getOdds(m,key){
       if(m?.odds&&(key in m.odds))return m.odds[key];
@@ -432,11 +410,10 @@
 
     function renderLeftRow(r,i){
       const crest = r.fav && crestFor(r.fav) ? `<img class="name-crest" src="${crestFor(r.fav)}" alt="${escapeHtml(r.fav)}">` : "";
-      const color = colorForTeam(r.fav);
       const nameHtml = `
         <div class="name-wrap">
           ${crest||""}
-          <span class="name-text" style="color:${color}">${escapeHtml(r.nick)}</span>
+          <span class="name-text" style="color:#fff;background:color-mix(in oklab, var(--accent) 22%, white); padding:2px 6px; border-radius:6px; mix-blend:normal">${escapeHtml(r.nick)}</span>
         </div>`;
 
       return `
@@ -445,9 +422,9 @@
           <div class="cell left">${nameHtml}</div>
           <div class="cell left num total">${fmt(r.total)}</div>
           <div class="cell left num bonus-cell">
-            <button class="bonus-chip" data-idx="${i}" title="Bónusz részletek">
+            <button class="btn btn-accent bonus-chip" data-idx="${i}" title="Bónusz részletek">
               +${fmt(r.bonusPts)} <span style="opacity:.9">(+${r.bonusPct}%)</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="margin-left:4px"><path d="M7 10l5 5 5-5z"/></svg>
             </button>
           </div>
           <div class="cell left num">${fmt(r.base)}</div>
@@ -566,7 +543,7 @@
         </div>
       </div>
       <div>
-        <button id="logout" class="btn" aria-label="Kilépés" style="background:var(--accent);color:#fff;border:1px solid var(--line);">
+        <button id="logout" class="btn btn-accent" aria-label="Kilépés">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/>
           </svg>
