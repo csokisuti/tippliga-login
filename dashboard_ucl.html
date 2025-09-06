@@ -29,6 +29,21 @@
     .table-wrap{overflow:auto}
     .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;line-height:1;vertical-align:middle}
     .pill-badge[hidden]{display:none!important}
+    /* ===== NAV visszaszámláló kinézet ===== */
+    .pill-badge.countdown{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-variant-numeric: tabular-nums;
+      letter-spacing:.2px;
+    }
+    .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
+    @keyframes pulse{
+      0%{ transform:scale(1) }
+      50%{ transform:scale(1.06) }
+      100%{ transform:scale(1) }
+    }
+    .blink{ animation:blink 1s steps(2,start) infinite }
+    @keyframes blink{ to{ opacity:.2 } }
+    /* ====== */
     .fb-wrap iframe{width:100%;height:540px;border:0;overflow:hidden}
     .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
     .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
@@ -100,6 +115,55 @@
     };
 
     function fmtTime(ts){try{return ts.toDate().toLocaleString("hu-HU",{hour12:false})}catch{return ""}}
+
+    // ===== NAV Top8 visszaszámláló (helper) =====
+    let navCdTimer = null;
+    function formatCountdown(ms){
+      const total = Math.max(0, Math.floor(ms/1000));
+      const d = Math.floor(total/86400);
+      const h = Math.floor((total%86400)/3600);
+      const m = Math.floor((total%3600)/60);
+      const s = total%60;
+      const H = String(h).padStart(2,'0');
+      const M = String(m).padStart(2,'0');
+      const S = String(s).padStart(2,'0');
+      const labelHTML = d>0
+        ? `<span class="mono">${d}n&nbsp;</span><span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
+        : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
+      const aria = d>0
+        ? `${d} nap ${h} óra ${m} perc ${s} másodperc`
+        : `${h} óra ${m} perc ${s} másodperc`;
+      return { labelHTML, aria };
+    }
+    function startNavTop8Countdown(until){
+      clearInterval(navCdTimer);
+      const el = document.getElementById('top8CountdownNav');
+      if (!el){ return; }
+      el.classList.add('countdown');
+      if (!until){
+        el.hidden = true;
+        return;
+      }
+      function tick(){
+        const ms = until - new Date();
+        if (ms <= 0){
+          el.hidden = true;
+          clearInterval(navCdTimer);
+          return;
+        }
+        const { labelHTML, aria } = formatCountdown(ms);
+        el.innerHTML = labelHTML;
+        el.setAttribute('aria-live','polite');
+        el.setAttribute('aria-label', `Visszaszámláló: ${aria}`);
+        el.title = `Határidő: ${until.toLocaleString('hu-HU')}`;
+        if (ms <= 5*60*1000){ el.classList.add('urgent'); }
+        else { el.classList.remove('urgent'); }
+      }
+      tick();
+      navCdTimer = setInterval(tick, 1000);
+      el.hidden = false;
+    }
+    // ==========================================
 
     // "2-1" -> [2,1]
     function parseRes(str){
@@ -249,6 +313,23 @@
           }
         }
 
+        // ===== Countdown határidő lekérés + indítás (lightweight) =====
+        try{
+          const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
+          let until = null;
+          let isLocked = false;
+          if (snap.exists()){
+            const d = snap.data() || {};
+            until = d.lockUntil?.toDate?.() || null;
+            const now = new Date();
+            isLocked = !!d.isLocked || (until && now >= until);
+          }
+          startNavTop8Countdown(isLocked ? null : until);
+        }catch(e){
+          startNavTop8Countdown(null);
+        }
+        // =============================================================
+
         // Közelgő BL meccsekhez tipp badge
         try{
           const now=new Date();
@@ -372,7 +453,7 @@
       });
 
       inputEl.addEventListener('keydown',(e)=>{
-        if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
+        if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click();}
       });
 
       async function markSeen(){
@@ -434,7 +515,10 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
         <div class="text">
-          <span class="title">Szezon végi sorrend</span>
+          <span class="title">
+            Szezon végi sorrend
+            <span id="top8CountdownNav" class="pill-badge countdown" hidden></span>
+          </span>
           <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
@@ -539,7 +623,7 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
 
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
     </svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
@@ -557,4 +641,3 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
   </section>
 </body>
 </html>
-
