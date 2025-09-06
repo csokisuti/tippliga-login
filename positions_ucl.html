@@ -175,6 +175,9 @@
     let pickedGolden       = "";
     let teamQuery          = "";
 
+    /* 🔒 Pozíciós lezárás állapot */
+    let POS_LOCK = { active:false, text:'' };
+
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login_ucl.html"; return; }
@@ -211,6 +214,9 @@
             selectedTop8 = arr.filter(t => TEAMS.includes(t)).slice(0,8);
           }
         }catch{}
+
+        /* 🔒 betöltjük a lezárást, mielőtt a gridekhez nyúlnánk */
+        await loadPositionsLockAndApply();
 
         await loadMarkets();
         await hydrateChampionPick();
@@ -275,6 +281,52 @@
 
     /* ⟵ KÉT TIZEDES: +pont jelvény formázása */
     const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}`);
+
+    /* 🔒 Lezárás betöltése + UI alkalmazása */
+    async function loadPositionsLockAndApply(){
+      try{
+        const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
+        let active=false, text='';
+        if(snap.exists()){
+          const d = snap.data()||{};
+          const until = d.lockUntil?.toDate?.() || null;
+          const now = new Date();
+          const timeLocked = until && now >= until;
+          active = !!d.isLocked || timeLocked;
+          if (active){
+            text = `🔒 Lezárva ${timeLocked&&until?`(határidő: ${until.toLocaleString('hu-HU')})`:'(azonnali zárás)'}${d.message?` – ${d.message}`:''}`;
+          }
+        }
+        POS_LOCK = { active, text };
+      }catch{
+        POS_LOCK = { active:false, text:'' };
+      }
+      applyLockUI();
+    }
+
+    function applyLockUI(){
+      // Banner
+      let banner = document.getElementById('lockBanner');
+      if (POS_LOCK.active){
+        if(!banner){
+          banner = document.createElement('div');
+          banner.id = 'lockBanner';
+          banner.style.cssText = 'margin:8px 0 0;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff7ed;color:#7c2d12;font-weight:600';
+          const host = document.querySelector('.layout');
+          const anchor = host?.querySelector('#card-top8');
+          if (host && anchor) host.insertBefore(banner, anchor);
+        }
+        banner.textContent = POS_LOCK.text || '🔒 Lezárva';
+        banner.hidden = false;
+        const s = document.getElementById('teamSearch'); if (s) s.disabled = true;
+        // státuszok átírása
+        document.querySelectorAll('.status .status-text').forEach(el=> el.textContent='Lezárva');
+      } else {
+        if(banner) banner.hidden = true;
+        const s = document.getElementById('teamSearch'); if (s) s.disabled = false;
+        updateBadges(); // visszaállítjuk az aktuális állapot kijelzést
+      }
+    }
 
     /* ===== Accordion ===== */
     function initAccordions(){
@@ -345,7 +397,7 @@
             <div class="badge-odds">${fmtPts(pts)}</div>
           </div>
           <div class="pc-check">✓</div>`;
-        el.addEventListener('click', ()=> saveChampionPickWith(c.team, odds));
+        el.addEventListener('click', ()=>{ if (POS_LOCK.active) return; saveChampionPickWith(c.team, odds); });
         box.appendChild(el);
       });
       highlightChampionCard();
@@ -376,7 +428,7 @@
             <div class="badge-odds">${fmtPts(pts)}</div>
           </div>
           <div class="pc-check">✓</div>`;
-        el.addEventListener('click', ()=> saveGoldenPickWith(c.player, c.team||'', odds));
+        el.addEventListener('click', ()=>{ if (POS_LOCK.active) return; saveGoldenPickWith(c.player, c.team||'', odds); });
         box.appendChild(el);
       });
       highlightGoldenCard();
@@ -417,6 +469,7 @@
     let saveTimerTop8 = null;
     function autoSaveTop8(){ clearTimeout(saveTimerTop8); saveTimerTop8 = setTimeout(saveTop8Now, 250); }
     async function saveTop8Now(){
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       const saved = document.getElementById("saveStateTop8");
       try{
         await setDoc(doc(db,"ucl_top8Tips", currentUserEmail), {
@@ -433,6 +486,7 @@
 
     let saveTimerC = null;
     function saveChampionPickWith(team, oddsDecimal){
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       clearTimeout(saveTimerC);
       pickedChampion = team;
       highlightChampionCard();
@@ -458,6 +512,7 @@
 
     let saveTimerG = null;
     function saveGoldenPickWith(player, team, oddsDecimal){
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       clearTimeout(saveTimerG);
       pickedGolden = player;
       highlightGoldenCard();
@@ -517,12 +572,14 @@
       document.getElementById("saveStateTop8").classList.toggle("show", false);
     }
     function toggleSelect(team){
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       if (selectedTop8.includes(team)){ removeTeam(team); return; }
       if (selectedTop8.length>=8) return;
       selectedTop8.push(team);
       renderPool(); renderSelected(); autoSaveTop8();
     }
     function removeTeam(team){
+      if (POS_LOCK.active) return;            /* 🔒 guard */
       selectedTop8 = selectedTop8.filter(t=>t!==team);
       renderPool(); renderSelected(); autoSaveTop8();
     }
@@ -689,7 +746,7 @@
       </a>
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1 2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg>
         </div>
         <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
       </a>
