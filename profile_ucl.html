@@ -23,14 +23,13 @@
     .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
     .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
-    .nav-card .title{ font-weight:800; display:inline-flex; align-items:center; gap:6px; }
+    .nav-card .title{ font-weight:800; }
     .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
-    /* Countdown badge a Top8-hoz (piros, monospace, villogó kettőspont) */
+    /* NAV visszaszámláló – ugyanaz a kinézet, mint a mintában (piros badge, monospaced számok) */
     .pill-badge.countdown{
-      background:#ef4444; /* piros háttér */
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
       font-variant-numeric: tabular-nums;
       letter-spacing:.2px;
@@ -41,7 +40,7 @@
     @keyframes blink{ to{ opacity:.2 } }
 
     .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; }
-    .btn-accent{ min-height:40px; padding:10px 14px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(15,23,42,.08); }
+    .btn-accent{ min-height:40px; padding:10px 14px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(0,0,0,.08); }
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:disabled{ opacity:.6; cursor:not-allowed; }
 
@@ -109,49 +108,21 @@
     /* ---------------- Helpers ---------------- */
     /* Címerek – BL/UCL mezőny */
     const crestMap = {
-      "Ajax": "ucl_crest/ajax.png",
-      "Arsenal": "ucl_crest/arsenal.png",
-      "Atalanta": "ucl_crest/atalanta.png",
-      "Athletic Bilbao": "ucl_crest/athletic.png",
-      "Atlético Madrid": "ucl_crest/atletico.png",
-      "Barcelona": "ucl_crest/barcelona.png",
-      "Bayern München": "ucl_crest/bayern.png",
-      "Benfica": "ucl_crest/benfica.png",
-      "Borussia Dortmund": "ucl_crest/borussia.png",
-      "Bodø/Glimt": "ucl_crest/bodo.png",
-      "Club Bruges": "ucl_crest/brugge.png",
-      "Chelsea": "ucl_crest/chelsea.png",
-      "FC Köbenhavn": "ucl_crest/copenhagen.png",
-      "Eintracht Frankfurt": "ucl_crest/frankfurt.png",
-      "Galatasaray": "ucl_crest/galata.png",
-      "Internazionale": "ucl_crest/inter.png",
-      "Juventus": "ucl_crest/juventus.png",
-      "Bayer Leverkusen": "ucl_crest/leverkusen.png",
-      "Liverpool": "ucl_crest/liverpool.png",
-      "Manchester City": "ucl_crest/mancity.png",
-      "Olympique Marseille": "ucl_crest/marseille.png",
-      "Monaco": "ucl_crest/monaco.png",
-      "Napoli": "ucl_crest/napoli.png",
-      "Newcastle United": "ucl_crest/newcastle.png",
-      "Olympiakosz Pireusz": "ucl_crest/olympiacos.png",
-      "Pafosz": "ucl_crest/pafos.png",
-      "Paris Saint-Germain": "ucl_crest/psg.png",
-      "PSV": "ucl_crest/psv.png",
-      "Qarabag": "ucl_crest/qarabag.png",
-      "Real Madrid": "ucl_crest/real.png",
-      "Slavia Praha": "ucl_crest/slavia.png",
-      "Sporting CP": "ucl_crest/sporting.png",
-      "Tottenham Hotspur": "ucl_crest/tottenham.png",
-      "Union Saint-Gilloise": "ucl_crest/usg.png",
-      "Villarreal": "ucl_crest/villareal.png",
-      "Kajrat Almati": "ucl_crest/kairat.png"
+      "Ajax": "ucl_crest/ajax.png","Arsenal": "ucl_crest/arsenal.png","Atalanta": "ucl_crest/atalanta.png","Athletic Bilbao": "ucl_crest/athletic.png",
+      "Atlético Madrid": "ucl_crest/atletico.png","Barcelona": "ucl_crest/barcelona.png","Bayern München": "ucl_crest/bayern.png","Benfica": "ucl_crest/benfica.png",
+      "Borussia Dortmund": "ucl_crest/borussia.png","Bodø/Glimt": "ucl_crest/bodo.png","Club Bruges": "ucl_crest/brugge.png","Chelsea": "ucl_crest/chelsea.png",
+      "FC Köbenhavn": "ucl_crest/copenhagen.png","Eintracht Frankfurt": "ucl_crest/frankfurt.png","Galatasaray": "ucl_crest/galata.png","Internazionale": "ucl_crest/inter.png",
+      "Juventus": "ucl_crest/juventus.png","Bayer Leverkusen": "ucl_crest/leverkusen.png","Liverpool": "ucl_crest/liverpool.png","Manchester City": "ucl_crest/mancity.png",
+      "Olympique Marseille": "ucl_crest/marseille.png","Monaco": "ucl_crest/monaco.png","Napoli": "ucl_crest/napoli.png","Newcastle United": "ucl_crest/newcastle.png",
+      "Olympiakosz Pireusz": "ucl_crest/olympiacos.png","Pafosz": "ucl_crest/pafos.png","Paris Saint-Germain": "ucl_crest/psg.png","PSV": "ucl_crest/psv.png",
+      "Qarabag": "ucl_crest/qarabag.png","Real Madrid": "ucl_crest/real.png","Slavia Praha": "ucl_crest/slavia.png","Sporting CP": "ucl_crest/sporting.png",
+      "Tottenham Hotspur": "ucl_crest/tottenham.png","Union Saint-Gilloise": "ucl_crest/usg.png","Villarreal": "ucl_crest/villareal.png","Kajrat Almati": "ucl_crest/kairat.png"
     };
     const escapeHtml = s => String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
-    /* ===== NAV Top8 visszaszámláló (profil) ===== */
+    /* ===== NAV Top8 visszaszámláló (helper) – mint a mintában ===== */
     let navCdTimer = null;
-
     function formatCountdown(ms){
       const total = Math.max(0, Math.floor(ms/1000));
       const d = Math.floor(total/86400);
@@ -169,13 +140,15 @@
         : `${h} óra ${m} perc ${s} másodperc`;
       return { labelHTML, aria };
     }
-
     function startNavTop8Countdown(until){
       clearInterval(navCdTimer);
       const el = document.getElementById('top8CountdownNav');
       if (!el){ return; }
-      if (!until){ el.hidden = true; return; }
-
+      el.classList.add('countdown');
+      if (!until){
+        el.hidden = true;
+        return;
+      }
       function tick(){
         const ms = until - new Date();
         if (ms <= 0){
@@ -188,35 +161,20 @@
         el.setAttribute('aria-live','polite');
         el.setAttribute('aria-label', `Visszaszámláló: ${aria}`);
         el.title = `Határidő: ${until.toLocaleString('hu-HU')}`;
-        if (ms <= 5*60*1000){ el.classList.add('urgent'); } else { el.classList.remove('urgent'); }
-        el.hidden = false;
+        if (ms <= 5*60*1000){ el.classList.add('urgent'); }
+        else { el.classList.remove('urgent'); }
       }
-
       tick();
       navCdTimer = setInterval(tick, 1000);
+      el.hidden = false;
     }
-
-    async function loadPositionsLockAndApply(){
-      try{
-        const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
-        let until = null, active = false;
-        if (snap.exists()){
-          const d = snap.data() || {};
-          until = d.lockUntil?.toDate?.() || null;
-          const now = new Date();
-          active = !!d.isLocked || (until && now >= until);
-        }
-        startNavTop8Countdown(active ? null : until);
-      }catch(e){
-        startNavTop8Countdown(null);
-      }
-    }
+    /* ======================================== */
 
     /* ---------------- Állapot ---------------- */
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
-    let favouriteTeamucl = "";   // <-- UCL kedvenc csapat mező
+    let favouriteTeamucl = "";   // UCL kedvenc csapat mező
     let chatLastSeen = null;
 
     /* ---------------- INIT ---------------- */
@@ -255,9 +213,8 @@
           const d = userSnap.data();
           currentUserNick = d.nickname || currentUserEmail;
           currentUserRole = d.role || "user";
-          favouriteTeamucl = d.favouriteTeamucl || "";   // <-- innen olvassuk az UCL kedvencet
+          favouriteTeamucl = d.favouriteTeamucl || "";
           chatLastSeen = d.chatLastSeen || null;
-          // ÚJ: emlékeztető beolvasása
           if (typeof d.reminderEmail !== "undefined") {
             reminderToggle.checked = !!d.reminderEmail;
           }
@@ -276,8 +233,22 @@
           if (crest) { favCrestImg.src = crest; favCrestImg.alt = favouriteTeamucl; favCrestImg.hidden = false; }
         }
 
-        /* TOP8 visszaszámláló elindítása (profil oldalon is) */
-        await loadPositionsLockAndApply();
+        /* ===== Countdown határidő lekérés + indítás (mint a mintában) ===== */
+        try{
+          const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
+          let until = null;
+          let isLocked = false;
+          if (snap.exists()){
+            const d = snap.data() || {};
+            until = d.lockUntil?.toDate?.() || null;
+            const now = new Date();
+            isLocked = !!d.isLocked || (until && now >= until);
+          }
+          startNavTop8Countdown(isLocked ? null : until);
+        }catch(e){
+          startNavTop8Countdown(null);
+        }
+        /* ================================================================ */
 
         // Becenév szerkesztése
         nickInp.value = currentUserNick === currentUserEmail ? "" : currentUserNick;
@@ -295,7 +266,7 @@
         Object.keys(crestMap).forEach(team=>{
           const opt = document.createElement("option");
           opt.value = team; opt.textContent = team;
-          if (team === favouriteTeamucl) opt.selected = true;   // <-- itt is UCL mező
+          if (team === favouriteTeamucl) opt.selected = true;
           teamSel.appendChild(opt);
         });
         function updateCrestPreview(){
@@ -308,7 +279,7 @@
         teamSel.addEventListener("change", updateCrestPreview);
         teamSave.addEventListener("click", async ()=>{
           try{
-            await setDoc(userRef, { favouriteTeamucl: teamSel.value }, { merge:true }); // <-- ide mentjük
+            await setDoc(userRef, { favouriteTeamucl: teamSel.value }, { merge:true });
             showMsg("Kedvenc csapat (BL) frissítve.");
           }catch(e){ showMsg("Hiba a csapat mentésekor.", "err"); }
         });
@@ -343,7 +314,7 @@
           }
         });
 
-        // ÚJ: emlékeztető toggle mentése (azonnal, kattintáskor)
+        // ÚJ: emlékeztető toggle mentése
         reminderToggle.addEventListener("change", async ()=>{
           try{
             await setDoc(userRef, { reminderEmail: reminderToggle.checked }, { merge:true });
@@ -491,7 +462,7 @@
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/>
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
           </svg>
           Kilépés
         </button>
@@ -512,7 +483,7 @@
         </div>
       </a>
 
-      <!-- Szezon végi sorrend / Top8 (COUNTDOWN BADGE beépítve) -->
+      <!-- Szezon végi sorrend / Top8 -->
       <a class="nav-card" href="positions_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
