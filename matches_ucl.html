@@ -78,7 +78,7 @@
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
     .btn-icon{ width:18px; height:18px; display:inline-block; }
 
-    /* Chat */
+    /* Chat – BL külön gyűjtemény */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -193,7 +193,7 @@
       return dt.toLocaleDateString('hu-HU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     }
 
-    /* ===== NAV Top8 visszaszámláló (ugyanaz mint positions oldalon) ===== */
+    /* ===== NAV Top8 visszaszámláló ===== */
     let navCdTimer = null;
     function formatCountdown(ms){
       const total = Math.max(0, Math.floor(ms/1000));
@@ -240,7 +240,6 @@
       navCdTimer = setInterval(tick, 1000);
       el.hidden = false;
     }
-    /* =================================================================== */
 
     /* ===== ÚJ: Duplák stabil felépítése tippekből ===== */
     async function dayKeyForMatchId(matchId){
@@ -282,7 +281,7 @@
     let currentUserNick  = "";
     let currentUserRole  = "user";
     let favouriteTeamucl = "";
-    let chatLastSeen     = null;
+    let chatLastSeenUcl  = null;   // <-- külön BL chat mező
 
     let myTipsByMatch = new Map();
     let doublesByDay  = new Map();            // YYYY-MM-DD -> matchId
@@ -306,7 +305,7 @@
           currentUserNick  = d.nickname || currentUserEmail;
           currentUserRole  = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeen     = d.chatLastSeen || null;
+          chatLastSeenUcl  = d.chatLastSeenUcl || null;   // <-- itt is BL mező
         } else {
           currentUserNick = currentUserEmail;
         }
@@ -338,7 +337,6 @@
         }catch{
           startNavTop8Countdown(null);
         }
-        /* ==================================================== */
 
         try{
           const now = new Date();
@@ -416,7 +414,6 @@
       const wrap = document.getElementById("matchList");
       wrap.innerHTML = "";
 
-      // napok időrendben
       const dayKeys = Array.from(matchesByDay.keys()).sort();
       for (const dk of dayKeys){
         const dayBlock = document.createElement('div');
@@ -439,7 +436,6 @@
 
         wrap.appendChild(dayBlock);
 
-        // meccsek a napon
         const matches = matchesByDay.get(dk) || [];
         for (const m of matches){
           const tip = myTipsByMatch.get(m.id) || {};
@@ -495,7 +491,6 @@
           row.appendChild(right);
           list.appendChild(row);
 
-          // Ha a nap már zárolt, nem lehet állítani
           if (isDayLocked(dk)){
             dbl.disabled = true;
             dbl.title = "Ezen a napon a duplázás már lezárt (az első meccs elkezdődött).";
@@ -522,7 +517,6 @@
             await saveTip(m, select.value, dbl.checked, dk, saved);
           });
 
-          // napon belüli konzisztencia
           const lockedId = doublesByDay.get(dk);
           if (lockedId && lockedId !== m.id){ dbl.checked = false; }
         }
@@ -561,7 +555,6 @@
       });
     }
 
-    // Csak az adott nap meccsei között hagyunk meg 1 duplát (adatbázisban is)
     async function enforceSingleDoubleForDay(dayKey, keepMatchId){
       const idsForDay = new Set((matchesByDay.get(dayKey) || []).map(m=>m.id));
       const qTips = query(collection(db,"ucl_tips"), where("user","==", currentUserEmail));
@@ -580,7 +573,6 @@
       for (const p of tasks){ try{ await p; }catch{} }
     }
 
-    // Mentés: régi és új mezők is + day kulcs
     async function saveTip(matchObj, choice, isDouble, dayKey, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
@@ -592,7 +584,7 @@
         matchId,
         round: String(roundStr),
         roundId: String(roundStr),
-        day: dayKey,                     // ÚJ: meccsnap kulcs (YYYY-MM-DD)
+        day: dayKey,
         choice: choice || "",
         tip: choice || "",
         double: !!isDouble,
@@ -621,7 +613,7 @@
       }catch(e){ console.warn(e); }
     }
 
-    /* ===== Chat ===== */
+    /* ===== Chat – BL külön: chatMessages_ucl + chatLastSeenUcl ===== */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -631,17 +623,15 @@
       const inputEl = document.getElementById('chatInput');
       const sendBtn = document.getElementById('chatSendBtn');
 
-      const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
-
       function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
       function close(){ panel.classList.remove('open'); }
       function toggle(){ panel.classList.contains('open') ? close() : open(); }
       fab.addEventListener('click', toggle);
       closeBtn.addEventListener('click', close);
 
-      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
+      let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
 
-      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
+      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc')); // <-- UCL gyűjtemény
       onSnapshot(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
@@ -670,7 +660,7 @@
               del.className = 'del';
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){} });
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch(e){} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
@@ -694,7 +684,12 @@
         const backup = txt;
         inputEl.value = '';
         try{
-          await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
+          await addDoc(collection(db,'chatMessages_ucl'), {  // <-- UCL gyűjtemény
+            email: currentUserEmail,
+            nick: currentUserNick || 'Ismeretlen',
+            text: backup,
+            ts: serverTimestamp()
+          });
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
           inputEl.value = backup; inputEl.focus();
@@ -704,7 +699,7 @@
 
       async function markSeen(){
         try{
-          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true }); // <-- külön mező
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
         }catch(e){}
