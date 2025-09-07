@@ -1,170 +1,244 @@
-import React, { useEffect, useState } from 'react'
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Bejelentkezés / Regisztráció</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    :root{--bg:#f6f7fb;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e6eaf1;--accent:#3b82f6}
+    body{background:var(--bg);color:var(--text);margin:0}
+    .page{max-width:980px;margin:32px auto;padding:0 16px;display:flex;flex-direction:column;gap:16px}
+    .login-container{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);padding:18px}
+    .login-container h3{margin:6px 0 12px}
+    .login-container input{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;box-sizing:border-box;margin:6px 0}
+    .login-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{min-height:40px;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+    .btn-primary{background:var(--accent);color:#fff;border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .btn-ghost{background:#fff;color:#111;border:1px solid var(--line)}
+    .btn[disabled]{opacity:.55;cursor:not-allowed;filter:grayscale(.25)}
 
-export default function EntryMock(){
-  const [loading,setLoading]=useState(true)
-  const [authed,setAuthed]=useState(false)
-  const [admin,setAdmin]=useState(false)
-  const [lastLeague,setLastLeague]=useState(null)
-  const [email,setEmail]=useState("")
-  const [password,setPassword]=useState("")
-  const [remember,setRemember]=useState(true)
-  useEffect(()=>{ const t=setTimeout(()=>setLoading(false),800); return()=>clearTimeout(t)},[])
+    /* Notice */
+    .notice{display:none;padding:10px 12px;border-radius:10px;border:1px solid var(--line);margin:0 0 10px}
+    .notice.show{display:block}
+    .notice.success{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .notice.error{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
 
-  const LEAGUES={
-    nb1:{ code:"nb1", name:"NB I TippLiga", emoji:"🇭🇺", href:"#nb1", logo:"fizz.png" },
-    ucl:{ code:"ucl", name:"BL TippLiga", emoji:"⭐", href:"#ucl", logo:"ucl.png" }
-  }
+    /* Liga választó (NB1 dashboard-koherens) */
+    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
+    .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--line);background:#f7f9fd}
+    .card .body{padding:12px}
+    .nav-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    @media (max-width:700px){.nav-grid{grid-template-columns:1fr}}
+    .select-card{position:relative;display:flex;align-items:center;gap:12px;text-align:left;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer;transition:.15s ease}
+    .select-card:hover{transform:translateY(-2px)}
+    .select-card[aria-pressed="true"]{outline:2px solid color-mix(in oklab,var(--accent) 35%,white);outline-offset:2px}
+    .logo-wrap{width:48px;height:48px;border-radius:12px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+    .logo-wrap img{max-width:40px;max-height:40px}
+    .text{display:flex;flex-direction:column;line-height:1.2}
+    .title{font-weight:800}
+    .desc{color:var(--muted);font-size:12px}
+    .dot{width:12px;height:12px;border-radius:999px;border:2px solid color-mix(in oklab,var(--accent) 35%,white);margin-left:auto}
+    .dot.active{background:var(--accent)}
+    .hint{color:var(--muted);font-size:12px;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Info sáv -->
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
 
-  function Header(){
-    return (
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-[#111a30] border border-[#1f2a44] grid place-items-center font-extrabold">TL</div>
-          <div>
-            <h1 className="m-0 text-lg">TippLiga – közös belépés</h1>
-            <p className="m-0 text-sm text-slate-400">NB I és BL egy helyen</p>
-          </div>
-        </div>
-        <div className="text-slate-400 text-sm">{authed?"Bejelentkezve":"Vendég mód"}</div>
+    <!-- A MEGLÉVŐ LOGIN BOKSZ – változatlan mezők + gombok -->
+    <div class="login-container">
+      <h3>Bejelentkezés</h3>
+      <input type="email" id="email" placeholder="Email:">
+      <input type="password" id="password" placeholder="Jelszó:">
+      <div class="login-actions">
+        <button id="loginBtn" class="btn btn-primary" onclick="login()" disabled>Bejelentkezés</button>
+        <button class="btn btn-ghost" onclick="toggleRegister()">⇩ Regisztráció</button>
       </div>
-    )
-  }
 
-  function LeagueCards(){
-    return (
-      <div className="grid grid-cols-2 gap-3 mt-3 max-[520px]:grid-cols-1">
-        {Object.keys(LEAGUES).map(k=>{
-          const L=LEAGUES[k]
-          return (
-            <a key={k} href={L.href} onClick={()=>setLastLeague(L.code)} className="flex flex-col gap-3 p-4 border border-[#1f2a44] rounded-xl bg-[#0c152b] hover:-translate-y-0.5 hover:border-[#2a3a66] transition">
-              <div className="flex items-center gap-3">
-                <img src={L.logo} alt={`${L.name} logó`} className="h-8 w-auto rounded bg-white/90 p-1 border border-[#1f2a44]"/>
-                <span className="inline-flex items-center gap-2 text-xs text-slate-300 bg-[#0b142a] border border-[#1f2a44] rounded-full px-3 py-1">{L.emoji} {L.name}</span>
-              </div>
-              <span className="text-slate-400 text-sm">Belépés a {L.name} felületre</span>
-            </a>
-          )
-        })}
-      </div>
-    )
-  }
-
-  function Panel({title,children}){
-    return (
-      <div className="bg-gradient-to-b from-[#0e1730] to-[#111a33] border border-[#1f2a44] rounded-xl p-4">
-        <h2 className="m-0 mb-2 text-base">{title}</h2>
-        {children}
-      </div>
-    )
-  }
-
-  function Button({children,variant="default",onClick,href}){
-    const base="px-4 py-2 rounded-lg font-semibold border text-sm"
-    const cls={
-      default: base+" bg-[#0f1a34] border-[#1f2a44] hover:border-[#2a3a66]",
-      accent: base+" bg-blue-600 border-blue-600 hover:brightness-110",
-      green: base+" bg-emerald-500 border-emerald-500 hover:brightness-110"
-    }[variant]
-    const Comp = href? 'a':'button'
-    return <Comp href={href} onClick={onClick} className={cls}>{children}</Comp>
-  }
-
-  return (
-    <div className="min-h-screen text-slate-100" style={{background:"linear-gradient(180deg,#0a0f1c 0%,#0b1220 100%)"}}>
-      <div className="min-h-screen flex items-center justify-center p-7">
-        <div className="w-full max-w-[980px] bg-[#0f172a]/85 backdrop-blur border border-[#1f2a44] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,.35)] p-6">
-          <Header/>
-
-          {loading && (
-            <div className="grid place-items-center py-8">
-              <div className="w-8 h-8 rounded-full border-2 border-[#2a3a66] border-t-blue-500 animate-spin"/>
-            </div>
-          )}
-
-          {!loading && (
-            <div className="grid grid-cols-[1.1fr_.9fr] gap-4 max-[900px]:grid-cols-1">
-              {authed? (
-                <>
-                  <Panel title={`Üdv, ${"krisztian@example.com"}`}>
-                    <p className="text-slate-400 text-sm">Válassz ligát vagy folytasd az utolsóval.</p>
-                    <div className="flex flex-wrap gap-2 my-3">
-                      {lastLeague && (
-                        <Button variant="green" href={"#"+lastLeague}>
-                          Gyors belépés: {lastLeague==="nb1"?LEAGUES.nb1.name:LEAGUES.ucl.name}
-                        </Button>
-                      )}
-                      <Button onClick={()=>{setAuthed(false); setAdmin(false)}}>Kijelentkezés</Button>
-                    </div>
-                    <LeagueCards/>
-                  </Panel>
-
-                  <Panel title="Admin központ">
-                    {admin? (
-                      <div className="flex gap-2 flex-wrap">
-                        <Button href="#admin-nb1">NB I admin</Button>
-                        <Button href="#admin-ucl">BL admin</Button>
-                      </div>
-                    ) : (
-                      <p className="text-slate-400 text-sm">Csak admin jogosultsággal látható.</p>
-                    )}
-                  </Panel>
-                </>
-              ) : (
-                <>
-                  <Panel title="Bejelentkezés">
-                    <div className="flex flex-col gap-2 my-2">
-                      <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="E-mail" className="w-full px-3 py-3 rounded-lg bg-[#0b142a] border border-[#1f2a44] outline-none"/>
-                      <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Jelszó" className="w-full px-3 py-3 rounded-lg bg-[#0b142a] border border-[#1f2a44] outline-none"/>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 text-slate-300 text-sm">
-                        <input type="checkbox" checked={remember} onChange={()=>setRemember(!remember)} />
-                        Emlékezz rám ezen az eszközön
-                      </label>
-                      <Button variant="accent" onClick={()=>{setAuthed(true)}}>Belépés</Button>
-                    </div>
-                    <div className="mt-3">
-                      <Button onClick={()=>{}}>
-                        Elfelejtett jelszó
-                      </Button>
-                    </div>
-                  </Panel>
-
-                  <Panel title="Mi ez az oldal?">
-                    <p className="text-slate-400 text-sm">Egy közös kapu az NB I és a BL TippLiga felületeidhez. Bejelentkezés után választhatsz ligát, és elmentjük az utolsó választásodat a gyors belépéshez.</p>
-                    <LeagueCards/>
-                  </Panel>
-                </>
-              )}
-            </div>
-          )}
-
-          <div className="mt-6 border-t border-[#1f2a44] pt-4 text-xs text-slate-400">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold">Mock kapcsolók:</span>
-              <button className="px-3 py-1 rounded bg-[#0f1a34] border border-[#1f2a44] hover:border-[#2a3a66]" onClick={()=>setAuthed(v=>!v)}>{authed?"Átváltás vendég módra":"Átváltás bejelentkezett módra"}</button>
-              <button className="px-3 py-1 rounded bg-[#0f1a34] border border-[#1f2a44] hover:border-[#2a3a66]" onClick={()=>setAdmin(v=>!v)} disabled={!authed} style={{opacity:authed?1:.5}}>{admin?"Admin kikapcsolása":"Admin bekapcsolása"}</button>
-              <button className="px-3 py-1 rounded bg-[#0f1a34] border border-[#1f2a44] hover:border-[#2a3a66]" onClick={()=>setLastLeague(lastLeague?null:"nb1")} disabled={!authed} style={{opacity:authed?1:.5}}>{lastLeague?"Gyors belépés eltüntetése":"Gyors belépés beállítása (NB I)"}</button>
-            </div>
-          </div>
-        </div>
+      <div id="register-section" style="display:none;margin-top:16px;border-top:1px solid var(--line);padding-top:12px">
+        <h3 style="margin-top:0">Regisztráció</h3>
+        <input type="text" id="nickname" placeholder="Becenév">
+        <input type="email" id="regEmail" placeholder="Email">
+        <input type="password" id="regPassword" placeholder="Jelszó">
+        <input type="password" id="regConfirmPassword" placeholder="Jelszó újra">
+        <button class="btn btn-primary" onclick="register()">Regisztráció</button>
       </div>
     </div>
-  )
-}
 
-function quickLabel(last){
-  if(!last) return null
-  if(last==="nb1") return "Gyors belépés: NB I TippLiga"
-  if(last==="ucl") return "Gyors belépés: BL TippLiga"
-  return null
-}
+    <!-- ÚJ: LIGA VÁLASZTÓ BLOKK (lentebb) -->
+    <section class="card" aria-label="Liga választó">
+      <h3>Válaszd ki a ligát</h3>
+      <div class="body">
+        <div class="nav-grid">
+          <button class="select-card" data-league="nb1" aria-pressed="false">
+            <span class="logo-wrap"><img src="fizz.png" alt="NB I – Fizz Liga logó" onerror="this.onerror=null;this.src='fizz.svg'"></span>
+            <span class="text">
+              <span class="title">NB I TippLiga</span>
+              <span class="desc">Hazai bajnokság • dashboard.html</span>
+            </span>
+            <span class="dot" aria-hidden="true"></span>
+          </button>
 
-try{
-  console.assert(quickLabel("nb1")==="Gyors belépés: NB I TippLiga","nb1 quick label hibás")
-  console.assert(quickLabel("ucl")==="Gyors belépés: BL TippLiga","ucl quick label hibás")
-  console.assert(quickLabel(null)===null,"null quick label hibás")
-  console.log("EntryMock beépített tesztek: OK")
-}catch(e){
-  console.error("EntryMock tesztek hibája",e)
-}
+          <button class="select-card" data-league="ucl" aria-pressed="false">
+            <span class="logo-wrap"><img src="ucl.png" alt="UEFA Champions League logó" onerror="this.onerror=null;this.src='ucl.svg'"></span>
+            <span class="text">
+              <span class="title">BL TippLiga</span>
+              <span class="desc">UEFA Champions League • dashboard_ucl.html</span>
+            </span>
+            <span class="dot" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div id="leagueHint" class="hint">A belépés gomb a liga kiválasztása után aktiválódik.</div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.firebasestorage.app",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // --- Segéd: visszajelző sáv ---
+    function showNotice(msg, type='success', timeoutMs=3000){
+      const n = document.getElementById('notice');
+      if(!n) return;
+      n.textContent = msg;
+      n.className = `notice show ${type}`;
+      if(timeoutMs){
+        setTimeout(()=>{ n.className = 'notice'; n.textContent=''; }, timeoutMs);
+      }
+    }
+
+    // --- Liga választó állapot ---
+    let selectedLeague = null; // 'nb1' | 'ucl'
+
+    function computeTarget(league){
+      if(league === 'ucl') return 'dashboard_ucl.html';
+      if(league === 'nb1') return 'dashboard.html';
+      return '';
+    }
+
+    function setSelectedLeague(code){
+      selectedLeague = code;
+      const cards = document.querySelectorAll('.select-card');
+      cards.forEach(btn => {
+        const active = btn.getAttribute('data-league') === code;
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        const dot = btn.querySelector('.dot');
+        if(dot) dot.classList.toggle('active', active);
+      });
+      const loginBtn = document.getElementById('loginBtn');
+      if(loginBtn) loginBtn.disabled = !selectedLeague;
+    }
+
+    // --- Eseménykezelők a ligakártyákhoz ---
+    document.querySelectorAll('.select-card').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setSelectedLeague(btn.getAttribute('data-league'));
+      });
+    });
+
+    // --- A meglévő funkciók MEGHAGYÁSA mellett: csak a redirect lesz ligafüggő ---
+    window.toggleRegister = function () {
+      const regSection = document.getElementById('register-section');
+      regSection.style.display = regSection.style.display === 'none' ? 'block' : 'none';
+    }
+
+    window.register = async function () {
+      const nickname = document.getElementById('nickname').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+      if (!nickname || !email || !password || !confirmPassword) {
+        alert('Minden mezőt ki kell tölteni.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        alert('A jelszavak nem egyeznek.');
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        await setDoc(doc(db, 'users', user.email), { email, nickname, role: 'user' });
+
+        // ÚJ: visszajelzés + "visszairányítás" a belépéshez
+        showNotice('Sikeres regisztráció! Jelentkezz be az e-mail címeddel és jelszavaddal.', 'success', 5000);
+        // 1) regisztrációs blokk bezárása
+        const regSection = document.getElementById('register-section');
+        if (regSection) regSection.style.display = 'none';
+        // 2) e-mail mező előtöltése, fókusz a loginra
+        const loginEmail = document.getElementById('email');
+        const loginPass = document.getElementById('password');
+        if (loginEmail) loginEmail.value = email;
+        if (loginPass) loginPass.value = '';
+        loginEmail?.focus();
+        // 3) scroll a login tetejére
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // 4) ha külön reg oldalról érkezne, biztos visszairányítás a loginra
+        // (nálunk ugyanazon az oldalon van, de ez fallback)
+        // setTimeout(()=>{ if(!location.pathname.toLowerCase().includes('login')) location.href='login.html'; }, 600);
+      } catch (error) {
+        showNotice('Hiba: ' + error.message, 'error', 6000);
+      }
+    }
+
+    window.login = async function () {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        alert('Add meg az email címed és a jelszavad.');
+        return;
+      }
+      if (!selectedLeague) {
+        alert('Válaszd ki a ligát a belépéshez.');
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        const target = computeTarget(selectedLeague);
+        window.location.href = target;
+      } catch (error) {
+        showNotice('Hiba a bejelentkezéskor: ' + error.message, 'error', 6000);
+      }
+    }
+
+    // --- Kis önellenőrző tesztek a konzolban ---
+    try{
+      console.assert(computeTarget('nb1')==='dashboard.html','nb1 → dashboard.html');
+      console.assert(computeTarget('ucl')==='dashboard_ucl.html','ucl → dashboard_ucl.html');
+      console.assert(computeTarget(null)==='', 'null → empty');
+      setSelectedLeague(null); // login disabled
+      const btn = document.getElementById('loginBtn');
+      console.assert(btn.disabled===true,'login disabled when no league');
+      setSelectedLeague('nb1');
+      console.assert(btn.disabled===false,'login enabled after selection');
+      // showNotice teszt
+      showNotice('Teszt üzenet', 'success', 1000);
+      const n = document.getElementById('notice');
+      console.assert(n.classList.contains('show'), 'notice megjelenik');
+      setTimeout(()=>console.assert(!n.classList.contains('show'), 'notice eltűnik'), 1200);
+      console.log('Login page liga-választó tesztek: OK');
+    }catch(e){ console.error('Teszt hiba:', e); }
+  </script>
+</body>
+</html>
