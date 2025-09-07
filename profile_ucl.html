@@ -175,7 +175,7 @@
     let currentUserNick = "";
     let currentUserRole = "user";
     let favouriteTeamucl = "";   // UCL kedvenc csapat mező
-    let chatLastSeen = null;
+    let chatLastSeenUcl = null;  // <-- UCL-specifikus
 
     /* ---------------- INIT ---------------- */
     document.addEventListener("DOMContentLoaded", () => {
@@ -214,7 +214,7 @@
           currentUserNick = d.nickname || currentUserEmail;
           currentUserRole = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeen = d.chatLastSeen || null;
+          chatLastSeenUcl = d.chatLastSeenUcl || null; // <-- UCL-specifikus mező olvasás
           if (typeof d.reminderEmail !== "undefined") {
             reminderToggle.checked = !!d.reminderEmail;
           }
@@ -329,7 +329,7 @@
         // Menü badge
         updatePendingBadge();
 
-        // Chat
+        // Chat (UCL)
         initChat(userRef);
 
         if (window.hideLoader) hideLoader();
@@ -354,7 +354,7 @@
       });
     }
 
-    /* ---------------- Chat ---------------- */
+    /* ---------------- Chat (UCL külön: chatMessages_ucl + chatLastSeenUcl) ---------------- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -370,9 +370,9 @@
       fab.addEventListener('click', toggle);
       closeBtn.addEventListener('click', close);
 
-      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
+      let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
 
-      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
+      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc')); // <-- UCL kollekció
       onSnapshot(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
@@ -402,7 +402,7 @@
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
               del.addEventListener('click', async ()=>{
-                try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){}
+                try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch(e){}
               });
               row.appendChild(del);
             }
@@ -427,7 +427,9 @@
         const backup = txt;
         inputEl.value = '';
         try{
-          await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
+          await addDoc(collection(db,'chatMessages_ucl'), { // <-- UCL kollekció
+            email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp()
+          });
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
           inputEl.value = backup; inputEl.focus();
@@ -439,7 +441,7 @@
 
       async function markSeen(){
         try{
-          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true }); // <-- UCL mező
           lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
@@ -462,7 +464,7 @@
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/>
           </svg>
           Kilépés
         </button>
