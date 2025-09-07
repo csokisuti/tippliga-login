@@ -33,7 +33,7 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
       font-variant-numeric: tabular-nums;
       letter-spacing:.2px;
-      background:#ef4444; /* sötétebb kapszula a countdownnak */
+      background:#ef4444;
     }
     .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
     @keyframes pulse{ 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
@@ -116,7 +116,7 @@
     .hidden-info{ color:#b45309; font-size:13px; margin-top:6px }
     .empty{ padding:12px 14px; color:#64748b }
 
-    /* Chat – egységes */
+    /* Chat – UCL külön gyűjtemény */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -398,7 +398,7 @@
     let currentUserNick = "";
     let currentUserRole = "user";
     let favouriteTeamucl = "";
-    let chatLastSeen = null;
+    let chatLastSeenUcl = null;   // <-- külön BL/UCL chat mező
 
     let matches = [];
     let tipsByMatch = new Map();
@@ -498,15 +498,12 @@
       document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
       document.getElementById("detailPct").textContent   = `+${u.pct}%`;
 
-      // Hivatalos Top 8 (8 sorra kitöltve)
       const off = (officialTop8 || []).map(canonTeam);
       const off8 = Array.from({length: 8}, (_, i) => off[i] || "—");
 
-      // Játékos saját Top 8 tippjei
       const picks = (u.picks || []).map(canonTeam);
       const used  = new Set();
 
-      // Nem egyező tippek (ABC szerint)
       const unmatched = picks
         .filter(p => !off.includes(p))
         .sort((a,b) => a.localeCompare(b, "hu"));
@@ -740,8 +737,6 @@
           <div class="meta">
             Kezdés: ${koStr || "-"} • Eredmény: ${escapeHtml(m.result || "-")} • Kimenetel: <b>${escapeHtml(m.outcome || "-")}</b>
           </div>
-        */
-
         `;
 
         const tipsWrap = document.createElement("div"); tipsWrap.className = "tips";
@@ -817,12 +812,12 @@
           currentUserNick = d.nickname || currentUserEmail;
           currentUserRole = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeen = d.chatLastSeen || null;
+          chatLastSeenUcl = d.chatLastSeenUcl || null; // <-- UCL mező
         } else {
           currentUserNick = currentUserEmail;
           currentUserRole = "user";
           favouriteTeamucl = "";
-          chatLastSeen = null;
+          chatLastSeenUcl = null;
         }
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
         if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
@@ -947,7 +942,7 @@
       }catch{}
     }
 
-    /* ---------------- Chat ---------------- */
+    /* ---------------- Chat (UCL külön: chatMessages_ucl + chatLastSeenUcl) ---------------- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -963,9 +958,9 @@
       fab.addEventListener('click', toggle);
       closeBtn.addEventListener('click', close);
 
-      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
+      let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
 
-      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
+      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc')); // <-- UCL gyűjtemény
       onSnapshot(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
@@ -995,7 +990,7 @@
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
               del.addEventListener('click', async ()=>{
-                try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){}
+                try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch(e){}
               });
               row.appendChild(del);
             }
@@ -1019,8 +1014,13 @@
         if (!txt){ inputEl.focus(); return; }
         const backup = txt;
         inputEl.value = '';
-               try{
-          await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
+        try{
+          await addDoc(collection(db,'chatMessages_ucl'), { // <-- UCL gyűjtemény
+            email: currentUserEmail,
+            nick: currentUserNick || 'Ismeretlen',
+            text: backup,
+            ts: serverTimestamp()
+          });
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
           inputEl.value = backup; inputEl.focus();
@@ -1032,7 +1032,7 @@
 
       async function markSeen(){
         try{
-          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true }); // <-- UCL mező
           lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
@@ -1285,4 +1285,3 @@
   </section>
 </body>
 </html>
-
