@@ -106,6 +106,11 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    /* ------- CHAT konstansok a BL-hez ------- */
+    const CHAT_COLLECTION = 'chatMessages_ucl';
+    const CHAT_LAST_SEEN_FIELD = 'chatLastSeenUcl';
+    /* ---------------------------------------- */
+
     const crestMap = {
       "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/borussia.png","Bodø/Glimt":"ucl_crest/bodo.png","Club Bruges":"ucl_crest/brugge.png","Chelsea":"ucl_crest/chelsea.png","FC Köbenhavn":"ucl_crest/copenhagen.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png","Galatasaray":"ucl_crest/galata.png","Internazionale":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Bayer Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png","Olympique Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png","Newcastle United":"ucl_crest/newcastle.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png","Pafosz":"ucl_crest/pafos.png","Paris Saint-Germain":"ucl_crest/psg.png","PSV":"ucl_crest/psv.png","Qarabag":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png","Slavia Praha":"ucl_crest/slavia.png","Sporting CP":"ucl_crest/sporting.png","Tottenham Hotspur":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png","Kajrat Almati":"ucl_crest/kairat.png"
     };
@@ -294,7 +299,8 @@
           currentUserNick=data.nickname||currentUserEmail;
           currentUserRole=data.role||"user";
           favouriteTeamucl=data.favouriteTeamucl || "";
-          chatLastSeen=data.chatLastSeen||null;
+          /* --- külön BL chat olvasottság mező --- */
+          chatLastSeen=data[CHAT_LAST_SEEN_FIELD]||null;
         }else{
           currentUserNick=currentUserEmail; currentUserRole="user"; favouriteTeamucl=""; chatLastSeen=null;
         }
@@ -385,7 +391,8 @@
 
       let lastSeenMs=chatLastSeen?.toMillis?chatLastSeen.toMillis():0;
 
-      const qAll=query(collection(db,'chatMessages'),orderBy('ts','asc'));
+      /* ---- külön BL chat gyűjtemény ---- */
+      const qAll=query(collection(db,CHAT_COLLECTION),orderBy('ts','asc'));
       onSnapshot(qAll,snap=>{
         listEl.innerHTML='';
         if(snap.empty){
@@ -415,7 +422,7 @@
               del.className='del';
               del.textContent='Törlés';
               del.title='Üzenet törlése';
-              del.addEventListener('click',async()=>{try{await deleteDoc(doc(db,'chatMessages',docu.id))}catch(e){console.warn('Del failed',e)}});
+              del.addEventListener('click',async()=>{try{await deleteDoc(doc(db,CHAT_COLLECTION,docu.id))}catch(e){console.warn('Del failed',e)}});
               row.appendChild(del);
             }
             listEl.appendChild(row);
@@ -439,7 +446,7 @@
         const backup=txt;
         inputEl.value='';
         try{
-          await addDoc(collection(db,'chatMessages'),{
+          await addDoc(collection(db,CHAT_COLLECTION),{
             email: currentUserEmail,
             nick: currentUserNick || 'Ismeretlen',
             text: backup,
@@ -458,7 +465,7 @@
 
       async function markSeen(){
         try{
-          await setDoc(userRef,{ chatLastSeen: serverTimestamp() },{ merge:true });
+          await setDoc(userRef,{ [CHAT_LAST_SEEN_FIELD]: serverTimestamp() },{ merge:true });
           lastSeenMs=Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent='';
