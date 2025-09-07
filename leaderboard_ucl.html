@@ -175,7 +175,7 @@
     /* ---- Bonus szabályok ---- */
     const BONUS_CFG=Object.freeze({winnerPct:10,topScorerPct:5,top8PerHitPct:1,top8MaxPct:8});
 
-    let currentUserEmail="",currentUserNick="",currentUserRole="user",favouriteTeamucl="",chatLastSeen=null;
+    let currentUserEmail="",currentUserNick="",currentUserRole="user",favouriteTeamucl="",chatLastSeenUcl=null;
 
     /* Állapot – BL kollekciók */
     let usersMap={}, usersFavUcl={};
@@ -244,7 +244,11 @@
         const userRef=doc(db,"users",currentUserEmail);
         const userSnap=await getDoc(userRef);
         if(userSnap.exists()){
-          const d=userSnap.data();currentUserNick=d.nickname||currentUserEmail;currentUserRole=d.role||"user";favouriteTeamucl=d.favouriteTeamucl||"";chatLastSeen=d.chatLastSeen||null
+          const d=userSnap.data();
+          currentUserNick=d.nickname||currentUserEmail;
+          currentUserRole=d.role||"user";
+          favouriteTeamucl=d.favouriteTeamucl||"";
+          chatLastSeenUcl=d.chatLastSeenUcl||null; // <-- UCL-specifikus mező
         }else{currentUserNick=currentUserEmail}
         document.getElementById("welcome").textContent=`Üdv, ${currentUserNick}!`;
         if(currentUserRole==="admin")document.getElementById("adminLink").style.display="flex";
@@ -311,7 +315,7 @@
         });
 
         updatePendingBadge();
-        initChat(userRef);
+        initChat(userRef);   // <-- UCL chat
         if(window.hideLoader)hideLoader();
       });
 
@@ -561,15 +565,16 @@
       });
     }
 
-    /* ---------------- Chat ---------------- */
+    /* ---------------- Chat (UCL külön: chatMessages_ucl + chatLastSeenUcl) ---------------- */
     function initChat(userRef){
       const fab=document.getElementById('chatToggle');const fabBadge=document.getElementById('chatFabBadge');const panel=document.getElementById('chatPanel');const closeBtn=document.getElementById('chatClose');const listEl=document.getElementById('chatMessages');const inputEl=document.getElementById('chatInput');const sendBtn=document.getElementById('chatSendBtn');
       function open(){panel.classList.add('open');setTimeout(()=>inputEl?.focus(),50);markSeen()}
       function close(){panel.classList.remove('open')}
       function toggle(){panel.classList.contains('open')?close():open()}
       fab.addEventListener('click',toggle);closeBtn.addEventListener('click',close);
-      let lastSeenMs=chatLastSeen?.toMillis?chatLastSeen.toMillis():0;
-      const qAll=query(collection(db,'chatMessages'),orderBy('ts','asc'));
+      let lastSeenMs=chatLastSeenUcl?.toMillis?chatLastSeenUcl.toMillis():0;
+
+      const qAll=query(collection(db,'chatMessages_ucl'),orderBy('ts','asc')); // <-- UCL kollekció
       onSnapshot(qAll,snap=>{
         listEl.innerHTML='';
         if(snap.empty){
@@ -581,7 +586,7 @@
             const row=document.createElement('div');row.className='msg';
             row.innerHTML=`<div style="flex:1 1 auto"><div class="meta"><strong>${d.nick||'Ismeretlen'}</strong> • ${d.ts?fmtTime(d.ts):''}</div><div class="text">${(d.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div></div>`;
             const canDelete=(currentUserRole==='admin')||(d.email===currentUserEmail);
-            if(canDelete){const del=document.createElement('button');del.className='del';del.textContent='Törlés';del.title='Üzenet törlése';del.addEventListener('click',async()=>{try{await deleteDoc(doc(db,'chatMessages',docu.id))}catch(e){}});row.appendChild(del)}
+            if(canDelete){const del=document.createElement('button');del.className='del';del.textContent='Törlés';del.title='Üzenet törlése';del.addEventListener('click',async()=>{try{await deleteDoc(doc(db,'chatMessages_ucl',docu.id))}catch(e){}});row.appendChild(del)}
             listEl.appendChild(row);
           });
           if(!panel.classList.contains('open')&&unread>0){fab.classList.add('has-unread');fabBadge.textContent=unread>99?'99+':String(unread)}else{fab.classList.remove('has-unread');fabBadge.textContent=''}
@@ -591,10 +596,15 @@
       sendBtn.addEventListener('click',async()=>{
         const txt=(inputEl.value||'').trim();if(!txt){inputEl.focus();return}
         const backup=txt;inputEl.value='';
-        try{await addDoc(collection(db,'chatMessages'),{email:currentUserEmail,nick:currentUserNick||'Ismeretlen',text:backup,ts:serverTimestamp()});if(panel.classList.contains('open'))await markSeen()}catch(e){inputEl.value=backup;inputEl.focus()}
+        try{
+          await addDoc(collection(db,'chatMessages_ucl'),{ // <-- UCL kollekció
+            email:currentUserEmail,nick:currentUserNick||'Ismeretlen',text:backup,ts:serverTimestamp()
+          });
+          if(panel.classList.contains('open'))await markSeen()
+        }catch(e){inputEl.value=backup;inputEl.focus()}
       });
       inputEl.addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendBtn.click()}})
-      async function markSeen(){try{await setDoc(userRef,{chatLastSeen:serverTimestamp()},{merge:true});lastSeenMs=Date.now();fab.classList.remove('has-unread');fabBadge.textContent=''}catch(e){}}
+      async function markSeen(){try{await setDoc(userRef,{chatLastSeenUcl:serverTimestamp()},{merge:true});lastSeenMs=Date.now();fab.classList.remove('has-unread');fabBadge.textContent=''}catch(e){}}
     }
   </script>
 </head>
@@ -704,4 +714,3 @@
   </section>
 </body>
 </html>
-
