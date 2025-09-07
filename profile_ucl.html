@@ -201,7 +201,7 @@
         const msg = document.getElementById("message");
 
         // ÚJ: emlékeztető kapcsoló elemei
-        const reminderToggle = document.getElementById("reminderEmail");
+        const reminderToggle = document.getElementById("reminderEmailUcl");
         const reminderHint = document.getElementById("reminderHint");
 
         function showMsg(text, type="ok"){ msg.textContent = text; msg.className = type==="ok" ? "hint ok" : "hint err"; }
@@ -215,8 +215,8 @@
           currentUserRole = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
           chatLastSeenUcl = d.chatLastSeenUcl || null; // <-- UCL-specifikus mező olvasás
-          if (typeof d.reminderEmail !== "undefined") {
-            reminderToggle.checked = !!d.reminderEmail;
+          if (typeof d.reminderEmailUcl !== "undefined") {
+            reminderToggle.checked = !!d.reminderEmailUcl;
           }
         } else {
           currentUserNick = currentUserEmail;
@@ -317,7 +317,7 @@
         // ÚJ: emlékeztető toggle mentése
         reminderToggle.addEventListener("change", async ()=>{
           try{
-            await setDoc(userRef, { reminderEmail: reminderToggle.checked }, { merge:true });
+            await setDoc(userRef, { reminderEmailUcl: reminderToggle.checked }, { merge:true });
             reminderHint.textContent = reminderToggle.checked
               ? "Emlékeztető bekapcsolva. Csak akkor megy e-mail, ha 12 órával a forduló első meccse előtt még nem tippeltél minden meccsre."
               : "Emlékeztető kikapcsolva.";
@@ -595,7 +595,7 @@
       <div class="form">
         <div class="row-inline">
           <label style="display:flex;align-items:center;gap:10px;">
-            <input id="reminderEmail" type="checkbox">
+            <input id="reminderEmailUcl" type="checkbox">
             <span>E-mailes emlékeztetőt kérek</span>
           </label>
         </div>
@@ -639,3 +639,4 @@
   </section>
 </body>
 </html>
+
