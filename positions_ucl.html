@@ -54,15 +54,9 @@
     .arrow{transition:transform .18s ease}
     .card.open .arrow{transform:rotate(180deg)}
 
-    /* Kártya fej bal oldal: cím + kis leírás */
     .card-hl{display:flex;flex-direction:column;gap:4px}
     .card-subdesc{font-size:12px;color:var(--muted,#64748b);line-height:1.35}
 
-    /* (régi) Kártya leírás a body-ban – már nem használjuk itt
-    .card-desc{margin:10px 14px 0;color:var(--muted,#64748b);font-size:14px;line-height:1.5}
-    */
-
-    /* Status pill */
     .status{display:inline-flex;align-items:center;gap:6px;font-size:12px}
     .dot{width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:#e2e8f0;color:#fff}
     .dot.ok{background:#16a34a}
@@ -109,7 +103,7 @@
     body.locked .pool, body.locked .selected-wrap, body.locked .grid-cards{filter:grayscale(.2);opacity:.6}
     body.locked .team-chip, body.locked .selected-chip, body.locked .pick-card{pointer-events:none;cursor:not-allowed}
 
-    /* Kilépés gomb – régi stílus */
+    /* Kilépés gomb */
     .btn-accent{
       min-height:40px;padding:10px 14px;border-radius:10px;
       background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);
@@ -120,7 +114,7 @@
     .btn-accent:focus{outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white);outline-offset:2px}
     .btn-icon{width:18px;height:18px;display:inline-block}
 
-    /* CHAT – jó verzió */
+    /* CHAT – BL külön gyűjtemény */
     .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
     .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
     .chat-fab.has-unread .fab-badge{display:inline-block}
@@ -210,7 +204,7 @@
     let currentUserNick  = "";
     let currentUserRole  = "user";
     let favouriteTeamucl = "";
-    let chatLastSeen     = null;
+    let chatLastSeenUcl  = null;    // <-- külön mező az UCL chathez
 
     // model
     let selectedTop8 = [];
@@ -270,7 +264,6 @@
         el.setAttribute('aria-label', `Visszaszámláló: ${aria}`);
         el.title = `Határidő: ${until.toLocaleString('hu-HU')}`;
 
-        // 5 perc alatt finom pulzálás
         if (ms <= 5*60*1000){ el.classList.add('urgent'); }
         else { el.classList.remove('urgent'); }
       }
@@ -292,7 +285,7 @@
           currentUserNick  = d.nickname || currentUserEmail;
           currentUserRole  = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeen     = d.chatLastSeen || null;
+          chatLastSeenUcl  = d.chatLastSeenUcl || null;  // <-- külön mező
         } else {
           currentUserNick = currentUserEmail;
         }
@@ -330,7 +323,7 @@
 
         initAccordions();
         initSearch();
-        initChat(userRef);
+        initChat(userRef);         // <-- BL chat
         updatePendingBadge();
         if (window.hideLoader) hideLoader();
       });
@@ -419,7 +412,6 @@
     }
 
     function applyLockUI(){
-      // Határidő sáv
       const banner = document.getElementById('deadlineBanner');
       if (banner){
         banner.innerHTML = POS_LOCK.info || '';
@@ -427,19 +419,16 @@
         banner.hidden = false;
       }
 
-      // Interakciók
       document.body.classList.toggle('locked', POS_LOCK.active);
       const s = document.getElementById('teamSearch');
       if (s) s.disabled = POS_LOCK.active;
 
-      // státusz-pillák
       if (POS_LOCK.active){
         document.querySelectorAll('.status .status-text').forEach(el=> el.textContent='Lezárva');
       } else {
         updateBadges();
       }
 
-      // NAV visszaszámláló (élő)
       startNavTop8Countdown(POS_LOCK.active ? null : POS_LOCK.until);
     }
 
@@ -733,7 +722,7 @@
       });
     }
 
-    /* ===== Chat ===== */
+    /* ===== Chat – BL külön: chatMessages_ucl + chatLastSeenUcl ===== */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -748,9 +737,9 @@
       fab.addEventListener('click', ()=> panel.classList.contains('open') ? close() : open());
       closeBtn.addEventListener('click', close);
 
-      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
+      let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
 
-      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
+      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc')); // <-- UCL
       onSnapshot(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
@@ -778,7 +767,7 @@
               del.className = 'del';
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch{} });
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch{} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
@@ -802,7 +791,12 @@
         const backup = txt;
         inputEl.value = '';
         try{
-          await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
+          await addDoc(collection(db,'chatMessages_ucl'), {   // <-- UCL
+            email: currentUserEmail,
+            nick: currentUserNick || 'Ismeretlen',
+            text: backup,
+            ts: serverTimestamp()
+          });
           if (panel.classList.contains('open')) await markSeen();
         }catch{
           inputEl.value = backup; inputEl.focus();
@@ -812,7 +806,7 @@
 
       async function markSeen(){
         try{
-          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true }); // <-- UCL mező
           lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
@@ -989,4 +983,3 @@
   </section>
 </body>
 </html>
-
