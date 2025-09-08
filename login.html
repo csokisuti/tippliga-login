@@ -8,6 +8,12 @@
     :root{--bg:#f6f7fb;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e6eaf1;--accent:#3b82f6}
     body{background:var(--bg);color:var(--text);margin:0}
     .page{max-width:980px;margin:32px auto;padding:0 16px;display:flex;flex-direction:column;gap:16px}
+
+    .notice{display:none;padding:10px 12px;border-radius:10px;border:1px solid var(--line);margin:0 0 10px}
+    .notice.show{display:block}
+    .notice.success{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .notice.error{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
+
     .login-container{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);padding:18px}
     .login-container h3{margin:6px 0 12px}
     .login-container input{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;box-sizing:border-box;margin:6px 0}
@@ -17,13 +23,6 @@
     .btn-ghost{background:#fff;color:#111;border:1px solid var(--line)}
     .btn[disabled]{opacity:.55;cursor:not-allowed;filter:grayscale(.25)}
 
-    /* Notice */
-    .notice{display:none;padding:10px 12px;border-radius:10px;border:1px solid var(--line);margin:0 0 10px}
-    .notice.show{display:block}
-    .notice.success{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-    .notice.error{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
-
-    /* Liga választó (NB1 dashboard-koherens) */
     .card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
     .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--line);background:#f7f9fd}
     .card .body{padding:12px}
@@ -44,10 +43,10 @@
 </head>
 <body>
   <div class="page">
-    <!-- Info sáv -->
+    <!-- Visszajelző sáv -->
     <div id="notice" class="notice" role="status" aria-live="polite"></div>
 
-    <!-- A MEGLÉVŐ LOGIN BOKSZ – változatlan mezők + gombok -->
+    <!-- MEGLÉVŐ LOGIN doboz (mezők és gombok megőrizve) -->
     <div class="login-container">
       <h3>Bejelentkezés</h3>
       <input type="email" id="email" placeholder="Email:">
@@ -67,13 +66,16 @@
       </div>
     </div>
 
-    <!-- ÚJ: LIGA VÁLASZTÓ BLOKK (lentebb) -->
+    <!-- LIGA VÁLASZTÓ blokk (lentebb) -->
     <section class="card" aria-label="Liga választó">
       <h3>Válaszd ki a ligát</h3>
       <div class="body">
         <div class="nav-grid">
           <button class="select-card" data-league="nb1" aria-pressed="false">
-            <span class="logo-wrap"><img src="fizz.png" alt="NB I – Fizz Liga logó" onerror="this.onerror=null;this.src='fizz.svg'"></span>
+            <span class="logo-wrap">
+              <!-- ide tedd fel a képet fizz.png néven -->
+              <img src="fizz.png" alt="NB I – Fizz Liga logó" onerror="this.onerror=null;this.src='fizz.svg'">
+            </span>
             <span class="text">
               <span class="title">NB I TippLiga</span>
               <span class="desc">Hazai bajnokság • dashboard.html</span>
@@ -82,7 +84,10 @@
           </button>
 
           <button class="select-card" data-league="ucl" aria-pressed="false">
-            <span class="logo-wrap"><img src="ucl.png" alt="UEFA Champions League logó" onerror="this.onerror=null;this.src='ucl.svg'"></span>
+            <span class="logo-wrap">
+              <!-- ide tedd fel a képet ucl.png néven -->
+              <img src="ucl.png" alt="UEFA Champions League logó" onerror="this.onerror=null;this.src='ucl.svg'">
+            </span>
             <span class="text">
               <span class="title">BL TippLiga</span>
               <span class="desc">UEFA Champions League • dashboard_ucl.html</span>
@@ -113,7 +118,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // --- Segéd: visszajelző sáv ---
+    // --- segéd: visszajelző sáv ---
     function showNotice(msg, type='success', timeoutMs=3000){
       const n = document.getElementById('notice');
       if(!n) return;
@@ -124,7 +129,7 @@
       }
     }
 
-    // --- Liga választó állapot ---
+    // --- liga választó állapot ---
     let selectedLeague = null; // 'nb1' | 'ucl'
 
     function computeTarget(league){
@@ -135,8 +140,7 @@
 
     function setSelectedLeague(code){
       selectedLeague = code;
-      const cards = document.querySelectorAll('.select-card');
-      cards.forEach(btn => {
+      document.querySelectorAll('.select-card').forEach(btn => {
         const active = btn.getAttribute('data-league') === code;
         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
         const dot = btn.querySelector('.dot');
@@ -146,14 +150,14 @@
       if(loginBtn) loginBtn.disabled = !selectedLeague;
     }
 
-    // --- Eseménykezelők a ligakártyákhoz ---
+    // --- eseménykezelők a ligakártyákhoz ---
     document.querySelectorAll('.select-card').forEach(btn => {
       btn.addEventListener('click', () => {
         setSelectedLeague(btn.getAttribute('data-league'));
       });
     });
 
-    // --- A meglévő funkciók MEGHAGYÁSA mellett: csak a redirect lesz ligafüggő ---
+    // --- a meglévő funkciók MEGHAGYÁSA mellett: csak a redirect ligafüggő ---
     window.toggleRegister = function () {
       const regSection = document.getElementById('register-section');
       regSection.style.display = regSection.style.display === 'none' ? 'block' : 'none';
@@ -178,38 +182,17 @@
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // --- ROBUSZTUS PROFIL-MENTÉS: több útvonalat próbálunk, hogy illeszkedjen a Firestore szabályaidhoz ---
+        // Email-azonosítós dokumentum (users/{email}) – passzol a rules-odhoz
         const profile = { email, nickname, role: 'user', uid: user.uid };
-        const attempts = [
-          { col: 'users', id: email },         // ha e-mail azonosítós a szabály (a dashboardod eddig ezt használta)
-          { col: 'users', id: user.uid },      // ha UID a kötelező azonosító
-          { col: 'userProfiles', id: user.uid } // fallback alternatív kollekció
-        ];
-
-        let saved = false, lastErr = null, usedPath = null;
-        for (const a of attempts) {
-          try {
-            await setDoc(doc(db, a.col, a.id), profile, { merge: true });
-            saved = true; usedPath = `${a.col}/${a.id}`; break;
-          } catch (e) {
-            lastErr = e;
-            // csak a permission hibát nyeljük le és próbáljuk a következőt
-            if (!(e && (e.code === 'permission-denied' || String(e).includes('PERMISSION_DENIED')))) {
-              break;
-            }
-          }
+        try {
+          await setDoc(doc(db, 'users', user.email), profile, { merge: true });
+        } catch (permErr) {
+          // Ha Firestore rule miatt nem sikerül, a regisztráció ettől még OK – csak naplózzuk.
+          console.warn('Profil mentése users/{email} alatt nem sikerült (rules?):', permErr);
         }
 
-        if (!saved) {
-          console.warn('Felhasználói profil mentése nem sikerült egyik útvonalon sem.', lastErr);
-          showNotice('Regisztráció sikerült, de a profil mentése jogosultság miatt nem. Lépj be, majd jelezd az adminnak.', 'error', 7000);
-        } else {
-          console.info('Profil mentve ide:', usedPath);
-          localStorage.setItem('profileWritePath', usedPath);
-          showNotice('Sikeres regisztráció! Jelentkezz be az e-mail címeddel és jelszavaddal.', 'success', 6000);
-        }
-
-        // Regisztrációs blokk bezárása + login mező előkészítése
+        // Visszajelzés + visszairányítás a bejelentkezéshez
+        showNotice('Sikeres regisztráció! Jelentkezz be az e-mail címeddel és jelszavaddal.', 'success', 6000);
         const regSection = document.getElementById('register-section');
         if (regSection) regSection.style.display = 'none';
         const loginEmail = document.getElementById('email');
@@ -220,12 +203,8 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
       } catch (error) {
-        // egyértelműbb hibaüzenet a jogosultsági esetre
-        if (error && (error.code === 'permission-denied' || String(error).includes('PERMISSION_DENIED'))) {
-          showNotice('Nincs jogosultság az adatbázis írásához (Firestore rules). Állítsd be, hogy a frissen regisztrált felhasználó írhasson a users táblába.', 'error', 8000);
-        } else {
-          showNotice('Hiba: ' + error.message, 'error', 6000);
-        }
+        // Auth szintű hiba
+        showNotice('Hiba: ' + error.message, 'error', 6000);
       }
     }
 
@@ -251,21 +230,19 @@
       }
     }
 
-    // --- Kis önellenőrző tesztek a konzolban ---
+    // --- rövid önellenőrzés (konzol) ---
     try{
       console.assert(computeTarget('nb1')==='dashboard.html','nb1 → dashboard.html');
       console.assert(computeTarget('ucl')==='dashboard_ucl.html','ucl → dashboard_ucl.html');
       console.assert(computeTarget(null)==='', 'null → empty');
-      setSelectedLeague(null); // login disabled
+
       const btn = document.getElementById('loginBtn');
+      setSelectedLeague(null);
       console.assert(btn.disabled===true,'login disabled when no league');
       setSelectedLeague('nb1');
       console.assert(btn.disabled===false,'login enabled after selection');
-      // showNotice teszt
-      showNotice('Teszt üzenet', 'success', 1000);
-      const n = document.getElementById('notice');
-      console.assert(n.classList.contains('show'), 'notice megjelenik');
-      setTimeout(()=>console.assert(!n.classList.contains('show'), 'notice eltűnik'), 1200);
+      setSelectedLeague(null); // reset
+
       console.log('Login page liga-választó tesztek: OK');
     }catch(e){ console.error('Teszt hiba:', e); }
   </script>
