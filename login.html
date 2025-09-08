@@ -177,26 +177,55 @@
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        await setDoc(doc(db, 'users', user.email), { email, nickname, role: 'user' });
 
-        // ÚJ: visszajelzés + "visszairányítás" a belépéshez
-        showNotice('Sikeres regisztráció! Jelentkezz be az e-mail címeddel és jelszavaddal.', 'success', 5000);
-        // 1) regisztrációs blokk bezárása
+        // --- ROBUSZTUS PROFIL-MENTÉS: több útvonalat próbálunk, hogy illeszkedjen a Firestore szabályaidhoz ---
+        const profile = { email, nickname, role: 'user', uid: user.uid };
+        const attempts = [
+          { col: 'users', id: email },         // ha e-mail azonosítós a szabály (a dashboardod eddig ezt használta)
+          { col: 'users', id: user.uid },      // ha UID a kötelező azonosító
+          { col: 'userProfiles', id: user.uid } // fallback alternatív kollekció
+        ];
+
+        let saved = false, lastErr = null, usedPath = null;
+        for (const a of attempts) {
+          try {
+            await setDoc(doc(db, a.col, a.id), profile, { merge: true });
+            saved = true; usedPath = `${a.col}/${a.id}`; break;
+          } catch (e) {
+            lastErr = e;
+            // csak a permission hibát nyeljük le és próbáljuk a következőt
+            if (!(e && (e.code === 'permission-denied' || String(e).includes('PERMISSION_DENIED')))) {
+              break;
+            }
+          }
+        }
+
+        if (!saved) {
+          console.warn('Felhasználói profil mentése nem sikerült egyik útvonalon sem.', lastErr);
+          showNotice('Regisztráció sikerült, de a profil mentése jogosultság miatt nem. Lépj be, majd jelezd az adminnak.', 'error', 7000);
+        } else {
+          console.info('Profil mentve ide:', usedPath);
+          localStorage.setItem('profileWritePath', usedPath);
+          showNotice('Sikeres regisztráció! Jelentkezz be az e-mail címeddel és jelszavaddal.', 'success', 6000);
+        }
+
+        // Regisztrációs blokk bezárása + login mező előkészítése
         const regSection = document.getElementById('register-section');
         if (regSection) regSection.style.display = 'none';
-        // 2) e-mail mező előtöltése, fókusz a loginra
         const loginEmail = document.getElementById('email');
         const loginPass = document.getElementById('password');
         if (loginEmail) loginEmail.value = email;
         if (loginPass) loginPass.value = '';
         loginEmail?.focus();
-        // 3) scroll a login tetejére
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        // 4) ha külön reg oldalról érkezne, biztos visszairányítás a loginra
-        // (nálunk ugyanazon az oldalon van, de ez fallback)
-        // setTimeout(()=>{ if(!location.pathname.toLowerCase().includes('login')) location.href='login.html'; }, 600);
+
       } catch (error) {
-        showNotice('Hiba: ' + error.message, 'error', 6000);
+        // egyértelműbb hibaüzenet a jogosultsági esetre
+        if (error && (error.code === 'permission-denied' || String(error).includes('PERMISSION_DENIED'))) {
+          showNotice('Nincs jogosultság az adatbázis írásához (Firestore rules). Állítsd be, hogy a frissen regisztrált felhasználó írhasson a users táblába.', 'error', 8000);
+        } else {
+          showNotice('Hiba: ' + error.message, 'error', 6000);
+        }
       }
     }
 
