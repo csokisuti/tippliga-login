@@ -34,18 +34,24 @@
     @media (max-width:700px){.nav-grid{grid-template-columns:1fr}}
     .select-card{position:relative;display:flex;align-items:center;gap:12px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer;transition:.15s ease}
     .select-card:hover{transform:translateY(-2px)}
-    /* PERSISTENS kijelölés: ne csak hoverre legyen kiemelve */
+
+    /* PERSISTENS kijelölés – nem csak hoverre */
+    .select-card.is-selected,
     .select-card[aria-pressed="true"]{
-      border-color: color-mix(in oklab,var(--accent) 45%, white);
-      background: color-mix(in oklab, var(--accent) 8%, white);
+      border-color: color-mix(in oklab,var(--accent) 50%, white);
+      background: color-mix(in oklab, var(--accent) 10%, white);
       box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent), 0 6px 18px rgba(15,23,42,.08);
     }
+    .select-card.is-selected .title{color:#0f172a}
+    .select-card.is-selected .desc{color:#475569}
+
     .logo-wrap{width:68px;height:68px;border-radius:14px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
     .logo-wrap img{max-width:60px;max-height:60px}
     .text{display:flex;flex-direction:column;line-height:1.2}
     .title{font-weight:800}
-    .desc{color:var(--muted);font-size:12px}    .dot{width:12px;height:12px;border-radius:999px;border:2px solid color-mix(in oklab,var(--accent) 35%,white);margin-left:8px}
-    .dot.active{background:var(--accent)}
+    .desc{color:var(--muted);font-size:12px}
+    .dot{width:14px;height:14px;border-radius:999px;box-shadow:inset 0 0 0 2px color-mix(in oklab,var(--accent) 40%, white);background:transparent;margin-left:auto;transition:background .12s ease}
+    .dot.active{background:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
     .hint{color:var(--muted);font-size:12px;margin-top:6px}
   </style>
 </head>
@@ -143,6 +149,7 @@
       document.querySelectorAll('.select-card').forEach(btn => {
         const active = btn.getAttribute('data-league') === code;
         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        btn.classList.toggle('is-selected', active);
         btn.querySelector('.dot')?.classList.toggle('active', active);
       });
       document.getElementById('loginBtn').disabled = !selectedLeague;
@@ -178,7 +185,6 @@
         catch (permErr) { console.warn('Profil mentése users/{email} alatt nem sikerült (rules?):', permErr); }
 
         showNotice('Sikeres regisztráció! Jelentkezz be az e-mail címeddel és jelszavaddal.', 'success', 6000);
-        // A reg kártyát lecsukjuk, a bejelentkezéshez felkészítünk
         toggleRegister(false);
         const loginEmail = document.getElementById('email');
         const loginPass = document.getElementById('password');
