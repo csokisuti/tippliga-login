@@ -35,15 +35,16 @@
     .select-card{position:relative;display:flex;align-items:center;gap:12px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer;transition:.15s ease}
     .select-card:hover{transform:translateY(-2px)}
 
-    /* PERSISTENS kijelölés – nem csak hoverre */
-    .select-card.is-selected,
-    .select-card[aria-pressed="true"]{
-      border-color: color-mix(in oklab,var(--accent) 50%, white);
-      background: color-mix(in oklab, var(--accent) 10%, white);
-      box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent), 0 6px 18px rgba(15,23,42,.08);
+    /* PERSISTENS kijelölés – NEM hover-függő. Erős specifikáció + !important, hogy bármilyen alapstílust felülírjon. */
+    .select-card[data-selected="true"]{
+      border-color: color-mix(in oklab,var(--accent) 55%, white) !important;
+      background: color-mix(in oklab, var(--accent) 12%, white) !important;
+      outline: 2px solid color-mix(in oklab,var(--accent) 40%, white) !important;
+      outline-offset: 2px !important;
+      box-shadow: 0 6px 18px rgba(15,23,42,.08) !important;
     }
-    .select-card.is-selected .title{color:#0f172a}
-    .select-card.is-selected .desc{color:#475569}
+    .select-card[data-selected="true"] .title{color:#0f172a !important}
+    .select-card[data-selected="true"] .desc{color:#475569 !important}
 
     .logo-wrap{width:68px;height:68px;border-radius:14px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
     .logo-wrap img{max-width:60px;max-height:60px}
@@ -69,7 +70,7 @@
       <div class="league-block" aria-label="Liga választó">
         <div class="league-title">Válaszd ki a ligát</div>
         <div class="nav-grid">
-          <button class="select-card" data-league="nb1" aria-pressed="false">
+          <button class="select-card" data-league="nb1" aria-pressed="false" data-selected="false">
             <span class="logo-wrap">
               <img src="fizz.png" alt="NB I – Fizz Liga logó" onerror="this.onerror=null;this.src='fizz.svg'">
             </span>
@@ -80,7 +81,7 @@
             <span class="dot" aria-hidden="true"></span>
           </button>
 
-          <button class="select-card" data-league="ucl" aria-pressed="false">
+          <button class="select-card" data-league="ucl" aria-pressed="false" data-selected="false">
             <span class="logo-wrap">
               <img src="ucl.png" alt="UEFA Champions League logó" onerror="this.onerror=null;this.src='ucl.svg'">
             </span>
@@ -149,11 +150,19 @@
       document.querySelectorAll('.select-card').forEach(btn => {
         const active = btn.getAttribute('data-league') === code;
         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-        btn.classList.toggle('is-selected', active);
+        btn.setAttribute('data-selected', active ? 'true' : 'false');
         btn.querySelector('.dot')?.classList.toggle('active', active);
       });
       document.getElementById('loginBtn').disabled = !selectedLeague;
+      // mentés, hogy visszatöltse legközelebb
+      try{ localStorage.setItem('lastLeague', code || ''); }catch{}
     }
+
+    // induláskor visszatöltjük az utolsó választást (ha volt)
+    try{
+      const last = localStorage.getItem('lastLeague');
+      if(last === 'nb1' || last === 'ucl'){ setSelectedLeague(last); }
+    }catch{}
 
     // Liga kártyák események
     document.querySelectorAll('.select-card').forEach(btn => {
@@ -217,9 +226,9 @@
       console.assert(document.getElementById('loginBtn').disabled===true,'login disabled no league');
       setSelectedLeague('nb1');
       console.assert(document.getElementById('loginBtn').disabled===false,'login enabled after select');
-      setSelectedLeague(null);
       console.log('Login layout tesztek: OK');
     }catch(e){ console.error('Teszt hiba:', e); }
   </script>
 </body>
 </html>
+
