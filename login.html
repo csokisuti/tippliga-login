@@ -27,39 +27,29 @@
     .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--line);background:#f7f9fd}
     .card .body{padding:12px}
 
-    /* Liga blokk a login dobozon BELÜL */
+    /* ===== Liga blokk a login dobozon BELÜL ===== */
     .league-block{margin-top:10px}
     .league-title{display:flex;align-items:center;gap:8px;font-weight:800;margin:10px 0 8px}
-    .nav-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    @media (max-width:700px){.nav-grid{grid-template-columns:1fr}}
-    .select-card{position:relative;display:flex;align-items:center;gap:12px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer;transition:.15s ease}
-    .select-card:hover{transform:translateY(-2px)}
+    .league-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    @media (max-width:700px){.league-grid{grid-template-columns:1fr}}
 
-    /* PERSISTENS kijelölés – NEM hover-függő. Erős specifikáció + !important, hogy bármilyen alapstílust felülírjon. */
-    .select-card[data-selected="true"]{
-      border-color: color-mix(in oklab,var(--accent) 55%, white) !important;
-      background: color-mix(in oklab, var(--accent) 12%, white) !important;
-      outline: 2px solid color-mix(in oklab,var(--accent) 40%, white) !important;
-      outline-offset: 2px !important;
-      box-shadow: 0 6px 18px rgba(15,23,42,.08) !important;
-    }
-    .select-card[data-selected="true"] .title{color:#0f172a !important}
-    .select-card[data-selected="true"] .desc{color:#475569 !important}
+    /* IMPORTANT: teljesen NEM generikus osztálynevek, hogy ne ütközzenek a global style.css-sel */
+    .league-option{position:relative;display:flex;align-items:center;gap:14px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer;transition:box-shadow .12s ease,border-color .12s ease, background .12s ease}
+    .league-option:hover{box-shadow:0 8px 20px rgba(15,23,42,.08)}
 
-    /* MINDIG LÁTSZÓDJON a tartalom – soha ne legyen áttetsző/eltüntetve */
-    .select-card .logo-wrap,
-    .select-card .text,
-    .select-card .title,
-    .select-card .desc,
-    .select-card .dot{width:14px;height:14px;border-radius:999px;border:2px solid color-mix(in oklab,var(--accent) 45%, white);background:transparent;margin-left:auto;transition:background .12s ease, border-color .12s ease;opacity:1 !important;visibility:visible !important}
+    /* Tartós kiemelés – nem hover; nincs outline, hogy ne legyen "dupla keret" hatás */
+    .league-option[data-selected="true"]{border-color:color-mix(in oklab,var(--accent) 45%, white);background:color-mix(in oklab,var(--accent) 10%, white)}
 
-    .logo-wrap{width:68px;height:68px;border-radius:14px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
-    .logo-wrap img{max-width:60px;max-height:60px}
-    .text{display:flex;flex-direction:column;line-height:1.2}
-    .title{font-weight:800}
-    .desc{color:var(--muted);font-size:12px}
-    .dot{width:14px;height:14px;border-radius:999px;box-shadow:inset 0 0 0 2px color-mix(in oklab,var(--accent) 40%, white);background:transparent;margin-left:auto;transition:background .12s ease}
-    .dot.active{background:var(--accent);border-color:var(--accent)}
+    .league-logo{width:68px;height:68px;border-radius:14px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:0 0 68px}
+    .league-logo img{max-width:60px;max-height:60px}
+
+    .league-copy{display:flex;flex-direction:column;line-height:1.2;flex:1 1 auto;min-width:0}
+    .league-name{font-weight:800;color:#0f172a}
+    .league-sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    .league-radio{width:16px;height:16px;border-radius:999px;border:2px solid color-mix(in oklab,var(--accent) 45%, white);background:#fff;flex:0 0 16px}
+    .league-radio.is-active{background:var(--accent);border-color:var(--accent)}
+
     .hint{color:var(--muted);font-size:12px;margin-top:6px}
   </style>
 </head>
@@ -76,27 +66,27 @@
       <!-- Liga választó KÖZVETLENÜL a login alatt -->
       <div class="league-block" aria-label="Liga választó">
         <div class="league-title">Válaszd ki a ligát</div>
-        <div class="nav-grid">
-          <button class="select-card" data-league="nb1" aria-pressed="false" data-selected="false">
-            <span class="logo-wrap">
+        <div class="league-grid">
+          <button class="league-option" data-league="nb1" data-selected="false">
+            <span class="league-logo">
               <img src="fizz.png" alt="NB I – Fizz Liga logó" onerror="this.onerror=null;this.src='fizz.svg'">
             </span>
-            <span class="text">
-              <span class="title">NB I TippLiga</span>
-              <span class="desc">Hazai bajnokság</span>
+            <span class="league-copy">
+              <span class="league-name">NB I TippLiga</span>
+              <span class="league-sub">Hazai bajnokság</span>
             </span>
-            <span class="dot" aria-hidden="true"></span>
+            <span class="league-radio" aria-hidden="true"></span>
           </button>
 
-          <button class="select-card" data-league="ucl" aria-pressed="false" data-selected="false">
-            <span class="logo-wrap">
+          <button class="league-option" data-league="ucl" data-selected="false">
+            <span class="league-logo">
               <img src="ucl.png" alt="UEFA Champions League logó" onerror="this.onerror=null;this.src='ucl.svg'">
             </span>
-            <span class="text">
-              <span class="title">BL TippLiga</span>
-              <span class="desc">Bajnokok Ligája</span>
+            <span class="league-copy">
+              <span class="league-name">BL TippLiga</span>
+              <span class="league-sub">Bajnokok Ligája</span>
             </span>
-            <span class="dot" aria-hidden="true"></span>
+            <span class="league-radio" aria-hidden="true"></span>
           </button>
         </div>
         <div id="leagueHint" class="hint">A belépés gomb a liga kiválasztása után aktiválódik.</div>
@@ -150,29 +140,27 @@
       if(timeoutMs){ setTimeout(()=>{ n.className = 'notice'; n.textContent=''; }, timeoutMs); }
     }
 
+    // --- Liga kiválasztás logika (NEM generikus osztályokra támaszkodik) ---
     let selectedLeague = null; // 'nb1' | 'ucl'
-    function computeTarget(league){ if(league==='ucl') return 'dashboard_ucl.html'; if(league==='nb1') return 'dashboard.html'; return ''; }
+    function computeTarget(l){ return l==='ucl' ? 'dashboard_ucl.html' : (l==='nb1' ? 'dashboard.html' : ''); }
     function setSelectedLeague(code){
       selectedLeague = code;
-      document.querySelectorAll('.select-card').forEach(btn => {
+      document.querySelectorAll('.league-option').forEach(btn => {
         const active = btn.getAttribute('data-league') === code;
-        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
         btn.setAttribute('data-selected', active ? 'true' : 'false');
-        btn.querySelector('.dot')?.classList.toggle('active', active);
+        const r = btn.querySelector('.league-radio');
+        if(r){ r.classList.toggle('is-active', active); }
       });
-      document.getElementById('loginBtn').disabled = !selectedLeague;
-      // mentés, hogy visszatöltse legközelebb
+      const loginBtn = document.getElementById('loginBtn');
+      if(loginBtn) loginBtn.disabled = !selectedLeague;
       try{ localStorage.setItem('lastLeague', code || ''); }catch{}
     }
 
-    // induláskor visszatöltjük az utolsó választást (ha volt)
-    try{
-      const last = localStorage.getItem('lastLeague');
-      if(last === 'nb1' || last === 'ucl'){ setSelectedLeague(last); }
-    }catch{}
+    // Induláskor visszatöltjük az utolsó választást
+    try{ const last = localStorage.getItem('lastLeague'); if(last==='nb1'||last==='ucl'){ setSelectedLeague(last); } }catch{}
 
-    // Liga kártyák események
-    document.querySelectorAll('.select-card').forEach(btn => {
+    // Kattintáskezelő
+    document.querySelectorAll('.league-option').forEach(btn => {
       btn.addEventListener('click', () => setSelectedLeague(btn.getAttribute('data-league')));
     });
 
@@ -184,22 +172,20 @@
       if(show){ card.scrollIntoView({ behavior:'smooth', block:'start' }); }
     }
 
+    // --- Regisztráció ---
     window.register = async function () {
       const nickname = document.getElementById('nickname').value.trim();
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
       const confirmPassword = document.getElementById('regConfirmPassword').value;
-
       if (!nickname || !email || !password || !confirmPassword) { alert('Minden mezőt ki kell tölteni.'); return; }
       if (password !== confirmPassword) { alert('A jelszavak nem egyeznek.'); return; }
-
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const profile = { email, nickname, role: 'user', uid: user.uid };
         try { await setDoc(doc(db, 'users', user.email), profile, { merge: true }); }
         catch (permErr) { console.warn('Profil mentése users/{email} alatt nem sikerült (rules?):', permErr); }
-
         showNotice('Sikeres regisztráció! Jelentkezz be az e-mail címeddel és jelszavaddal.', 'success', 6000);
         toggleRegister(false);
         const loginEmail = document.getElementById('email');
@@ -213,6 +199,7 @@
       }
     }
 
+    // --- Bejelentkezés ---
     window.login = async function () {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
@@ -233,6 +220,7 @@
       console.assert(document.getElementById('loginBtn').disabled===true,'login disabled no league');
       setSelectedLeague('nb1');
       console.assert(document.getElementById('loginBtn').disabled===false,'login enabled after select');
+      setSelectedLeague(null);
       console.log('Login layout tesztek: OK');
     }catch(e){ console.error('Teszt hiba:', e); }
   </script>
