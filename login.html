@@ -46,13 +46,20 @@
     .select-card[data-selected="true"] .title{color:#0f172a !important}
     .select-card[data-selected="true"] .desc{color:#475569 !important}
 
+    /* MINDIG LÁTSZÓDJON a tartalom – soha ne legyen áttetsző/eltüntetve */
+    .select-card .logo-wrap,
+    .select-card .text,
+    .select-card .title,
+    .select-card .desc,
+    .select-card .dot{width:14px;height:14px;border-radius:999px;border:2px solid color-mix(in oklab,var(--accent) 45%, white);background:transparent;margin-left:auto;transition:background .12s ease, border-color .12s ease;opacity:1 !important;visibility:visible !important}
+
     .logo-wrap{width:68px;height:68px;border-radius:14px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
     .logo-wrap img{max-width:60px;max-height:60px}
     .text{display:flex;flex-direction:column;line-height:1.2}
     .title{font-weight:800}
     .desc{color:var(--muted);font-size:12px}
     .dot{width:14px;height:14px;border-radius:999px;box-shadow:inset 0 0 0 2px color-mix(in oklab,var(--accent) 40%, white);background:transparent;margin-left:auto;transition:background .12s ease}
-    .dot.active{background:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+    .dot.active{background:var(--accent);border-color:var(--accent)}
     .hint{color:var(--muted);font-size:12px;margin-top:6px}
   </style>
 </head>
@@ -231,4 +238,3 @@
   </script>
 </body>
 </html>
-
