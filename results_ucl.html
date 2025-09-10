@@ -28,18 +28,6 @@
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
-    /* Élő visszaszámláló megjelenítés (Top8) */
-    .pill-badge.countdown{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
-      font-variant-numeric: tabular-nums;
-      letter-spacing:.2px;
-      background:#ef4444;
-    }
-    .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
-    @keyframes pulse{ 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
-    .blink{ animation:blink 1s steps(2,start) infinite }
-    @keyframes blink{ to{ opacity:.2 } }
-
     .btn-accent{ min-height:40px; padding:10px 14px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(0,0,0,.08); }
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
@@ -116,7 +104,7 @@
     .hidden-info{ color:#b45309; font-size:13px; margin-top:6px }
     .empty{ padding:12px 14px; color:#64748b }
 
-    /* Chat – UCL külön gyűjtemény */
+    /* Chat – UCL külön szoba */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -322,83 +310,12 @@
     }
     const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}%`);
 
-    /* ===== Top8 visszaszámláló NAV-hoz ===== */
-    let POS_LOCK = { active:false, until:null };
-    let navCdTimer = null;
-
-    function formatCountdown(ms){
-      const total = Math.max(0, Math.floor(ms/1000));
-      const d = Math.floor(total/86400);
-      const h = Math.floor((total%86400)/3600);
-      const m = Math.floor((total%3600)/60);
-      const s = total%60;
-      const H = String(h).padStart(2,'0');
-      const M = String(m).padStart(2,'0');
-      const S = String(s).padStart(2,'0');
-      const labelHTML = d>0
-        ? `<span class="mono">${d}n&nbsp;</span><span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
-        : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
-      const aria = d>0
-        ? `${d} nap ${h} óra ${m} perc ${s} másodperc`
-        : `${h} óra ${m} perc ${s} másodperc`;
-      return { labelHTML, aria, msLeft: total*1000 };
-    }
-
-    function startNavTop8Countdown(until){
-      clearInterval(navCdTimer);
-      const el = document.getElementById('top8CountdownNav');
-      if (!el){ return; }
-
-      if (!until || POS_LOCK.active){
-        el.hidden = true;
-        return;
-      }
-
-      function tick(){
-        const ms = until - new Date();
-        if (ms <= 0){
-          el.hidden = true;
-          clearInterval(navCdTimer);
-          return;
-        }
-        const { labelHTML, aria, msLeft } = formatCountdown(ms);
-        el.innerHTML = labelHTML;
-        el.setAttribute('aria-live','polite');
-        el.setAttribute('aria-label', `Visszaszámláló: ${aria}`);
-        el.title = `Határidő: ${until.toLocaleString('hu-HU')}`;
-        if (msLeft <= 5*60*1000){ el.classList.add('urgent'); }
-        else { el.classList.remove('urgent'); }
-        el.hidden = false;
-      }
-
-      tick();
-      navCdTimer = setInterval(tick, 1000);
-    }
-
-    async function loadPositionsLockAndApply(){
-      try{
-        const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
-        let until=null, active=false;
-        if(snap.exists()){
-          const d = snap.data()||{};
-          until = d.lockUntil?.toDate?.() || null;
-          const now = new Date();
-          const timeLocked = until && now >= until;
-          active = !!d.isLocked || timeLocked;
-        }
-        POS_LOCK = { active, until };
-      }catch{
-        POS_LOCK = { active:false, until:null };
-      }
-      startNavTop8Countdown(POS_LOCK.active ? null : POS_LOCK.until);
-    }
-
     /* ---------------- Állapot ---------------- */
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
     let favouriteTeamucl = "";
-    let chatLastSeenUcl = null;   // <-- külön BL/UCL chat mező
+    let chatLastSeen = null; // UCL-hez tartozó timestamp kerül ide (chatLastSeenUcl mezőből)
 
     let matches = [];
     let tipsByMatch = new Map();
@@ -802,7 +719,7 @@
       document.getElementById("goldenUserSearch").addEventListener("input",(e)=>renderGoldenUsers(e.target.value));
 
       onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "login_ucl.html"; return; }
+        if (!user) { window.location.href = "login.html"; return; }
         currentUserEmail = user.email;
 
         const userRef = doc(db, "users", currentUserEmail);
@@ -812,12 +729,13 @@
           currentUserNick = d.nickname || currentUserEmail;
           currentUserRole = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeenUcl = d.chatLastSeenUcl || null; // <-- UCL mező
+          // 🔵 UCL chat last-seen mező
+          chatLastSeen = d.chatLastSeenUcl || null;
         } else {
           currentUserNick = currentUserEmail;
           currentUserRole = "user";
           favouriteTeamucl = "";
-          chatLastSeenUcl = null;
+          chatLastSeen = null;
         }
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
         if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
@@ -828,9 +746,6 @@
           const crest = crestMap[favouriteTeamucl];
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
-
-        /* NAV Top8 countdown betöltése */
-        await loadPositionsLockAndApply();
 
         const usersSnap = await getDocs(collection(db, "users"));
         usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
@@ -918,7 +833,7 @@
       });
 
       document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login_ucl.html");
+        signOut(auth).then(() => window.location.href = "login.html");
       });
     });
 
@@ -942,7 +857,7 @@
       }catch{}
     }
 
-    /* ---------------- Chat (UCL külön: chatMessages_ucl + chatLastSeenUcl) ---------------- */
+    /* ---------------- Chat (UCL) ---------------- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -958,9 +873,10 @@
       fab.addEventListener('click', toggle);
       closeBtn.addEventListener('click', close);
 
-      let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
+      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
 
-      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc')); // <-- UCL gyűjtemény
+      // 🔵 UCL chat kollekció
+      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc'));
       onSnapshot(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
@@ -1015,12 +931,7 @@
         const backup = txt;
         inputEl.value = '';
         try{
-          await addDoc(collection(db,'chatMessages_ucl'), { // <-- UCL gyűjtemény
-            email: currentUserEmail,
-            nick: currentUserNick || 'Ismeretlen',
-            text: backup,
-            ts: serverTimestamp()
-          });
+          await addDoc(collection(db,'chatMessages_ucl'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
           inputEl.value = backup; inputEl.focus();
@@ -1032,7 +943,8 @@
 
       async function markSeen(){
         try{
-          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true }); // <-- UCL mező
+          // 🔵 UCL last-seen mező frissítése
+          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true });
           lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
@@ -1073,22 +985,13 @@
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
         </div>
-        <div class="text">
-          <span class="title">
-            Szezon végi sorrend
-            <span id="top8CountdownNav" class="pill-badge countdown" hidden></span>
-          </span>
-          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
-        </div>
+        <div class="text"><span class="title">Top 8 + bónusz <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
         </div>
-        <div class="text">
-          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
-          <span class="desc">Közelgő meccsek & tippek</span>
-        </div>
+        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
