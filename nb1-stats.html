@@ -122,7 +122,7 @@
           <div class="body">
             <table>
               <thead><tr><th>Csapat</th><th>Tippek</th><th>Pts/Tipp</th></tr></thead>
-            <tbody id="tableTeamRoi"></tbody>
+              <tbody id="tableTeamRoi"></tbody>
             </table>
           </div>
         </div>
@@ -277,6 +277,22 @@
     return 0;
   }
 
+  // --- csapatnév-normalizálás (kedvenc csapat egyezéshez)
+  function NORM(x){
+    return String(x||"")
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")   // ékezet
+      .replace(/\b(fc|sc|vtk|te|akademia|akad[eé]mia|budapest)\b/g,"") // opcionális utótagok
+      .replace(/[^a-z0-9]+/g," ")
+      .trim();
+  }
+  function teamEq(a,b){ return NORM(a) && NORM(a)===NORM(b); }
+  function matchInvolvesTeam(m, team){
+    const h = m?.homeTeam || m?.home || "";
+    const a = m?.awayTeam || m?.away || "";
+    return teamEq(team, h) || teamEq(team, a);
+  }
+
   const state = {
     tips: [],
     matches: {},
@@ -329,8 +345,8 @@
       const u=d.data();
       if(u?.email){
         state.users[u.email] = {
-          nick: u.nickname || u.email,
-          fav:  u.favoriteTeam || ""    // <-- bias indexhez
+          nick: u.nickname || u.nick || u.displayName || u.email,
+          fav:  u.favoriteTeam || ""
         };
       }
     });
@@ -525,10 +541,9 @@
         flatStake += 1; if (ok) flatReturn += o;
         mixStake  += mult; if (ok) mixReturn += o*mult;
 
-        // Bias index (kedvenc csapat meccsei)
-        if (favTeam){
-          const involve = (s(m.homeTeam||m.home||"")===favTeam) || (s(m.awayTeam||m.away||"")===favTeam);
-          if (involve){ favAgg.tips++; if (ok) favAgg.wins++; favAgg.pts += pts; }
+        // Bias index (kedvenc csapat meccsei) – normalizált egyezés
+        if (favTeam && matchInvolvesTeam(m, favTeam)){
+          favAgg.tips++; if (ok) favAgg.wins++; favAgg.pts += pts;
         }
 
         // Odds-range aggregálás
