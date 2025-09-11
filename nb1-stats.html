@@ -300,7 +300,6 @@
       getDocs(collection(db, "users"))
     ]);
 
-    // meccsek -> csak a 4. fordulótól
     state.matches = {};
     mSnap.forEach(d => {
       const m = { id:d.id, ...d.data() };
@@ -309,14 +308,12 @@
       state.matches[d.id] = m;
     });
 
-    // tippek (csak érvényes mezők)
     state.tips = tSnap.docs.map(d=> ({ id:d.id, ...d.data() }))
       .filter(t => s(t.user).trim() && s(t.matchId).trim());
 
-    // legfrissebb verzió
     state.perUserLatest = new Map();
     for (const tip of state.tips){
-      if (!state.matches[s(tip.matchId)]) continue; // F1–F3 kiszűrve
+      if (!state.matches[s(tip.matchId)]) continue;
       const k = `${s(tip.user)}|${s(tip.matchId)}`;
       const cur = state.perUserLatest.get(k);
       const curTs = cur?.updatedAt?.toMillis?.() || cur?.timestamp?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
@@ -324,7 +321,6 @@
       if (!cur || ts >= curTs) state.perUserLatest.set(k, tip);
     }
 
-    // userek
     state.users = {};
     uSnap.forEach(d=>{
       const u=d.data();
@@ -336,7 +332,6 @@
       }
     });
 
-    // fordulók (csak F4+-ból)
     const rset = new Set();
     Object.values(state.matches).forEach(m=>{ const r = matchRound(m); if (r) rset.add(r); });
     state.roundsAsc = Array.from(rset).map(x=>parseInt(x,10)).sort((a,b)=>a-b).map(x=>String(x));
@@ -370,24 +365,22 @@
     return rounds;
   }
 
-  // ---- FIX: „Összes odds” módban semmit nem szűrünk ki
   function tipPassesOddsChoice(o){
     const sel = $("oddsSel").value;
-    if (sel === 'all') return true;      // fontos!
+    if (sel === 'all') return true;
     if (!o) return false;
     if (sel === 'low') return o <= 1.8;
     if (sel === 'mid') return o > 1.8 && o < 3.0;
     if (sel === 'high') return o >= 3.0;
     return true;
   }
-
   function tipPassesOdds(t, m){
     const pick = tipChoice(t); if (!pick) return false;
     const o = getOdds(m, pick) || 0;
     return tipPassesOddsChoice(o);
   }
 
-  // szűrés: kiválasztott játékos + időablak + odds  (Egyedi)
+  // Egyedi (player-szűrt)
   function filterTipsByUi(){
     const { player } = currentFilters();
     const rset = new Set(selectedRounds());
@@ -403,7 +396,7 @@
     return out;
   }
 
-  // szűrés: LIGA (playerSel NEM számít) + időablak + odds
+  // Liga (független a player szelektortól)
   function filterTipsForLeague(){
     const rset = new Set(selectedRounds());
     const out = [];
@@ -421,12 +414,11 @@
     $("whoLabel").textContent = (player==='all' ? 'Összes játékos' : (state.users[player]?.nick || player));
     $("rangeLabel").textContent = (win==='all' ? 'Teljes szezon (F4-től)' : `Utolsó ${win} forduló`);
 
-    // ========== EGYEDI (playerSel-től függ) ==========
+    // ===== Egyedi =====
     const tips   = filterTipsByUi();
     const byUser = groupBy(tips, t=> s(t.user));
     const byMatch= groupBy(tips, t=> s(t.matchId));
 
-    // pontok user×forduló
     const perRoundPts = {};
     const userTotals  = {};
     for (const t of tips){
@@ -453,12 +445,12 @@
     let earlyCnt=0, earlyPts=0, lateCnt=0, latePts=0, midCnt=0, midPts=0;
     let safeCnt=0, safeWins=0, safePts=0, heroCnt=0, heroWins=0, heroPts=0;
 
-    // Sportfogadás-mutató aggregátorok
+    // Sportfogadás-mutató
     let totalTips=0, correctTips=0;
     let flatStake=0, flatReturn=0;
     let mixStake=0,  mixReturn=0;
 
-    // Bias index / odds-range (egyedi)
+    // Kedvenc-csapat / odds-range
     const favAgg = { team:'', tips:0, wins:0, pts:0 };
     const rangeAgg = {
       low:   {name:'≤1.80', tips:0, wins:0, pts:0, stake:0, ret:0},
@@ -473,7 +465,7 @@
       sparkSeries.push(arr); arr.forEach(v=>{ sumForm+=v; cntForm++; });
 
       const favTeamNorm = NORM(state.users[u]?.fav);
-      if (player!=='all') favAgg.team = state.users[u]?.fav || '';
+      if (player!=='all') favAgg.team = state.users[player]?.fav || '';
 
       for (const t of (byUser[u] || [])){
         const m = state.matches[s(t.matchId)]; if (!m) continue;
@@ -483,27 +475,21 @@
         const mult = tipDouble(t) ? 2 : 1;
         const pts  = (ok && o) ? o*mult : 0;
 
-        // dupla
         if (tipDouble(t)){ dblAll++; if (ok) dblHit++; if (pts) dblPts += pts; }
         basePts += pts;
 
-        // risk
         if (o){ riskAll+=o; riskCountAll++; if (ok){ riskWin+=o; riskCountWin++; } }
 
-        // upset
         const maxO = Math.max(getOdds(m,'1')||0, getOdds(m,'X')||0, getOdds(m,'2')||0);
         if (o && Math.abs(o-maxO)<1e-9){ upsetAll++; if (ok){ upsetWins++; upsetPts += pts; } }
 
-        // bias 1/X/2
         bias[pick].pick++; if (ok) bias[pick].hit++;
 
-        // team ROI
         function addTeam(team, w){ const obj=teamRoi.get(team)||{tips:0,pts:0}; obj.tips+=w; obj.pts+=pts*w; teamRoi.set(team,obj); }
         if (pick==='1') addTeam(m.homeTeam||m.home||'',1);
         else if (pick==='2') addTeam(m.awayTeam||m.away||'',1);
         else if (pick==='X'){ addTeam(m.homeTeam||m.home||'',.5); addTeam(m.awayTeam||m.away||'',.5); }
 
-        // timing
         const ts = t.updatedAt?.toMillis?.() || t.timestamp?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
         const ko = m.startTime?.toMillis?.() || (m.startTime?.seconds? m.startTime.seconds*1000 : 0);
         if (ts && ko){
@@ -513,18 +499,12 @@
           else { midCnt++; midPts+=pts; }
         }
 
-        // biztos vs hős
         if (o && o<=1.8){ safeCnt++; if (ok) safeWins++; safePts+=pts; }
         else if (o && o>=3.0){ heroCnt++; if (ok) heroWins++; heroPts+=pts; }
 
-        // sportfogadás – CSAK ha van odds, számolunk téttel
         totalTips += 1; if (ok) correctTips += 1;
-        if (o > 0){
-          flatStake += 1; if (ok) flatReturn += o;
-          mixStake  += mult; if (ok) mixReturn += o*mult;
-        }
+        if (o>0){ flatStake += 1; if (ok) flatReturn += o; mixStake += mult; if (ok) mixReturn += o*mult; }
 
-        // Bias index (kedvenc csapat meccsei)
         if (favTeamNorm){
           const homeN = NORM(m.homeTeam||m.home||'');
           const awayN = NORM(m.awayTeam||m.away||'');
@@ -533,7 +513,6 @@
           }
         }
 
-        // Odds-range
         if (o){
           const b = rangeAgg[bucket(o)];
           b.tips++; if (ok) { b.wins++; b.pts+=pts; b.ret += o; }
@@ -542,7 +521,6 @@
       }
     }
 
-    // KPI-k
     const formAvg = cntForm ? (sumForm/cntForm) : 0;
     $("kpiForm").textContent = `${fmt(formAvg)} / ford.`;
     drawSpark($("sparkForm"), mergeSeries(sparkSeries));
@@ -556,28 +534,23 @@
     $("kpiUpset").textContent = upsetAll? `${fmt(upsetWins/upsetAll*100)}%` : '—';
     $("noteUpset").textContent = `találat: ${upsetWins}/${upsetAll} • nyerő upset átlag: ${fmt(upsetWins? upsetPts/upsetWins:0)} pont`;
 
-    // Bias 1/X/2
     fillBiasTable(bias);
 
-    // Team ROI top5
     const topTeams = [...teamRoi.entries()].map(([team, o])=>({team, tips:o.tips, roi:o.tips? o.pts/o.tips:0}))
       .filter(x=>x.team).sort((a,b)=> b.roi - a.roi).slice(0,5);
     fillRows("tableTeamRoi", topTeams.map(x=>[`${x.team}`, fmt(x.tips), fmt(x.roi)]));
 
-    // Timing
     fillRows("tableTiming", [
       ['Korai (≥24h)', earlyCnt, fmt(earlyCnt? earlyPts/earlyCnt:0)],
       ['Köztes',       midCnt,   fmt(midCnt?   midPts/midCnt:0)],
       ['Késői (<3h)',  lateCnt,  fmt(lateCnt?  latePts/lateCnt:0)],
     ]);
 
-    // Safe vs Hero
     fillRows("tableSafeHero", [
       ['Biztos (≤1.8)', fmt(safeCnt? safeWins/safeCnt*100:0)+'%', fmt(safeCnt? safePts/safeCnt:0)],
       ['Hős (≥3.0)',    fmt(heroCnt? heroWins/heroCnt*100:0)+'%', fmt(heroCnt? heroPts/heroCnt:0)]
     ]);
 
-    // Sportfogadás-mutató (üres esetben is beszédes)
     const flatProfit = flatReturn - flatStake;
     const mixProfit  = mixReturn  - mixStake;
     const flatRoi = flatStake ? flatProfit / flatStake : 0;
@@ -588,7 +561,6 @@
       ['Flat + duplák 2 egység', fmt(hitPct)+'%', fmt(mixStake||0),  fmt(mixReturn||0),  fmt(mixProfit||0),  fmt(mixRoi)]
     ]);
 
-    // Bias index (kedvenc csapat)
     const favRows = [];
     if (player==='all'){
       favRows.push(['—','—','—','—']);
@@ -600,7 +572,6 @@
     }
     fillRows("tableFavBias", favRows);
 
-    // Odds-range táblázat (egyedi)
     const orows = Object.values(rangeAgg).map(b=>{
       const hit = b.tips ? b.wins/b.tips*100 : 0;
       const avg = b.tips ? b.pts/b.tips : 0;
@@ -609,12 +580,11 @@
     });
     fillRows("tableOddsRange", orows);
 
-    // ====== LIGA (playerSel NEM számít) ======
+    // ===== Liga =====
     const tipsL = filterTipsForLeague();
     const byUserL = groupBy(tipsL, t=> s(t.user));
     const byMatchL= groupBy(tipsL, t=> s(t.matchId));
 
-    // Tippeloszlás (liga)
     let c1=0,cX=0,c2=0; const perRoundPick={};
     for (const t of tipsL){
       const m=state.matches[s(t.matchId)]; if(!m) continue; const r=matchRound(m);
@@ -627,7 +597,6 @@
     selectedRounds().forEach(r=>{ const o=perRoundPick[r]||{'1':0,'X':0,'2':0}; const ssum=o['1']+o['X']+o['2']||1; pdRows.push([`F${r}`, fmt(o['1']/ssum*100)+'%', fmt(o['X']/ssum*100)+'%', fmt(o['2']/ssum*100)+'%']); });
     fillRows("tablePickDist", pdRows, true);
 
-    // Crowd pontosság (liga)
     let crowdWins=0,games=0,crowdPts=0,avgPts=0;
     for (const [mid, list] of Object.entries(byMatchL)){
       const m=state.matches[mid]; if(!m||!m.outcome) continue;
@@ -637,7 +606,7 @@
       if (crowdPick===m.outcome) crowdWins++;
       let tot=0; list.forEach(t=>{ const p=tipChoice(t), mult=tipDouble(t)?2:1, o=getOdds(m,p)||0; const pts=(p===m.outcome && o)? o*mult:0; tot+=pts; });
       avgPts += (list.length? tot/list.length:0);
-      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome && oC) crowdPts += oC; // 1 egység / meccs
+      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome && oC) crowdPts += oC;
     }
     fillRows("tableCrowd", [
       ['Crowd-pick találati arány', fmt(games? crowdWins/games*100:0)+'%'],
@@ -645,7 +614,6 @@
       ['Ha mindig crowd-pick lenne', fmt(games? crowdPts/games:0)],
     ]);
 
-    // Legnagyobb meglepetések (Top 5)
     const upsetRows=[];
     for (const [mid, list] of Object.entries(byMatchL)){
       const m = state.matches[mid]; if (!m || !m.outcome) continue;
@@ -665,7 +633,6 @@
       ])
     );
 
-    // ROI toplista (liga, flat 1 egység/tipp)
     const roiList = Object.keys(byUserL).map(u=>{
       const tipsU = byUserL[u];
       let stake=0, ret=0, wins=0;
@@ -684,7 +651,6 @@
       `${i+1}.`, r.nick, r.tips, fmt(r.hit)+'%', fmt(r.profit), fmt(r.roi)
     ]));
 
-    // Kalibráció (liga)
     const bins=[0,.2,.3,.4,.5,.6,.7,.8,1], stat=bins.slice(0,-1).map((b,i)=>({lo:b,hi:bins[i+1],exp:0,cnt:0}));
     const inRounds=new Set(selectedRounds());
     for (const m of Object.values(state.matches)){
@@ -702,7 +668,6 @@
       fmt(b.cnt/total*100 - (b.exp/b.cnt*100))+'pp'
     ]));
 
-    // Ponteloszlás (liga)
     const perRoundPtsL = {};
     for (const [u, list] of Object.entries(byUserL)){
       list.forEach(t=>{
@@ -721,7 +686,6 @@
     });
     fillRows("tableRoundDist", rdRows);
 
-    // Gini (liga)
     const totalsL = Object.keys(byUserL).map(u=>{
       return Object.values(perRoundPtsL[u]||{}).reduce((a,b)=>a+b,0);
     });
@@ -742,16 +706,18 @@
     el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"/></svg>`;
   }
   function fillRows(tbodyId, rows, highlightFirst=false){
-    const tb=$(tbodyId); tb.innerHTML='';
+    const tb=$(tbodyId);
+    if(!tb){ console.warn('Hiányzó tbody id:', tbodyId); return; }  /* DEFENZÍV FIX */
+    tb.innerHTML='';
     rows.forEach((r,i)=>{ const tr=document.createElement('tr'); if(highlightFirst && i===0) tr.className='hl'; tr.innerHTML=r.map(c=>`<td>${c}</td>`).join(''); tb.appendChild(tr); });
   }
   function fillBiasTable(b){
-    const tb=$("tableBias"); tb.innerHTML='';
+    const tb=$("tableBias"); if(!tb){ console.warn('Hiányzó tbody id: tableBias'); return; }
+    tb.innerHTML='';
     [['1','Hazai'],['X','Döntetlen'],['2','Vendég']].forEach(([k,lab])=>{
       const p=b[k].pick, h=b[k].hit, sr=p? h/p*100:0;
-      tb.appendChild(row([lab, p, fmt(sr)+'%']));
+      const tr=document.createElement('tr'); tr.innerHTML=[lab, p, fmt(sr)+'%'].map(c=>`<td>${c}</td>`).join(''); tb.appendChild(tr);
     });
-    function row(cells){ const tr=document.createElement('tr'); tr.innerHTML=cells.map(c=>`<td>${c}</td>`).join(''); return tr; }
   }
 
   function exportCsv(){
