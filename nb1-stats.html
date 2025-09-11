@@ -263,6 +263,7 @@
   const $  = (id)=>document.getElementById(id);
   const fmt= (n)=> (Number(n)||0).toFixed(2);
   const s  = (v)=> (v==null ? "" : String(v));
+  const NORM = (x)=> s(x).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
   const tipChoice = t => t?.choice ?? t?.tip ?? "";
   const tipDouble = t => !!(t?.double ?? t?.isDouble);
@@ -275,22 +276,6 @@
     if (key==="X") return Number(m?.oddsX ?? m?.["oddsX"]) || 0;
     if (key==="2") return Number(m?.odds2 ?? m?.["odds2"]) || 0;
     return 0;
-  }
-
-  // --- csapatnév-normalizálás (kedvenc csapat egyezéshez)
-  function NORM(x){
-    return String(x||"")
-      .toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")   // ékezet
-      .replace(/\b(fc|sc|vtk|te|akademia|akad[eé]mia|budapest)\b/g,"") // opcionális utótagok
-      .replace(/[^a-z0-9]+/g," ")
-      .trim();
-  }
-  function teamEq(a,b){ return NORM(a) && NORM(a)===NORM(b); }
-  function matchInvolvesTeam(m, team){
-    const h = m?.homeTeam || m?.home || "";
-    const a = m?.awayTeam || m?.away || "";
-    return teamEq(team, h) || teamEq(team, a);
   }
 
   const state = {
@@ -320,7 +305,7 @@
     mSnap.forEach(d => {
       const m = { id:d.id, ...d.data() };
       const rn = roundNum(m);
-      if (rn==null || rn < MIN_ROUND) return;   // kizárás
+      if (rn==null || rn < MIN_ROUND) return;
       state.matches[d.id] = m;
     });
 
@@ -339,14 +324,14 @@
       if (!cur || ts >= curTs) state.perUserLatest.set(k, tip);
     }
 
-    // userek (kedvenc csapat is, ha van)
+    // userek
     state.users = {};
     uSnap.forEach(d=>{
       const u=d.data();
       if(u?.email){
         state.users[u.email] = {
-          nick: u.nickname || u.nick || u.displayName || u.email,
-          fav:  u.favoriteTeam || ""
+          nick: u.nickname || u.email,
+          fav:  s(u.favoriteTeam || "")
         };
       }
     });
@@ -385,8 +370,10 @@
     return rounds;
   }
 
+  // ---- FIX: „Összes odds” módban semmit nem szűrünk ki
   function tipPassesOddsChoice(o){
     const sel = $("oddsSel").value;
+    if (sel === 'all') return true;      // fontos!
     if (!o) return false;
     if (sel === 'low') return o <= 1.8;
     if (sel === 'mid') return o > 1.8 && o < 3.0;
@@ -400,7 +387,7 @@
     return tipPassesOddsChoice(o);
   }
 
-  // szűrés: kiválasztott játékos + időablak + odds
+  // szűrés: kiválasztott játékos + időablak + odds  (Egyedi)
   function filterTipsByUi(){
     const { player } = currentFilters();
     const rset = new Set(selectedRounds());
@@ -479,22 +466,16 @@
       mid2:  {name:'2.51–3.50', tips:0, wins:0, pts:0, stake:0, ret:0},
       high:  {name:'≥3.51', tips:0, wins:0, pts:0, stake:0, ret:0},
     };
-
-    function bucket(o){
-      if (o<=1.8) return 'low';
-      if (o<=2.5) return 'mid1';
-      if (o<=3.5) return 'mid2';
-      return 'high';
-    }
+    const bucket = (o)=> o<=1.8 ? 'low' : o<=2.5 ? 'mid1' : o<=3.5 ? 'mid2' : 'high';
 
     for (const u of focusUsers){
       const arr = rds.map(r => perRoundPts[u]?.[r] || 0);
       sparkSeries.push(arr); arr.forEach(v=>{ sumForm+=v; cntForm++; });
 
-      const favTeam = state.users[u]?.fav || "";
-      if (player!=='all') favAgg.team = favTeam; // csak kijelölt usernél informatív
+      const favTeamNorm = NORM(state.users[u]?.fav);
+      if (player!=='all') favAgg.team = state.users[u]?.fav || '';
 
-      for (const t of byUser[u] || []){
+      for (const t of (byUser[u] || [])){
         const m = state.matches[s(t.matchId)]; if (!m) continue;
         const pick = tipChoice(t); if (!pick) continue;
         const o    = getOdds(m, pick) || 0;
@@ -536,20 +517,26 @@
         if (o && o<=1.8){ safeCnt++; if (ok) safeWins++; safePts+=pts; }
         else if (o && o>=3.0){ heroCnt++; if (ok) heroWins++; heroPts+=pts; }
 
-        // sportfogadás
+        // sportfogadás – CSAK ha van odds, számolunk téttel
         totalTips += 1; if (ok) correctTips += 1;
-        flatStake += 1; if (ok) flatReturn += o;
-        mixStake  += mult; if (ok) mixReturn += o*mult;
-
-        // Bias index (kedvenc csapat meccsei) – normalizált egyezés
-        if (favTeam && matchInvolvesTeam(m, favTeam)){
-          favAgg.tips++; if (ok) favAgg.wins++; favAgg.pts += pts;
+        if (o > 0){
+          flatStake += 1; if (ok) flatReturn += o;
+          mixStake  += mult; if (ok) mixReturn += o*mult;
         }
 
-        // Odds-range aggregálás
+        // Bias index (kedvenc csapat meccsei)
+        if (favTeamNorm){
+          const homeN = NORM(m.homeTeam||m.home||'');
+          const awayN = NORM(m.awayTeam||m.away||'');
+          if (homeN===favTeamNorm || awayN===favTeamNorm){
+            favAgg.tips++; if (ok) favAgg.wins++; favAgg.pts += pts;
+          }
+        }
+
+        // Odds-range
         if (o){
           const b = rangeAgg[bucket(o)];
-          b.tips++; if (ok) { b.wins++; b.pts+=pts; b.ret += o; } // flat 1 egység/tipp
+          b.tips++; if (ok) { b.wins++; b.pts+=pts; b.ret += o; }
           b.stake += 1;
         }
       }
@@ -590,15 +577,15 @@
       ['Hős (≥3.0)',    fmt(heroCnt? heroWins/heroCnt*100:0)+'%', fmt(heroCnt? heroPts/heroCnt:0)]
     ]);
 
-    // Sportfogadás-mutató
+    // Sportfogadás-mutató (üres esetben is beszédes)
     const flatProfit = flatReturn - flatStake;
     const mixProfit  = mixReturn  - mixStake;
     const flatRoi = flatStake ? flatProfit / flatStake : 0;
     const mixRoi  = mixStake  ? mixProfit  / mixStake  : 0;
     const hitPct  = totalTips ? (correctTips / totalTips * 100) : 0;
     fillRows("tableBetSim", [
-      ['Flat 1 egység/tipp',     fmt(hitPct)+'%', fmt(flatStake), fmt(flatReturn), fmt(flatProfit), fmt(flatRoi)],
-      ['Flat + duplák 2 egység', fmt(hitPct)+'%', fmt(mixStake),  fmt(mixReturn),  fmt(mixProfit),  fmt(mixRoi)]
+      ['Flat 1 egység/tipp',     fmt(hitPct)+'%', fmt(flatStake||0), fmt(flatReturn||0), fmt(flatProfit||0), fmt(flatRoi)],
+      ['Flat + duplák 2 egység', fmt(hitPct)+'%', fmt(mixStake||0),  fmt(mixReturn||0),  fmt(mixProfit||0),  fmt(mixRoi)]
     ]);
 
     // Bias index (kedvenc csapat)
@@ -685,8 +672,7 @@
       tipsU.forEach(t=>{
         const m = state.matches[s(t.matchId)]; if(!m) return;
         const p = tipChoice(t); const o = getOdds(m,p)||0; const ok = m.outcome && p===m.outcome;
-        stake += 1;
-        if (ok) { ret += o; wins++; }
+        if (o>0){ stake += 1; if (ok) { ret += o; wins++; } }
       });
       const profit = ret - stake;
       const roi = stake ? profit/stake : 0;
