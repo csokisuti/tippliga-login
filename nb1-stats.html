@@ -148,13 +148,13 @@
         </div>
 
         <div class="card">
-          <div class="head"><div class="title">Sportfogadás-mutató<span class="qq" title="Két szimuláció: (1) minden tipp 1 egység tét; (2) duplák 2 egységgel vannak megjátszva. Profit = nyeremény − tét, ROI = Profit / Tét.">?</span></div></div>
+          <div class="head"><div class="title">Sportfogadás-mutató<span class="qq" title="Két szcenárió: (1) minden tipp 1 egység tét; (2) a duplának jelölt tippek 2 egységgel mennek. Profit = Visszafizetés − Össz-tét, ROI = Profit / Össz-tét.">?</span></div></div>
           <div class="body">
             <table>
               <thead><tr><th>Modell</th><th>Találati %</th><th>Össz-tét</th><th>Visszafizetés</th><th>Profit</th><th>ROI</th></tr></thead>
               <tbody id="tableBetSim"></tbody>
             </table>
-            <div class="note">A pontszám továbbra is odds-alapú; ez a blokk csak illusztratív bankroll-szemlélet.</div>
+            <div class="note">A pontszám továbbra is odds-alapú; ez a blokk illusztratív bankroll-szemlélet.</div>
           </div>
         </div>
       </div>
@@ -305,7 +305,7 @@
     // legfrissebb verzió
     state.perUserLatest = new Map();
     for (const tip of state.tips){
-      if (!state.matches[s(tip.matchId)]) continue; // olyan meccsre tippelt, amit kiszűrtünk (F1–F3)
+      if (!state.matches[s(tip.matchId)]) continue; // F1–F3 kiszűrve
       const k = `${s(tip.user)}|${s(tip.matchId)}`;
       const cur = state.perUserLatest.get(k);
       const curTs = cur?.updatedAt?.toMillis?.() || cur?.timestamp?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
@@ -414,8 +414,9 @@
     let safeCnt=0, safeWins=0, safePts=0, heroCnt=0, heroWins=0, heroPts=0;
 
     // Sportfogadás-mutató aggregátorok
-    let flatStake=0, flatReturn=0, flatWins=0;
-    let dblStake=0,  dblReturn=0,  dblWins=0;
+    let totalTips=0, correctTips=0;
+    let flatStake=0, flatReturn=0;
+    let mixStake=0,  mixReturn=0;
 
     for (const u of focusUsers){
       const arr = rds.map(r => perRoundPts[u]?.[r] || 0);
@@ -464,12 +465,17 @@
         else if (o && o>=3.0){ heroCnt++; if (ok) heroWins++; heroPts+=pts; }
 
         // ===== Sportfogadás-mutató =====
-        // (1) minden tipp 1 egységgel:
+        totalTips += 1;
+        if (ok) correctTips += 1;
+
+        // (1) flat 1 egység minden tipp
         flatStake += 1;
-        if (ok) { flatReturn += o; flatWins++; }
-        // (2) duplák 2 egységgel:
-        dblStake  += mult;            // 1 vagy 2 egység tét
-        if (ok) { dblReturn += o*mult; dblWins++; }
+        if (ok) flatReturn += o;
+
+        // (2) flat + duplák 2 egységgel
+        const st = mult;         // 1 vagy 2
+        mixStake += st;
+        if (ok) mixReturn += o * st;
       }
     }
 
@@ -502,22 +508,24 @@
       ['Késői (<3h)',  lateCnt,  fmt(lateCnt?  latePts/lateCnt:0)],
     ]);
 
-    // Safe vs Hero
-    const sv = [ ['Biztos (≤1.8)', safeCnt, fmt(safeCnt? safeWins/safeCnt*100:0)+'%', fmt(safeCnt? safePts/safeCnt:0)],
-                 ['Hős (≥3.0)',   heroCnt, fmt(heroCnt? heroWins/heroCnt*100:0)+'%', fmt(heroCnt? heroPts/heroCnt:0)] ];
-    fillRows("tableSafeHero", sv.map(r=>[r[0],r[2],r[3]]));
-
-    // Sportfogadás-mutató
-    const betRows = [
-      ['Flat 1 egység/tipp', fmt(flatWins/(flatStake||1)*100)+'%', fmt(flatStake), fmt(flatReturn), fmt(flatReturn-flatStake), fmt((flatReturn-flatStake)/(flatStake||1))],
-      ['Dupla = 2 egység',   fmt(dblWins/(Object.keys(byUser).length? null:0)), fmt(dblStake), fmt(dblReturn), fmt(dblReturn-dblStake), fmt((dblReturn-dblStake)/(dblStake||1))]
+    // Safe vs Hero (csak a megjelenített oszlopok)
+    const sv = [
+      ['Biztos (≤1.8)', fmt(safeCnt? safeWins/safeCnt*100:0)+'%', fmt(safeCnt? safePts/safeCnt:0)],
+      ['Hős (≥3.0)',    fmt(heroCnt? heroWins/heroCnt*100:0)+'%', fmt(heroCnt? heroPts/heroCnt:0)]
     ];
-    // helyesen számoljuk a találati % a dupla-modellnél is:
-    betRows[1][1] = fmt(dblWins/(dblStake? (dblStake/ (dblStake/ (dblWins||1))) : 1)); // egyszerűsítve lejjebb számoljuk…
-    // inkább számoljuk újra normálisan:
-    const totalTips = Object.values(byUser).reduce((a,l)=>a+l.length,0) || 1;
-    betRows[1][1] = fmt(dblWins/totalTips*100)+'%';
-    fillRows("tableBetSim", betRows);
+    fillRows("tableSafeHero", sv.map(r=>[r[0],r[1],r[2]]));
+
+    // ===== Sportfogadás-mutató (helyes) =====
+    const flatProfit = flatReturn - flatStake;
+    const mixProfit  = mixReturn  - mixStake;
+    const flatRoi = flatStake ? flatProfit / flatStake : 0;
+    const mixRoi  = mixStake  ? mixProfit  / mixStake  : 0;
+    const hitPct  = totalTips ? (correctTips / totalTips * 100) : 0; // mindkét modellnél ugyanaz
+
+    fillRows("tableBetSim", [
+      ['Flat 1 egység/tipp',  fmt(hitPct)+'%', fmt(flatStake), fmt(flatReturn), fmt(flatProfit), fmt(flatRoi)],
+      ['Flat + duplák 2 egység', fmt(hitPct)+'%', fmt(mixStake),  fmt(mixReturn),  fmt(mixProfit),  fmt(mixRoi)]
+    ]);
 
     // ===== Liga statok =====
     // Tippeloszlás
@@ -530,7 +538,7 @@
     }
     const sum=c1+cX+c2 || 1;
     const pdRows=[[`Összesen`, fmt(c1/sum*100)+'%', fmt(cX/sum*100)+'%', fmt(c2/sum*100)+'%']];
-    selectedRounds().forEach(r=>{ const o=perRoundPick[r]||{'1':0,'X':0,'2':0}; const s=o['1']+o['X']+o['2']||1; pdRows.push([`F${r}`, fmt(o['1']/s*100)+'%', fmt(o['X']/s*100)+'%', fmt(o['2']/s*100)+'%']); });
+    selectedRounds().forEach(r=>{ const o=perRoundPick[r]||{'1':0,'X':0,'2':0}; const ssum=o['1']+o['X']+o['2']||1; pdRows.push([`F${r}`, fmt(o['1']/ssum*100)+'%', fmt(o['X']/ssum*100)+'%', fmt(o['2']/ssum*100)+'%']); });
     fillRows("tablePickDist", pdRows, true);
 
     // Crowd pontosság
@@ -543,7 +551,7 @@
       if (crowdPick===m.outcome) crowdWins++;
       let tot=0; list.forEach(t=>{ const p=tipChoice(t), mult=tipDouble(t)?2:1, o=getOdds(m,p)||0; const pts=(p===m.outcome && o)? o*mult:0; tot+=pts; });
       avgPts += (list.length? tot/list.length:0);
-      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome && oC) crowdPts += oC;
+      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome && oC) crowdPts += oC; // 1 egység / meccs
     }
     fillRows("tableCrowd", [
       ['Crowd-pick találati arány', fmt(games? crowdWins/games*100:0)+'%'],
@@ -557,8 +565,8 @@
     for (const m of Object.values(state.matches)){
       if (!inRounds.has(matchRound(m)) || !m.outcome) continue;
       const inv1=1/(getOdds(m,'1')||Infinity), invX=1/(getOdds(m,'X')||Infinity), inv2=1/(getOdds(m,'2')||Infinity);
-      let s=0; [inv1,invX,inv2].forEach(v=>{ if (isFinite(v)) s+=v; }); if(!s) continue;
-      const P={'1':inv1/s,'X':invX/s,'2':inv2/s}; const p=P[m.outcome]||0;
+      let ssum=0; [inv1,invX,inv2].forEach(v=>{ if (isFinite(v)) ssum+=v; }); if(!ssum) continue;
+      const P={'1':inv1/ssum,'X':invX/ssum,'2':inv2/ssum}; const p=P[m.outcome]||0;
       const idx=stat.findIndex(b=> p>=b.lo && p<b.hi); if(idx>=0){ stat[idx].cnt++; stat[idx].exp += (stat[idx].lo+stat[idx].hi)/2; }
     }
     const total=stat.reduce((a,b)=>a+(b.cnt||0),0)||1;
@@ -572,8 +580,8 @@
     // Forma-liga (utolsó 5)
     const last5 = state.roundsAsc.slice(-5);
     const playerAvg = Object.keys(byUser).map(u=>{
-      let s=0,c=0; last5.forEach(r=>{ s += (perRoundPts[u]?.[r]||0); c++; });
-      return {email:u, nick: state.users[u]?.nick || u, avg: c? s/c:0};
+      let ssum=0,c=0; last5.forEach(r=>{ ssum += (perRoundPts[u]?.[r]||0); c++; });
+      return {email:u, nick: state.users[u]?.nick || u, avg: c? ssum/c:0};
     }).sort((a,b)=> b.avg-a.avg).slice(0,8);
     fillRows("tableFormLeague", playerAvg.map((p,i)=>[`${i+1}.`, p.nick, fmt(p.avg)]));
 
