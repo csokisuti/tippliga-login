@@ -161,7 +161,7 @@
                 <thead><tr><th>Típus</th><th>Arány</th><th>Átlag pont</th></tr></thead>
                 <tbody id="tableTiming"></tbody>
               </table>
-              <div class="note">Korai: 24h+ a kezdés előtt • Késői: < 3h</div>
+              <div class="note">Korai: 24h+ a kezdés előtt • Késői: &lt; 3h</div>
             </div>
           </div>
 
@@ -250,7 +250,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // ====== CONFIG ======
     const firebaseConfig = {
@@ -285,18 +285,19 @@
 
     const $ = (id)=>document.getElementById(id);
     const fmt = (n)=> (Number(n)||0).toFixed(2);
-    const NORM = s=> String(s||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const safeStr = (v)=> (v==null ? "" : String(v));
+    const NORM = s=> safeStr(s).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    const tipChoice = t => t.choice ?? t.tip ?? "";
-    const tipDouble = t => !!(t.double ?? t.isDouble);
-    const matchRound = m => String(m.round ?? m.roundId ?? "");
+    const tipChoice = t => t?.choice ?? t?.tip ?? "";
+    const tipDouble = t => !!(t?.double ?? t?.isDouble);
+    const matchRound = m => safeStr(m?.round ?? m?.roundId ?? "");
 
     function getOdds(m, key){
-      if (m?.odds && (key in m.odds)) return m.odds[key];
-      if (key==="1") return m.odds1 ?? m["odds1"];
-      if (key==="X") return m.oddsX ?? m["oddsX"];
-      if (key==="2") return m.odds2 ?? m["odds2"];
-      return undefined;
+      if (m?.odds && (key in m.odds)) return Number(m.odds[key]) || 0;
+      if (key==="1") return Number(m?.odds1 ?? m?.["odds1"]) || 0;
+      if (key==="X") return Number(m?.oddsX ?? m?.["oddsX"]) || 0;
+      if (key==="2") return Number(m?.odds2 ?? m?.["odds2"]) || 0;
+      return 0;
     }
 
     const state = {
@@ -326,11 +327,13 @@
       state.matches = {};
       mSnap.forEach(d=> state.matches[d.id] = { id:d.id, ...d.data() });
 
-      // teljes tips mentése + legfrissebb kiválasztása
-      state.tips = tSnap.docs.map(d=> ({ id:d.id, ...d.data() }));
+      // teljes tips mentése + legfrissebb kiválasztása (csak érvényes user+match)
+      state.tips = tSnap.docs.map(d=> ({ id:d.id, ...d.data() }))
+        .filter(t => safeStr(t.user).trim() && safeStr(t.matchId).trim());
+
       state.perUserLatest = new Map();
       for (const tip of state.tips){
-        const k = `${tip.user}|${tip.matchId}`;
+        const k = `${safeStr(tip.user)}|${safeStr(tip.matchId)}`;
         const cur = state.perUserLatest.get(k);
         const curTs = cur?.updatedAt?.toMillis?.() || cur?.timestamp?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
         const ts = tip.updatedAt?.toMillis?.() || tip.timestamp?.toMillis?.() || tip.createdAt?.toMillis?.() || 0;
@@ -338,7 +341,12 @@
       }
 
       state.users = {};
-      uSnap.forEach(d=>{ const u=d.data(); if(u?.email){ state.users[u.email] = { nick: u.nickname || u.email, team: u.favoriteTeam || "" }; } });
+      uSnap.forEach(d=>{
+        const u=d.data();
+        if(u?.email){
+          state.users[u.email] = { nick: u.nickname || u.email, team: u.favoriteTeam || "" };
+        }
+      });
 
       // fordulók
       const rset = new Set();
@@ -348,15 +356,25 @@
 
     function hydratePlayerSelect(){
       const sel = $("playerSel");
-      const names = new Map();
-      for (const tip of state.tips){
-        const u = state.users[tip.user];
-        names.set(tip.user, u?.nick || tip.user);
+      // csak a tényleg tippelő userek, biztonságosan
+      const nameMap = new Map();
+      for (const tip of state.perUserLatest.values()){
+        const email = safeStr(tip.user).trim();
+        if (!email) continue;
+        const nick = safeStr(state.users[email]?.nick) || email;
+        nameMap.set(email, nick);
       }
-      const ordered = [...names.entries()].sort((a,b)=> a[1].localeCompare(b[1]));
-      for (const [email, nick] of ordered){
-        const o = document.createElement('option'); o.value = email; o.textContent = nick; sel.appendChild(o);
-      }
+      const ordered = [...nameMap.entries()]
+        .sort((a,b)=> safeStr(a[1]).localeCompare(safeStr(b[1]), "hu", {sensitivity:"base"}));
+
+      // alap opció megtartása
+      // (a selectben már ott van az "Összes játékos" – nem töröljük)
+      ordered.forEach(([email, nick])=>{
+        const o = document.createElement('option');
+        o.value = email;
+        o.textContent = nick || email;
+        sel.appendChild(o);
+      });
     }
 
     function bindUi(){
@@ -383,16 +401,18 @@
 
     function filterTipsByUi(){
       const { player, win } = currentFilters();
-      // időablak: utolsó N forduló a meccs roundId-ja alapján (globálisan)
+      // időablak: utolsó N forduló
       let rounds = state.roundsAsc.slice();
       if (win !== 'all') rounds = rounds.slice(-parseInt(win,10));
       const rset = new Set(rounds);
 
-      // szűrés és a legfrissebb verzió használata
       const out = [];
       for (const tip of state.perUserLatest.values()){
-        if (player !== 'all' && tip.user !== player) continue;
-        const m = state.matches[tip.matchId]; if (!m) continue;
+        const email = safeStr(tip.user).trim();
+        if (!email) continue;
+        if (player !== 'all' && email !== player) continue;
+        const m = state.matches[safeStr(tip.matchId)];
+        if (!m) continue;
         if (!rset.has(matchRound(m))) continue;
         if (!tipPassesOdds(tip, m)) continue;
         out.push(tip);
@@ -406,15 +426,15 @@
       $("rangeLabel").textContent = (win==='all' ? 'Teljes szezon' : `Utolsó ${win} forduló`);
 
       const tips = filterTipsByUi();
-      const byUser = groupBy(tips, t=> t.user);
-      const byMatch = groupBy(tips, t=> t.matchId);
+      const byUser = groupBy(tips, t=> safeStr(t.user));
+      const byMatch = groupBy(tips, t=> safeStr(t.matchId));
 
       const perRoundPts = {}; // user->round->sum pts
       const userTotals = {};  // user-> total
 
-      // pontszám számítása a meccsek és outcome alapján
+      // pontszám számítása
       for (const t of tips){
-        const m = state.matches[t.matchId]; if (!m) continue;
+        const m = state.matches[safeStr(t.matchId)]; if (!m) continue;
         const pick = tipChoice(t); if (!pick) continue;
         const correct = !!m.outcome && pick === m.outcome;
         const mult = tipDouble(t) ? 2 : 1;
@@ -426,7 +446,7 @@
         userTotals[t.user] = (userTotals[t.user]||0) + pts;
       }
 
-      // ===== Egyedi statok (kiválasztott user vagy összesített átlag) =====
+      // ===== Egyedi statok =====
       const focusUsers = (function(){
         if ($("playerSel").value==='all') return Object.keys(byUser);
         return [$("playerSel").value];
@@ -451,7 +471,7 @@
 
         // bejárás tip szinten
         for (const t of byUser[u] || []){
-          const m = state.matches[t.matchId]; if (!m) continue;
+          const m = state.matches[safeStr(t.matchId)]; if (!m) continue;
           const pick = tipChoice(t); if (!pick) continue;
           const o = getOdds(m, pick) || 0;
           const correct = !!m.outcome && pick === m.outcome;
@@ -459,8 +479,7 @@
           const pts = (correct && o) ? Number(o) * mult : 0;
 
           // dupla
-          if (tipDouble(t)){
-            dblAll++; if (correct) dblHit++; if (pts) dblPts += pts; }
+          if (tipDouble(t)){ dblAll++; if (correct) dblHit++; if (pts) dblPts += pts; }
           basePts += pts;
 
           // kockázat
@@ -474,15 +493,15 @@
           // bias
           bias[pick].pick++; if (correct) bias[pick].hit++;
 
-          // team ROI: a választott KIMENETEL hazai esetén homeTeam, vendég esetén awayTeam, X-nél mindkettőt számoljuk fél-fél súllyal
+          // team ROI
           function addTeam(team, w){ const obj = teamRoi.get(team) || {tips:0, pts:0}; obj.tips += w; obj.pts += pts*w; teamRoi.set(team, obj); }
           if (pick==='1') addTeam(m.homeTeam||m.home||'',1);
           else if (pick==='2') addTeam(m.awayTeam||m.away||'',1);
           else if (pick==='X'){ addTeam(m.homeTeam||m.home||'',0.5); addTeam(m.awayTeam||m.away||'',0.5); }
 
-          // időzítés: tip.timestamp vs startTime
+          // időzítés
           const ts = t.updatedAt?.toMillis?.() || t.timestamp?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
-          const ko = m.startTime?.toMillis?.() || m.startTime?.seconds*1000 || 0;
+          const ko = m.startTime?.toMillis?.() || (m.startTime?.seconds? m.startTime.seconds*1000 : 0);
           if (ts && ko){
             const diffH = (ko - ts) / (3600*1000);
             if (diffH >= 24){ earlyCnt++; earlyPts += pts; }
@@ -548,7 +567,7 @@
       // Pick eloszlás összesítve és fordulónként
       let c1=0,cX=0,c2=0; const perRoundPick = {}; // r -> {1,X,2}
       for (const t of tips){
-        const m = state.matches[t.matchId]; if (!m) continue; const r = matchRound(m);
+        const m = state.matches[safeStr(t.matchId)]; if (!m) continue; const r = matchRound(m);
         const p = tipChoice(t); if (!p) continue;
         if (p==='1') c1++; else if (p==='X') cX++; else if (p==='2') c2++;
         const o = (perRoundPick[r] ||= { '1':0,'X':0,'2':0 }); o[p]++;
@@ -559,7 +578,7 @@
       const rds = selectedRounds();
       rds.forEach(r=>{ const o=perRoundPick[r]||{'1':0,'X':0,'2':0}; const s=(o['1']+o['X']+o['2'])||1; const tr=document.createElement('tr'); tr.innerHTML=`<td>F${r}</td><td>${fmt(o['1']/s*100)}%</td><td>${fmt(o['X']/s*100)}%</td><td>${fmt(o['2']/s*100)}%</td>`; tbodyPD.appendChild(tr); });
 
-      // Crowd pontosság (meccsenként a legnépszerűbb pick talál-e)
+      // Crowd pontosság
       let crowdWins=0, games=0, crowdPts=0, avgPts=0, cntTips=0;
       for (const [mid, tipsList] of Object.entries(byMatch)){
         const m = state.matches[mid]; if (!m || !m.outcome) continue;
@@ -568,7 +587,7 @@
         const crowdPick = Object.entries(count).sort((a,b)=> b[1]-a[1])[0]?.[0] || '';
         if (!crowdPick) continue; games++;
         if (crowdPick === m.outcome) crowdWins++;
-        // átlag pont vs crowd pont (ha mindenki crowdPicket tippelt volna)
+        // átlag pont vs crowd pont
         let tot=0; tipsList.forEach(t=>{ const pick=tipChoice(t); const mult=tipDouble(t)?2:1; const o=getOdds(m,pick)||0; const pts=(pick===m.outcome && o)? o*mult : 0; tot += pts; });
         avgPts += (tipsList.length? tot/tipsList.length:0);
         const oCrowd = getOdds(m, crowdPick)||0; const crowdPtsIf = (crowdPick===m.outcome && oCrowd)? oCrowd : 0; crowdPts += crowdPtsIf; cntTips++;
@@ -579,7 +598,7 @@
       addRowCR('Ha mindig crowd-pick lenne', fmt(cntTips? crowdPts/games:0));
       function addRowCR(k,v){ const tr=document.createElement('tr'); tr.innerHTML=`<td>${k}</td><td>${v}</td>`; tbodyCR.appendChild(tr); }
 
-      // Kalibráció: implied P binelése és összevetés a tényleges gyakorisággal
+      // Kalibráció
       const bins = [0, .2, .3, .4, .5, .6, .7, .8, 1];
       const stat = bins.slice(0,-1).map((b,i)=>({lo:b,hi:bins[i+1], exp:0, cnt:0 }));
       for (const m of Object.values(state.matches)){
@@ -589,12 +608,19 @@
         let s = 0; [inv1,invX,inv2].forEach(v=>{ if (isFinite(v)) s += v; }); if (!s) continue;
         const P = { '1':inv1/s, 'X':invX/s, '2':inv2/s };
         const p = P[m.outcome] || 0;
-        const idx = stat.findIndex(b=> p>=b.lo && p<b.hi); if (idx>=0){ stat[idx].cnt++; stat[idx].exp += (bMid(stat[idx])); }
+        const idx = stat.findIndex(b=> p>=b.lo && p<b.hi); if (idx>=0){ stat[idx].cnt++; stat[idx].exp += ((stat[idx].lo+stat[idx].hi)/2); }
       }
       const tbodyCal = $("tableCalib"); tbodyCal.innerHTML='';
-      stat.forEach(b=>{ if (!b.cnt) return; const exp = b.exp/b.cnt*100; const act = ((b.cnt)/ totalBinMatches(stat)) *100; const diff = act-exp; const tr=document.createElement('tr'); tr.innerHTML=`<td>${fmt(b.lo*100)}–${fmt(b.hi*100)}%</td><td>${fmt(exp)}%</td><td>${fmt(act)}%</td><td>${fmt(diff)}pp</td>`; tbodyCal.appendChild(tr); });
-      function totalBinMatches(stat){ return stat.reduce((a,b)=> a + (b.cnt||0), 0); }
-      function bMid(b){ return (b.lo + b.hi)/2; }
+      const totalCnt = stat.reduce((a,b)=> a + (b.cnt||0), 0) || 1;
+      stat.forEach(b=>{
+        if (!b.cnt) return;
+        const exp = b.exp/b.cnt*100;
+        const act = (b.cnt/ totalCnt) *100;
+        const diff = act-exp;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${fmt(b.lo*100)}–${fmt(b.hi*100)}%</td><td>${fmt(exp)}%</td><td>${fmt(act)}%</td><td>${fmt(diff)}pp</td>`;
+        tbodyCal.appendChild(tr);
+      });
 
       // Forma-liga (utolsó 5 forduló)
       const last5 = state.roundsAsc.slice(-5);
@@ -604,14 +630,14 @@
       }).sort((a,b)=> b.avg - a.avg).slice(0,8);
       const tbodyFL = $("tableFormLeague"); tbodyFL.innerHTML=''; playerAvg.forEach((p,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td class="pos">${i+1}.</td><td>${escapeHtml(p.nick)}</td><td>${fmt(p.avg)}</td>`; tbodyFL.appendChild(tr); });
 
-      // Ponteloszlás fordulónként (medián, P90, átlag) – a kiválasztott körben
+      // Ponteloszlás fordulónként
       const tbodyRD = $("tableRoundDist"); tbodyRD.innerHTML='';
       rds.forEach(r=>{
         const arr=[]; for (const u of Object.keys(byUser)){ arr.push(perRoundPts[u]?.[r]||0); }
         if (!arr.length) return; arr.sort((a,b)=>a-b); const med = quant(arr,.5); const p90=quant(arr,.9); const avg= arr.reduce((a,b)=>a+b,0)/arr.length; const tr=document.createElement('tr'); tr.innerHTML=`<td>F${r}</td><td>${fmt(med)}</td><td>${fmt(p90)}</td><td>${fmt(avg)}</td>`; tbodyRD.appendChild(tr);
       });
 
-      // Gini az összpontból (kiválasztott tartományon)
+      // Gini
       const totals = Object.keys(byUser).map(u=> userTotals[u]||0);
       $("giniVal").textContent = `Gini: ${fmt(gini(totals))}`;
     }
@@ -636,11 +662,16 @@
     function gini(values){ const v=values.slice().map(x=>Math.max(0,Number(x)||0)).sort((a,b)=>a-b); const n=v.length||1; const sum=v.reduce((a,b)=>a+b,0)||1; let acc=0; for(let i=0;i<n;i++){ acc += v[i]*(i+1); } return (2*acc)/(n*sum) - (n+1)/n; }
 
     function exportCsv(){
-      // egyszerű export: játékos, meccs, pick, odds, dupla, helyes, pont
       const tips = filterTipsByUi();
       const rows = [['user','matchId','round','home','away','pick','odds','double','correct','points']];
       for (const t of tips){
-        const m=state.matches[t.matchId]; if(!m) continue; const pick=tipChoice(t); const o=getOdds(m,pick)||0; const dbl=tipDouble(t); const ok=m.outcome && pick===m.outcome; const pts=(ok && o)? (dbl?2:1)*o:0; rows.push([t.user, t.matchId, matchRound(m), m.homeTeam||m.home||'', m.awayTeam||m.away||'', pick, o, dbl, ok, pts]);
+        const m=state.matches[safeStr(t.matchId)]; if(!m) continue;
+        const pick=tipChoice(t);
+        const o=getOdds(m,pick)||0;
+        const dbl=tipDouble(t);
+        const ok=m.outcome && pick===m.outcome;
+        const pts=(ok && o)? (dbl?2:1)*o:0;
+        rows.push([t.user, t.matchId, matchRound(m), m.homeTeam||m.home||'', m.awayTeam||m.away||'', pick, o, dbl, ok, pts]);
       }
       const csv = rows.map(r=> r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
       const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
