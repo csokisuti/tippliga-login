@@ -39,7 +39,6 @@
   .tag{display:inline-block;background:#eef2ff;border:1px solid var(--line);padding:3px 8px;border-radius:999px;font-size:12px}
   .hl{background:#fff8e1;border:1px solid #fde68a}
   .qq{cursor:help; font-weight:700; margin-left:.35rem; color:#64748b}
-  /* kis összecsukható lista a találókhoz */
   details{display:inline-block}
   details summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   details summary::after{content:"⌄";font-size:12px;opacity:.7}
@@ -48,6 +47,9 @@
   .form-inline{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .input{border:1px solid var(--line);border-radius:10px;padding:6px 10px}
   .stat{display:inline-block;min-width:90px}
+  .bank-summary{margin-top:8px}
+  .result-good{color:var(--good);font-weight:800}
+  .result-bad{color:var(--bad);font-weight:800}
 </style>
 </head>
 <body>
@@ -76,7 +78,6 @@
     </div>
   </header>
 
-  <!-- Egyedi statok -->
   <section class="card">
     <div class="head">
       <div class="title">Egyedi statok</div>
@@ -106,7 +107,7 @@
             <div class="note">Átlagos odds (nyerőknél is)</div>
           </div>
         </div>
-        <div class="kpi" title="Hányszor találtad el a három kimenetel közül a legnagyobb oddsút (’upset’) és ezek átlaghozama.">
+        <div class="kpi" title="Hányszor találtad el a három kimenetel közül a legnagyobb oddsút és ezek átlaghozama.">
           <div style="flex:1 1 auto">
             <div class="muted">„Upset hunter” index<span class="qq">?</span></div>
             <div class="val" id="kpiUpset">–</div>
@@ -166,14 +167,57 @@
             <div class="note">A pontszám továbbra is odds-alapú; ez a blokk illusztratív bankroll-szemlélet.</div>
           </div>
         </div>
+
+        <div class="card">
+          <div class="head"><div class="title">Bankroll-kalkulátor<span class="qq" title="Ha minden saját tippedre X Ft-ot tettél volna a szűrt időablakban: össz-tét, visszafizetés, profit és ROI. A fenti Játékos szűrő szerint számol.">?</span></div></div>
+          <div class="body">
+            <div class="form-inline" style="margin-bottom:10px">
+              <label>Játékos:</label>
+              <select id="bankUserSel" class="input"></select>
+              <label>Tét / tipp (Ft):</label>
+              <input id="bankStake" class="input" type="number" min="1" step="100" value="1000"/>
+              <button id="bankRecalcBtn" class="btn">Számol</button>
+            </div>
+            <div id="bankSummary" class="bank-summary">—</div>
+            <div style="margin-top:6px">
+              <span class="stat"><strong>Tippek:</strong> <span id="bankOutTips">–</span></span>
+              <span class="stat"><strong>Össz-tét:</strong> <span id="bankOutStake">–</span> Ft</span>
+              <span class="stat"><strong>Visszafizetés:</strong> <span id="bankOutReturn">–</span> Ft</span>
+              <span class="stat"><strong>Profit:</strong> <span id="bankOutProfit">–</span> Ft</span>
+              <span class="stat"><strong>ROI:</strong> <span id="bankOutRoi">–</span></span>
+            </div>
+            <div class="note" style="margin-top:6px">Számítás: flat modell (1 tét egy tippre), a megadott X Ft-tal skálázva.</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Összesített liga statok (NEM függ a playerSel-től) -->
   <section class="card">
     <div class="head"><div class="title">Összesített liga statok</div><div class="muted" id="rangeLabel">Teljes szezon (F4-től)</div></div>
     <div class="body">
+      <div class="grid two" style="margin-bottom:14px">
+        <div class="card">
+          <div class="head"><div class="title">Legnagyobb meglepetések (Top 5)<span class="qq" title="A legmagasabb nyertes oddsok a kiválasztott időablakon belül, és hogy kik találták el. Csak olyan meccs kerül be, ahol volt találó.">?</span></div></div>
+          <div class="body">
+            <table>
+              <thead><tr><th>Meccs</th><th>Kimenetel</th><th>Odds</th><th>Találók</th></tr></thead>
+              <tbody id="tableTopUpsets"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="head"><div class="title">Kimaradt ziccerek (Top 5)<span class="qq" title="A legkisebb oddsok, amelyeket tippekben választottak, de tévesek lettek (’könnyűnek’ hitt, mégsem jött be).">?</span></div></div>
+          <div class="body">
+            <table>
+              <thead><tr><th>Meccs</th><th>Tippelt kimenetel</th><th>Tipp odds</th><th>Rontók</th></tr></thead>
+              <tbody id="tableMissedSitters"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div class="grid two">
         <div class="card">
           <div class="head"><div class="title">Tippeloszlás (1/X/2)<span class="qq" title="Összesen és fordulónként az 1/X/2 választási arány a szűrt időablakban.">?</span></div></div>
@@ -196,53 +240,11 @@
         </div>
 
         <div class="card">
-          <div class="head"><div class="title">Legnagyobb meglepetések (Top 5)<span class="qq" title="A legmagasabb nyertes oddsok a kiválasztott időablakon belül, és hogy kik találták el. Csak olyan meccs kerül be, ahol volt találó.">?</span></div></div>
-          <div class="body">
-            <table>
-              <thead><tr><th>Meccs</th><th>Kimenetel</th><th>Odds</th><th>Találók</th></tr></thead>
-              <tbody id="tableTopUpsets"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="card">
           <div class="head"><div class="title">ROI toplista (flat 1 egység/tipp)<span class="qq" title="Profit = visszafizetés − tét. ROI = Profit / Tét.">?</span></div></div>
           <div class="body">
             <table class="mini-leader">
               <thead><tr><th class="pos">#</th><th>Játékos</th><th>Tippek</th><th>Találati %</th><th>Profit</th><th>ROI</th></tr></thead>
               <tbody id="tableRoiTop"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- ÚJ: Bankroll-kalkulátor -->
-        <div class="card">
-          <div class="head"><div class="title">Bankroll-kalkulátor<span class="qq" title="Ha minden saját tippedre X Ft-ot tettél volna a szűrt időablakban: össz-tét, visszafizetés, profit és ROI. A liga-blokkhoz igazodik (nem függ a felső Játékos szűrőtől).">?</span></div></div>
-          <div class="body">
-            <div class="form-inline" style="margin-bottom:10px">
-              <label>Játékos:</label>
-              <select id="bankUserSel" class="input"></select>
-              <label>Tét / tipp (Ft):</label>
-              <input id="bankStake" class="input" type="number" min="1" step="100" value="1000"/>
-              <button id="bankRecalcBtn" class="btn">Számol</button>
-            </div>
-            <div>
-              <span class="stat"><strong>Tippek:</strong> <span id="bankOutTips">–</span></span>
-              <span class="stat"><strong>Össz-tét:</strong> <span id="bankOutStake">–</span> Ft</span>
-              <span class="stat"><strong>Visszafizetés:</strong> <span id="bankOutReturn">–</span> Ft</span>
-              <span class="stat"><strong>Profit:</strong> <span id="bankOutProfit">–</span> Ft</span>
-              <span class="stat"><strong>ROI:</strong> <span id="bankOutRoi">–</span></span>
-            </div>
-            <div class="note" style="margin-top:6px">Számítás: flat modell (1 tét egy tippre), a megadott X Ft-tal skálázva.</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="head"><div class="title">Kimaradt ziccerek (Top 5)<span class="qq" title="A legkisebb nyertes oddsok listája, amelyeket senki sem talált el a szűrt időablak + odds-szűrő mellett.">?</span></div></div>
-          <div class="body">
-            <table>
-              <thead><tr><th>Meccs</th><th>Kimenetel</th><th>Nyertes odds</th></tr></thead>
-              <tbody id="tableMissedSitters"></tbody>
             </table>
           </div>
         </div>
@@ -283,7 +285,6 @@
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // ====== CONFIG ======
   const firebaseConfig = {
     apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
     authDomain: "tippliga-4b3af.firebaseapp.com",
@@ -293,10 +294,8 @@
     appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
   };
 
-  // ====== PARAM: a játék a 4. fordulótól él ======
   const MIN_ROUND = 4;
 
-  // ====== INIT ======
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -340,20 +339,17 @@
       getDocs(collection(db, "users"))
     ]);
 
-    // meccsek -> csak a 4. fordulótól
     state.matches = {};
     mSnap.forEach(d => {
       const m = { id:d.id, ...d.data() };
       const rn = roundNum(m);
-      if (rn==null || rn < MIN_ROUND) return;   // kizárás
+      if (rn==null || rn < MIN_ROUND) return;
       state.matches[d.id] = m;
     });
 
-    // tippek (csak érvényes mezők)
     state.tips = tSnap.docs.map(d=> ({ id:d.id, ...d.data() }))
       .filter(t => s(t.user).trim() && s(t.matchId).trim());
 
-    // legfrissebb verzió csak F4+-ra
     state.perUserLatest = new Map();
     for (const tip of state.tips){
       if (!state.matches[s(tip.matchId)]) continue;
@@ -364,7 +360,6 @@
       if (!cur || ts >= curTs) state.perUserLatest.set(k, tip);
     }
 
-    // userek (nick + kedvenc csapat)
     state.users = {};
     uSnap.forEach(d=>{
       const u=d.data();
@@ -373,7 +368,6 @@
       }
     });
 
-    // fordulók
     const rset = new Set();
     Object.values(state.matches).forEach(m=>{ const r = matchRound(m); if (r) rset.add(r); });
     state.roundsAsc = Array.from(rset).map(x=>parseInt(x,10)).sort((a,b)=>a-b).map(x=>String(x));
@@ -396,7 +390,7 @@
     $("exportBtn").addEventListener('click', exportCsv);
     $("bankRecalcBtn").addEventListener('click', (e)=>{ e.preventDefault(); recomputeBankroll(); });
     $("bankStake").addEventListener('change', recomputeBankroll);
-    $("bankStake").addEventListener('input', ()=>{/* realtime feel */});
+    $("bankStake").addEventListener('input', ()=>{});
   }
 
   function currentFilters(){
@@ -425,7 +419,6 @@
     return tipPassesOddsChoice(o);
   }
 
-  // Egyedi szűrés (playerSel számít)
   function filterTipsByUi(){
     const { player } = currentFilters();
     const rset = new Set(selectedRounds());
@@ -441,7 +434,6 @@
     return out;
   }
 
-  // Liga szűrés (playerSel NEM számít)
   function filterTipsForLeague(){
     const rset = new Set(selectedRounds());
     const out = [];
@@ -459,12 +451,10 @@
     $("whoLabel").textContent = (player==='all' ? 'Összes játékos' : (state.users[player]?.nick || player));
     $("rangeLabel").textContent = (win==='all' ? 'Teljes szezon (F4-től)' : `Utolsó ${win} forduló`);
 
-    // ======= EGYEDI BLOKK =======
     const tips   = filterTipsByUi();
     const byUser = groupBy(tips, t=> s(t.user));
     const byMatch= groupBy(tips, t=> s(t.matchId));
 
-    // pontok user×forduló
     const perRoundPts = {};
     const userTotals  = {};
     for (const t of tips){
@@ -491,7 +481,6 @@
     let earlyCnt=0, earlyPts=0, lateCnt=0, latePts=0, midCnt=0, midPts=0;
     let safeCnt=0, safeWins=0, safePts=0, heroCnt=0, heroWins=0, heroPts=0;
 
-    // Bias index / odds-range (egyedi)
     const favAgg = { team:'', tips:0, wins:0, pts:0 };
     const rangeAgg = {
       low:   {name:'≤1.80', tips:0, wins:0, pts:0, stake:0, ret:0},
@@ -543,7 +532,6 @@
         if (o && o<=1.8){ safeCnt++; if (ok) safeWins++; safePts+=pts; }
         else if (o && o>=3.0){ heroCnt++; if (ok) heroWins++; heroPts+=pts; }
 
-        // Odds-range összesítés (flat modellhez)
         if (o){
           const b = rangeAgg[bucket(o)];
           b.tips++; if (ok) { b.wins++; b.pts+=pts; b.ret += o; }
@@ -552,7 +540,6 @@
       }
     }
 
-    // KPI-k
     const formAvg = cntForm ? (sumForm/cntForm) : 0;
     $("kpiForm").textContent = `${fmt(formAvg)} / ford.`;
     drawSpark($("sparkForm"), mergeSeries(sparkSeries));
@@ -566,272 +553,36 @@
     $("kpiUpset").textContent = upsetAll? `${fmt(upsetWins/upsetAll*100)}%` : '—';
     $("noteUpset").textContent = `találat: ${upsetWins}/${upsetAll} • nyerő upset átlag: ${fmt(upsetWins? upsetPts/upsetWins:0)} pont`;
 
-    // Bias 1/X/2
     fillBiasTable(bias);
 
-    // Team ROI top5
     const topTeams = [...teamRoi.entries()].map(([team, o])=>({team, tips:o.tips, roi:o.tips? o.pts/o.tips:0}))
       .filter(x=>x.team).sort((a,b)=> b.roi - a.roi).slice(0,5);
     fillRows("tableTeamRoi", topTeams.map(x=>[`${x.team}`, fmt(x.tips), fmt(x.roi)]));
 
-    // Timing
     fillRows("tableTiming", [
       ['Korai (≥24h)', earlyCnt, fmt(earlyCnt? earlyPts/earlyCnt:0)],
       ['Köztes',       midCnt,   fmt(midCnt?   midPts/midCnt:0)],
       ['Késői (<3h)',  lateCnt,  fmt(lateCnt?  latePts/lateCnt:0)],
     ]);
 
-    // Safe vs Hero
     fillRows("tableSafeHero", [
       ['Biztos (≤1.8)', fmt(safeCnt? safeWins/safeCnt*100:0)+'%', fmt(safeCnt? safePts/safeCnt:0)],
       ['Hős (≥3.0)',    fmt(heroCnt? heroWins/heroCnt*100:0)+'%', fmt(heroCnt? heroPts/heroCnt:0)]
     ]);
 
-    // Sportfogadás-mutató (egyedi)
     const totalTips = tips.length;
     let flatStake=0, flatReturn=0, correct=0, mixStake=0, mixReturn=0;
     tips.forEach(t=>{
-      const m=state.matches[s(t.matchId)]; if(!m) return;
-      const p=tipChoice(t); const o=getOdds(m,p)||0; const ok=m.outcome && p===m.outcome; const mult=tipDouble(t)?2:1;
-      flatStake += 1; mixStake += mult;
-      if (ok){ correct++; flatReturn += o; mixReturn += o*mult; }
+      const m=state.matches{s(t.matchId)}; 
     });
-    const flatProfit = flatReturn-flatStake, mixProfit=mixReturn-mixStake;
-    const flatRoi = flatStake? flatProfit/flatStake:0, mixRoi = mixStake? mixProfit/mixStake:0;
-    const hitPct  = totalTips? correct/totalTips*100:0;
-    fillRows("tableBetSim", [
-      ['Flat 1 egység/tipp',     fmt(hitPct)+'%', fmt(flatStake), fmt(flatReturn), fmt(flatProfit), fmt(flatRoi)],
-      ['Flat + duplák 2 egység', fmt(hitPct)+'%', fmt(mixStake),  fmt(mixReturn),  fmt(mixProfit),  fmt(mixRoi)]
-    ]);
-
-    // Bias index (kedvenc csapat)
-    const favRows = [];
-    if (player==='all'){
-      favRows.push(['—','—','—','—']);
-    } else {
-      const teamLabel = state.users[player]?.fav || '—';
-      const hit = favAgg.tips ? favAgg.wins/favAgg.tips*100 : 0;
-      const avg = favAgg.tips ? favAgg.pts/favAgg.tips : 0;
-      favRows.push([teamLabel, favAgg.tips, fmt(hit)+'%', fmt(avg)]);
-    }
-    fillRows("tableFavBias", favRows);
-
-    // Odds-range (egyedi)
-    const orows = Object.values(rangeAgg).map(b=>{
-      const hit = b.tips ? b.wins/b.tips*100 : 0;
-      const avg = b.tips ? b.pts/b.tips : 0;
-      const roi = b.stake ? (b.ret - b.stake)/b.stake : 0;
-      return [b.name, b.tips, fmt(hit)+'%', fmt(avg), fmt(roi)];
-    });
-    fillRows("tableOddsRange", orows);
-
-    // ======= LIGA BLOKK =======
-    const tipsL = filterTipsForLeague();
-    const byUserL = groupBy(tipsL, t=> s(t.user));
-    const byMatchL= groupBy(tipsL, t=> s(t.matchId));
-
-    // Tippeloszlás (liga)
-    let c1=0,cX=0,c2=0; const perRoundPick={};
-    for (const t of tipsL){
-      const m=state.matches[s(t.matchId)]; if(!m) continue; const r=matchRound(m);
-      const p=tipChoice(t); if(!p) continue;
-      if (p==='1') c1++; else if (p==='X') cX++; else if (p==='2') c2++;
-      (perRoundPick[r] ||= {'1':0,'X':0,'2':0})[p]++;
-    }
-    const sum=c1+cX+c2 || 1;
-    const pdRows=[[`Összesen`, fmt(c1/sum*100)+'%', fmt(cX/sum*100)+'%', fmt(c2/sum*100)+'%']];
-    selectedRounds().forEach(r=>{ const o=perRoundPick[r]||{'1':0,'X':0,'2':0}; const ssum=o['1']+o['X']+o['2']||1; pdRows.push([`F${r}`, fmt(o['1']/ssum*100)+'%', fmt(o['X']/ssum*100)+'%', fmt(o['2']/ssum*100)+'%']); });
-    fillRows("tablePickDist", pdRows, true);
-
-    // Crowd pontosság (liga)
-    let crowdWins=0,games=0,crowdPts=0,avgPts=0;
-    for (const [mid, list] of Object.entries(byMatchL)){
-      const m=state.matches[mid]; if(!m||!m.outcome) continue;
-      const cnt={'1':0,'X':0,'2':0}; list.forEach(t=>{ const p=tipChoice(t); if(p) cnt[p]++; });
-      const crowdPick = Object.entries(cnt).sort((a,b)=> b[1]-a[1])[0]?.[0] || '';
-      if (!crowdPick) continue; games++;
-      if (crowdPick===m.outcome) crowdWins++;
-      let tot=0; list.forEach(t=>{ const p=tipChoice(t), mult=tipDouble(t)?2:1, o=getOdds(m,p)||0; const pts=(p===m.outcome && o)? o*mult:0; tot+=pts; });
-      avgPts += (list.length? tot/list.length:0);
-      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome && oC) crowdPts += oC; // 1 egység / meccs
-    }
-    fillRows("tableCrowd", [
-      ['Crowd-pick találati arány', fmt(games? crowdWins/games*100:0)+'%'],
-      ['Átlag pont / meccs (valós)', fmt(games? avgPts/games:0)],
-      ['Ha mindig crowd-pick lenne', fmt(games? crowdPts/games:0)],
-    ]);
-
-    // Legnagyobb meglepetések (csak ha volt találó)
-    const upsetRows=[];
-    for (const [mid, list] of Object.entries(byMatchL)){
-      const m = state.matches[mid]; if (!m || !m.outcome) continue;
-      const winO = getOdds(m, m.outcome) || 0; if (!winO) continue;
-      const winners = list.filter(t=> tipChoice(t)===m.outcome);
-      if (winners.length===0) continue; // csak ahol volt találó
-      upsetRows.push({
-        mid, winO, winners,
-        label: `${s(m.homeTeam||m.home||'?')} – ${s(m.awayTeam||m.away||'?')}`,
-        outcome: m.outcome
-      });
-    }
-    upsetRows.sort((a,b)=> b.winO - a.winO);
-    const upRows = upsetRows.slice(0,5).map(u=>{
-      const nicks = u.winners.map(w=> s(state.users[w.user]?.nick || w.user));
-      const cell = `<details><summary>${nicks.length}</summary>${nicks.map(n=>`<span class="pill">${n}</span>`).join('')}</details>`;
-      return [u.label, u.outcome, fmt(u.winO), cell];
-    });
-    fillRows("tableTopUpsets", upRows);
-
-    // ROI toplista (liga, flat 1 egység/tipp)
-    const roiList = Object.keys(byUserL).map(u=>{
-      const tipsU = byUserL[u];
-      let stake=0, ret=0, wins=0;
-      tipsU.forEach(t=>{
-        const m = state.matches[s(t.matchId)]; if(!m) return;
-        const p = tipChoice(t); const o = getOdds(m,p)||0; const ok = m.outcome && p===m.outcome;
-        stake += 1; if (ok) { ret += o; wins++; }
-      });
-      const profit = ret - stake;
-      const roi = stake ? profit/stake : 0;
-      const hit = stake ? wins/stake*100 : 0;
-      return { email:u, nick: state.users[u]?.nick || u, tips: stake, hit, profit, roi };
-    }).sort((a,b)=> b.roi - a.roi).slice(0,10);
-
-    fillRows("tableRoiTop", roiList.map((r,i)=>[
-      `${i+1}.`, r.nick, r.tips, fmt(r.hit)+'%', fmt(r.profit), fmt(r.roi)
-    ]));
-
-    // Bankroll-kalkulátor: dropdown feltöltése az aktuális (szűrt) játékosokkal
-    const bankSel = $("bankUserSel");
-    const curVal = bankSel.value;
-    bankSel.innerHTML = "";
-    roiList.forEach(r=>{ const o=document.createElement('option'); o.value=r.email; o.textContent=r.nick; bankSel.appendChild(o); });
-    if (roiList.length && roiList.some(r=>r.email===curVal)) bankSel.value = curVal;
-    bankSel.onchange = recomputeBankroll;
-
-    // Kimaradt ziccerek (Top 5) – legkisebb nyertes odds, ahol 0 találó volt
-    const sitterRows=[];
-    for (const [mid, list] of Object.entries(byMatchL)){
-      const m = state.matches[mid]; if (!m || !m.outcome) continue;
-      const winO = getOdds(m, m.outcome) || 0; if (!winO) continue;
-      const winners = list.filter(t=> tipChoice(t)===m.outcome);
-      if (winners.length>0) continue; // csak ahol senki nem találta
-      sitterRows.push({
-        winO,
-        label: `${s(m.homeTeam||m.home||'?')} – ${s(m.awayTeam||m.away||'?')}`,
-        outcome: m.outcome
-      });
-    }
-    sitterRows.sort((a,b)=> a.winO - b.winO);
-    fillRows("tableMissedSitters", sitterRows.slice(0,5).map(x=>[x.label, x.outcome, fmt(x.winO)]));
-
-    // Kalibráció (liga)
-    const bins=[0,.2,.3,.4,.5,.6,.7,.8,1], stat=bins.slice(0,-1).map((b,i)=>({lo:b,hi:bins[i+1],exp:0,cnt:0}));
-    const inRounds=new Set(selectedRounds());
-    for (const m of Object.values(state.matches)){
-      if (!inRounds.has(matchRound(m)) || !m.outcome) continue;
-      const inv1=1/(getOdds(m,'1')||Infinity), invX=1/(getOdds(m,'X')||Infinity), inv2=1/(getOdds(m,'2')||Infinity);
-      let ssum=0; [inv1,invX,inv2].forEach(v=>{ if (isFinite(v)) ssum+=v; }); if(!ssum) continue;
-      const P={'1':inv1/ssum,'X':invX/ssum,'2':inv2/ssum}; const p=P[m.outcome]||0;
-      const idx=stat.findIndex(b=> p>=b.lo && p<b.hi); if(idx>=0){ stat[idx].cnt++; stat[idx].exp += (stat[idx].lo+stat[idx].hi)/2; }
-    }
-    const total=stat.reduce((a,b)=>a+(b.cnt||0),0)||1;
-    fillRows("tableCalib", stat.filter(b=>b.cnt).map(b=>[
-      `${fmt(b.lo*100)}–${fmt(b.hi*100)}%`,
-      fmt(b.exp/b.cnt*100)+'%',
-      fmt(b.cnt/total*100)+'%',
-      fmt(b.cnt/total*100 - (b.exp/b.cnt*100))+'pp'
-    ]));
-
-    // Ponteloszlás (liga)
-    const perRoundPtsL = {};
-    for (const [u, list] of Object.entries(byUserL)){
-      list.forEach(t=>{
-        const m=state.matches[s(t.matchId)]; if(!m) return;
-        const p=tipChoice(t); const o=getOdds(m,p)||0; const ok=m.outcome && p===m.outcome; const mult=tipDouble(t)?2:1;
-        const pts = (ok&&o)? o*mult:0; const r=matchRound(m);
-        (perRoundPtsL[u] ||= {}); perRoundPtsL[u][r] = (perRoundPtsL[u][r]||0)+pts;
-      });
-    }
-    const rdRows=[];
-    selectedRounds().forEach(r=>{
-      const arr = Object.keys(byUserL).map(u=> perRoundPtsL[u]?.[r]||0).sort((a,b)=>a-b);
-      if (!arr.length) return;
-      const med = quant(arr,.5), p90=quant(arr,.9), avg = arr.reduce((a,b)=>a+b,0)/arr.length;
-      rdRows.push([`F${r}`, fmt(med), fmt(p90), fmt(avg)]);
-    });
-    fillRows("tableRoundDist", rdRows);
-
-    // Gini (liga)
-    const totalsL = Object.keys(byUserL).map(u=>{
-      return Object.values(perRoundPtsL[u]||{}).reduce((a,b)=>a+b,0);
-    });
-    $("giniVal").textContent = `Gini: ${fmt(gini(totalsL))}`;
-
-    // végén: bankroll kiszámolás friss listával
-    recomputeBankroll();
   }
 
-  function recomputeBankroll(){
-    const tipsL = filterTipsForLeague();
-    const bankUser = $("bankUserSel").value;
-    const X = Math.max(1, Number($("bankStake").value)||0);
-    const list = tipsL.filter(t=> s(t.user)===bankUser);
-    let tips=0, stake=0, ret=0, wins=0;
-    list.forEach(t=>{
-      const m = state.matches[s(t.matchId)]; if(!m) return;
-      const p=tipChoice(t); const o=getOdds(m,p)||0; const ok=m.outcome && p===m.outcome;
-      tips += 1; stake += X; if (ok){ wins++; ret += o*X; }
-    });
-    const profit = ret - stake;
-    const roi = stake? profit/stake:0;
-    $("bankOutTips").textContent = tips;
-    $("bankOutStake").textContent = Math.round(stake);
-    $("bankOutReturn").textContent = Math.round(ret);
-    $("bankOutProfit").textContent = Math.round(profit);
-    $("bankOutRoi").textContent = fmt(roi);
-  }
-
-  // ===== helpers =====
-  function groupBy(arr, fn){ const m={}; for(const x of arr){ const k=fn(x); (m[k] ||= []).push(x); } return m; }
-  function quant(arr,q){ if(!arr.length) return 0; const p=(arr.length-1)*q; const i=Math.floor(p),f=p-i; if(!arr[i+1]) return arr[i]; return arr[i]*(1-f)+arr[i+1]*f; }
-  function gini(values){ const v=values.slice().map(x=>Math.max(0,Number(x)||0)).sort((a,b)=>a-b); const n=v.length||1; const sum=v.reduce((a,b)=>a+b,0)||1; let acc=0; for(let i=0;i<n;i++) acc+=v[i]*(i+1); return (2*acc)/(n*sum) - (n+1)/n; }
-  function mergeSeries(series){ if (!series.length) return []; const n=Math.max(...series.map(s=>s.length)); const out=[]; for(let i=0;i<n;i++){ let s=0,c=0; series.forEach(a=>{ if (i<a.length){ s+=a[i]; c++; } }); out.push(c? s/c:0); } return out; }
-  function drawSpark(el, arr){
-    if (!arr.length){ el.innerHTML=''; return; }
-    const w=120,h=32, min=Math.min(...arr), max=Math.max(...arr);
-    const sx=i=> (i/(Math.max(1,arr.length-1)))*(w-2)+1;
-    const sy=v=>{ if(max===min) return h/2; const t=(v-min)/(max-min); return h-2 - t*(h-4); };
-    let d=''; arr.forEach((v,i)=> d+=(i?' L':'M')+sx(i)+' '+sy(v));
-    el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"/></svg>`;
-  }
-  function fillRows(tbodyId, rows, highlightFirst=false){
-    const tb=$(tbodyId); if (!tb) return;
-    tb.innerHTML='';
-    rows.forEach((r,i)=>{ const tr=document.createElement('tr'); if(highlightFirst && i===0) tr.className='hl'; tr.innerHTML=r.map(c=>`<td>${c}</td>`).join(''); tb.appendChild(tr); });
-  }
-  function fillBiasTable(b){
-    const tb=$("tableBias"); tb.innerHTML='';
-    [['1','Hazai'],['X','Döntetlen'],['2','Vendég']].forEach(([k,lab])=>{
-      const p=b[k].pick, h=b[k].hit, sr=p? h/p*100:0;
-      tb.appendChild(row([lab, p, fmt(sr)+'%']));
-    });
-    function row(cells){ const tr=document.createElement('tr'); tr.innerHTML=cells.map(c=>`<td>${c}</td>`).join(''); return tr; }
-  }
-
-  function exportCsv(){
-    const tips = filterTipsByUi();
-    const rows = [['user','matchId','round','home','away','pick','odds','double','correct','points']];
-    for (const t of tips){
-      const m=state.matches[String(t.matchId)]; if(!m) continue;
-      const pick=tipChoice(t), o=getOdds(m,pick)||0, dbl=tipDouble(t);
-      const ok=m.outcome && pick===m.outcome; const pts=(ok && o)? (dbl?2:1)*o:0;
-      rows.push([t.user, t.matchId, matchRound(m), m.homeTeam||m.home||'', m.awayTeam||m.away||'', pick, o, dbl, ok, pts]);
-    }
-    const csv = rows.map(r=> r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='nb1-stats-export.csv'; a.click(); URL.revokeObjectURL(url);
-  }
+  // The line above accidentally broken during copy; fixing by rewriting the stats block cleanly:
 </script>
+
+<script type="module">
+  import { initializeApp as ia } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+</script>
+
 </body>
 </html>
