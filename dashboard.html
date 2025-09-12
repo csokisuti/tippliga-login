@@ -154,6 +154,21 @@
     .rules-body p{margin:0 0 10px}
     .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
     .rules-updated{font-size:12px;color:var(--muted,#64748b)}
+
+    /* ===== Onboarding (kötelező első beállítás) ===== */
+    .onb-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;display:none;align-items:center;justify-content:center}
+    .onb-backdrop.open{display:flex}
+    .onb-dialog{width:min(720px,92vw);background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.25);overflow:hidden}
+    .onb-head{padding:12px 14px;background:#f7f9fd;border-bottom:1px solid var(--line,#e6eaf1);font-weight:800}
+    .onb-body{padding:14px;display:grid;gap:12px}
+    .onb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .onb-foot{padding:12px 14px;background:#fff;border-top:1px solid var(--line,#e6eaf1);display:flex;justify-content:space-between;align-items:center}
+    .onb-note{font-size:12px;color:var(--muted,#64748b)}
+    .onb-actions{display:flex;gap:8px}
+    .onb-btn{border:1px solid var(--line,#e6eaf1);background:#e5e7eb;color:#111;padding:8px 12px;border-radius:10px;font-weight:700;cursor:not-allowed;opacity:.6}
+    .onb-btn.ok{background:var(--accent,#3b82f6);color:#fff;border-color:#dbeafe}
+    .onb-btn.enabled{cursor:pointer;opacity:1}
+    .onb-sel{border:1px solid var(--line,#e6eaf1);border-radius:10px;padding:8px 10px;min-width:260px}
   </style>
 
   <script type="module">
@@ -263,7 +278,7 @@
         else { a.D++; b.D++; a.Pts += 1; b.Pts += 1; }
 
         const k = [A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
-        H2H[k] ||= { [A]:{Pts:0,GF:0,GA:0}, [B]:{Pts:0,GF:0,GA:0} };
+        H2H[k] ||= { [A]:{Pts:0,GF:0,GA}, [B]:{Pts:0,GF:0,GA:0} };
         if (hg > ag){ H2H[k][A].Pts += 3; }
         else if (hg < ag){ H2H[k][B].Pts += 3; }
         else { H2H[k][A].Pts += 1; H2H[k][B].Pts += 1; }
@@ -401,6 +416,9 @@
             img.src = crest; img.alt = favoriteTeam; img.hidden = false;
           }
         }
+
+        /* ===== Onboarding trigger NB1 ===== */
+        await maybeForceFavoriteSetup(userRef);
 
         try{
           const now = new Date();
@@ -555,6 +573,62 @@
     closeRules?.addEventListener('click', closeRulesModal);
     closeRules2?.addEventListener('click', closeRulesModal);
     rulesModal?.addEventListener('click', (e)=>{ if(e.target===rulesModal) closeRulesModal(); });
+
+    /* ===== Onboarding (kötelező első beállítás) – NB1 ===== */
+    const onbEl = document.getElementById("onbFav");
+    const onbSel = document.getElementById("onbFavSelect");
+    const onbRem = document.getElementById("onbRem");
+    const onbSave= document.getElementById("onbFavSave");
+
+    // NB1 csapatlista a crestMap kulcsai alapján
+    onbSel.innerHTML = `<option value="">– Válassz csapatot –</option>` +
+      Object.keys(crestMap).map(t=>`<option value="${t}">${t}</option>`).join("");
+
+    onbSel?.addEventListener("change", ()=>{
+      const ok = !!onbSel.value;
+      if (onbSave){
+        onbSave.disabled = !ok;
+        onbSave.classList.toggle("enabled", ok);
+      }
+    });
+
+    async function maybeForceFavoriteSetup(userRef){
+      if (favoriteTeam) return; // már be van állítva → nem kell modál
+      // alapállapot
+      if (onbSave){
+        onbSave.disabled = true;
+        onbSave.classList.remove("enabled");
+      }
+      if (onbSel) onbSel.value = "";
+      if (onbRem) onbRem.checked = true;
+      if (onbEl) onbEl.classList.add("open");
+
+      if (onbSave){
+        onbSave.onclick = async ()=>{
+          if (!onbSel.value) return;
+          try{
+            await setDoc(userRef, {
+              favoriteTeam: onbSel.value,
+              reminderEmail: !!onbRem?.checked
+            }, { merge:true });
+
+            // lokális frissítés
+            favoriteTeam = onbSel.value;
+            const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD")
+              .replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-');
+            document.body.classList.add(themeClass);
+            const crest = crestMap[favoriteTeam];
+            if (crest){
+              const img = document.getElementById("favCrest");
+              img.src = crest; img.alt = favoriteTeam; img.hidden = false;
+            }
+            onbEl?.classList.remove("open");
+          }catch(e){
+            alert("Hiba a beállítás mentésekor. Próbáld újra.");
+          }
+        };
+      }
+    }
   </script>
 </head>
 <body>
@@ -651,7 +725,7 @@
       <!-- Admin a végén – ha 7 elem van, simán átcsúszhat 2. sorba -->
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -659,6 +733,32 @@
         </div>
       </a>
     </nav>
+
+    <!-- ÚJ: Kötelező első beállítás (kedvenc + emlékeztető) -->
+    <div id="onbFav" class="onb-backdrop" aria-modal="true" role="dialog" aria-labelledby="onbFavTitle">
+      <div class="onb-dialog">
+        <div class="onb-head" id="onbFavTitle">Üdv a TippLigában! 🎉</div>
+        <div class="onb-body">
+          <div>Először <strong>válaszd ki a kedvenc NB I csapatodat</strong>, és döntsd el, kérsz-e e-mailes emlékeztetőt a tippek leadására. <em>Később a Profil oldalon bármikor módosítható.</em></div>
+          <div class="onb-row">
+            <label for="onbFavSelect"><strong>Kedvenc csapat</strong></label>
+            <select id="onbFavSelect" class="onb-sel"></select>
+          </div>
+          <div class="onb-row">
+            <label style="display:flex;align-items:center;gap:10px;">
+              <input id="onbRem" type="checkbox" checked>
+              <span>E-mailes emlékeztetőt kérek</span>
+            </label>
+          </div>
+        </div>
+        <div class="onb-foot">
+          <span class="onb-note">Tipp: Ezeket később a <strong>Profil</strong> oldalon is módosíthatod.</span>
+          <div class="onb-actions">
+            <button id="onbFavSave" class="onb-btn ok" disabled>Mentés és folytatás</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ÚJ: Szabályzat modál HTML -->
     <div id="rulesModal" class="rules-modal" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
@@ -717,7 +817,7 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
 
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
     </svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
