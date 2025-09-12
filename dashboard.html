@@ -180,7 +180,6 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     import { computeLiveOrderFromMatches } from "./standings.js";
-    // <<< ÚJ: liga váltó modul bekötés
     import { initLeagueSwitcher, setLeagueBadge } from "./league-switcher.js";
 
     const firebaseConfig = {
@@ -372,8 +371,8 @@
     let chatLastSeen = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-      // <<< ÚJ: liga switcher felhúzás a fejlécbe
-      initLeagueSwitcher();
+      // Liga-váltó mount: logout ALATT
+      initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
       // Szabályzat modal init
       initRulesModal();
@@ -448,7 +447,7 @@
           const badge = document.getElementById("tipsBadge");
           if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
 
-          // <<< ÚJ: liga switcher badge NB1-re
+          // Liga switcher badge NB1-re
           setLeagueBadge('nb1', pending);
         }catch(e){ console.warn(e); }
 
@@ -643,13 +642,18 @@
         </div>
       </div>
       <div>
-        <!-- A league-switcher ide fog automatikusan beépülni a modulból -->
+        <!-- Kilépés -->
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
           </svg>
           Kilépés
         </button>
+
+        <!-- Liga-váltó: közvetlenül a Kilépés alatt -->
+        <div id="leagueSwitchMount" style="margin-top:10px;"></div>
+
+        <!-- Szabályzat -->
         <button id="openRules" class="btn-accent" style="display:block;margin-top:10px;">Szabályzat</button>
       </div>
     </div>
@@ -689,7 +693,7 @@
 
       <a class="nav-card" href="results.html">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Eredmények</span>
@@ -807,7 +811,7 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
     </svg>
-  <span id="chatFabBadge" class="fab-badge"></span>
+    <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
