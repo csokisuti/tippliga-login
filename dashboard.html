@@ -180,6 +180,8 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     import { computeLiveOrderFromMatches } from "./standings.js";
+    // <<< ÚJ: liga váltó modul bekötés
+    import { initLeagueSwitcher, setLeagueBadge } from "./league-switcher.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -370,7 +372,10 @@
     let chatLastSeen = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-      // --- Szabályzat modal init (FIX: DOMContentLoaded után fogjuk meg az elemeket)
+      // <<< ÚJ: liga switcher felhúzás a fejlécbe
+      initLeagueSwitcher();
+
+      // Szabályzat modal init
       initRulesModal();
 
       // Onboarding DOM elemek
@@ -438,8 +443,13 @@
           const myTipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail)));
           const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+
+          // NB1 nav-badge (marad)
           const badge = document.getElementById("tipsBadge");
           if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+
+          // <<< ÚJ: liga switcher badge NB1-re
+          setLeagueBadge('nb1', pending);
         }catch(e){ console.warn(e); }
 
         await buildComputedTable();
@@ -568,7 +578,6 @@
       }
     }
 
-    // ---- Szabályzat modál logika (DOM után kötjük fel) ----
     function initRulesModal(){
       const rulesModal = document.getElementById('rulesModal');
       const openRulesBtn = document.getElementById('openRules');
@@ -584,7 +593,6 @@
       rulesModal?.addEventListener('click', (e)=>{ if(e.target===rulesModal) closeRulesModal(); });
     }
 
-    // Kötelező első beállítás logika (felugró)
     async function maybeForceFavoriteSetup(userRef, refs){
       const { onbEl, onbSel, onbRem, onbSave } = refs || {};
       if (favoriteTeam) return;
@@ -635,6 +643,7 @@
         </div>
       </div>
       <div>
+        <!-- A league-switcher ide fog automatikusan beépülni a modulból -->
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
@@ -798,7 +807,7 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
     </svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
+  <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
