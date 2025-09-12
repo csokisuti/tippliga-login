@@ -630,7 +630,7 @@
       if (crowdPick===m.outcome) crowdWins++;
       let tot=0; list.forEach(t=>{ const p=tipChoice(t), mult=tipDouble(t)?2:1, o=getOdds(m,p)||0; const pts=(p===m.outcome && o)? o*mult:0; tot+=pts; });
       avgPts += (list.length? tot/list.length:0);
-      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome és oC) crowdPts += oC;
+      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome && oC) crowdPts += oC;
     }
     fillRows("tableCrowd", [
       ['Crowd-pick találati arány', fmt(games? crowdWins/games*100:0)+'%'],
@@ -816,3 +816,4 @@
 </script>
 </body>
 </html>
+
