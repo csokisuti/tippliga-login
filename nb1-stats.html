@@ -454,12 +454,25 @@
     // ======= EGYEDI BLOKK =======
     const tips   = filterTipsByUi();
     const byUser = groupBy(tips, t=> s(t.user));
+    const rds    = selectedRounds();
 
-    // KPI-k és táblákhoz aggregálás
-    const rds = selectedRounds();
+    // 1) user×round pontok előbb
     const perRoundPts = {};
-    const sparkSeries=[], bias={ '1':{pick:0,hit:0}, 'X':{pick:0,hit:0}, '2':{pick:0,hit:0} };
-    let sumForm=0,cntForm=0, dblHit=0,dblAll=0,dblPts=0,basePts=0;
+    tips.forEach(t=>{
+      const m = state.matches[s(t.matchId)]; if (!m) return;
+      const pick = tipChoice(t); if (!pick) return;
+      const ok   = !!m.outcome && pick===m.outcome;
+      const mult = tipDouble(t) ? 2 : 1;
+      const o    = getOdds(m, pick) || 0;
+      const pts  = (ok && o) ? o*mult : 0;
+      const r    = matchRound(m);
+      (perRoundPts[t.user] ||= {});
+      perRoundPts[t.user][r] = (perRoundPts[t.user][r]||0) + pts;
+    });
+
+    // 2) KPI aggregálók + bias + kedvenc csapat
+    const bias={ '1':{pick:0,hit:0}, 'X':{pick:0,hit:0}, '2':{pick:0,hit:0} };
+    let dblHit=0,dblAll=0,dblPts=0,basePts=0;
     let riskAll=0,riskWin=0, riskCountAll=0,riskCountWin=0;
     let upsetWins=0,upsetAll=0,upsetPts=0;
     const teamRoi=new Map();
@@ -471,47 +484,58 @@
     };
     const bucket=(o)=> o<=1.8?'low':(o<=2.5?'mid1':(o<=3.5?'mid2':'high'));
 
-    const usersInView = (player==='all' ? Object.keys(byUser) : [player]);
-    for (const u of usersInView){
-      const arr = rds.map(r => (perRoundPts[u]?.[r]||0));
-      sparkSeries.push(arr);
+    const favAgg = { team:'', tips:0, wins:0, pts:0 };
+    if (player!=='all') favAgg.team = state.users[player]?.fav || '';
 
-      for (const t of (byUser[u]||[])){
-        const m = state.matches[s(t.matchId)]; if (!m) continue;
-        const pick = tipChoice(t); if (!pick) continue;
-        const o    = getOdds(m, pick) || 0;
-        const ok   = !!m.outcome && pick===m.outcome;
-        const mult = tipDouble(t) ? 2 : 1;
-        const pts  = (ok && o) ? o*mult : 0;
+    tips.forEach(t=>{
+      const m = state.matches[s(t.matchId)]; if (!m) return;
+      const pick = tipChoice(t); if (!pick) return;
+      const o    = getOdds(m, pick) || 0;
+      const ok   = !!m.outcome && pick===m.outcome;
+      const mult = tipDouble(t) ? 2 : 1;
+      const pts  = (ok && o) ? o*mult : 0;
 
-        // forma
-        const r = matchRound(m);
-        (perRoundPts[u] ||= {}); perRoundPts[u][r] = (perRoundPts[u][r]||0) + pts;
+      // duplák + kockázat
+      if (tipDouble(t)){ dblAll++; if (ok) dblHit++; if (pts) dblPts += pts; }
+      basePts += pts;
+      if (o){ riskAll+=o; riskCountAll++; if (ok){ riskWin+=o; riskCountWin++; } }
 
-        // kpi számolók
-        sumForm += pts; cntForm++;
-        if (tipDouble(t)){ dblAll++; if (ok) dblHit++; if (pts) dblPts += pts; }
-        basePts += pts;
-        if (o){ riskAll+=o; riskCountAll++; if (ok){ riskWin+=o; riskCountWin++; } }
-        const maxO = Math.max(getOdds(m,'1')||0, getOdds(m,'X')||0, getOdds(m,'2')||0);
-        if (o && Math.abs(o-maxO)<1e-9){ upsetAll++; if (ok){ upsetWins++; upsetPts += pts; } }
-        bias[pick].pick++; if (ok) bias[pick].hit++;
+      // upset
+      const maxO = Math.max(getOdds(m,'1')||0, getOdds(m,'X')||0, getOdds(m,'2')||0);
+      if (o && Math.abs(o-maxO)<1e-9){ upsetAll++; if (ok){ upsetWins++; upsetPts += pts; } }
 
-        // team ROI
-        function addTeam(team, w){ const obj=teamRoi.get(team)||{tips:0,pts:0}; obj.tips+=w; obj.pts+=pts*w; teamRoi.set(team,obj); }
-        if (pick==='1') addTeam(m.homeTeam||m.home||'',1);
-        else if (pick==='2') addTeam(m.awayTeam||m.away||'',1);
-        else if (pick==='X'){ addTeam(m.homeTeam||m.home||'',.5); addTeam(m.awayTeam||m.away||'',.5); }
+      // 1/X/2 bias
+      bias[pick].pick++; if (ok) bias[pick].hit++;
 
-        // odds-range
-        if (o){ const b=rangeAgg[bucket(o)]; b.tips++; if (ok){ b.wins++; b.pts+=pts; b.ret+=o; } b.stake+=1; }
+      // Team ROI (X = 0.5-0.5)
+      function addTeam(team, w){ const obj=teamRoi.get(team)||{tips:0,pts:0}; obj.tips+=w; obj.pts+=pts*w; teamRoi.set(team,obj); }
+      if (pick==='1') addTeam(m.homeTeam||m.home||'',1);
+      else if (pick==='2') addTeam(m.awayTeam||m.away||'',1);
+      else if (pick==='X'){ addTeam(m.homeTeam||m.home||'',.5); addTeam(m.awayTeam||m.away||'',.5); }
+
+      // Odds-range (flat modell)
+      if (o){ const b = rangeAgg[bucket(o)]; b.tips++; if (ok){ b.wins++; b.pts+=pts; b.ret += o; } b.stake += 1; }
+
+      // Kedvenc csapatos bias
+      if (player!=='all' && favAgg.team){
+        const isFavMatch = (s(m.homeTeam||m.home||'')===favAgg.team) || (s(m.awayTeam||m.away||'')===favAgg.team);
+        if (isFavMatch){
+          favAgg.tips += 1;
+          if (ok) favAgg.wins += 1;
+          favAgg.pts += pts;
+        }
       }
-    }
+    });
 
-    const formAvg = cntForm ? (sumForm/cntForm) : 0;
+    // 3) Forma-index = átlag pont / forduló, a per-round sorozatokból
+    const usersInView = (player==='all' ? Object.keys(byUser) : [player]);
+    const sparkSeries = usersInView.map(u => rds.map(r => (perRoundPts[u]?.[r]||0)));
+    const merged = mergeSeries(sparkSeries);
+    const formAvg = merged.length ? (merged.reduce((a,b)=>a+b,0) / merged.length) : 0;
     $("kpiForm").textContent = `${fmt(formAvg)} / ford.`;
-    drawSpark($("sparkForm"), mergeSeries(sparkSeries));
+    drawSpark($("sparkForm"), merged);
 
+    // 4) Egyéb KPI-k és táblák
     const dblRate = dblAll? (dblHit/dblAll*100):0;
     $("kpiDouble").textContent = dblAll? `${fmt(dblRate)}%` : '—';
     $("noteDouble").textContent = `${dblHit}/${dblAll} talált • duplából jött pontok: ${fmt(basePts? dblPts/basePts*100:0)}%`;
@@ -551,7 +575,7 @@
       ['Flat + duplák 2 egység', fmt(hitPct)+'%', fmt(mixStake),  fmt(mixReturn),  fmt(mixProfit),  fmt(mixRoi)]
     ]);
 
-    // Bankroll dropdown: ha egy konkrét játékos van kiválasztva, azt tesszük alapértelmezettnek
+    // Bankroll dropdown feltöltés és számítás
     const bankSel = $("bankUserSel");
     const prevVal = bankSel.value;
     bankSel.innerHTML = "";
@@ -566,6 +590,17 @@
     }
     bankSel.onchange = recomputeBankroll;
     recomputeBankroll();
+
+    // ---- Kedvenc csapat (Bias index) tábla tényleges kitöltése ----
+    const favRows = [];
+    if (player==='all' || !favAgg.team){
+      favRows.push(['—','—','—','—']);
+    } else {
+      const hit = favAgg.tips ? favAgg.wins/favAgg.tips*100 : 0;
+      const avg = favAgg.tips ? favAgg.pts/favAgg.tips : 0;
+      favRows.push([favAgg.team, favAgg.tips, fmt(hit)+'%', fmt(avg)]);
+    }
+    fillRows("tableFavBias", favRows);
 
     // ======= LIGA BLOKK =======
     const tipsL   = filterTipsForLeague();
@@ -595,7 +630,7 @@
       if (crowdPick===m.outcome) crowdWins++;
       let tot=0; list.forEach(t=>{ const p=tipChoice(t), mult=tipDouble(t)?2:1, o=getOdds(m,p)||0; const pts=(p===m.outcome && o)? o*mult:0; tot+=pts; });
       avgPts += (list.length? tot/list.length:0);
-      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome && oC) crowdPts += oC;
+      const oC = getOdds(m,crowdPick)||0; if (crowdPick===m.outcome és oC) crowdPts += oC;
     }
     fillRows("tableCrowd", [
       ['Crowd-pick találati arány', fmt(games? crowdWins/games*100:0)+'%'],
@@ -775,7 +810,7 @@
       rows.push([t.user, t.matchId, matchRound(m), m.homeTeam||m.home||'', m.awayTeam||m.away||'', pick, o, dbl, ok, pts]);
     }
     const csv = rows.map(r=> r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download='nb1-stats-export.csv'; a.click(); URL.revokeObjectURL(url);
   }
 </script>
