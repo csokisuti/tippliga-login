@@ -47,7 +47,7 @@
     .chat-list{overflow:auto;padding:8px 10px}
     .chat-empty{color:var(--muted,#64748b);font-size:13px;padding:8px 10px}
     .msg{padding:8px 10px;border-bottom:1px solid var(--line,#e6eaf1);display:flex;gap:8px;align-items:flex-start}
-    .msg .meta{font-size:12px;color:var(--muted,#64748b);margin-bottom:2px}
+    .msg .meta{font-size:12px;color:#64748b;margin-bottom:2px}
     .msg .text{white-space:pre-wrap;word-break:break-word}
     .msg .del{margin-left:auto;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:2px 8px;border-radius:8px;font-size:12px;cursor:pointer;display:none}
     .msg:hover .del{display:inline-block}
@@ -71,7 +71,7 @@
     .rules-body{padding:14px;overflow:auto;line-height:1.5;color:#111;white-space:pre-wrap}
     .rules-body p{margin:0 0 10px}
     .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
-    .rules-updated{font-size:12px;color:var(--muted,#64748b)}
+    .rules-updated{font-size:12px;color:#64748b}
 
     .onb-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;display:none;align-items:center;justify-content:center}
     .onb-backdrop.open{display:flex}
@@ -80,7 +80,7 @@
     .onb-body{padding:14px;display:grid;gap:12px}
     .onb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .onb-foot{padding:12px 14px;background:#fff;border-top:1px solid var(--line,#e6eaf1);display:flex;justify-content:space-between;align-items:center}
-    .onb-note{font-size:12px;color:var(--muted,#64748b)}
+    .onb-note{font-size:12px;color:#64748b}
     .onb-actions{display:flex;gap:8px}
     .onb-btn{border:1px solid var(--line,#e6eaf1);background:#e5e7eb;color:#111;padding:8px 12px;border-radius:10px;font-weight:700;cursor:not-allowed;opacity:.6}
     .onb-btn.ok{background:var(--accent,#3b82f6);color:#fff;border-color:#dbeafe}
@@ -93,6 +93,8 @@
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { computeLiveOrderFromMatches } from "./standings.js";
+    /* ÚJ: liga-váltó modul */
+    import { initLeagueSwitcher, setLeagueBadge } from "./league-switcher.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -267,6 +269,9 @@
     let favouriteTeamucl=""; let chatLastSeen=null;
 
     document.addEventListener("DOMContentLoaded",()=>{
+      /* Liga-váltó mount: Kilépés ALATT, UCL-oldalon */
+      initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
+
       onAuthStateChanged(auth,async(user)=>{
         if(!user){window.location.href="login.html";return}
         currentUserEmail=user.email;
@@ -312,7 +317,7 @@
           startNavTop8Countdown(isLocked?null:until);
         }catch(e){ startNavTop8Countdown(null); }
 
-        // Közelgő BL meccsek tipp badge
+        // Közelgő BL meccsek tipp badge + liga-váltó badge (UCL)
         try{
           const now=new Date();
           const upcomingSnap=await getDocs(query(collection(db,"ucl_matches"),where("startTime",">=",now)));
@@ -322,6 +327,8 @@
           const pending=upcoming.filter(m=>!tippedIds.has(m.id)).length;
           const badge=document.getElementById("tipsBadge");
           if(pending>0){badge.textContent=pending;badge.hidden=false}else{badge.hidden=true}
+          /* ÚJ: UCL jelvény a switcherben */
+          setLeagueBadge('ucl', pending);
         }catch(e){console.warn(e)}
 
         await buildComputedTable();
@@ -347,7 +354,7 @@
 
       document.getElementById("logout").addEventListener("click",()=>{signOut(auth).then(()=>window.location.href="login.html")});
 
-      // Szabályzat modál (biztos DOM után)
+      // Szabályzat modál
       const rulesModal=document.getElementById('rulesModal');
       const openRulesBtn=document.getElementById('openRules');
       const closeRules=document.getElementById('closeRules');
@@ -506,6 +513,10 @@
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
           Kilépés
         </button>
+
+        <!-- Liga-váltó: közvetlenül a Kilépés alatt -->
+        <div id="leagueSwitchMount" style="margin-top:10px;"></div>
+
         <button id="openRules" class="btn-accent" style="display:block;margin-top:10px;">Szabályzat</button>
       </div>
     </div>
@@ -527,7 +538,7 @@
         <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
       <a class="nav-card" href="results_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg></div>
         <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
       </a>
       <a class="nav-card" href="leaderboard_ucl.html">
@@ -582,7 +593,7 @@
     </div>
   </div>
 
-  <!-- Szabályzat modál (BL oldalon is elérhető; tartalmát majd BL-re szabhatjuk) -->
+  <!-- Szabályzat modál -->
   <div id="rulesModal" class="rules-modal" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
     <div class="rules-dialog">
       <div class="rules-head">
