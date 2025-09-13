@@ -20,10 +20,14 @@
       .content-grid{ grid-template-columns: 1fr; }
     }
 
-    .header{ display:flex; align-items:center; justify-content:space-between; }
-    .header-left{ display:flex; align-items:center; gap:12px; }
+    .header{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
+    .header-left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
+
+    /* liga-váltó balra, a cím mellé */
+    .league-switch-left{ margin-left:8px; }
+    @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0; } }
 
     .nav-grid{
       display:grid;
@@ -57,6 +61,14 @@
       overflow:hidden;
     }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+
+    /* tabella kártya – gomb a cím mellé */
+    .card-head-row{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd;
+    }
+    .card-head-row h3{ margin:0; padding:0; border:0; background:transparent; }
+
     .table-wrap{ overflow:auto; }
     .pill-badge{
       display:inline-flex; align-items:center; justify-content:center;
@@ -136,6 +148,7 @@
       background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
       font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
       box-shadow:0 6px 18px rgba(0,0,0,.08);
+      text-decoration:none;
     }
     .btn-accent:hover{ filter:brightness(.95); }
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
@@ -303,7 +316,7 @@
       try{
         const liveOrder = computeLiveOrderFromMatches(matchesForModule, teams);
         window.liveStandingsOrder = liveOrder;
-        localStorage.setItem("liveStandingsOrder", JSON.stringify(liveOrder));
+        localStorage.setItem("liveStandingsOrder", JSON.stringify(liveStandingsOrder));
       }catch(e){
         console.warn("Live standings (module) compute failed:", e);
       }
@@ -371,7 +384,7 @@
     let chatLastSeen = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Liga-váltó mount: logout ALATT
+      // Liga-váltó mount: BAL SZÉL – cím mellett
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
       // Szabályzat modal init
@@ -624,18 +637,18 @@
           <h1>NB1 TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
+        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BAL OLDALON A CÍM MELLETT -->
+        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
+
       <div>
-        <!-- Kilépés -->
+        <!-- Kilépés – a régi liga-váltó helyén, jobb oldalon -->
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
           </svg>
           Kilépés
         </button>
-
-        <!-- Liga-váltó: közvetlenül a Kilépés alatt -->
-        <div id="leagueSwitchMount" style="margin-top:10px;"></div>
 
         <!-- Szabályzat -->
         <button id="openRules" class="btn-accent" style="display:block;margin-top:10px;">Szabályzat</button>
@@ -780,7 +793,11 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
 
     <div class="content-grid">
       <section class="card table-wrap">
-        <h3>NB I tabella</h3>
+        <!-- Fejléc sor gombbal a jobb oldalon -->
+        <div class="card-head-row">
+          <h3>NB I tabella</h3>
+          <a id="statsLink" class="btn-accent" href="nb1-stats.html">Tippjáték statisztikák</a>
+        </div>
         <div id="tableContainer"></div>
       </section>
 
