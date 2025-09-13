@@ -406,6 +406,19 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
 
       // Eventek
       document.getElementById('matchForm').addEventListener('submit', onAddMatch);
+
+      // --- NEW: startTime előtöltése az utoljára használt értékkel (localStorage) ---
+      try {
+        const lastStart = localStorage.getItem('ucl_lastStartTime');
+        if (lastStart) {
+          const stEl = document.getElementById('startTime');
+          if (stEl) stEl.value = lastStart; // pl. "2025-09-01T20:45"
+        }
+      } catch (err) {
+        console.warn('lastStartTime read failed:', err);
+      }
+      // --- END NEW ---
+
       const wrh = document.getElementById('withResultHeader');
       if(wrh){ wrh.onclick=()=>{ const c=document.getElementById('withResultContent'); c.style.display = c.style.display==='none' ? 'block':'none'; }; }
 
@@ -557,7 +570,13 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
 
     async function onAddMatch(e){
       e.preventDefault();
-      const startTime = Timestamp.fromDate(new Date(document.getElementById('startTime').value));
+
+      // --- NEW: mentsük el a legutóbbi startTime értéket (datetime-local formátum) ---
+      const startStr = document.getElementById('startTime').value; // pl. "2025-09-01T20:45"
+      try { localStorage.setItem('ucl_lastStartTime', startStr); } catch (err) { console.warn('lastStartTime save failed:', err); }
+      // --- END NEW ---
+
+      const startTime = Timestamp.fromDate(new Date(startStr));
       const home = document.getElementById('homeTeam').value;
       const away = document.getElementById('awayTeam').value;
       const round = document.getElementById('roundId').value;
@@ -574,6 +593,14 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       });
       alert('UCL meccs mentve');
       e.target.reset();
+
+      // --- NEW: reset után visszaírjuk ugyanazt az időpontot a következő felvitelhez ---
+      try {
+        const stEl = document.getElementById('startTime');
+        if (stEl) stEl.value = startStr;
+      } catch (err) { /* no-op */ }
+      // --- END NEW ---
+
       await loadMatches();
       await loadResults();
     }
