@@ -31,7 +31,7 @@ button {
 }
 button:hover { filter: brightness(0.96); }
 
-/* ===== TÉMÁK – mindegyik beállít saját --accent + háttér ===== */
+/* ===== TÉMÁK – NB I (változatlan) ===== */
 body.theme-debreceni-vsc      { --accent:#da1a32; --bg-soft:#ffecee; --text:#251015; }
 body.theme-diosgyori-vtk      { --accent:#c00000; --bg-soft:#fff1f1; --text:#241010; }
 body.theme-ferencvaros        { --accent:#0a7d44; --bg-soft:#eaf7ef; --text:#0d2419; }
@@ -44,42 +44,255 @@ body.theme-paksi-fc           { --accent:#009933; --bg-soft:#e9f6ef; --text:#0f2
 body.theme-puskas-akademia    { --accent:#ffc72c; --bg-soft:#fff9e8; --text:#1d1602; }
 body.theme-ujpest-fc          { --accent:#9d4edd; --bg-soft:#f6f0fb; --text:#1b1024; }
 body.theme-zalaegerszegi-te-fc{ --accent:#0047ab; --bg-soft:#eaf1ff; --text:#0c1a33; }
-body.theme-ajax            { --accent:#D2122E; --bg-soft:#ffeaea; --text:#40010a; } /* Ajax red :contentReference[oaicite:10]{index=10} */
-body.theme-psg             { --accent:#004170; --bg-soft:#e0eef9; --text:#0f1d2a; } /* PSG blue :contentReference[oaicite:11]{index=11} */
-body.theme-real-madrid     { --accent:#FEBE10; --bg-soft:#fff8cc; --text:#4b4000; } /* Real Madrid gold :contentReference[oaicite:12]{index=12} */
-body.theme-liverpool       { --accent:#C8102E; --bg-soft:#ffe8ea; --text:#400c11; } /* Liverpool red :contentReference[oaicite:13]{index=13} */
-body.theme-barcelona      { --accent:#A50044; --bg-soft:#fce5eb; --text:#2d001f; }  /* Barca maroon */
-body.theme-bayern         { --accent:#DC052D; --bg-soft:#ffe7ea; --text:#3f000a; }  /* Bayern red */
-body.theme-manchester-city{ --accent:#6CABDD; --bg-soft:#e5f4fb; --text:#0f2a38; }  /* City sky blue */
-body.theme-juventus       { --accent:#000000; --bg-soft:#f0f0f0; --text:#1a1a1a; }  /* Juventus black */
-body.theme-inter          { --accent:#00315F; --bg-soft:#e4ecf5; --text:#090f18; }  /* Inter blue */
-body.theme-atletico-madrid{ --accent:#E3000F; --bg-soft:#ffeaea; --text:#3a0a05; }  /* Atletico red */
-body.theme-benfica        { --accent:#E80C15; --bg-soft:#ffecec; --text:#3a0809; }
-body.theme-arsenal        { --accent:#EF0107; --bg-soft:#ffecec; --text:#400908; }
-body.theme-chelsea        { --accent:#034694; --bg-soft:#e5eef9; --text:#0d1e2e; }
-body.theme-dortmund       { --accent:#FDE100; --bg-soft:#fffde5; --text:#3f3700; }
-body.theme-eintracht      { --accent:#000000; --bg-soft:#f5f5f5; --text:#1a1a1a; }
-body.theme-club-brugge    { --accent:#0066cc; --bg-soft:#e7f2ff; --text:#0d1e2e; }
-body.theme-basel          { --accent:#ff0800; --bg-soft:#ffe5e5; --text:#400000; }
-body.theme-copenhagen     { --accent:#00529F; --bg-soft:#e5eefc; --text:#0d1e2d; }
-body.theme-kairat         { --accent:#006d2c; --bg-soft:#e9f6eb; --text:#0d190f; }
-body.theme-fenerbahce     { --accent:#005a3c; --bg-soft:#e9fcef; --text:#0f1e15; }
-body.theme-bodo-glimt     { --accent:#F2D355; --bg-soft:#fdf9e5; --text:#3a3600; }
-body.theme-monaco         { --accent:#E2001A; --bg-soft:#ffecec; --text:#40000a; }
-body.theme-newcastle      { --accent:#241f20; --bg-soft:#f5f5f5; --text:#1a1a1a; }
-body.theme-olympiacos     { --accent:#E41B17; --bg-soft:#ffecec; --text:#400908; }
-body.theme-marseille      { --accent:#0055A4; --bg-soft:#e5eefc; --text:#0d1e2e; }
-body.theme-pafos          { --accent:#008FE5; --bg-soft:#e5f4fd; --text:#0d1e2d; }
-body.theme-qarabag        { --accent:#158916; --bg-soft:#ebf9eb; --text:#0f1d10; }
-body.theme-red-star       { --accent:#DF1C24; --bg-soft:#ffecec; --text:#400908; }
-body.theme-sturm-graz     { --accent:#F58220; --bg-soft:#fff5eb; --text:#3a1e00; }
-body.theme-sporting       { --accent:#006A40; --bg-soft:#e8f7e9; --text:#0f1e13; }
-body.theme-napoli         { --accent:#27A9E1; --bg-soft:#e5f8fd; --text:#0d1f26; }
-body.theme-tottenham      { --accent:#132257; --bg-soft:#e5e9f5; --text:#0f1320; }
-body.theme-villarreal     { --accent:#FCCF01; --bg-soft:#fff9e0; --text:#3a3200; }
-body.theme-usg            { --accent:#005231; --bg-soft:#e9f6ef; --text:#0f1e17; } /* Union SG dark green */
 
-/* derivált árnyalatok az aktuális accentből (egyszerű, opacity-alapú) */
+/* ===== TÉMÁK – BL: aliasokkal (több név ugyanarra a témára) ===== */
+
+/* Ajax */
+body.theme-ajax,
+body.theme-afc-ajax {
+  --accent:#D2122E; --bg-soft:#ffeaea; --text:#40010a;
+}
+
+/* Paris Saint-Germain */
+body.theme-psg,
+body.theme-paris-saint-germain {
+  --accent:#004170; --bg-soft:#e0eef9; --text:#0f1d2a;
+}
+
+/* Real Madrid */
+body.theme-real-madrid,
+body.theme-real-madrid-cf {
+  --accent:#FEBE10; --bg-soft:#fff8cc; --text:#4b4000;
+}
+
+/* Liverpool */
+body.theme-liverpool,
+body.theme-liverpool-fc {
+  --accent:#C8102E; --bg-soft:#ffe8ea; --text:#400c11;
+}
+
+/* Barcelona */
+body.theme-barcelona,
+body.theme-fc-barcelona {
+  --accent:#A50044; --bg-soft:#fce5eb; --text:#2d001f;
+}
+
+/* Bayern München */
+body.theme-bayern,
+body.theme-bayern-munchen,
+body.theme-bayern-münchen,
+body.theme-fc-bayern {
+  --accent:#DC052D; --bg-soft:#ffe7ea; --text:#3f000a;
+}
+
+/* Manchester City */
+body.theme-manchester-city,
+body.theme-manchester-city-fc {
+  --accent:#6CABDD; --bg-soft:#e5f4fb; --text:#0f2a38;
+}
+
+/* Juventus */
+body.theme-juventus,
+body.theme-juventus-fc {
+  --accent:#000000; --bg-soft:#f0f0f0; --text:#1a1a1a;
+}
+
+/* Internazionale */
+body.theme-inter,
+body.theme-internazionale,
+body.theme-inter-milan,
+body.theme-fc-internazionale {
+  --accent:#00315F; --bg-soft:#e4ecf5; --text:#090f18;
+}
+
+/* Atlético Madrid */
+body.theme-atletico-madrid,
+body.theme-atlético-madrid,
+body.theme-club-atletico-de-madrid {
+  --accent:#E3000F; --bg-soft:#ffeaea; --text:#3a0a05;
+}
+
+/* Benfica */
+body.theme-benfica,
+body.theme-sl-benfica,
+body.theme-sport-lisboa-e-benfica {
+  --accent:#E80C15; --bg-soft:#ffecec; --text:#3a0809;
+}
+
+/* Arsenal */
+body.theme-arsenal,
+body.theme-arsenal-fc {
+  --accent:#EF0107; --bg-soft:#ffecec; --text:#400908;
+}
+
+/* Chelsea */
+body.theme-chelsea,
+body.theme-chelsea-fc {
+  --accent:#034694; --bg-soft:#e5eef9; --text:#0d1e2e;
+}
+
+/* Borussia Dortmund */
+body.theme-dortmund,
+body.theme-borussia-dortmund,
+body.theme-bvb {
+  --accent:#FDE100; --bg-soft:#fffde5; --text:#3f3700;
+}
+
+/* Eintracht Frankfurt */
+body.theme-eintracht,
+body.theme-eintracht-frankfurt {
+  --accent:#000000; --bg-soft:#f5f5f5; --text:#1a1a1a;
+}
+
+/* Club Brugge / Bruges */
+body.theme-club-brugge,
+body.theme-club-bruges {
+  --accent:#0066cc; --bg-soft:#e7f2ff; --text:#0d1e2e;
+}
+
+/* FC Basel (ha marad) */
+body.theme-basel,
+body.theme-fc-basel {
+  --accent:#ff0800; --bg-soft:#ffe5e5; --text:#400000;
+}
+
+/* FC Köbenhavn / Copenhagen */
+body.theme-copenhagen,
+body.theme-fc-kobenhavn,
+body.theme-fc-københavn {
+  --accent:#00529F; --bg-soft:#e5eefc; --text:#0d1e2d;
+}
+
+/* Galatasaray */
+body.theme-galatasaray,
+body.theme-galatasaray-sk {
+  --accent:#a90432; --bg-soft:#fde9ef; --text:#300713;
+}
+
+/* Bodø/Glimt */
+body.theme-bodo-glimt,
+body.theme-bodø-glimt {
+  --accent:#F2D355; --bg-soft:#fdf9e5; --text:#3a3600;
+}
+
+/* Monaco */
+body.theme-monaco,
+body.theme-as-monaco {
+  --accent:#E2001A; --bg-soft:#ffecec; --text:#40000a;
+}
+
+/* Napoli */
+body.theme-napoli,
+body.theme-ssc-napoli {
+  --accent:#27A9E1; --bg-soft:#e5f8fd; --text:#0d1f26;
+}
+
+/* Newcastle United */
+body.theme-newcastle,
+body.theme-newcastle-united {
+  --accent:#241f20; --bg-soft:#f5f5f5; --text:#1a1a1a;
+}
+
+/* Olympiakosz Pireusz / Olympiacos */
+body.theme-olympiacos,
+body.theme-olympiakosz-pireusz,
+body.theme-olympiacos-fc {
+  --accent:#E41B17; --bg-soft:#ffecec; --text:#400908;
+}
+
+/* Olympique Marseille */
+body.theme-marseille,
+body.theme-olympique-marseille {
+  --accent:#0055A4; --bg-soft:#e5eefc; --text:#0d1e2e;
+}
+
+/* Pafosz / Pafos */
+body.theme-pafos,
+body.theme-pafosz,
+body.theme-pafos-fc {
+  --accent:#008FE5; --bg-soft:#e5f4fd; --text:#0d1e2d;
+}
+
+/* Qarabag */
+body.theme-qarabag,
+body.theme-qarabaq,
+body.theme-qarabag-fk {
+  --accent:#158916; --bg-soft:#ebf9eb; --text:#0f1d10;
+}
+
+/* Slavia Praha */
+body.theme-slavia-praha,
+body.theme-sk-slavia-praha {
+  --accent:#D2122E; --bg-soft:#ffeaea; --text:#40010a;
+}
+
+/* Bayer Leverkusen */
+body.theme-bayer-leverkusen {
+  --accent:#e30613; --bg-soft:#ffe9eb; --text:#3f080b;
+}
+
+/* Sporting CP */
+body.theme-sporting,
+body.theme-sporting-cp,
+body.theme-sporting-clube-de-portugal {
+  --accent:#006A40; --bg-soft:#e8f7e9; --text:#0f1e13;
+}
+
+/* Atalanta */
+body.theme-atalanta,
+body.theme-atalanta-bc {
+  --accent:#00529F; --bg-soft:#e5eefc; --text:#0d1e2e;
+}
+
+/* Athletic Bilbao */
+body.theme-athletic-bilbao,
+body.theme-athletic-club {
+  --accent:#cc0018; --bg-soft:#ffe9ec; --text:#30060c;
+}
+
+/* PSV */
+body.theme-psv,
+body.theme-psv-eindhoven {
+  --accent:#cc0000; --bg-soft:#fdecec; --text:#2a1010;
+}
+
+/* Tottenham Hotspur */
+body.theme-tottenham,
+body.theme-tottenham-hotspur {
+  --accent:#132257; --bg-soft:#e5e9f5; --text:#0f1320;
+}
+
+/* Villarreal */
+body.theme-villarreal,
+body.theme-villarreal-cf {
+  --accent:#FCCF01; --bg-soft:#fff9e0; --text:#3a3200;
+}
+
+/* Union Saint-Gilloise */
+body.theme-usg,
+body.theme-union-saint-gilloise,
+body.theme-royale-union-saint-gilloise {
+  --accent:#005231; --bg-soft:#e9f6ef; --text:#0f1e17;
+}
+
+/* Kajrat Almati (Kairat Almaty) */
+body.theme-kairat,
+body.theme-kajrat-almati,
+body.theme-fc-kairat {
+  --accent:#006d2c; --bg-soft:#e9f6eb; --text:#0d190f;
+}
+
+/* ===== Egyéb korábbiak (ha voltak) ===== */
+body.theme-red-star,
+body.theme-crvena-zvezda {
+  --accent:#DF1C24; --bg-soft:#ffecec; --text:#400908;
+}
+body.theme-sturm-graz,
+body.theme-sk-sturm-graz {
+  --accent:#F58220; --bg-soft:#fff5eb; --text:#3a1e00;
+}
+
+/* ===== Derivált árnyalatok az aktuális accentből ===== */
 body[class^="theme-"]{
   --accent-weak: color-mix(in oklab, var(--accent) 20%, white);
   --accent-strong: color-mix(in oklab, var(--accent) 30%, white);
