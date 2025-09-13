@@ -126,6 +126,8 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
+    const TIP_HISTORY = "tipHistory"; // AUDIT kollekció (NB1-hez azonos)
+
     /* Címerek – BL mezőny */
     const crestMap = {
       "Ajax": "ucl_crest/ajax.png",
@@ -182,6 +184,14 @@
     const tipChoice = t => (t?.choice ?? t?.tip ?? "");
     const tipDouble = t => !!(t?.double ?? t?.isDouble);
     const tipTsMs   = t => t?.updatedAt?.toMillis?.() || t?.createdAt?.toMillis?.() || t?.timestamp?.toMillis?.() || 0;
+
+    /* Helper az audit sorhoz */
+    const sanitizeEmail = (e)=> String(e).replace(/[^a-zA-Z0-9._-]/g,'_');
+    const oddsSnapshotFromMatch = (m)=> m ? ({
+      "1": m?.odds?.["1"] ?? m?.odds1 ?? null,
+      "X": m?.odds?.["X"] ?? m?.oddsX ?? null,
+      "2": m?.odds?.["2"] ?? m?.odds2 ?? null
+    }) : null;
 
     /* === Meccsnap kulcsok === */
     const pad2 = n => String(n).padStart(2,'0');
@@ -496,7 +506,7 @@
             dbl.title = "Ezen a napon a duplázás már lezárt (az első meccs elkezdődött).";
           }
 
-          select.addEventListener('change', async ()=>{ await saveTip(m, select.value, dbl.checked, dk, saved); });
+          select.addEventListener('change', async ()=>{ await saveTipWithAudit(m, select.value, dbl.checked, dk, saved); });
 
           dbl.addEventListener('change', async ()=>{
             if (isDayLocked(dk)){
@@ -507,14 +517,14 @@
             }
             if (dbl.checked){
               reflectDoubleStateForDay(dk, m.id);
-              await enforceSingleDoubleForDay(dk, m.id);
+              await enforceSingleDoubleForDay(dk, m.id); // auditál
               doublesByDay.set(dk, m.id);
               updateDayFlag(dk);
             }else{
               if (doublesByDay.get(dk) === m.id) doublesByDay.delete(dk);
               updateDayFlag(dk);
             }
-            await saveTip(m, select.value, dbl.checked, dk, saved);
+            await saveTipWithAudit(m, select.value, dbl.checked, dk, saved);
           });
 
           const lockedId = doublesByDay.get(dk);
@@ -555,62 +565,137 @@
       });
     }
 
+    // --- rendszer által kényszerített dupla-levétel + AUDIT ---
     async function enforceSingleDoubleForDay(dayKey, keepMatchId){
       const idsForDay = new Set((matchesByDay.get(dayKey) || []).map(m=>m.id));
       const qTips = query(collection(db,"ucl_tips"), where("user","==", currentUserEmail));
       const snap = await getDocs(qTips);
-      const tasks = [];
-      snap.forEach(docu=>{
+      for (const docu of snap.docs){
         const d = docu.data();
-        if (!d?.matchId) return;
-        if (!idsForDay.has(d.matchId)) return;
+        if (!d?.matchId) continue;
+        if (!idsForDay.has(d.matchId)) continue;
         if (d.matchId !== keepMatchId && (d.double === true || d.isDouble === true)){
-          tasks.push(updateDoc(doc(db,"ucl_tips", docu.id), {
-            double:false, isDouble:false, updatedAt: serverTimestamp(), timestamp: serverTimestamp(), day: dayKey
-          }));
+          const prevChoice = d.choice ?? d.tip ?? "";
+          try{
+            await updateDoc(doc(db,"ucl_tips", docu.id), {
+              double:false, isDouble:false, updatedAt: serverTimestamp(), timestamp: serverTimestamp(), day: dayKey
+            });
+            await addDoc(collection(db, TIP_HISTORY), {
+              user: d.user || currentUserEmail,
+              matchId: d.matchId,
+              tipDocId: docu.id,
+              day: dayKey,
+              round: String(d.round ?? d.roundId ?? ""),
+              prevChoice,
+              prevDouble: true,
+              newChoice: prevChoice,
+              newDouble: false,
+              reason: "system:enforceSingleDouble",
+              page: "matches_ucl.html",
+              ts: serverTimestamp()
+            });
+          }catch(e){ console.warn("enforceSingleDoubleForDay err:", e); }
         }
-      });
-      for (const p of tasks){ try{ await p; }catch{} }
+      }
     }
 
-    async function saveTip(matchObj, choice, isDouble, dayKey, savedEl){
+    // --- mentés + AUDIT ---
+    async function saveTipWithAudit(matchObj, choice, isDouble, dayKey, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
-      const nowTs = serverTimestamp();
 
-      const tipData = {
-        user: currentUserEmail,
-        nick: currentUserNick || currentUserEmail,
-        matchId,
-        round: String(roundStr),
-        roundId: String(roundStr),
-        day: dayKey,
-        choice: choice || "",
-        tip: choice || "",
-        double: !!isDouble,
-        isDouble: !!isDouble,
-        createdAt: nowTs,
-        updatedAt: nowTs,
-        timestamp: nowTs
-      };
-
-      let existingId = null;
+      // előző állapot
+      let existingId = null, prevChoice = null, prevDouble = null;
       try{
-        const snap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail), where("matchId","==", matchId)));
-        if (!snap.empty) existingId = snap.docs[0].id;
-      }catch{}
+        const snap = await getDocs(query(collection(db,"ucl_tips"),
+          where("user","==", currentUserEmail),
+          where("matchId","==", matchId)
+        ));
+        if (!snap.empty){
+          const d = snap.docs[0];
+          const v = d.data() || {};
+          existingId = d.id;
+          prevChoice = v.choice ?? v.tip ?? null;
+          prevDouble = !!(v.double ?? v.isDouble);
+        }
+      }catch(e){}
+
+      const newChoice = choice || "";
+      const newDouble = !!isDouble;
+
+      // nincs tényleges változás
+      if (existingId && prevChoice === newChoice && prevDouble === newDouble){
+        savedEl.classList.add("show");
+        setTimeout(()=>savedEl.classList.remove("show"), 900);
+        return;
+      }
 
       try{
         if (existingId){
-          await setDoc(doc(db,"ucl_tips", existingId), tipData, { merge:true });
+          await updateDoc(doc(db,"ucl_tips", existingId), {
+            choice: newChoice,
+            tip: newChoice,                // kompat
+            double: newDouble,
+            isDouble: newDouble,           // kompat
+            day: dayKey,
+            round: String(roundStr),
+            roundId: String(roundStr),     // kompat
+            updatedAt: serverTimestamp(),
+            timestamp: serverTimestamp()
+          });
         } else {
-          const fixedId = `${currentUserEmail.replace(/[^a-zA-Z0-9._-]/g,'_')}_${matchId}`;
-          await setDoc(doc(db,"ucl_tips", fixedId), tipData, { merge:true });
+          const fixedId = `${sanitizeEmail(currentUserEmail)}_${matchId}`;
+          await setDoc(doc(db,"ucl_tips", fixedId), {
+            user: currentUserEmail,
+            nick: currentUserNick || currentUserEmail,
+            matchId,
+            day: dayKey,
+            round: String(roundStr),
+            roundId: String(roundStr),
+            choice: newChoice,
+            tip: newChoice,
+            double: newDouble,
+            isDouble: newDouble,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            timestamp: serverTimestamp()
+          }, { merge:true });
+          existingId = fixedId;
         }
-        myTipsByMatch.set(matchId, { ...tipData });
+
+        // AUDIT sor
+        await addDoc(collection(db, TIP_HISTORY), {
+          user: currentUserEmail,
+          matchId,
+          tipDocId: existingId,
+          day: dayKey,
+          round: String(roundStr),
+          prevChoice,
+          prevDouble,
+          newChoice,
+          newDouble,
+          oddsSnapshot: oddsSnapshotFromMatch(matchObj),
+          reason: "user",
+          page: "matches_ucl.html",
+          ts: serverTimestamp()
+        });
+
+        // lokális cache
+        myTipsByMatch.set(matchId, {
+          user: currentUserEmail,
+          matchId,
+          day: dayKey,
+          round: String(roundStr),
+          choice: newChoice,
+          double: newDouble
+        });
+
         savedEl.classList.add("show");
-        setTimeout(()=>savedEl.classList.remove("show"), 1200);
-      }catch(e){ console.warn(e); }
+        setTimeout(()=>savedEl.classList.remove("show"), 900);
+      }catch(e){
+        console.warn("saveTipWithAudit err:", e);
+        alert("Mentési hiba: " + (e?.message || String(e)));
+      }
     }
 
     /* ===== Chat – BL külön: chatMessages_ucl + chatLastSeenUcl ===== */
@@ -720,7 +805,7 @@
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/>
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
           </svg>
           Kilépés
         </button>
