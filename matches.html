@@ -38,8 +38,7 @@
     .crest{ width:28px; height:28px; object-fit:contain; border-radius:6px; background:#fff; border:1px solid var(--line,#e6eaf1); }
     .vs{ font-weight:700; color:#475569; }
     .meta{ color:#64748b; font-size:12px; }
-    .odds{ display:flex; gap:10px; font-size:16px; color:#475569; flex-wrap:wrap; font-weight:600; }
-    @media (max-width: 700px){ .odds{ font-size:18px; } }
+    .odds{ display:flex; gap:10px; font-size:12px; color:#475569; flex-wrap:wrap; }
     .ctl{ display:flex; align-items:center; gap:10px; }
     .select{ padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); }
     .double-wrap{ display:flex; align-items:center; gap:6px; }
@@ -78,412 +77,500 @@
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
   </style>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore,
-      doc, getDoc, setDoc, updateDoc, deleteDoc,
-      collection, getDocs, addDoc, serverTimestamp,
-      query, where, orderBy, onSnapshot
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore,
+    doc, getDoc, setDoc, updateDoc, deleteDoc,
+    collection, getDocs, addDoc, serverTimestamp,
+    query, where, orderBy, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-      authDomain: "tippliga-4b3af.firebaseapp.com",
-      projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.appspot.com",
-      messagingSenderId: "720359845241",
-      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+    authDomain: "tippliga-4b3af.firebaseapp.com",
+    projectId: "tippliga-4b3af",
+    storageBucket: "tippliga-4b3af.appspot.com",
+    messagingSenderId: "720359845241",
+    appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-    const crestMap = {
-      "Ferencváros": "crest/crest-fradi.png",
-      "Újpest FC": "crest/crest-ujpest.png",
-      "Debreceni VSC": "crest/crest-dvsc.png",
-      "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
-      "Paksi FC": "crest/crest-paks.png",
-      "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
-      "Puskás Akadémia": "crest/crest-puskas.png",
-      "Kisvárda FC": "crest/crest-kisvarda.png",
-      "Diósgyőri VTK": "crest/crest-dvtk.png",
-      "Zalaegerszegi TE FC": "crest/crest-zte.png",
-      "ETO FC Győr": "crest/crest-gyor.png",
-      "MTK Budapest": "crest/crest-mtk.png"
-    };
-    function crestFor(team){ return crestMap[team] || ""; }
-    function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
+  const TIP_HISTORY = "tipHistory"; // <-- ÚJ: audit kollekció
 
-    // Robusztus odds/round olvasás
-    function getOdds(m, key){
-      if (m?.odds && (key in m.odds)) return m.odds[key];
-      if (key==="1") return m.odds1 ?? m["odds1"];
-      if (key==="X") return m.oddsX ?? m["oddsX"];
-      if (key==="2") return m.odds2 ?? m["odds2"];
-      return undefined;
-    }
-    function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
+  const crestMap = {
+    "Ferencváros": "crest/crest-fradi.png",
+    "Újpest FC": "crest/crest-ujpest.png",
+    "Debreceni VSC": "crest/crest-dvsc.png",
+    "Nyíregyháza Spartacus": "crest/crest-nyiregyhaza.png",
+    "Paksi FC": "crest/crest-paks.png",
+    "Kazincbarcikai SC": "crest/crest-kazincbarcika.png",
+    "Puskás Akadémia": "crest/crest-puskas.png",
+    "Kisvárda FC": "crest/crest-kisvarda.png",
+    "Diósgyőri VTK": "crest/crest-dvtk.png",
+    "Zalaegerszegi TE FC": "crest/crest-zte.png",
+    "ETO FC Győr": "crest/crest-gyor.png",
+    "MTK Budapest": "crest/crest-mtk.png"
+  };
+  function crestFor(team){ return crestMap[team] || ""; }
+  function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
 
-    let currentUserEmail = "";
-    let currentUserNick = "";
-    let currentUserRole = "user";
-    let favoriteTeam = "";
-    let chatLastSeen = null;
+  // Robusztus odds/round olvasás
+  function getOdds(m, key){
+    if (m?.odds && (key in m.odds)) return m.odds[key];
+    if (key==="1") return m.odds1 ?? m["odds1"];
+    if (key==="X") return m.oddsX ?? m["oddsX"];
+    if (key==="2") return m.odds2 ?? m["odds2"];
+    return undefined;
+  }
+  function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
 
-    let myTipsByMatch = new Map();
-    let doublesByRound = new Map();
+  const sanitizeEmail = (e)=> String(e).replace(/[^a-zA-Z0-9._-]/g,'_');
+  const oddsSnapshotFromMatch = (m)=> m ? ({
+    "1": m?.odds?.["1"] ?? m?.odds1 ?? null,
+    "X": m?.odds?.["X"] ?? m?.oddsX ?? null,
+    "2": m?.odds?.["2"] ?? m?.odds2 ?? null
+  }) : null;
 
-    // ÚJ: fordulónként az első meccs kezdési ideje
-    let earliestStartByRound = new Map();
-    function isRoundLocked(roundKey){
-      const first = earliestStartByRound.get(String(roundKey));
-      return first ? (new Date() >= first) : false;
-    }
+  let currentUserEmail = "";
+  let currentUserNick = "";
+  let currentUserRole = "user";
+  let favoriteTeam = "";
+  let chatLastSeen = null;
 
-    document.addEventListener("DOMContentLoaded", () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "login.html"; return; }
-        currentUserEmail = user.email;
+  let myTipsByMatch = new Map();
+  let doublesByRound = new Map();
 
-        const userRef = doc(db, "users", currentUserEmail);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const d = userSnap.data();
-          currentUserNick = d.nickname || currentUserEmail;
-          currentUserRole = d.role || "user";
-          favoriteTeam = d.favoriteTeam || "";
-          chatLastSeen = d.chatLastSeen || null;
-        } else {
-          currentUserNick = currentUserEmail;
-          currentUserRole = "user";
-          favoriteTeam = "";
-          chatLastSeen = null;
+  // ÚJ: fordulónként az első meccs kezdési ideje (round lock)
+  let earliestStartByRound = new Map();
+  function isRoundLocked(roundKey){
+    const first = earliestStartByRound.get(String(roundKey));
+    return first ? (new Date() >= first) : false;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      currentUserEmail = user.email;
+
+      const userRef = doc(db, "users", currentUserEmail);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const d = userSnap.data();
+        currentUserNick = d.nickname || currentUserEmail;
+        currentUserRole = d.role || "user";
+        favoriteTeam = d.favoriteTeam || "";
+        chatLastSeen = d.chatLastSeen || null;
+      } else {
+        currentUserNick = currentUserEmail;
+        currentUserRole = "user";
+        favoriteTeam = "";
+        chatLastSeen = null;
+      }
+
+      document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
+      if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
+
+      if (favoriteTeam) {
+        const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+        document.body.classList.add(themeClass);
+        const crest = crestMap[favoriteTeam];
+        if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
+      }
+
+      try{
+        const now = new Date();
+
+        // 1) Közelgő meccsek a listához
+        const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
+        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+        // 2) Tippek beolvasása és duplák feljegyzése (LEGUTÓBBIAK)
+        const tipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail)));
+        const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
+        const latestByMatch = new Map();
+        for (const t of tips){
+          const k = t.matchId;
+          const prev = latestByMatch.get(k);
+          const prevTs = prev?.updatedAt?.toMillis?.() || prev?.createdAt?.toMillis?.() || 0;
+          const curTs = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
+          if (!prev || curTs >= prevTs) latestByMatch.set(k, t);
+        }
+        myTipsByMatch = latestByMatch;
+
+        doublesByRound.clear();
+        for (const t of latestByMatch.values()){
+          if (t.double && t.round != null){
+            doublesByRound.set(String(t.round), t.matchId);
+          }
         }
 
-        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
-
-        if (favoriteTeam) {
-          const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
-          const crest = crestMap[favoriteTeam];
-          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
-        }
-
-        try{
-          const now = new Date();
-
-          // 1) Közelgő meccsek a listához
-          const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
-          const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-
-          // 2) Tippek beolvasása és duplák feljegyzése
-          const tipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail)));
-          const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
-          const latestByMatch = new Map();
-          for (const t of tips){
-            const k = t.matchId;
-            const prev = latestByMatch.get(k);
-            const prevTs = prev?.updatedAt?.toMillis?.() || prev?.createdAt?.toMillis?.() || 0;
-            const curTs = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
-            if (!prev || curTs >= prevTs) latestByMatch.set(k, t);
-          }
-          myTipsByMatch = latestByMatch;
-
-          doublesByRound.clear();
-          for (const t of latestByMatch.values()){
-            if (t.double && t.round != null){
-              doublesByRound.set(String(t.round), t.matchId);
-            }
-          }
-
-          // 3) ÚJ: minden meccset beolvasunk és kiszámoljuk fordulónként az első kezdést
-          earliestStartByRound.clear();
-          const allSnap = await getDocs(query(collection(db,"matches"), orderBy("startTime","asc")));
-          allSnap.forEach(docu=>{
-            const m = docu.data();
-            const r = matchRound(m);
-            const start = m.startTime?.toDate ? m.startTime.toDate() : new Date(m.startTime);
-            if (!r || !start) return;
-            const prev = earliestStartByRound.get(r);
-            if (!prev || start < prev) earliestStartByRound.set(r, start);
-          });
-
-          buildMatchesList(upcoming);
-          updatePendingBadge(upcoming);
-        }catch(e){ console.warn(e); }
-
-        initChat(userRef);
-
-        document.getElementById("logout").addEventListener("click", () => {
-          signOut(auth).then(() => window.location.href = "login.html");
+        // 3) Forduló lock számítás
+        earliestStartByRound.clear();
+        const allSnap = await getDocs(query(collection(db,"matches"), orderBy("startTime","asc")));
+        allSnap.forEach(docu=>{
+          const m = docu.data();
+          const r = matchRound(m);
+          const start = m.startTime?.toDate ? m.startTime.toDate() : new Date(m.startTime);
+          if (!r || !start) return;
+          const prev = earliestStartByRound.get(r);
+          if (!prev || start < prev) earliestStartByRound.set(r, start);
         });
 
-        if (window.hideLoader) hideLoader();
+        buildMatchesList(upcoming);
+        updatePendingBadge(upcoming);
+      }catch(e){ console.warn(e); }
+
+      initChat(userRef);
+
+      document.getElementById("logout").addEventListener("click", () => {
+        signOut(auth).then(() => window.location.href = "login.html");
       });
+
+      if (window.hideLoader) hideLoader();
     });
+  });
 
-    function updatePendingBadge(upcoming){
-      const tippedIds = new Set(Array.from(myTipsByMatch.keys()));
-      const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-      const badge = document.getElementById("tipsBadge");
-      if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
-    }
+  function updatePendingBadge(upcoming){
+    const tippedIds = new Set(Array.from(myTipsByMatch.keys()));
+    const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+    const badge = document.getElementById("tipsBadge");
+    if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+  }
 
-    function buildMatchesList(matches){
-      const wrap = document.getElementById("matchList");
-      wrap.innerHTML = "";
-      for (const m of matches){
-        const tip = myTipsByMatch.get(m.id) || {};
-        const curChoice = tip.choice || "";
-        const isDouble = !!tip.double;
+  function buildMatchesList(matches){
+    const wrap = document.getElementById("matchList");
+    wrap.innerHTML = "";
+    for (const m of matches){
+      const tip = myTipsByMatch.get(m.id) || {};
+      const curChoice = tip.choice || "";
+      const isDouble = !!tip.double;
 
-        const roundStr = matchRound(m);
-        const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
-        const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
+      const roundStr = matchRound(m);
+      const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
+      const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
 
-        const row = document.createElement("div");
-        row.className = "match";
-        row.dataset.round = String(roundStr);
-        row.dataset.matchId = m.id;
+      const row = document.createElement("div");
+      row.className = "match";
+      row.dataset.round = String(roundStr);
+      row.dataset.matchId = m.id;
 
-        const left = document.createElement("div");
-        left.innerHTML = `
-          <div class="teams">
-            <div class="team"><img class="crest" src="${crestFor(m.homeTeam)||''}" alt=""> <span>${m.homeTeam||''}</span></div>
-            <span class="vs">vs</span>
-            <div class="team"><img class="crest" src="${crestFor(m.awayTeam)||''}" alt=""> <span>${m.awayTeam||''}</span></div>
-          </div>
-          <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
-          <div class="odds">${oddsLine}</div>
-        `;
+      const left = document.createElement("div");
+      left.innerHTML = `
+        <div class="teams">
+          <div class="team"><img class="crest" src="${crestFor(m.homeTeam)||''}" alt=""> <span>${m.homeTeam||''}</span></div>
+          <span class="vs">vs</span>
+          <div class="team"><img class="crest" src="${crestFor(m.awayTeam)||''}" alt=""> <span>${m.awayTeam||''}</span></div>
+        </div>
+        <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
+        <div class="odds">${oddsLine}</div>
+      `;
 
-        const right = document.createElement("div");
-        right.className = "ctl";
-        const select = document.createElement("select");
-        select.className = "select";
-        select.innerHTML = `<option value="">Válassz tippet</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>`;
-        select.value = curChoice;
+      const right = document.createElement("div");
+      right.className = "ctl";
+      const select = document.createElement("select");
+      select.className = "select";
+      select.innerHTML = `<option value="">Válassz tippet</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>`;
+      select.value = curChoice;
 
-        const dblWrap = document.createElement("label");
-        dblWrap.className = "double-wrap";
-        const dbl = document.createElement("input");
-        dbl.type = "checkbox";
-        dbl.checked = isDouble;
-        dbl.dataset.kind = "double";
-        const dblText = document.createElement("span");
-        dblText.textContent = "Dupla";
-        dblWrap.appendChild(dbl);
-        dblWrap.appendChild(dblText);
+      const dblWrap = document.createElement("label");
+      dblWrap.className = "double-wrap";
+      const dbl = document.createElement("input");
+      dbl.type = "checkbox";
+      dbl.checked = isDouble;
+      dbl.dataset.kind = "double";
+      const dblText = document.createElement("span");
+      dblText.textContent = "Dupla";
+      dblWrap.appendChild(dbl);
+      dblWrap.appendChild(dblText);
 
-        const saved = document.createElement("span");
-        saved.className = "save-state";
-        saved.textContent = "Mentve";
+      const saved = document.createElement("span");
+      saved.className = "save-state";
+      saved.textContent = "Mentve";
 
-        right.appendChild(select);
-        right.appendChild(dblWrap);
-        right.appendChild(saved);
+      right.appendChild(select);
+      right.appendChild(dblWrap);
+      right.appendChild(saved);
 
-        row.appendChild(left);
-        row.appendChild(right);
-        wrap.appendChild(row);
+      row.appendChild(left);
+      row.appendChild(right);
+      wrap.appendChild(row);
 
-        // --- ÚJ: ha a forduló első meccse már elkezdődött, tiltsuk a duplát (teljes fordulóra) ---
-        if (isRoundLocked(roundStr)) {
-          dbl.disabled = true;
-          dbl.title = "Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).";
+      // Round-locked duplák tiltása
+      if (isRoundLocked(roundStr)) {
+        dbl.disabled = true;
+        dbl.title = "Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).";
+      }
+
+      select.addEventListener("change", async ()=>{
+        await saveTipWithAudit(m, select.value, dbl.checked, saved);
+      });
+
+      dbl.addEventListener("change", async ()=>{
+        const rKey = String(roundStr);
+
+        if (isRoundLocked(rKey)) {
+          const lockedId = doublesByRound.get(rKey);
+          const shouldBeChecked = lockedId === m.id;
+          dbl.checked = !!shouldBeChecked;
+          alert("Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).");
+          return;
         }
 
-        select.addEventListener("change", async ()=>{
-          await saveTip(m, select.value, dbl.checked, saved);
-        });
-
-        dbl.addEventListener("change", async ()=>{
-          const rKey = String(roundStr);
-
-          // --- ÚJ: zárolás vizsgálat a forduló első meccséhez kötve ---
-          if (isRoundLocked(rKey)) {
-            const lockedId = doublesByRound.get(rKey);
-            const shouldBeChecked = lockedId === m.id;
-            dbl.checked = !!shouldBeChecked;
-            alert("Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).");
-            return;
+        if (dbl.checked){
+          // 1) UI
+          reflectDoubleStateForRound(rKey, m.id);
+          // 2) Szerver + AUDIT másik tipp(ek) duplájának levétele
+          await enforceSingleDouble(rKey, m.id);
+          doublesByRound.set(rKey, m.id);
+        } else {
+          if (doublesByRound.get(rKey) === m.id) {
+            doublesByRound.delete(rKey);
           }
-
-          if (dbl.checked){
-            reflectDoubleStateForRound(rKey, m.id);
-            await enforceSingleDouble(rKey, m.id);
-            doublesByRound.set(rKey, m.id);
-          } else {
-            if (doublesByRound.get(rKey) === m.id) {
-              doublesByRound.delete(rKey);
-            }
-          }
-          await saveTip(m, select.value, dbl.checked, saved);
-        });
-
-        const locked = doublesByRound.get(String(roundStr));
-        if (locked && locked !== m.id){
-          dbl.checked = false;
         }
+        await saveTipWithAudit(m, select.value, dbl.checked, saved);
+      });
+
+      // Ha már volt dupla ebben a fordulóban máson, vegyük le vizuálisan
+      const locked = doublesByRound.get(String(roundStr));
+      if (locked && locked !== m.id){
+        dbl.checked = false;
       }
     }
+  }
 
-    function reflectDoubleStateForRound(roundKey, keepMatchId){
-      const rows = document.querySelectorAll('.match');
-      rows.forEach(row=>{
-        if (row.dataset.round === String(roundKey)){
-          const chk = row.querySelector('input[type="checkbox"][data-kind="double"]');
-          if (!chk) return;
-          if (row.dataset.matchId === String(keepMatchId)){
-            chk.checked = true;
-          } else {
-            chk.checked = false;
-          }
-        }
-      });
-    }
-
-    async function enforceSingleDouble(roundKey, keepMatchId){
-      if (!roundKey) return;
-      const qTips = query(collection(db,"tips"), where("user","==", currentUserEmail), where("round","==", roundKey));
-      const snap = await getDocs(qTips);
-      const batch = [];
-      snap.forEach(docu=>{
-        const d = docu.data();
-        if (d.double && d.matchId !== keepMatchId){
-          batch.push(updateDoc(doc(db,"tips", docu.id), { double:false, updatedAt: serverTimestamp() }));
-        }
-      });
-      for (const p of batch) { try{ await p; }catch(e){} }
-    }
-
-    async function saveTip(matchObj, choice, isDouble, savedEl){
-      const matchId = matchObj.id;
-      const roundStr = matchRound(matchObj);
-      const tipData = {
-        user: currentUserEmail,
-        nick: currentUserNick || currentUserEmail,
-        matchId: matchId,
-        round: String(roundStr),
-        choice: choice || "",
-        double: !!isDouble,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
-
-      let existingId = null;
-      try{
-        const snap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail), where("matchId","==", matchId)));
-        if (!snap.empty) existingId = snap.docs[0].id;
-      }catch(e){}
-
-      try{
-        if (existingId){
-          await updateDoc(doc(db,"tips", existingId), tipData);
+  function reflectDoubleStateForRound(roundKey, keepMatchId){
+    const rows = document.querySelectorAll('.match');
+    rows.forEach(row=>{
+      if (row.dataset.round === String(roundKey)){
+        const chk = row.querySelector('input[type="checkbox"][data-kind="double"]');
+        if (!chk) return;
+        if (row.dataset.matchId === String(keepMatchId)){
+          chk.checked = true;
         } else {
-          const fixedId = `${currentUserEmail.replace(/[^a-zA-Z0-9._-]/g,'_')}_${matchId}`;
-          await setDoc(doc(db,"tips", fixedId), tipData, { merge:true });
+          chk.checked = false;
         }
-        myTipsByMatch.set(matchId, { ...tipData });
-        savedEl.classList.add("show");
-        setTimeout(()=>savedEl.classList.remove("show"), 1200);
-      }catch(e){ console.warn(e); }
-    }
+      }
+    });
+  }
 
-    /* ===== Chat (változatlan) ===== */
-    function initChat(userRef){
-      const fab = document.getElementById('chatToggle');
-      const fabBadge = document.getElementById('chatFabBadge');
-      const panel = document.getElementById('chatPanel');
-      const closeBtn = document.getElementById('chatClose');
-      const listEl = document.getElementById('chatMessages');
-      const inputEl = document.getElementById('chatInput');
-      const sendBtn = document.getElementById('chatSendBtn');
+  // --- ÚJ: rendszer által kényszerített dupla-levétel naplózással ---
+  async function enforceSingleDouble(roundKey, keepMatchId){
+    if (!roundKey) return;
+    const qTips = query(collection(db,"tips"), where("user","==", currentUserEmail), where("round","==", roundKey));
+    const snap = await getDocs(qTips);
 
-      function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
-      function close(){ panel.classList.remove('open'); }
-      function toggle(){ panel.classList.contains('open') ? close() : open(); }
-      fab.addEventListener('click', toggle);
-      closeBtn.addEventListener('click', close);
+    for (const docu of snap.docs){
+      const d = docu.data();
+      if (d.double && d.matchId !== keepMatchId){
+        // előző állapot
+        const prevChoice = d.choice ?? "";
+        const prevDouble = true;
 
-      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
+        try{
+          await updateDoc(doc(db,"tips", docu.id), { double:false, updatedAt: serverTimestamp() });
 
-      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
-        listEl.innerHTML = '';
-        if (snap.empty){
-          const empty = document.createElement('div');
-          empty.className = 'chat-empty';
-          empty.textContent = 'Még nincs üzenet. Légy te az első!';
-          listEl.appendChild(empty);
-        } else {
-          let unread = 0;
-          snap.forEach(docu=>{
-            const d = docu.data();
-            const tsMs = d.ts?.toMillis?.() || 0;
-            if (tsMs > lastSeenMs) unread++;
-
-            const row = document.createElement('div');
-            row.className = 'msg';
-            row.innerHTML = `
-              <div style="flex:1 1 auto">
-                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
-                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-              </div>
-            `;
-            const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
-            if (canDelete){
-              const del = document.createElement('button');
-              del.className = 'del';
-              del.textContent = 'Törlés';
-              del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){} });
-              row.appendChild(del);
-            }
-            listEl.appendChild(row);
+          // AUDIT: dupla levétele rendszer által
+          await addDoc(collection(db, TIP_HISTORY), {
+            user: d.user || currentUserEmail,
+            matchId: d.matchId,
+            tipDocId: docu.id,
+            round: String(d.round ?? ""),
+            prevChoice,
+            prevDouble,
+            newChoice: prevChoice,
+            newDouble: false,
+            reason: "system:enforceSingleDouble",
+            page: "matches.html",
+            ts: serverTimestamp()
           });
+        }catch(e){ console.warn("enforceSingleDouble err:", e); }
+      }
+    }
+  }
 
-          if (!panel.classList.contains('open') && unread > 0){
-            fab.classList.add('has-unread');
-            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
-          } else {
-            fab.classList.remove('has-unread');
-            fabBadge.textContent = '';
+  // --- ÚJ: mentés + audit log egy helyen ---
+  async function saveTipWithAudit(matchObj, choice, isDouble, savedEl){
+    const matchId = matchObj.id;
+    const roundStr = matchRound(matchObj);
+
+    // előző állapot lekérdezése (ha van)
+    let existingId = null, prevChoice = null, prevDouble = null;
+    try{
+      const snap = await getDocs(query(collection(db,"tips"),
+        where("user","==", currentUserEmail),
+        where("matchId","==", matchId)
+      ));
+      if (!snap.empty){
+        const d = snap.docs[0];
+        const v = d.data() || {};
+        existingId = d.id;
+        prevChoice = v.choice ?? null;
+        prevDouble = !!v.double;
+      }
+    }catch(e){}
+
+    const newChoice = choice || "";
+    const newDouble = !!isDouble;
+
+    // ha nincs tényleges változás, ne pazaroljunk írást/naplót
+    if (existingId && prevChoice === newChoice && prevDouble === newDouble){
+      // csak a "Mentve" jelzés a UI-ban
+      savedEl.classList.add("show");
+      setTimeout(()=>savedEl.classList.remove("show"), 900);
+      return;
+    }
+
+    try{
+      if (existingId){
+        // frissítés – createdAt marad, csak updatedAt változik
+        await updateDoc(doc(db,"tips", existingId), {
+          choice: newChoice,
+          double: newDouble,
+          round: String(roundStr),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // létrehozás fix ID-val (stabil jövőre nézve)
+        const fixedId = `${sanitizeEmail(currentUserEmail)}_${matchId}`;
+        await setDoc(doc(db,"tips", fixedId), {
+          user: currentUserEmail,
+          nick: currentUserNick || currentUserEmail,
+          matchId,
+          round: String(roundStr),
+          choice: newChoice,
+          double: newDouble,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge:true });
+        existingId = fixedId;
+      }
+
+      // AUDIT sor
+      await addDoc(collection(db, TIP_HISTORY), {
+        user: currentUserEmail,
+        matchId,
+        tipDocId: existingId,
+        round: String(roundStr),
+        prevChoice,
+        prevDouble,
+        newChoice,
+        newDouble,
+        oddsSnapshot: oddsSnapshotFromMatch(matchObj),
+        reason: "user",
+        page: "matches.html",
+        ts: serverTimestamp()
+      });
+
+      // lokális állapot
+      myTipsByMatch.set(matchId, {
+        user: currentUserEmail,
+        matchId,
+        round: String(roundStr),
+        choice: newChoice,
+        double: newDouble
+      });
+
+      savedEl.classList.add("show");
+      setTimeout(()=>savedEl.classList.remove("show"), 900);
+    }catch(e){
+      console.warn("saveTipWithAudit err:", e);
+    }
+  }
+
+  /* ===== Chat (változatlan) ===== */
+  function initChat(userRef){
+    const fab = document.getElementById('chatToggle');
+    const fabBadge = document.getElementById('chatFabBadge');
+    const panel = document.getElementById('chatPanel');
+    const closeBtn = document.getElementById('chatClose');
+    const listEl = document.getElementById('chatMessages');
+    const inputEl = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSendBtn');
+
+    function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
+    function close(){ panel.classList.remove('open'); }
+    function toggle(){ panel.classList.contains('open') ? close() : open(); }
+    fab.addEventListener('click', toggle);
+    closeBtn.addEventListener('click', close);
+
+    let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
+
+    const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
+    onSnapshot(qAll, snap => {
+      listEl.innerHTML = '';
+      if (snap.empty){
+        const empty = document.createElement('div');
+        empty.className = 'chat-empty';
+        empty.textContent = 'Még nincs üzenet. Légy te az első!';
+        listEl.appendChild(empty);
+      } else {
+        let unread = 0;
+        snap.forEach(docu=>{
+          const d = docu.data();
+          const tsMs = d.ts?.toMillis?.() || 0;
+          if (tsMs > lastSeenMs) unread++;
+
+          const row = document.createElement('div');
+          row.className = 'msg';
+          row.innerHTML = `
+            <div style="flex:1 1 auto">
+              <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
+              <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            </div>
+          `;
+          const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
+          if (canDelete){
+            const del = document.createElement('button');
+            del.className = 'del';
+            del.textContent = 'Törlés';
+            del.title = 'Üzenet törlése';
+            del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }catch(e){} });
+            row.appendChild(del);
           }
+          listEl.appendChild(row);
+        });
 
-          setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
-        }
-      });
-
-      sendBtn.addEventListener('click', async ()=>{
-        const txt = (inputEl.value || '').trim();
-        if (!txt){ inputEl.focus(); return; }
-        const backup = txt;
-        inputEl.value = '';
-        try{
-          await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
-          if (panel.classList.contains('open')) await markSeen();
-        }catch(e){
-          console.warn('Chat send failed:', e);
-          inputEl.value = backup; inputEl.focus();
-        }
-      });
-      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
-
-      async function markSeen(){
-        try{
-          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+        if (!panel.classList.contains('open') && unread > 0){
+          fab.classList.add('has-unread');
+          fabBadge.textContent = unread > 99 ? '99+' : String(unread);
+        } else {
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
-        }catch(e){}
+        }
+
+        setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
       }
+    });
+
+    sendBtn.addEventListener('click', async ()=>{
+      const txt = (inputEl.value || '').trim();
+      if (!txt){ inputEl.focus(); return; }
+      const backup = txt;
+      inputEl.value = '';
+      try{
+        await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
+        if (panel.classList.contains('open')) await markSeen();
+      }catch(e){
+        console.warn('Chat send failed:', e);
+        inputEl.value = backup; inputEl.focus();
+      }
+    });
+    inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
+
+    async function markSeen(){
+      try{
+        await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
+        fab.classList.remove('has-unread');
+        fabBadge.textContent = '';
+      }catch(e){}
     }
-  </script>
+  }
+</script>
 </head>
 <body>
   <div class="layout">
