@@ -2,6 +2,7 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>NB1 TippLiga – Összesített ranglista</title>
 
   <link rel="stylesheet" href="style-themed.css" />
@@ -35,6 +36,7 @@
     .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
     .table-wrap{ display:flex; }
+    .table-wrap > div:last-child { -webkit-overflow-scrolling: touch; }
     .grid{ display:grid; }
     .hdr, .row{ display:contents; }
     .cell{ padding:8px 12px; border-bottom:1px solid var(--line); background:#fff; display:flex; align-items:center; gap:8px; box-sizing:border-box; height:var(--rowh); overflow:hidden; }
@@ -105,6 +107,24 @@
     .ok{ color:#15803d; font-weight:700; }
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
+
+    @media (max-width: 1024px) {
+      .left { position:relative; left:auto; z-index:1; border-right:0; }
+      .table-wrap { overflow-x:auto; }
+      .cell { padding:8px 10px; }
+      .round-cell { min-width:64px; }
+    }
+    @media (max-width: 820px) {
+      .layout { padding:14px; }
+      .hdr .cell { height:40px; }
+      .cell { height:42px; font-size:14px; }
+      .nav-card { gap:10px; padding:12px; }
+      .nav-card .icon-wrap { width:38px; height:38px; }
+      .link-btn { padding:5px 9px; }
+    }
+    @media (pointer: coarse) {
+      .btn, .link-btn, #chatSendBtn { min-height:40px; }
+    }
   </style>
 
   <script type="module">
@@ -117,14 +137,10 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const BOT_META = {
-      "Evidens Elek": { avatar:"elek-256.webp", avatar2x:"elek-512.webp",
-        intro:"„Szia, Elek vagyok, a józan ész futószalagon...”" },
-      "Hazai Hugó":  { avatar:"hugo-256.webp", avatar2x:"hugo-512.webp",
-        intro:"„Én vagyok Hugó, a stadion fűszagának sommelier-je...”" },
-      "Ikszes Ilona":{ avatar:"ilona-256.webp", avatar2x:"ilona-512.webp",
-        intro:"„Ilona vagyok, az X-fétis megtestesülése...”" },
-      "Vendég Vendel":{ avatar:"vendel-256.webp", avatar2x:"vendel-512.webp",
-        intro:"„Vendel vagyok, idegenben is otthon...”" }
+      "Evidens Elek": { avatar:"elek-256.webp", avatar2x:"elek-512.webp", intro:"„Szia, Elek vagyok, a józan ész futószalagon...”" },
+      "Hazai Hugó":  { avatar:"hugo-256.webp", avatar2x:"hugo-512.webp", intro:"„Én vagyok Hugó, a stadion fűszagának sommelier-je...”" },
+      "Ikszes Ilona":{ avatar:"ilona-256.webp", avatar2x:"ilona-512.webp", intro:"„Ilona vagyok, az X-fétis megtestesülése...”" },
+      "Vendég Vendel":{ avatar:"vendel-256.webp", avatar2x:"vendel-512.webp", intro:"„Vendel vagyok, idegenben is otthon...”" }
     };
 
     const firebaseConfig = {
@@ -177,7 +193,6 @@
     function tipDouble(t){ return !!(t.double ?? t.isDouble); }
     const matchRound = m => String(m.round ?? m.roundId ?? "");
 
-    /* ---- ÚJ: élő sorrend kiolvasása localStorage-ból ---- */
     function readLiveOrderFromLocal(){
       try{
         const raw = localStorage.getItem("liveStandingsOrder");
@@ -188,15 +203,11 @@
       }catch{ return []; }
     }
 
-    /* ---- Állapot ---- */
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
     let favoriteTeam = "";
-
-    // VIZUÁLIS nézet: alapból csak az utolsó 5 forduló látszik
     let showAllView = false;
-    // GÉPI TIPPELŐK: alapból rejtve
     let showBots = false;
 
     let rows = [];
@@ -206,11 +217,22 @@
     let matchesCache = {};
     let botPickStore = {};
 
-    // Admin beállítás – EZ SZÁMOLÁSRA HAT
-    let LB_MODE = "full";      // "full" | "fromRound"
+    let LB_MODE = "full";
     let LB_START = 1;
 
-    /* ---------------- INIT ---------------- */
+    function leftCols() {
+      const w = window.innerWidth || 1200;
+      if (w <= 820)   return "60px 2.2fr 110px 150px 110px";
+      if (w <= 1024)  return "64px 2.4fr 120px 160px 115px";
+      return "70px 2.8fr 130px 170px 120px";
+    }
+    function roundCellWidth() {
+      const w = window.innerWidth || 1200;
+      if (w <= 820)  return 60;
+      if (w <= 1024) return 68;
+      return 78;
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
@@ -236,7 +258,6 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
         }
 
-        // Admin leaderboard config (SZÁMOLÁSHOZ)
         const lbSnap = await getDoc(doc(db,"settings","leaderboardConfig"));
         if (lbSnap.exists()){
           const cfg = lbSnap.data()||{};
@@ -256,7 +277,6 @@
         signOut(auth).then(() => window.location.href = "login.html");
       });
 
-      // Új: vizuális váltó
       document.getElementById('toggleAll').addEventListener('click', ()=>{
         showAllView = !showAllView;
         updateControlsText();
@@ -265,7 +285,6 @@
 
       const botsEl = document.getElementById('showBots');
       if (botsEl){
-        // szinkron az induló állapottal
         botsEl.checked = showBots;
         botsEl.addEventListener('change', async e=>{
           showBots = e.target.checked;
@@ -273,7 +292,6 @@
         });
       }
 
-      // Bot UI eventek
       document.addEventListener('click', (e)=>{
         const btn = e.target.closest('[data-bot-view]');
         if (btn){ openBotModal(btn.getAttribute('data-bot-view')); }
@@ -287,23 +305,25 @@
         if (!e.target.closest('#botCard')) closeBotCard();
       });
       window.addEventListener('keydown', e=>{ if (e.key==='Escape') closeBotCard(); });
-      window.addEventListener('resize', closeBotCard);
+
+      let rbTimer=null;
+      window.addEventListener('resize', ()=>{
+        closeBotCard();
+        clearTimeout(rbTimer);
+        rbTimer=setTimeout(()=>renderTable(),120);
+      });
     });
 
     function updateControlsText(){
       const btn = document.getElementById('toggleAll');
       const rangeLabel = document.getElementById('rangeLabel');
-
       btn.textContent = showAllView ? 'Csak az utolsó 5 forduló' : 'Mutasd az összes fordulót';
-
-      // Tájékoztatás: admin beállítás a számolásra
       rangeLabel.textContent =
         (LB_MODE==='fromRound'
           ? `Számolás: ${LB_START}. fordulótól • Nézet: ${showAllView ? 'összes forduló' : 'utolsó 5 forduló'}`
           : `Számolás: teljes szezon • Nézet: ${showAllView ? 'összes forduló' : 'utolsó 5 forduló'}`);
     }
 
-    /* ---------------- Adatok betöltése és SZÁMÍTÁS ---------------- */
     async function buildLeaderboard(){
       const [matchesSnap, tipsSnap, usersSnap, officialSnap, standingsTipsSnap] = await Promise.all([
         getDocs(collection(db, "matches")),
@@ -322,7 +342,6 @@
       officialOrder = officialArrayFrom(officialSnap.exists() ? officialSnap.data() : []).slice(0,12);
       while (officialOrder.length < 12) officialOrder.push("");
 
-      // ÚJ: referencia sorrend kiválasztása (localStorage -> official fallback)
       const liveOrder = readLiveOrderFromLocal();
       const refOrder = liveOrder.filter(Boolean).length ? liveOrder : officialOrder;
 
@@ -336,7 +355,6 @@
         orderByEmail[d.id] = (arr || []).slice(0,12);
       });
 
-      // Utolsó tipp verzió
       const latest = new Map();
       tipsSnap.forEach(docu=>{
         const t = docu.data(); if (!t?.matchId || !t?.user) return;
@@ -350,7 +368,6 @@
       const player = {};
       const rounds = new Set();
 
-      // SZÁMOLÁS: admin beállítás szerint szűrjük a fordulókat
       for (const tip of latest.values()){
         const m = matchesCache[tip.matchId]; if (!m) continue;
         const roundId = matchRound(m); if (!roundId) continue;
@@ -380,7 +397,7 @@
 
       rows = Object.entries(player).map(([nick,obj])=>{
         const order = orderByEmail[obj.email] || [];
-        const hits = calcHits(order, refOrder);   // <-- official helyett refOrder
+        const hits = calcHits(order, refOrder);
         const bonusPct = hits;
         const bonusPts = Math.round(obj.base * (bonusPct/100));
         const total = obj.base + bonusPts;
@@ -467,10 +484,7 @@
       const mount = document.getElementById('tableMount');
       if (!rows.length){ mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>"; return; }
 
-      // Minden elérhető forduló (admin-szűrés UTÁN) legújabb -> legrégebbi
       const roundsDesc = roundsAsc.slice().reverse();
-
-      // VIZUÁLIS szeletelés: utolsó 5 vagy mind
       const toShow = showAllView ? roundsDesc : roundsDesc.slice(0, 5);
 
       const maxPerRound = toShow.map(r=>{
@@ -494,10 +508,8 @@
 
       const left = document.createElement('div');
       left.className = 'left';
-      left.style.minWidth = '900px';
-      left.style.maxWidth = '900px';
       left.innerHTML = `
-        <div class="grid" style="grid-template-columns:70px 2.8fr 130px 170px 120px;">
+        <div class="grid" style="grid-template-columns:${leftCols()};">
           ${leftHeader}
           ${rows.map((r,i)=> renderLeftRow(r,i)).join('')}
         </div>
@@ -506,8 +518,9 @@
       const right = document.createElement('div');
       right.style.overflow = 'auto';
       right.style.flex = '1';
+      const rcw = roundCellWidth();
       right.innerHTML = `
-        <div class="grid" style="grid-template-columns:${'78px '.repeat(toShow.length)};">
+        <div class="grid" style="grid-template-columns:${(`${rcw}px `).repeat(toShow.length)};">
           <div class="hdr">${rightHeader}</div>
           ${rows.map(r=>{
             const cells = toShow.map((rid, idx)=>{
@@ -567,7 +580,6 @@
       `;
     }
 
-    /* ---- Bot profil-popover ---- */
     function openBotCard(name, anchorEl){
       const meta = BOT_META[name]; if (!meta) return;
       const pop = document.getElementById('botCard');
@@ -593,7 +605,6 @@
     }
     function closeBotCard(){ const pop = document.getElementById('botCard'); pop.classList.remove('open'); pop.removeAttribute('data-name'); }
 
-    /* ---- Bot „tippjei” modal ---- */
     function openBotModal(botName){
       const modal = document.getElementById('botModal');
       const title = document.getElementById('botModalTitle');
@@ -633,7 +644,6 @@
     }
     function closeBotModal(){ document.getElementById('botModal').classList.remove('open'); }
 
-    /* ---------------- Nav „függő tippek” badge ---------------- */
     function updatePendingBadge(){
       getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -646,7 +656,6 @@
       });
     }
 
-    /* ---------------- Chat ---------------- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -654,7 +663,6 @@
       const closeBtn = document.getElementById('chatClose');
       const listEl = document.getElementById('chatMessages');
       const inputEl = document.getElementById('chatInput');
-      const sendBtn = document.getElementById('chatSendBtn');
 
       function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
       function close(){ panel.classList.remove('open'); }
@@ -735,7 +743,6 @@
 </head>
 <body>
   <div class="layout">
-    <!-- Fejléc -->
     <div class="header">
       <div class="header-left">
         <img id="favCrest" class="fav-crest" alt="" hidden>
@@ -754,7 +761,6 @@
       </div>
     </div>
 
-    <!-- Nav -->
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -827,7 +833,6 @@
       </a>
     </nav>
 
-    <!-- Ranglista -->
     <section class="card">
       <div class="subhdr">
         <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
@@ -842,7 +847,6 @@
     </section>
   </div>
 
-  <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
@@ -862,18 +866,16 @@
     </div>
   </section>
 
-  <!-- Bot tippjei modal -->
   <div id="botModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="botModalTitle">
       <div class="modal-head">
         <div id="botModalTitle" class="modal-title"></div>
         <button class="close-x" aria-label="Bezárás">✕</button>
       </div>
-      <div id="botModalBody" class="modal-body"></div>
+        <div id="botModalBody" class="modal-body"></div>
     </div>
   </div>
 
-  <!-- Bot profil popover -->
   <div id="botCard" class="bot-card" role="dialog" aria-modal="false" aria-hidden="true">
     <div class="head">
       <img class="avatar bc-img" alt="">
