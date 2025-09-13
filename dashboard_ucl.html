@@ -317,7 +317,7 @@
           startNavTop8Countdown(isLocked?null:until);
         }catch(e){ startNavTop8Countdown(null); }
 
-        // (Eltávolítva) Közelgő BL meccsek tipp badge + liga-váltó jelvény
+        // (Eltávolítva) Közelgő BL meccsek tipp jelvény
 
         await buildComputedTable();
         onSnapshot(collection(db,"ucl_matches"),()=>buildComputedTable());
@@ -589,18 +589,32 @@
         <button id="closeRules" class="rules-close" aria-label="Bezárás">✕</button>
       </div>
       <div id="rulesBody" class="rules-body">
-<p><strong>1. A játék célja</strong><br>
-A TippLiga célja, hogy minél több pontot gyűjts az <strong>UEFA BL ligafázis meccseinek</strong> megtippelésével és a <strong>Top 8</strong>, valamint a <strong>Végső győztes</strong> és <strong>Gólkirály</strong> bónuszokkal.</p>
-<p><strong>2. Tippelés</strong><br>
-– Minden mérkőzésre <strong>1×2</strong> tipp adható a kezdésig.<br>
-– Fordulónként egy <strong>dupla tét</strong> jelölhető (kétszeres pont).<br>
-– Külön leadható: <strong>Top 8</strong>, <strong>Végső győztes</strong>, <strong>Gólkirály</strong>.</p>
-<p><strong>3. Pontszámítás</strong><br>
-– Helyes tipp: <strong>odds × tét</strong> (alap 1, dupla 2).<br>
-– Rossz tipp: <strong>0 pont</strong>.<br>
-– Bónuszok: a felületen jelzett szabályok szerint.</p>
-<p><strong>4. Eredmények és rangsor</strong><br>
-– Összesítés fordulónként és összetettben.</p>
+<p><strong>1) A játék célja</strong><br>
+A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek a <strong>Bajnokok Ligája</strong> mérkőzéseinek eredményeinek és a <strong>szezon kimeneteleinek</strong> megtippelésével.</p>
+
+<p><strong>2) Tippelés</strong><br>
+– Minden mérkőzésre <strong>1×2</strong> (Hazai–Döntetlen–Vendég) tipp adható le.<br>
+– A tipp a mérkőzés <strong>kezdési időpontjáig</strong> szabadon módosítható.<br>
+– <strong>Minden játéknapon</strong> (nem fordulónként) <strong>egyetlen mérkőzésre kijelölhető „Dupla tét”</strong>, amely <strong>kétszeres pontszorzót</strong> ad.<br>
+– A duplázás módosítása csak az adott játéknap <strong>első mérkőzésének kezdéséig</strong> lehetséges, utána rögzül.</p>
+
+<p><strong>3) Bónusz tippek</strong><br>
+– <strong>Végső győztes</strong>: tippeld meg, ki nyeri a BL-t.<br>
+– <strong>Gólkirály</strong>: tippeld meg, ki szerzi a legtöbb gólt.<br>
+– Ezekre a bónusz tippekre <strong>odds alapján</strong> történik a pontozás. A bónusz tippeknél az <strong>odds × 1 pont</strong> alapértéken felül a kijelzett <strong>százalékos érték (%)</strong> <em>pluszban hozzáadódik</em> a játékos <strong>végső szezonpontszámához</strong>.</p>
+
+<p><strong>4) Pontszámítás</strong><br>
+– <strong>Meccsek</strong>: helyes tipp = <strong>odds × tét</strong> (alap tét = 1 pont, <strong>dupla</strong> esetén = 2 pont).<br>
+– <strong>Rossz tipp</strong>: 0 pont.<br>
+– <strong>Bónusz tippek</strong> (Végső győztes, Gólkirály): helyes tipp = <strong>odds × 1 pont</strong> <em>+</em> a kijelzett <strong>%</strong> hozzáadódik a <strong>végső összpontszámhoz</strong>.<br>
+– Az oddsok <strong>manuálisan</strong> kerülnek rögzítésre a tipp(ek) feltöltésekor; a kezdésig az <strong>odds módosulhat</strong>, és nem feltétlenül egyezik az aktuálisan érvényes külső oddsokkal.</p>
+
+<p><strong>5) Eredmények és rangsor</strong><br>
+– Pontösszesítés <strong>játéknaponként</strong> és <strong>a teljes szezonra</strong>.<br>
+– A <strong>Toplista</strong> a játékosokat az <strong>összpontszám</strong> alapján sorolja.</p>
+
+<p><strong>6) Tipp</strong><br>
+– A <strong>Profil</strong> menüben válaszd ki a kedvenc <strong>BL-csapatodat</strong>, így a felület színei ahhoz igazodnak, és a <strong>klubcímere</strong> is megjelenik a profilodnál.</p>
       </div>
       <div class="rules-foot">
         <span id="rulesUpdated" class="rules-updated">Utoljára frissítve: 2025. 09. 12.</span>
