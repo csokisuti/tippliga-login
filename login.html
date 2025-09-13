@@ -22,34 +22,32 @@
     .btn-primary{background:var(--accent);color:#fff;border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.08)}
     .btn-ghost{background:#fff;color:#111;border:1px solid var(--line)}
     .btn[disabled]{opacity:.55;cursor:not-allowed;filter:grayscale(.25)}
+    .link{display:inline-block;color:var(--accent);font-size:13px;text-decoration:underline;cursor:pointer;margin:2px 0 8px}
+    .link[disabled]{opacity:.55;pointer-events:none;text-decoration:none}
 
     .card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
     .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--line);background:#f7f9fd}
     .card .body{padding:12px}
 
-    /* ===== Liga blokk a login dobozon BELÜL ===== */
+    /* Liga blokk a login dobozon BELÜL */
     .league-block{margin-top:10px}
     .league-title{display:flex;align-items:center;gap:8px;font-weight:800;margin:10px 0 8px}
-    .league-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    @media (max-width:700px){.league-grid{grid-template-columns:1fr}}
-
-    /* IMPORTANT: teljesen NEM generikus osztálynevek, hogy ne ütközzenek a global style.css-sel */
-    .league-option{position:relative;display:flex;align-items:center;gap:14px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer;transition:box-shadow .12s ease,border-color .12s ease, background .12s ease}
-    .league-option:hover{box-shadow:0 8px 20px rgba(15,23,42,.08)}
-
-    /* Tartós kiemelés – nem hover; nincs outline, hogy ne legyen "dupla keret" hatás */
-    .league-option[data-selected="true"]{border-color:color-mix(in oklab,var(--accent) 45%, white);background:color-mix(in oklab,var(--accent) 10%, white)}
-
-    .league-logo{width:68px;height:68px;border-radius:14px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:0 0 68px}
-    .league-logo img{max-width:60px;max-height:60px}
-
-    .league-copy{display:flex;flex-direction:column;line-height:1.2;flex:1 1 auto;min-width:0}
-    .league-name{font-weight:800;color:#0f172a}
-    .league-sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    .league-radio{width:16px;height:16px;border-radius:999px;border:2px solid color-mix(in oklab,var(--accent) 45%, white);background:#fff;flex:0 0 16px}
-    .league-radio.is-active{background:var(--accent);border-color:var(--accent)}
-
+    .nav-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    @media (max-width:700px){.nav-grid{grid-template-columns:1fr}}
+    .select-card{position:relative;display:flex;align-items:center;gap:12px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.05);cursor:pointer;transition:.15s ease}
+    .select-card:hover{transform:translateY(-2px)}
+    .select-card[aria-pressed="true"]{
+      border-color: color-mix(in oklab,var(--accent) 45%, white);
+      background: color-mix(in oklab, var(--accent) 8%, white);
+      box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent), 0 6px 18px rgba(15,23,42,.08);
+    }
+    .logo-wrap{width:68px;height:68px;border-radius:14px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+    .logo-wrap img{max-width:60px;max-height:60px}
+    .text{display:flex;flex-direction:column;line-height:1.2}
+    .title{font-weight:800}
+    .desc{color:var(--muted);font-size:12px}
+    .dot{width:12px;height:12px;border-radius:999px;border:2px solid color-mix(in oklab,var(--accent) 35%,white);margin-left:8px}
+    .dot.active{background:var(--accent)}
     .hint{color:var(--muted);font-size:12px;margin-top:6px}
   </style>
 </head>
@@ -62,31 +60,32 @@
       <h3>Bejelentkezés</h3>
       <input type="email" id="email" placeholder="Email:">
       <input type="password" id="password" placeholder="Jelszó:">
+      <a id="forgotLink" class="link" href="#" aria-label="Elfelejtett jelszó">Elfelejtetted a jelszót?</a>
 
       <!-- Liga választó KÖZVETLENÜL a login alatt -->
       <div class="league-block" aria-label="Liga választó">
         <div class="league-title">Válaszd ki a ligát</div>
-        <div class="league-grid">
-          <button class="league-option" data-league="nb1" data-selected="false">
-            <span class="league-logo">
+        <div class="nav-grid">
+          <button class="select-card" data-league="nb1" aria-pressed="false">
+            <span class="logo-wrap">
               <img src="fizz.png" alt="NB I – Fizz Liga logó" onerror="this.onerror=null;this.src='fizz.svg'">
             </span>
-            <span class="league-copy">
-              <span class="league-name">NB I TippLiga</span>
-              <span class="league-sub">Hazai bajnokság</span>
+            <span class="text">
+              <span class="title">NB I TippLiga</span>
+              <span class="desc">Hazai bajnokság</span>
             </span>
-            <span class="league-radio" aria-hidden="true"></span>
+            <span class="dot" aria-hidden="true"></span>
           </button>
 
-          <button class="league-option" data-league="ucl" data-selected="false">
-            <span class="league-logo">
+          <button class="select-card" data-league="ucl" aria-pressed="false">
+            <span class="logo-wrap">
               <img src="ucl.png" alt="UEFA Champions League logó" onerror="this.onerror=null;this.src='ucl.svg'">
             </span>
-            <span class="league-copy">
-              <span class="league-name">BL TippLiga</span>
-              <span class="league-sub">Bajnokok Ligája</span>
+            <span class="text">
+              <span class="title">BL TippLiga</span>
+              <span class="desc">Bajnokok Ligája</span>
             </span>
-            <span class="league-radio" aria-hidden="true"></span>
+            <span class="dot" aria-hidden="true"></span>
           </button>
         </div>
         <div id="leagueHint" class="hint">A belépés gomb a liga kiválasztása után aktiválódik.</div>
@@ -116,14 +115,14 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
       projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.firebasestorage.app",
+      storageBucket: "tippliga-4b3af.firebasestorage.app", // ha gond van vele, egyeztesd a Console-ban (gyakran: tippliga-4b3af.appspot.com)
       messagingSenderId: "720359845241",
       appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
@@ -132,7 +131,10 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    function showNotice(msg, type='success', timeoutMs=3000){
+    // magyar reset e-mail
+    auth.languageCode = 'hu'; // vagy: auth.useDeviceLanguage();
+
+    function showNotice(msg, type='success', timeoutMs=4000){
       const n = document.getElementById('notice');
       if(!n) return;
       n.textContent = msg;
@@ -140,29 +142,50 @@
       if(timeoutMs){ setTimeout(()=>{ n.className = 'notice'; n.textContent=''; }, timeoutMs); }
     }
 
-    // --- Liga kiválasztás logika (NEM generikus osztályokra támaszkodik) ---
     let selectedLeague = null; // 'nb1' | 'ucl'
-    function computeTarget(l){ return l==='ucl' ? 'dashboard_ucl.html' : (l==='nb1' ? 'dashboard.html' : ''); }
+    function computeTarget(league){ if(league==='ucl') return 'dashboard_ucl.html'; if(league==='nb1') return 'dashboard.html'; return ''; }
     function setSelectedLeague(code){
       selectedLeague = code;
-      document.querySelectorAll('.league-option').forEach(btn => {
+      document.querySelectorAll('.select-card').forEach(btn => {
         const active = btn.getAttribute('data-league') === code;
-        btn.setAttribute('data-selected', active ? 'true' : 'false');
-        const r = btn.querySelector('.league-radio');
-        if(r){ r.classList.toggle('is-active', active); }
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        btn.querySelector('.dot')?.classList.toggle('active', active);
       });
-      const loginBtn = document.getElementById('loginBtn');
-      if(loginBtn) loginBtn.disabled = !selectedLeague;
-      try{ localStorage.setItem('lastLeague', code || ''); }catch{}
+      document.getElementById('loginBtn').disabled = !selectedLeague;
     }
 
-    // Induláskor visszatöltjük az utolsó választást
-    try{ const last = localStorage.getItem('lastLeague'); if(last==='nb1'||last==='ucl'){ setSelectedLeague(last); } }catch{}
-
-    // Kattintáskezelő
-    document.querySelectorAll('.league-option').forEach(btn => {
+    // Liga kártyák
+    document.querySelectorAll('.select-card').forEach(btn => {
       btn.addEventListener('click', () => setSelectedLeague(btn.getAttribute('data-league')));
     });
+
+    // „Elfelejtett jelszó?” – semleges visszajelzéssel
+    const forgotLink = document.getElementById('forgotLink');
+    if (forgotLink){
+      forgotLink.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const link = e.currentTarget;
+        const email = document.getElementById('email').value.trim();
+        if (!email){
+          showNotice('Add meg az e-mail címedet, és küldünk jelszó-visszaállító linket.', 'error', 5000);
+          return;
+        }
+        try {
+          link.setAttribute('disabled','');
+          await sendPasswordResetEmail(auth, email, {
+            url: window.location.origin + '/login.html?from=reset',
+            handleCodeInApp: false
+          });
+          // szándékosan ugyanazt az üzenetet mutatjuk hibánál is (ne áruljuk el, létezik-e az e-mail)
+          showNotice('Ha létezik ilyen felhasználó, elküldtük a jelszó-visszaállító e-mailt. Nézd meg a leveleid és a spam mappát is.', 'success', 7000);
+        } catch (err) {
+          console.warn('sendPasswordResetEmail error:', err);
+          showNotice('Ha létezik ilyen felhasználó, elküldtük a jelszó-visszaállító e-mailt. Nézd meg a leveleid és a spam mappát is.', 'success', 7000);
+        } finally {
+          link.removeAttribute('disabled');
+        }
+      });
+    }
 
     // Regisztrációs kártya mutatása/elrejtése
     window.toggleRegister = function (force){
@@ -172,20 +195,22 @@
       if(show){ card.scrollIntoView({ behavior:'smooth', block:'start' }); }
     }
 
-    // --- Regisztráció ---
     window.register = async function () {
       const nickname = document.getElementById('nickname').value.trim();
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
       const confirmPassword = document.getElementById('regConfirmPassword').value;
+
       if (!nickname || !email || !password || !confirmPassword) { alert('Minden mezőt ki kell tölteni.'); return; }
       if (password !== confirmPassword) { alert('A jelszavak nem egyeznek.'); return; }
+
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const profile = { email, nickname, role: 'user', uid: user.uid };
         try { await setDoc(doc(db, 'users', user.email), profile, { merge: true }); }
         catch (permErr) { console.warn('Profil mentése users/{email} alatt nem sikerült (rules?):', permErr); }
+
         showNotice('Sikeres regisztráció! Jelentkezz be az e-mail címeddel és jelszavaddal.', 'success', 6000);
         toggleRegister(false);
         const loginEmail = document.getElementById('email');
@@ -199,7 +224,6 @@
       }
     }
 
-    // --- Bejelentkezés ---
     window.login = async function () {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
@@ -208,7 +232,9 @@
       try {
         await signInWithEmailAndPassword(auth, email, password);
         window.location.href = computeTarget(selectedLeague);
-      } catch (error) { showNotice('Hiba a bejelentkezéskor: ' + error.message, 'error', 6000); }
+      } catch (error) {
+        showNotice('Hiba a bejelentkezéskor: ' + error.message, 'error', 6000);
+      }
     }
 
     // Rövid önellenőrzés
