@@ -180,7 +180,7 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     import { computeLiveOrderFromMatches } from "./standings.js";
-    import { initLeagueSwitcher, setLeagueBadge } from "./league-switcher.js";
+    import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -435,22 +435,6 @@
         // Kötelező első beállítás (ha még nincs kedvenc)
         await maybeForceFavoriteSetup(userRef, { onbEl, onbSel, onbRem, onbSave });
 
-        try{
-          const now = new Date();
-          const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now)));
-          const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-          const myTipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail)));
-          const tippedIds = new Set(myTipsSnap.docs.map(d => d.data().matchId));
-          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-
-          // NB1 nav-badge (marad)
-          const badge = document.getElementById("tipsBadge");
-          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
-
-          // Liga switcher badge NB1-re
-          setLeagueBadge('nb1', pending);
-        }catch(e){ console.warn(e); }
-
         await buildComputedTable();
         onSnapshot(collection(db, "matches"), () => buildComputedTable());
 
@@ -686,7 +670,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg>
         </div>
         <div class="text">
-          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
+          <span class="title">Meccstippek</span>
           <span class="desc">Közelgő meccsek & tippek</span>
         </div>
       </a>
