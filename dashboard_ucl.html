@@ -45,7 +45,7 @@
     #chatClose{width:28px;height:28px;border-radius:8px;font-size:18px;line-height:28px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#111;border:1px solid var(--line,#e6eaf1);cursor:pointer}
     #chatClose:hover{filter:brightness(.95)}
     .chat-list{overflow:auto;padding:8px 10px}
-    .chat-empty{color:var(--muted,#64748b);font-size:13px;padding:8px 10px}
+    .chat-empty{color:#64748b;font-size:13px;padding:8px 10px}
     .msg{padding:8px 10px;border-bottom:1px solid var(--line,#e6eaf1);display:flex;gap:8px;align-items:flex-start}
     .msg .meta{font-size:12px;color:#64748b;margin-bottom:2px}
     .msg .text{white-space:pre-wrap;word-break:break-word}
@@ -93,8 +93,8 @@
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { computeLiveOrderFromMatches } from "./standings.js";
-    /* ÚJ: liga-váltó modul */
-    import { initLeagueSwitcher, setLeagueBadge } from "./league-switcher.js";
+    /* Liga-váltó modul – csak mount kell, jelvény nem */
+    import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -317,19 +317,7 @@
           startNavTop8Countdown(isLocked?null:until);
         }catch(e){ startNavTop8Countdown(null); }
 
-        // Közelgő BL meccsek tipp badge + liga-váltó badge (UCL)
-        try{
-          const now=new Date();
-          const upcomingSnap=await getDocs(query(collection(db,"ucl_matches"),where("startTime",">=",now)));
-          const upcoming=upcomingSnap.docs.map(d=>({id:d.id,...d.data()}));
-          const myTipsSnap=await getDocs(query(collection(db,"ucl_tips"),where("user","==",currentUserEmail)));
-          const tippedIds=new Set(myTipsSnap.docs.map(d=>d.data().matchId));
-          const pending=upcoming.filter(m=>!tippedIds.has(m.id)).length;
-          const badge=document.getElementById("tipsBadge");
-          if(pending>0){badge.textContent=pending;badge.hidden=false}else{badge.hidden=true}
-          /* ÚJ: UCL jelvény a switcherben */
-          setLeagueBadge('ucl', pending);
-        }catch(e){console.warn(e)}
+        // (Eltávolítva) Közelgő BL meccsek tipp badge + liga-váltó jelvény
 
         await buildComputedTable();
         onSnapshot(collection(db,"ucl_matches"),()=>buildComputedTable());
@@ -535,7 +523,7 @@
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg></div>
-        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
+        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg></div>
