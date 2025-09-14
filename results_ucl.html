@@ -321,7 +321,7 @@
     let currentUserNick = "";
     let currentUserRole = "user";
     let favouriteTeamucl = "";
-    let chatLastSeen = null; // UCL-hez tartozó timestamp kerül ide (chatLastSeenUcl mezőből)
+    let chatLastSeen = null; // UCL-hez tartozó timestamp
 
     let matches = [];
     let tipsByMatch = new Map();
@@ -565,7 +565,7 @@
       body.appendChild(tr);
     }
 
-    /* ---------------- Forduló eredmények ---------------- */
+    /* ---------------- Forduló eredmények (NB1 elvek) ---------------- */
     function buildRoundsUI(){
       const sel = document.getElementById("roundSelect");
       sel.innerHTML = "";
@@ -669,13 +669,23 @@
         if (!mTips.length){
           tipsWrap.appendChild(kicker("Ehhez a meccshez még nincs leadott tipp."));
         } else if (!hasStarted){
+          // NB1-elv: kezdésig nem nyilvános; saját tipp előnézet; adminnak lista a leadókról
           tipsWrap.appendChild(hiddenInfo("A tippek a kezdésig nem nyilvánosak."));
           mTips.filter(t => t.user === currentUserEmail).forEach(t=>{
             const row = document.createElement("div"); row.className = "tip";
             row.innerHTML = `<b>Saját tipped</b>: ${escapeHtml(tipChoice(t))}${tipDouble(t) ? ' <span class="kicker">(dupla)</span>' : ''}`;
             tipsWrap.appendChild(row);
           });
+          if (currentUserRole === 'admin') {
+            const uNames = [...new Set(mTips.map(t => t.user).filter(Boolean))]
+              .map(e => escapeHtml(nickByEmail[e] || e));
+            const adminRow = document.createElement('div');
+            adminRow.className = 'kicker';
+            adminRow.innerHTML = `<b>Leadott tippek (admin):</b> ${uNames.length ? uNames.join(', ') : '—'} (${uNames.length} fő)`;
+            tipsWrap.appendChild(adminRow);
+          }
         } else {
+          // kezdés után: mindenkié látható, pontszámmal
           mTips.forEach(t=>{
             const pick = tipChoice(t);
             const correct = m.outcome && pick === m.outcome;
@@ -709,7 +719,7 @@
     function kicker(text){ const d=document.createElement("div"); d.className="kicker"; d.textContent=text; return d; }
     function hiddenInfo(text){ const d=document.createElement("div"); d.className="hidden-info"; d.textContent=text; return d; }
 
-    /* ---------------- INIT ---------------- */
+    /* ---------------- INIT (NB1 logikahoz igazítva) ---------------- */
     document.addEventListener("DOMContentLoaded", () => {
       /* Liga-váltó mount: BAL SZÉL – cím mellett */
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
@@ -738,7 +748,6 @@
           currentUserNick = d.nickname || currentUserEmail;
           currentUserRole = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
-          // 🔵 UCL chat last-seen mező
           chatLastSeen = d.chatLastSeenUcl || null;
         } else {
           currentUserNick = currentUserEmail;
@@ -772,12 +781,15 @@
 
         onSnapshot(collection(db,"ucl_matches"), snap=>{
           const ms = snap.docs.map(d=>({id:d.id, ...d.data()}));
+          matches = ms;
           officialTop8 = deriveTop8FromMatches(ms);
           refreshBonusCard();
+          const sel = document.getElementById("roundSelect");
+          if (sel?.value) renderRound(sel.value);
           if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
         });
 
-        /* ---- TIPPBEOLVASÁS: user/email mezők egységesítése ---- */
+        /* ---- TIPPBEOLVASÁS: NB1-elvek (legfrissebb per user-meccs) + user/email normalizáció ---- */
         tipsByMatch.clear();
         const tipsSnapAll = await getDocs(collection(db, "ucl_tips"));
         const latest = new Map();
@@ -849,7 +861,7 @@
       });
     });
 
-    /* ---- Függő tippek jelvény: user/email OR lekérés ---- */
+    /* ---------------- Nav „függő tippek” badge (user/email OR) ---------------- */
     async function updatePendingBadge(email){
       try{
         const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date())));
@@ -892,7 +904,7 @@
 
       let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
 
-      // 🔵 UCL chat kollekció
+      // UCL chat kollekció
       const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc'));
       onSnapshot(qAll, snap => {
         listEl.innerHTML = '';
@@ -922,9 +934,7 @@
               del.className = 'del';
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{
-                try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch(e){}
-              });
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch(e){} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
@@ -960,7 +970,6 @@
 
       async function markSeen(){
         try{
-          // 🔵 UCL last-seen mező frissítése
           await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true });
           lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
