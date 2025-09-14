@@ -13,9 +13,14 @@
     .content-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
     @media (max-width:1000px){.content-grid{grid-template-columns:1fr}}
     .header{display:flex;align-items:center;justify-content:space-between}
-    .header-left{display:flex;align-items:center;gap:12px}
+    .header-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
     .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
     .welcome{color:var(--muted,#64748b);margin:4px 0 0}
+
+    /* liga-váltó balra, a cím mellé */
+    .league-switch-left{margin-left:8px}
+    @media (max-width:700px){.league-switch-left{width:100%;margin-left:0}}
+
     .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
     @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -269,7 +274,7 @@
     let favouriteTeamucl=""; let chatLastSeen=null;
 
     document.addEventListener("DOMContentLoaded",()=>{
-      /* Liga-váltó mount: Kilépés ALATT, UCL-oldalon */
+      /* Liga-váltó mount: BAL SZÉL – cím mellett */
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
       onAuthStateChanged(auth,async(user)=>{
@@ -316,8 +321,6 @@
           }
           startNavTop8Countdown(isLocked?null:until);
         }catch(e){ startNavTop8Countdown(null); }
-
-        // (Eltávolítva) Közelgő BL meccsek tipp jelvény
 
         await buildComputedTable();
         onSnapshot(collection(db,"ucl_matches"),()=>buildComputedTable());
@@ -495,16 +498,14 @@
           <h1>BL TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
+        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BAL OLDALON A CÍM MELLETT -->
+        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
           Kilépés
         </button>
-
-        <!-- Liga-váltó: közvetlenül a Kilépés alatt -->
-        <div id="leagueSwitchMount" style="margin-top:10px;"></div>
-
         <button id="openRules" class="btn-accent" style="display:block;margin-top:10px;">Szabályzat</button>
       </div>
     </div>
