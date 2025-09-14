@@ -777,16 +777,19 @@
           if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
         });
 
+        /* ---- TIPPBEOLVASÁS: user/email mezők egységesítése ---- */
         tipsByMatch.clear();
         const tipsSnapAll = await getDocs(collection(db, "ucl_tips"));
         const latest = new Map();
         tipsSnapAll.forEach(d => {
-          const t = d.data(); if (!t?.matchId || !t?.user) return;
+          const raw = d.data() || {};
+          const t = { id: d.id, ...raw, user: raw.user || raw.email }; // normalizálás
+          if (!t?.matchId || !t?.user) return;
           const k = t.user + "|" + t.matchId;
           const cur = latest.get(k);
-          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || 0;
-          const ts = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || 0;
-          if (!cur || ts >= curTs) latest.set(k, { id:d.id, ...t });
+          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || cur?.timestamp?.toMillis?.() || 0;
+          const ts    = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || t.timestamp?.toMillis?.() || 0;
+          if (!cur || ts >= curTs) latest.set(k, t);
         });
         for (const tip of latest.values()){
           if (!tipsByMatch.has(tip.matchId)) tipsByMatch.set(tip.matchId, []);
@@ -846,19 +849,24 @@
       });
     });
 
+    /* ---- Függő tippek jelvény: user/email OR lekérés ---- */
     async function updatePendingBadge(email){
       try{
         const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date())));
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
+
+        const tipsUserSnap  = await getDocs(query(collection(db,"ucl_tips"), where("user","==",  currentUserEmail)));
+        const tipsEmailSnap = await getDocs(query(collection(db,"ucl_tips"), where("email","==", currentUserEmail)));
+
         const latestByMatch = new Map();
-        tipsSnap.forEach(x=>{
-          const t=x.data(); if(!t?.matchId) return;
-          const cur=latestByMatch.get(t.matchId);
-          const ts=(t.updatedAt?.toMillis?.()||t.createdAt?.toMillis?.()||t.timestamp?.toMillis?.()||0);
+        [...tipsUserSnap.docs, ...tipsEmailSnap.docs].forEach(x=>{
+          const t=x.data()||{}; const mid=t.matchId; if(!mid) return;
+          const ts =(t.updatedAt?.toMillis?.()||t.createdAt?.toMillis?.()||t.timestamp?.toMillis?.()||0);
+          const cur=latestByMatch.get(mid);
           const cts=(cur?.updatedAt?.toMillis?.()||cur?.createdAt?.toMillis?.()||cur?.timestamp?.toMillis?.()||0);
-          if(!cur || ts>=cts) latestByMatch.set(t.matchId,t);
+          if(!cur || ts>=cts) latestByMatch.set(mid,t);
         });
+
         const tippedIds = new Set(Array.from(latestByMatch.keys()));
         const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
         const badge = document.getElementById("tipsBadge");
