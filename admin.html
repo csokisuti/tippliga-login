@@ -31,6 +31,10 @@
     .muted{color:var(--muted)}
     .ok{color:#16a34a;font-weight:700}
     .warn{color:#b45309;font-weight:700}
+    .sortable{list-style:none;padding:0;counter-reset:pos}
+    .sortable li{position:relative;padding:10px 10px 10px 36px;margin:5px 0;background:#f2f2f2;border:1px solid #ccc;border-radius:8px;cursor:grab}
+    .sortable li.dragging{opacity:.5}
+    .sortable li::before{counter-increment:pos;content:counter(pos) ". ";position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
     .filterbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
     .small{font-size:12px}
     .inline{display:inline-flex;gap:8px;align-items:center}
@@ -43,7 +47,7 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc,
-      query, orderBy, limit
+      query, orderBy, limit, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = { apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc", authDomain:"tippliga-4b3af.firebaseapp.com", projectId:"tippliga-4b3af", storageBucket:"tippliga-4b3af.appspot.com", messagingSenderId:"720359845241", appId:"1:720359845241:web:d3d6edcac6b43ebff053a8" };
@@ -56,6 +60,7 @@
     const teams = ["Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr","Kazincbarcikai SC","Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus","Paksi FC","Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"];
 
     function parseOutcome(r){ const p=r.split("-").map(x=>parseInt(x.trim())); if(p.length!==2||isNaN(p[0])||isNaN(p[1])) return ""; if(p[0]>p[1]) return "1"; if(p[0]<p[1]) return "2"; return "X" }
+    const stripNumPrefix = s => (s||"").replace(/^\s*\d+[\.\)]?\s*/,"");
 
     let _currentTplId = null;
 
@@ -72,9 +77,12 @@
       await loadUsers();
       await loadResults();
       await loadPositionsLock();
+      await loadOfficialOrder();
       await loadTemplates();
       await loadMailLog();
-      await loadLbCfg();
+
+      // Real-time figyelés a lezárás állapotára (státusz azonnal frissül)
+      onSnapshot(doc(db,"settings","positionsLock"), ()=> loadPositionsLock());
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=""}){
@@ -91,7 +99,7 @@
       const back=document.createElement("button"); back.className="btn"; back.textContent="⬅️ Vissza a dashboardra"; back.onclick=()=>location.href="dashboard.html";
       const expand=document.createElement("button"); expand.className="btn"; expand.textContent="Mindet nyisd le"; expand.onclick=()=>document.querySelectorAll(".card").forEach(c=>c.classList.add("open"));
       const collapse=document.createElement("button"); collapse.className="btn"; collapse.textContent="Mindet csukd össze"; collapse.onclick=()=>document.querySelectorAll(".card").forEach(c=>c.classList.remove("open"));
-      const refresh=document.createElement("button"); refresh.className="btn"; refresh.textContent="Frissítés"; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadTemplates(); loadMailLog(); loadLbCfg(); };
+      const refresh=document.createElement("button"); refresh.className="btn"; refresh.textContent="Frissítés"; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadOfficialOrder(); loadTemplates(); loadMailLog(); };
       left.appendChild(back); right.append(expand, collapse, refresh); top.append(left,right); document.body.appendChild(top);
 
       const wrap=document.createElement("div"); wrap.className="cards";
@@ -170,6 +178,17 @@
         </div>
         <div id="mailLogBox" class="xscroll"></div>`});
 
+      const cTable = makeCard({title:"NB1 tabella kép feltöltése", hint:"PNG/JPG, base64 tárolás", id:"card-table", bodyHTML:`
+        <div class="row">
+          <input type="file" id="tableImageInput" accept="image/*">
+          <button id="uploadTableImage" class="btn primary">Feltöltés</button>
+        </div>`});
+
+      const cOrder = makeCard({title:"Hivatalos szezon végi sorrend", hint:"Húzd–és–vidd, mentés", id:"card-order", bodyHTML:`
+        <button id="toggleOrder" class="btn">Sorrend szerkesztése/elrejtése</button>
+        <ul id="sortableList" class="sortable" style="display:none; margin-top:10px;"></ul>
+        <button id="saveOrderBtn" style="display:none;" class="btn primary">Mentés</button>`});
+
       const cLock = makeCard({title:"Pozíciós tipp lezárás", hint:"Azonnal vagy időpontra", id:"card-lock", bodyHTML:`
         <div class="muted">Itt szabályozható a Szezon végi pozíciós sorrend módosíthatósága.</div>
         <div class="row" style="margin-top:8px">
@@ -184,32 +203,17 @@
           <span id="lockStatus" class="muted"></span>
         </div>`});
 
-      const cLb = makeCard({title:"Leaderboard – számítási tartomány", hint:"A ranglistán mely fordulóktól számolunk", id:"card-lb", bodyHTML:`
-        <div class="row">
-          <label class="inline"><input type="radio" name="lbMode" value="full"> Teljes szezon</label>
-          <label class="inline"><input type="radio" name="lbMode" value="fromRound"> Csak ettől a fordulótól: </label>
-          <input type="number" id="lbStartFrom" min="1" step="1" placeholder="pl. 6" style="width:120px">
-        </div>
-        <div class="row">
-          <button class="btn primary" id="lbSave">Mentés</button>
-          <button class="btn" id="lbLoad">Betöltés</button>
-          <span id="lbStatus" class="muted small"></span>
-        </div>`});
-
       document.body.appendChild(wrap);
-      /* csak a szükséges kártyák */
-      wrap.append(
-        cAdd.section, cManage.section, cRes.section, cUsers.section,
-        cBulk.section, cLog.section, /* cTable.section, cOrder.section, */ cLock.section, cLb.section
-      );
+      wrap.append(cAdd.section, cManage.section, cRes.section, cUsers.section, cBulk.section, cLog.section, cTable.section, cOrder.section, cLock.section);
 
       document.getElementById("matchForm").addEventListener("submit", onAddMatch);
-      /* kivéve: uploadTableImage + order UI eventek */
+      document.getElementById("uploadTableImage").addEventListener("click", onUploadTable);
       document.getElementById("withResultHeader").onclick=()=>{ const c=document.getElementById("withResultContent"); c.style.display = c.style.display==="none" ? "block":"none" };
-
+      const sortableList = document.getElementById("sortableList");
+      document.getElementById("toggleOrder").onclick=()=>{ const vis = sortableList.style.display==="block"; sortableList.style.display = vis? "none":"block"; document.getElementById("saveOrderBtn").style.display = vis? "none":"inline-block" };
+      document.getElementById("saveOrderBtn").onclick = saveOfficialOrder;
       document.getElementById("applyFilters").onclick = renderMatchesFiltered;
       document.getElementById("resetFilters").onclick = ()=>{ document.getElementById("filterRound").value=""; document.getElementById("filterTeam").value=""; renderMatchesFiltered() };
-
       document.getElementById("bulkLoadUsers").onclick = bulkLoadUsers;
       document.getElementById("bulkSelectAll").onchange = (e)=>{ document.querySelectorAll("#bulkUsersBox input[type=checkbox]").forEach(cb=> cb.checked = e.target.checked) };
       document.getElementById("bulkSendBtn").onclick = bulkSend;
@@ -223,8 +227,9 @@
 
       document.getElementById("logRefresh").onclick = loadMailLog;
 
-      document.getElementById("lbLoad").onclick = loadLbCfg;
-      document.getElementById("lbSave").onclick = saveLbCfg;
+      /* ÚJ: gombok bekötése a lezárás kártyán */
+      document.getElementById("saveLock").onclick = saveLock;
+      document.getElementById("clearLock").onclick = clearLock;
     }
 
     let _matchesCache = [];
@@ -268,8 +273,8 @@
               <input type="datetime-local" value="${new Date(d.startTime.toDate()).toISOString().slice(0,16)}" id="start-${d.id}">
               <input value="${d.roundId||""}" id="round-${d.id}">
               <input value="${d.odds["1"]??""}" id="odds1-${d.id}" placeholder="Odds 1" style="width:90px">
-              <input value="${d.odds["X"]??""}" id="oddsX-${d.id}" placeholder="Odds X" style="width:90px">
-              <input value="${d.odds["2"]??""}" id="odds2-${d.id}" placeholder="Odds 2" style="width:90px">
+              <input value="${d.odds["X"]??""}" id="oddsX-${d.id}" placeholder="Odds 2" style="width:90px">
+              <input value="${d.odds["2"]??""}" id="odds2-${d.id}" placeholder="Odds X" style="width:90px">
               <button class="btn primary" onclick="updateMatch('${d.id}')">Mentés</button>
               <button class="btn danger" onclick="deleteMatch('${d.id}')">Törlés</button>
             </div>
@@ -310,6 +315,11 @@
       const homeTeam=document.getElementById("homeTeam"), awayTeam=document.getElementById("awayTeam"), roundId=document.getElementById("roundId"), odds1=document.getElementById("odds1"), oddsX=document.getElementById("oddsX"), odds2=document.getElementById("odds2");
       await addDoc(collection(db,"matches"),{ homeTeam:homeTeam.value, awayTeam:awayTeam.value, startTime, roundId:roundId.value, odds:{"1":parseFloat(odds1.value),"X":parseFloat(oddsX.value),"2":parseFloat(odds2.value)} });
       alert("Meccs mentve"); e.target.reset(); await loadMatches(); await loadResults();
+    }
+
+    async function onUploadTable(){
+      const f=document.getElementById("tableImageInput").files[0]; if(!f) return alert("Válassz ki egy képet!");
+      const rd=new FileReader(); rd.onload=async()=>{ const b64=rd.result.split(",")[1]; await setDoc(doc(db,"settings","nbi_table_image"),{ base64:b64 }); alert("Kép elmentve Firestore-ba!"); }; rd.readAsDataURL(f);
     }
 
     async function loadResults(){
@@ -560,45 +570,84 @@ verzió: ${data.version || 'n/a'}`);
 
     window.updateMatch = updateMatch;
     window.deleteMatch = deleteMatch;
-    window.saveLock = saveLock;
-    window.clearLock = clearLock;
 
     async function loadPositionsLock(){
       const status=document.getElementById("lockStatus");
       const snap=await getDoc(doc(db,"settings","positionsLock"));
-      if(!snap.exists()){ status.textContent="Jelenleg nyitva."; status.className="muted"; return }
-      const d=snap.data()||{}; const isLocked=!!d.isLocked; const until=d.lockUntil?.toDate?.()||null; const msg=d.message||""; const now=new Date(); const timeLocked=until && now>=until;
-      if(isLocked||timeLocked){ status.textContent = `ZÁRVA ${timeLocked&&until?`(határidő: ${until.toLocaleString("hu-HU")})`:"(azonnali zárás)"}${msg?` – ${msg}`:""}`; status.className="warn" } else { status.textContent="Jelenleg nyitva."; status.className="ok" }
+      if(!snap.exists()){
+        status.textContent="Jelenleg nyitva.";
+        status.className="muted";
+        // űrlap alaphelyzet
+        document.getElementById("lockNow").checked = false;
+        document.getElementById("lockUntil").value = "";
+        document.getElementById("lockMessage").value = "";
+        return;
+      }
+      const d=snap.data()||{};
+      const isLocked=!!d.isLocked;
+      const until=d.lockUntil?.toDate?.()||null;
+      const msg=d.message||"";
+      const now=new Date();
+      const timeLocked=until && now>=until;
+
+      if(isLocked||timeLocked){
+        status.textContent = `ZÁRVA ${timeLocked&&until?`(határidő: ${until.toLocaleString("hu-HU")})`:"(azonnali zárás)"}${msg?` – ${msg}`:""}`;
+        status.className="warn";
+      } else {
+        status.textContent="Jelenleg nyitva.";
+        status.className="ok";
+      }
+
+      // Űrlap kitöltése a jelenlegi értékekkel
+      document.getElementById("lockNow").checked = !!isLocked;
+      document.getElementById("lockUntil").value = until ? new Date(until).toISOString().slice(0,16) : "";
+      document.getElementById("lockMessage").value = msg;
     }
+
     async function saveLock(){
-      const lockNow=document.getElementById("lockNow").checked; const untilStr=document.getElementById("lockUntil").value; const message=document.getElementById("lockMessage").value.trim();
+      const lockNow=document.getElementById("lockNow").checked;
+      const untilStr=document.getElementById("lockUntil").value;
+      const message=document.getElementById("lockMessage").value.trim();
       let docObj={ isLocked:!!lockNow, message: message||"" };
-      if(untilStr){ const dt=new Date(untilStr); if(isNaN(+dt)) return alert("Hibás dátum/idő."); docObj.lockUntil = Timestamp.fromDate(dt) } else { docObj.lockUntil = null }
+      if(untilStr){
+        const dt=new Date(untilStr);
+        if(isNaN(+dt)) return alert("Hibás dátum/idő.");
+        docObj.lockUntil = Timestamp.fromDate(dt);
+      } else {
+        docObj.lockUntil = null;
+      }
       await setDoc(doc(db,"settings","positionsLock"), docObj);
-      alert("Lezárás beállítva."); await loadPositionsLock();
-    }
-    async function clearLock(){ await setDoc(doc(db,"settings","positionsLock"),{ isLocked:false, lockUntil:null, message:"" }); alert("Lezárás feloldva."); await loadPositionsLock() }
-
-    async function loadLbCfg(){
-      const ref = doc(db,"settings","leaderboardConfig");
-      const snap = await getDoc(ref);
-      const d = snap.exists()? snap.data(): {};
-      const mode = d.mode || "full";                 // "full" | "fromRound"
-      const startFrom = Number(d.startFrom)||1;
-      document.querySelectorAll('input[name="lbMode"]').forEach(r=> r.checked = (r.value===mode));
-      const el = document.getElementById("lbStartFrom");
-      if(el) el.value = startFrom;
-      const st = document.getElementById("lbStatus");
-      if(st) st.textContent = "Betöltve.";
+      alert("Lezárás beállítva.");
+      await loadPositionsLock();
     }
 
-    async function saveLbCfg(){
-      const r = [...document.querySelectorAll('input[name="lbMode"]')].find(x=>x.checked);
-      const mode = r ? r.value : "full"; // "full" | "fromRound"
-      const startFrom = Math.max(1, Number(document.getElementById("lbStartFrom").value)||1);
-      await setDoc(doc(db,"settings","leaderboardConfig"), { mode, startFrom }, { merge:true });
-      const st = document.getElementById("lbStatus");
-      if(st) st.textContent = "Mentve.";
+    async function clearLock(){
+      await setDoc(doc(db,"settings","positionsLock"),{ isLocked:false, lockUntil:null, message:"" });
+      alert("Lezárás feloldva.");
+      await loadPositionsLock();
+    }
+
+    async function loadOfficialOrder(){
+      const ref=doc(db,"finalStandings","official");
+      const listEl=document.getElementById("sortableList");
+      listEl.innerHTML="";
+      const snap=await getDoc(ref);
+      const source = snap.exists() && Array.isArray(snap.data().teams) ? snap.data().teams : teams;
+      const arr = source.map(stripNumPrefix);
+      let dragged=null;
+      arr.forEach(team=>{
+        const li=document.createElement("li"); li.textContent=team; li.draggable=true;
+        li.addEventListener("dragstart",()=>{ dragged=li; li.classList.add("dragging") });
+        li.addEventListener("dragend",()=>{ dragged=null; li.classList.remove("dragging") });
+        li.addEventListener("dragover",(e)=>{ e.preventDefault(); const r=li.getBoundingClientRect(); const after=(e.clientY - (r.top + r.height/2))>0; const p=li.parentNode; p.insertBefore(dragged, after? li.nextSibling: li) });
+        listEl.appendChild(li);
+      });
+    }
+
+    async function saveOfficialOrder(){
+      const list=[...document.querySelectorAll("#sortableList li")].map(li=> stripNumPrefix(li.textContent.trim()));
+      await setDoc(doc(db,"finalStandings","official"),{ teams:list, positions:list.map((t,i)=>({ team:t, position:i+1 })) });
+      alert("Sorrend elmentve.");
     }
   </script>
 </head>

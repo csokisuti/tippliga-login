@@ -47,24 +47,38 @@
     .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
 
+    /* Zár-bannner */
+    .lock-banner{
+      display:none; padding:10px 12px; border:1px solid #fcd34d; background:#fff7ed; color:#7c2d12;
+      border-radius:12px; font-weight:600;
+    }
+    .lock-banner.show{ display:block; }
+
     /* Sorrendező UI */
     .pool{ padding:12px; display:flex; flex-wrap:wrap; gap:10px; align-content:flex-start; min-height:120px; }
+    .pool.locked{ opacity:.7; }
     .team-chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:grab; user-select:none; }
     .team-chip:active{ cursor:grabbing; }
+    .team-chip[aria-disabled="true"]{ cursor:not-allowed; opacity:.6; }
+
     .crest{ width:22px; height:22px; object-fit:contain; border-radius:4px; background:#fff; border:1px solid var(--line,#e6eaf1); }
 
     .slots{ padding:12px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
     @media (max-width:700px){ .slots{ grid-template-columns: 1fr; } }
     .slot{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border:1px dashed var(--line,#e6eaf1); border-radius:12px; background:#fafbff; min-height:52px; }
     .slot.dragover{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 40%, white); outline-offset:2px; }
+    .slots.locked .slot{ opacity:.85; }
     .slot-left{ display:flex; align-items:center; gap:10px; }
     .pos-num{ width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:color-mix(in oklab, var(--accent,#3b82f6) 20%, white); color:var(--accent,#3b82f6); font-weight:800; }
     .slot-chip{ display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line,#e6eaf1); border-radius:10px; background:#fff; cursor:grab; user-select:none; }
+    .slot-chip[aria-disabled="true"]{ cursor:not-allowed; opacity:.7; }
     .slot-empty{ color:#94a3b8; font-size:13px; }
 
     .save-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
     .save-state{ font-size:12px; color:#16a34a; display:none; }
     .save-state.show{ display:inline-flex; }
+    .save-disabled{ font-size:12px; color:#b45309; display:none; }
+    .save-disabled.show{ display:inline-flex; }
 
     /* Chat gomb és panel (mint a többi oldalon) */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
@@ -88,7 +102,6 @@
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
-
     /* Gomb stílus (Kilépés) – egységes */
     .btn-accent{
       min-height:40px; padding:10px 14px; border-radius:10px;
@@ -157,6 +170,11 @@
     // A felhasználó által felrakott sorrend (12 hely)
     let placed = Array(12).fill("");
 
+    // ÚJ: lezárás állapota
+    let positionsLocked = false;
+    let lockUntil = null;
+    let lockMessage = "";
+
     document.addEventListener("DOMContentLoaded", () => {
       // liga-váltó mount
       const lsm = document.getElementById('leagueSwitchMount');
@@ -201,6 +219,9 @@
           }
         }catch(e){ console.warn(e); }
 
+        // ÚJ: lezárás figyelése + UI frissítés
+        watchPositionsLock();
+
         renderAll();
         initChat(userRef);
         updatePendingBadge();
@@ -211,6 +232,43 @@
         signOut(auth).then(() => window.location.href = "login.html");
       });
     });
+
+    /* ======= Lezárás kezelése ======= */
+    function computeLocked(d){
+      const isLocked = !!(d?.isLocked);
+      const until = d?.lockUntil?.toDate?.() || null;
+      const timeLocked = until && new Date() >= until;
+      return { locked: !!(isLocked || timeLocked), until, message: d?.message || "" };
+    }
+
+    function watchPositionsLock(){
+      const ref = doc(db,"settings","positionsLock");
+      onSnapshot(ref, snap=>{
+        const d = snap.exists() ? snap.data() : {};
+        const st = computeLocked(d);
+        positionsLocked = st.locked;
+        lockUntil = st.until;
+        lockMessage = st.message || "";
+
+        const banner = document.getElementById("lockBanner");
+        if (positionsLocked){
+          banner.classList.add("show");
+          banner.textContent = `🔒 Lezárva – a pozíciós tippek nem módosíthatók.` +
+            (lockUntil ? ` (határidő: ${lockUntil.toLocaleString("hu-HU")})` : "") +
+            (lockMessage ? ` – ${lockMessage}` : "");
+        } else {
+          banner.classList.remove("show");
+          banner.textContent = "";
+        }
+
+        // Vizualizáció a konténereken
+        document.getElementById("pool").classList.toggle("locked", positionsLocked);
+        document.getElementById("slots").classList.toggle("locked", positionsLocked);
+
+        // Újrarender, hogy a draggable flag-ek is alkalmazódjanak
+        renderAll();
+      });
+    }
 
     function updatePendingBadge(){
       getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
@@ -235,20 +293,30 @@
     function renderPool(){
       const pool = document.getElementById("pool");
       pool.innerHTML = "";
+
       for (const team of poolTeams()){
         const chip = document.createElement("div");
         chip.className = "team-chip";
-        chip.draggable = true;
         chip.dataset.team = team;
         chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
-        chip.addEventListener("dragstart", e=>{
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", JSON.stringify({type:"team", team, from:"pool"}));
-        });
+
+        // draggable csak ha nincs zárva
+        chip.draggable = !positionsLocked;
+        chip.setAttribute("aria-disabled", positionsLocked ? "true" : "false");
+
+        if (!positionsLocked){
+          chip.addEventListener("dragstart", e=>{
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", JSON.stringify({type:"team", team, from:"pool"}));
+          });
+        }
         pool.appendChild(chip);
       }
-      pool.addEventListener("dragover", e=>{ e.preventDefault(); });
+
+      pool.onDragOverHandler?.(); // noop safety
+      pool.addEventListener("dragover", e=>{ if (positionsLocked) return; e.preventDefault(); });
       pool.addEventListener("drop", e=>{
+        if (positionsLocked) return;
         e.preventDefault();
         const data = safeParse(e.dataTransfer.getData("text/plain"));
         if (data && data.type==="slot"){
@@ -283,14 +351,19 @@
         if (team){
           const chip = document.createElement("div");
           chip.className = "slot-chip";
-          chip.draggable = true;
           chip.dataset.team = team;
           chip.dataset.slot = String(i);
           chip.innerHTML = `<img class="crest" src="${crestFor(team)}" alt=""><span>${team}</span>`;
-          chip.addEventListener("dragstart", e=>{
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", JSON.stringify({type:"slot", index:i, team}));
-          });
+
+          chip.draggable = !positionsLocked;
+          chip.setAttribute("aria-disabled", positionsLocked ? "true" : "false");
+
+          if (!positionsLocked){
+            chip.addEventListener("dragstart", e=>{
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", JSON.stringify({type:"slot", index:i, team}));
+            });
+          }
           left.appendChild(chip);
         } else {
           const empty = document.createElement("div");
@@ -299,9 +372,10 @@
           left.appendChild(empty);
         }
 
-        slot.addEventListener("dragover", e=>{ e.preventDefault(); slot.classList.add("dragover"); });
+        slot.addEventListener("dragover", e=>{ if (positionsLocked) return; e.preventDefault(); slot.classList.add("dragover"); });
         slot.addEventListener("dragleave", ()=>{ slot.classList.remove("dragover"); });
         slot.addEventListener("drop", e=>{
+          if (positionsLocked) return;
           e.preventDefault();
           slot.classList.remove("dragover");
           const data = safeParse(e.dataTransfer.getData("text/plain"));
@@ -339,7 +413,15 @@
     function autoSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 300); }
 
     async function saveNow(){
+      // Lezáráskor nincs mentés
       const saved = document.getElementById("saveState");
+      const disabled = document.getElementById("saveDisabled");
+      if (positionsLocked){
+        saved.classList.remove("show");
+        disabled.classList.add("show");
+        setTimeout(()=>disabled.classList.remove("show"), 1500);
+        return;
+      }
       try{
         const order = placed.map(x=>x||"");
         await setDoc(doc(db,"standingsTips", currentUserEmail), {
@@ -348,6 +430,7 @@
           order,
           updatedAt: serverTimestamp()
         }, { merge:true });
+        disabled.classList.remove("show");
         saved.classList.add("show");
         setTimeout(()=>saved.classList.remove("show"), 1200);
       }catch(e){ console.warn(e); }
@@ -546,6 +629,9 @@
       </a>
     </nav>
 
+    <!-- Zár banner -->
+    <div id="lockBanner" class="lock-banner" role="status" aria-live="polite"></div>
+
     <!-- Tartalom -->
     <div class="content-grid">
       <section class="card">
@@ -553,6 +639,7 @@
         <div id="pool" class="pool"></div>
         <div class="save-row">
           <span id="saveState" class="save-state">Mentve</span>
+          <span id="saveDisabled" class="save-disabled">Le van zárva – mentés nem lehetséges.</span>
         </div>
       </section>
 
