@@ -15,13 +15,9 @@
     @media (max-width:1000px){ .content-grid{ grid-template-columns: 1fr; } }
 
     .header{ display:flex; align-items:center; justify-content:space-between; }
-    .header-left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .header-left{ display:flex; align-items:center; gap:12px; }
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
-
-    /* új: liga-váltó a cím mellett */
-    .league-switch-left{ margin-left:8px; }
-    @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0; } }
 
     /* NAV – ugyanaz, mint a dashboardon */
     .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
@@ -111,9 +107,6 @@
       query, where, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    /* ÚJ: liga-váltó komponens */
-    import { initLeagueSwitcher } from "./league-switcher.js";
-
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
@@ -158,10 +151,6 @@
     let placed = Array(12).fill("");
 
     document.addEventListener("DOMContentLoaded", () => {
-      // liga-váltó mount
-      const lsm = document.getElementById('leagueSwitchMount');
-      if (lsm) initLeagueSwitcher({ mountTarget: lsm });
-
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
         currentUserEmail = user.email;
@@ -454,7 +443,6 @@
           <h1>NB1 TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
-        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
@@ -479,7 +467,7 @@
         </div>
       </a>
 
-      <!-- Szezon végi sorrend (aktuális oldal) -->
+      <!-- Szezon végi sorrend (aktuális oldal linkje is maradhat) -->
       <a class="nav-card" href="positions.html">
         <div class="icon-wrap" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
@@ -537,7 +525,7 @@
       <!-- Admin (rejtve nem adminoknak) -->
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
