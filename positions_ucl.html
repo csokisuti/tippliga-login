@@ -2,6 +2,7 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>BL TippLiga – Top 8 + bónuszok</title>
 
   <link rel="stylesheet" href="style-themed.css" />
@@ -16,6 +17,10 @@
     .header-left{display:flex;align-items:center;gap:12px}
     .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
     .welcome{color:var(--muted,#64748b);margin:4px 0 0}
+
+    /* Liga-váltó balra, a cím mellé */
+    .league-switch-left{ margin-left:8px }
+    @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0 } }
 
     /* NAV */
     .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
@@ -141,6 +146,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -274,6 +280,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      /* Liga-váltó mount: BAL SZÉL – cím mellett */
+      initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
+
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login_ucl.html"; return; }
         currentUserEmail = user.email;
@@ -824,6 +833,8 @@
           <h1>BL TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
+        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BAL OLDALON A CÍM MELLETT -->
+        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
