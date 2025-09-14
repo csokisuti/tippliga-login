@@ -13,9 +13,13 @@
 
     /* Fejléc/nav – egységes */
     .header{ display:flex; align-items:center; justify-content:space-between; }
-    .header-left{ display:flex; align-items:center; gap:12px; }
+    .header-left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
+
+    /* ÚJ: liga-váltó a cím mellett */
+    .league-switch-left{ margin-left:8px; }
+    @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0; } }
 
     .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
     @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
@@ -80,6 +84,8 @@
       doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    /* ÚJ: liga-váltó */
+    import { initLeagueSwitcher } from "./league-switcher.js";
 
     /* ---------------- Firebase init ---------------- */
     const firebaseConfig = {
@@ -121,6 +127,10 @@
 
     /* ---------------- INIT ---------------- */
     document.addEventListener("DOMContentLoaded", () => {
+      /* liga-váltó mount */
+      const leagueMount = document.getElementById("leagueSwitchMount");
+      if (leagueMount) initLeagueSwitcher({ mountTarget: leagueMount });
+
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
         currentUserEmail = user.email;
@@ -177,7 +187,8 @@
         }
 
         // Becenév szerkesztése
-        nickInp.value = currentUserNick === currentUserEmail ? "" : currentUserNick;
+        const initialNick = (userSnap.exists() && userSnap.data().nickname) || "";
+        nickInp.value = initialNick && initialNick !== currentUserEmail ? initialNick : "";
         nickSave.addEventListener("click", async ()=>{
           const val = nickInp.value.trim();
           try{
@@ -323,7 +334,7 @@
             const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
             if (canDelete){
               const del = document.createElement('button');
-              del.className = 'del';
+              del className = 'del';
               del.textContent = 'Törlés';
               del.title = 'Üzenet törlése';
               del.addEventListener('click', async ()=>{
@@ -383,6 +394,8 @@
           <h1>NB1 TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
+        <!-- ÚJ: liga-váltó mount -->
+        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
@@ -466,7 +479,7 @@
       <!-- Admin a végén – ha 7 elem van, simán átcsúszhat 2. sorba -->
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -559,5 +572,3 @@
   </section>
 </body>
 </html>
-
-
