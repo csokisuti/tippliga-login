@@ -55,7 +55,6 @@
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
     .btn-icon{ width:18px; height:18px; display:inline-block; }
 
-    /* Chat */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -75,6 +74,9 @@
     #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
+
+    .league-switch-left{ margin-left:8px; }
+    @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0; } }
   </style>
 
   <script type="module">
@@ -86,6 +88,7 @@
       collection, getDocs, addDoc, serverTimestamp,
       query, where, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -100,7 +103,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const TIP_HISTORY = "tipHistory"; // audit gyűjtemény
+    const TIP_HISTORY = "tipHistory";
 
     const crestMap = {
       "Ferencváros": "crest/crest-fradi.png",
@@ -119,7 +122,6 @@
     function crestFor(team){ return crestMap[team] || ""; }
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
 
-    // Robusztus odds/round olvasás
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -130,11 +132,7 @@
     function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
 
     const sanitizeEmail = (e)=> String(e).replace(/[^a-zA-Z0-9._-]/g,'_');
-    const oddsSnapshotFromMatch = (m)=> m ? ({
-      "1": m?.odds?.["1"] ?? m?.odds1 ?? null,
-      "X": m?.odds?.["X"] ?? m?.oddsX ?? null,
-      "2": m?.odds?.["2"] ?? m?.odds2 ?? null
-    }) : null;
+    const oddsSnapshotFromMatch = (m)=> m ? ({"1": m?.odds?.["1"] ?? m?.odds1 ?? null,"X": m?.odds?.["X"] ?? m?.oddsX ?? null,"2": m?.odds?.["2"] ?? m?.odds2 ?? null}) : null;
 
     let currentUserEmail = "";
     let currentUserNick = "";
@@ -145,7 +143,6 @@
     let myTipsByMatch = new Map();
     let doublesByRound = new Map();
 
-    // ÚJ: fordulónként az első meccs kezdési ideje (round lock)
     let earliestStartByRound = new Map();
     function isRoundLocked(roundKey){
       const first = earliestStartByRound.get(String(roundKey));
@@ -153,6 +150,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      const mount = document.getElementById('leagueSwitchMount');
+      if (mount) initLeagueSwitcher({ mountTarget: mount });
+
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
         currentUserEmail = user.email;
@@ -184,12 +184,9 @@
 
         try{
           const now = new Date();
-
-          // 1) Közelgő meccsek a listához
           const upcomingSnap = await getDocs(query(collection(db,"matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
           const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
 
-          // 2) Tippek beolvasása és duplák feljegyzése (LEGUTÓBBIAK)
           const tipsSnap = await getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail)));
           const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
           const latestByMatch = new Map();
@@ -209,7 +206,6 @@
             }
           }
 
-          // 3) Forduló lock számítás
           earliestStartByRound.clear();
           const allSnap = await getDocs(query(collection(db,"matches"), orderBy("startTime","asc")));
           allSnap.forEach(docu=>{
@@ -247,7 +243,6 @@
       wrap.innerHTML = "";
       for (const m of matches){
         const tip = myTipsByMatch.get(m.id) || {};
-        // Visszafelé kompatibilis olvasás
         const curChoice = (tip.choice ?? tip.tip ?? "");
         const isDouble  = !!(tip.double ?? tip.isDouble);
 
@@ -301,7 +296,6 @@
         row.appendChild(right);
         wrap.appendChild(row);
 
-        // Round-locked duplák tiltása
         if (isRoundLocked(roundStr)) {
           dbl.disabled = true;
           dbl.title = "Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).";
@@ -323,9 +317,7 @@
           }
 
           if (dbl.checked){
-            // 1) UI
             reflectDoubleStateForRound(rKey, m.id);
-            // 2) Szerver + AUDIT másik tipp(ek) duplájának levétele
             await enforceSingleDouble(rKey, m.id);
             doublesByRound.set(rKey, m.id);
           } else {
@@ -336,7 +328,6 @@
           await saveTipWithAudit(m, select.value, dbl.checked, saved);
         });
 
-        // Ha már volt dupla ebben a fordulóban máson, vegyük le vizuálisan
         const locked = doublesByRound.get(String(roundStr));
         if (locked && locked !== m.id){
           dbl.checked = false;
@@ -359,7 +350,6 @@
       });
     }
 
-    // --- rendszer által kényszerített dupla-levétel naplózással ---
     async function enforceSingleDouble(roundKey, keepMatchId){
       if (!roundKey) return;
       const qTips = query(collection(db,"tips"), where("user","==", currentUserEmail), where("round","==", roundKey));
@@ -392,12 +382,10 @@
       }
     }
 
-    // --- mentés + audit log egy helyen ---
     async function saveTipWithAudit(matchObj, choice, isDouble, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
 
-      // előző állapot lekérdezése (ha van)
       let existingId = null, prevChoice = null, prevDouble = null;
       try{
         const snap = await getDocs(query(collection(db,"tips"),
@@ -416,7 +404,6 @@
       const newChoice = choice || "";
       const newDouble = !!isDouble;
 
-      // nincs tényleges változás
       if (existingId && prevChoice === newChoice && prevDouble === newDouble){
         savedEl.classList.add("show");
         setTimeout(()=>savedEl.classList.remove("show"), 900);
@@ -427,9 +414,9 @@
         if (existingId){
           await updateDoc(doc(db,"tips", existingId), {
             choice: newChoice,
-            tip: newChoice,           // kompat
+            tip: newChoice,
             double: newDouble,
-            isDouble: newDouble,      // kompat
+            isDouble: newDouble,
             round: String(roundStr),
             updatedAt: serverTimestamp()
           });
@@ -441,9 +428,9 @@
             matchId,
             round: String(roundStr),
             choice: newChoice,
-            tip: newChoice,           // kompat
+            tip: newChoice,
             double: newDouble,
-            isDouble: newDouble,      // kompat
+            isDouble: newDouble,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           }, { merge:true });
@@ -481,7 +468,6 @@
       }
     }
 
-    /* ===== Chat (változatlan) ===== */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -580,6 +566,7 @@
           <h1>NB1 TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
+        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
@@ -656,7 +643,7 @@
 
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37 2.6a6.9 6.9 0 0 0 1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -675,7 +662,7 @@
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
     </svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
+  <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
   <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
