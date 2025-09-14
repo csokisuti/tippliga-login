@@ -2,103 +2,120 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
-  <title>BL TippLiga</title>
+  <title>BL TippLiga – Meccstippek</title>
 
   <link rel="stylesheet" href="style-themed.css" />
   <link rel="stylesheet" href="style.css">
   <script src="loader.js" defer></script>
 
   <style>
-    .layout{display:flex;flex-direction:column;gap:16px;max-width:1200px;margin:0 auto;padding:20px}
-    .content-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
-    @media (max-width:1000px){.content-grid{grid-template-columns:1fr}}
-    .header{display:flex;align-items:center;justify-content:space-between}
-    .header-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-    .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
-    .welcome{color:var(--muted,#64748b);margin:4px 0 0}
+    .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
+    .content-grid{ display:grid; grid-template-columns: 1fr; gap:16px; }
+    .header{ display:flex; align-items:center; justify-content:space-between; }
+    .header-left{ display:flex; align-items:center; gap:12px; }
+    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
 
     /* liga-váltó balra, a cím mellé */
     .league-switch-left{margin-left:8px}
     @media (max-width:700px){.league-switch-left{width:100%;margin-left:0}}
 
-    .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
-    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05)}
-    .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent,#3b82f6) 15%,white);color:var(--accent,#3b82f6)}
-    .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
-    .nav-card .title{font-weight:800}
-    .nav-card .desc{color:var(--muted,#64748b);font-size:12px}
-    .card{background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
-    .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .table-wrap{overflow:auto}
-    .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;line-height:1;vertical-align:middle}
-    .pill-badge[hidden]{display:none!important}
-    .pill-badge.countdown{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-variant-numeric:tabular-nums;letter-spacing:.2px}
-    .pill-badge.countdown.urgent{animation:pulse 1s ease-in-out infinite}
-    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
-    .blink{animation:blink 1s steps(2,start) infinite}
-    @keyframes blink{to{opacity:.2}}
-    .fb-wrap iframe{width:100%;height:540px;border:0;overflow:hidden}
-    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
-    .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
-    .chat-fab.has-unread .fab-badge{display:inline-block}
-    .chat-panel{position:fixed;right:22px;bottom:86px;z-index:998;width:380px;max-width:calc(100vw - 32px);max-height:70vh;display:none;flex-direction:column;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.14)}
-    .chat-panel.open{display:flex}
-    .chat-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .chat-title{font-weight:800}
-    #chatClose{width:28px;height:28px;border-radius:8px;font-size:18px;line-height:28px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#111;border:1px solid var(--line,#e6eaf1);cursor:pointer}
-    #chatClose:hover{filter:brightness(.95)}
-    .chat-list{overflow:auto;padding:8px 10px}
-    .chat-empty{color:#64748b;font-size:13px;padding:8px 10px}
-    .msg{padding:8px 10px;border-bottom:1px solid var(--line,#e6eaf1);display:flex;gap:8px;align-items:flex-start}
-    .msg .meta{font-size:12px;color:#64748b;margin-bottom:2px}
-    .msg .text{white-space:pre-wrap;word-break:break-word}
-    .msg .del{margin-left:auto;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:2px 8px;border-radius:8px;font-size:12px;cursor:pointer;display:none}
-    .msg:hover .del{display:inline-block}
-    #chatComposer{display:flex;gap:8px;align-items:center;padding:10px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
-    #chatInput{background:#fff;color:#111;border:1px solid var(--line,#e6eaf1);height:40px;padding:8px 10px;border-radius:10px;font-size:14px;outline:none;width:100%;box-sizing:border-box}
-    #chatInput::placeholder{color:#6b7280}
-    #chatSendBtn{min-width:90px;padding:8px 12px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:0;font-weight:600;cursor:pointer}
-    .btn-accent{min-height:40px;padding:10px 14px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
-    .btn-accent:hover{filter:brightness(.95)}
-    .btn-accent:focus{outline:2px solid color-mix(in oklab,var(--accent,#3b82f6) 30%,white);outline-offset:2px}
-    .btn-icon{width:18px;height:18px;display:inline-block}
-    .qual-green{background:color-mix(in oklab,#16a34a 12%,white)}
-    .elim-red{background:color-mix(in oklab,#ef4444 10%,white)}
+    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
+    @media (max-width: 1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width: 700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
+    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
+    .nav-card .title{ font-weight:800; }
+    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
+    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; }
+    .pill-badge[hidden]{ display:none !important; }
 
-    .rules-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
-    .rules-modal.open{display:flex}
-    .rules-dialog{width:min(900px,92vw);max-height:80vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
-    .rules-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .rules-title{font-weight:800}
-    .rules-close{width:32px;height:32px;border:1px solid var(--line,#e6eaf1);border-radius:8px;background:#eef2ff;cursor:pointer}
-    .rules-body{padding:14px;overflow:auto;line-height:1.5;color:#111;white-space:pre-wrap}
-    .rules-body p{margin:0 0 10px}
-    .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
-    .rules-updated{font-size:12px;color:#64748b}
+    /* === NAV visszaszámláló kinézet (Top8) === */
+    .pill-badge.countdown{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-variant-numeric: tabular-nums;
+      letter-spacing:.2px;
+    }
+    .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
+    @keyframes pulse{
+      0%{ transform:scale(1) } 50%{ transform:scale(1.06) } 100%{ transform:scale(1) }
+    }
+    .blink{ animation:blink 1s steps(2,start) infinite }
+    @keyframes blink{ to{ opacity:.2 } }
+    /* ======================================== */
 
-    .onb-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;display:none;align-items:center;justify-content:center}
-    .onb-backdrop.open{display:flex}
-    .onb-dialog{width:min(720px,92vw);background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.25);overflow:hidden}
-    .onb-head{padding:12px 14px;background:#f7f9fd;border-bottom:1px solid var(--line,#e6eaf1);font-weight:800}
-    .onb-body{padding:14px;display:grid;gap:12px}
-    .onb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .onb-foot{padding:12px 14px;background:#fff;border-top:1px solid var(--line,#e6eaf1);display:flex;justify-content:space-between;align-items:center}
-    .onb-note{font-size:12px;color:#64748b}
-    .onb-actions{display:flex;gap:8px}
-    .onb-btn{border:1px solid var(--line,#e6eaf1);background:#e5e7eb;color:#111;padding:8px 12px;border-radius:10px;font-weight:700;cursor:not-allowed;opacity:.6}
-    .onb-btn.ok{background:var(--accent,#3b82f6);color:#fff;border-color:#dbeafe}
-    .onb-btn.enabled{cursor:pointer;opacity:1}
-    .onb-sel{border:1px solid var(--line,#e6eaf1);border-radius:10px;padding:8px 10px;min-width:260px}
+    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
+    .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+
+    /* Nap blokkok */
+    .day-block{ padding:12px; }
+    .day-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px dashed var(--line,#e6eaf1); border-radius:10px; background:#fafbff; margin-bottom:10px; }
+    .day-title{ font-weight:800; }
+    .dbl-flag{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line,#e6eaf1); background:#fff; color:#334155; }
+    .dbl-flag svg{ width:14px; height:14px; }
+    .dbl-flag.done{ background:#ecfdf5; border-color:#16a34a; color:#166534; }
+    .dbl-flag .muted{ color:#64748b; }
+
+    .match-list{ display:flex; flex-direction:column; gap:12px; }
+    .match{ display:grid; grid-template-columns: 1fr auto; gap:12px; padding:12px; border:1px solid var(--line,#e6eaf1); border-radius:12px; background:#fff; }
+    @media (max-width: 700px){ .match{ grid-template-columns: 1fr; } }
+    .teams{ display:flex; align-items:center; gap:12px; }
+    .team{ display:flex; align-items:center; gap:8px; }
+    .crest{ width:28px; height:28px; object-fit:contain; border-radius:6px; background:#fff; border:1px solid var(--line,#e6eaf1); }
+    .vs{ font-weight:700; color:#475569; }
+    .meta{ color:#64748b; font-size:12px; }
+    .odds{ display:flex; gap:10px; font-size:12px; color:#475569; flex-wrap:wrap; }
+    .ctl{ display:flex; align-items:center; gap:10px; }
+    .select{ padding:8px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); }
+    .double-wrap{ display:flex; align-items:center; gap:6px; }
+    .save-state{ font-size:12px; color:#16a34a; display:none; }
+    .save-state.show{ display:inline-flex; }
+
+    .btn-accent{
+      min-height:40px; padding:10px 14px; border-radius:10px;
+      background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
+      font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+      box-shadow:0 6px 18px rgba(0,0,0,.08);
+    }
+    .btn-accent:hover{ filter:brightness(.95); }
+    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
+    .btn-icon{ width:18px; height:18px; display:inline-block; }
+
+    /* Chat – BL külön gyűjtemény */
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
+    .chat-fab.has-unread .fab-badge{ display:inline-block; }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel.open{ display:flex; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .chat-title{ font-weight:800; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
+    #chatClose:hover{ filter:brightness(0.95); }
+    .chat-list{ overflow:auto; padding:8px 10px; }
+    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
+    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
+    .msg .text{ white-space:pre-wrap; word-break:break-word; }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
+    .msg:hover .del{ display:inline-block; }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
+
+    /* NB1-hez igazított odds méret – minimális override, mást nem piszkálunk */
+    .match .odds{ font-size:16px !important; }
   </style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { computeLiveOrderFromMatches } from "./standings.js";
-    /* Liga-váltó modul – csak mount kell, jelvény nem */
+    import {
+      getFirestore,
+      doc, getDoc, setDoc, updateDoc, deleteDoc,
+      collection, getDocs, addDoc, serverTimestamp,
+      query, where, orderBy, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig = {
@@ -112,380 +129,673 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const db   = getFirestore(app);
 
-    const CHAT_COLLECTION = 'chatMessages_ucl';
-    const CHAT_LAST_SEEN_FIELD = 'chatLastSeenUcl';
+    const TIP_HISTORY = "tipHistory"; // AUDIT kollekció (NB1-hez azonos)
 
+    /* Címerek – BL mezőny */
     const crestMap = {
-      "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/borussia.png","Bodø/Glimt":"ucl_crest/bodo.png","Club Bruges":"ucl_crest/brugge.png","Chelsea":"ucl_crest/chelsea.png","FC Köbenhavn":"ucl_crest/copenhagen.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png","Galatasaray":"ucl_crest/galata.png","Internazionale":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Bayer Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png","Olympique Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png","Newcastle United":"ucl_crest/newcastle.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png","Pafosz":"ucl_crest/pafos.png","Paris Saint-Germain":"ucl_crest/psg.png","PSV":"ucl_crest/psv.png","Qarabag":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png","Slavia Praha":"ucl_crest/slavia.png","Sporting CP":"ucl_crest/sporting.png","Tottenham Hotspur":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png","Kajrat Almati":"ucl_crest/kairat.png"
+      "Ajax": "ucl_crest/ajax.png",
+      "Arsenal": "ucl_crest/arsenal.png",
+      "Atalanta": "ucl_crest/atalanta.png",
+      "Athletic Bilbao": "ucl_crest/athletic.png",
+      "Atlético Madrid": "ucl_crest/atletico.png",
+      "Barcelona": "ucl_crest/barcelona.png",
+      "Bayern München": "ucl_crest/bayern.png",
+      "Benfica": "ucl_crest/benfica.png",
+      "Borussia Dortmund": "ucl_crest/borussia.png",
+      "Bodø/Glimt": "ucl_crest/bodo.png",
+      "Club Bruges": "ucl_crest/brugge.png",
+      "Chelsea": "ucl_crest/chelsea.png",
+      "FC Köbenhavn": "ucl_crest/copenhagen.png",
+      "Eintracht Frankfurt": "ucl_crest/frankfurt.png",
+      "Galatasaray": "ucl_crest/galata.png",
+      "Internazionale": "ucl_crest/inter.png",
+      "Juventus": "ucl_crest/juventus.png",
+      "Bayer Leverkusen": "ucl_crest/leverkusen.png",
+      "Liverpool": "ucl_crest/liverpool.png",
+      "Manchester City": "ucl_crest/mancity.png",
+      "Olympique Marseille": "ucl_crest/marseille.png",
+      "Monaco": "ucl_crest/monaco.png",
+      "Napoli": "ucl_crest/napoli.png",
+      "Newcastle United": "ucl_crest/newcastle.png",
+      "Olympiakosz Pireusz": "ucl_crest/olympiacos.png",
+      "Pafosz": "ucl_crest/pafos.png",
+      "Paris Saint-Germain": "ucl_crest/psg.png",
+      "PSV": "ucl_crest/psv.png",
+      "Qarabag": "ucl_crest/qarabag.png",
+      "Real Madrid": "ucl_crest/real.png",
+      "Slavia Praha": "ucl_crest/slavia.png",
+      "Sporting CP": "ucl_crest/sporting.png",
+      "Tottenham Hotspur": "ucl_crest/tottenham.png",
+      "Union Saint-Gilloise": "ucl_crest/usg.png",
+      "Villarreal": "ucl_crest/villareal.png",
+      "Kajrat Almati": "ucl_crest/kairat.png"
     };
+    const crestFor = t => crestMap[t] || "";
+    const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
-    const facebookLinks = {
-      "Ajax":"https://www.facebook.com/afcajax","Arsenal":"https://www.facebook.com/Arsenal","Atalanta":"https://www.facebook.com/atalantabc","Athletic Bilbao":"https://www.facebook.com/ATHLETICCLUB","Atlético Madrid":"https://www.facebook.com/AtleticodeMadrid","Bayer Leverkusen":"https://www.facebook.com/bayer04leverkusen","Borussia Dortmund":"https://www.facebook.com/BVB","Chelsea":"https://www.facebook.com/ChelseaFC","Club Brugge":"https://www.facebook.com/clubbrugge","Eintracht Frankfurt":"https://www.facebook.com/eintracht","Barcelona":"https://www.facebook.com/fcbarcelona","Bayern München":"https://www.facebook.com/FCBayern","FC Köbenhavn":"https://www.facebook.com/FCKobenhavn","Kajrat Almati":"https://www.facebook.com/fckairat","Bodø/Glimt":"https://www.facebook.com/Glimt1916","Internazionale":"https://www.facebook.com/Inter","Juventus":"https://www.facebook.com/Juventus","Liverpool":"https://www.facebook.com/LiverpoolFC","Monaco":"https://www.facebook.com/asmonaco","Manchester City":"https://www.facebook.com/mancity","Newcastle United":"https://www.facebook.com/newcastleunited","Olympiakosz Pireusz":"https://www.facebook.com/OlympiacosFC","Galatasaray":"https://www.facebook.com/Galatasaray","Slavia Praha":"https://www.facebook.com/slaviaofficial","Olympique Marseille":"https://www.facebook.com/OM","Pafosz":"https://www.facebook.com/pafosfc.official","Paris Saint-Germain":"https://www.facebook.com/PSG","Qarabag":"https://www.facebook.com/QarabagFK","Real Madrid":"https://www.facebook.com/RealMadrid","Benfica":"https://www.facebook.com/SLBenfica","Sporting CP":"https://www.facebook.com/SportingCP","Napoli":"https://www.facebook.com/SSCNapoli","Tottenham Hotspur":"https://www.facebook.com/TottenhamHotspur","Villarreal":"https://www.facebook.com/villarrealcf","Union Saint-Gilloise":"https://www.facebook.com/rusaintgilloise","PSV":"https://www.facebook.com/PSV"
-    };
+    /* Odds helper – többféle sémát támogat */
+    function getOdds(m, key){
+      if (m?.odds && (key in m.odds)) return m.odds[key];
+      if (key==="1") return m.odds1 ?? m["odds1"];
+      if (key==="X") return m.oddsX ?? m["oddsX"];
+      if (key==="2") return m.odds2 ?? m["odds2"];
+      return undefined;
+    }
 
-    function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}) }catch{ return "" } }
+    /* Forduló továbbra is megy (kompat mentéshez), de duplázás már nap szerint */
+    const matchRound = m => String(m.round ?? m.roundId ?? "");
+    const tipChoice = t => (t?.choice ?? t?.tip ?? "");
+    const tipDouble = t => !!(t?.double ?? t?.isDouble);
+    const tipTsMs   = t => t?.updatedAt?.toMillis?.() || t?.createdAt?.toMillis?.() || t?.timestamp?.toMillis?.() || 0;
 
-    let navCdTimer=null;
+    /* Helper az audit sorhoz */
+    const sanitizeEmail = (e)=> String(e).replace(/[^a-zA-Z0-9._-]/g,'_');
+    const oddsSnapshotFromMatch = (m)=> m ? ({
+      "1": m?.odds?.["1"] ?? m?.odds1 ?? null,
+      "X": m?.odds?.["X"] ?? m?.oddsX ?? null,
+      "2": m?.odds?.["2"] ?? m?.odds2 ?? null
+    }) : null;
+
+    /* === Meccsnap kulcsok === */
+    const pad2 = n => String(n).padStart(2,'0');
+    function asDate(v){ return v?.toDate?.() ? v.toDate() : new Date(v); }
+    function dayKeyFromDate(dt){ return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`; }
+    function dayLabel(dayKey){
+      const [y,m,d] = dayKey.split('-').map(Number);
+      const dt = new Date(y, m-1, d);
+      return dt.toLocaleDateString('hu-HU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    }
+
+    /* ===== NAV Top8 visszaszámláló ===== */
+    let navCdTimer = null;
     function formatCountdown(ms){
-      const total=Math.max(0,Math.floor(ms/1000));
-      const d=Math.floor(total/86400);
-      const h=Math.floor((total%86400)/3600);
-      const m=Math.floor((total%3600)/60);
-      const s=total%60;
-      const H=String(h).padStart(2,'0');
-      const M=String(m).padStart(2,'0');
-      const S=String(s).padStart(2,'0');
-      const labelHTML=d>0?`${d}n ${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}`:`${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}`;
-      const aria=d>0?`${d} nap ${h} óra ${m} perc ${s} másodperc`:`${h} óra ${m} perc ${s} másodperc`;
-      return {labelHTML,aria};
+      const total = Math.max(0, Math.floor(ms/1000));
+      const d = Math.floor(total/86400);
+      const h = Math.floor((total%86400)/3600);
+      const m = Math.floor((total%3600)/60);
+      const s = total%60;
+      const H = String(h).padStart(2,'0');
+      const M = String(m).padStart(2,'0');
+      const S = String(s).padStart(2,'0');
+      const labelHTML = d>0
+        ? `<span class="mono">${d}n&nbsp;</span><span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`
+        : `<span class="mono">${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}</span>`;
+      const aria = d>0
+        ? `${d} nap ${h} óra ${m} perc ${s} másodperc`
+        : `${h} óra ${m} perc ${s} másodperc`;
+      return { labelHTML, aria };
     }
     function startNavTop8Countdown(until){
       clearInterval(navCdTimer);
-      const el=document.getElementById('top8CountdownNav');
-      if(!el) return;
+      const el = document.getElementById('top8CountdownNav');
+      if (!el){ return; }
       el.classList.add('countdown');
-      if(!until){ el.hidden=true; return; }
+      if (!until){
+        el.hidden = true;
+        return;
+      }
       function tick(){
-        const ms=until-new Date();
-        if(ms<=0){ el.hidden=true; clearInterval(navCdTimer); return; }
-        const {labelHTML,aria}=formatCountdown(ms);
-        el.innerHTML=labelHTML;
+        const ms = until - new Date();
+        if (ms <= 0){
+          el.hidden = true;
+          clearInterval(navCdTimer);
+          return;
+        }
+        const { labelHTML, aria } = formatCountdown(ms);
+        el.innerHTML = labelHTML;
         el.setAttribute('aria-live','polite');
-        el.setAttribute('aria-label',`Visszaszámláló: ${aria}`);
-        el.title=`Határidő: ${until.toLocaleString('hu-HU')}`;
-        if(ms<=5*60*1000){ el.classList.add('urgent'); } else { el.classList.remove('urgent'); }
+        el.setAttribute('aria-label', `Visszaszámláló: ${aria}`);
+        el.title = `Határidő: ${until.toLocaleString('hu-HU')}`;
+        if (ms <= 5*60*1000){ el.classList.add('urgent'); }
+        else { el.classList.remove('urgent'); }
       }
       tick();
-      navCdTimer=setInterval(tick,1000);
-      el.hidden=false;
+      navCdTimer = setInterval(tick, 1000);
+      el.hidden = false;
     }
 
-    function parseRes(str){
-      const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
-      return m?[parseInt(m[1]),parseInt(m[2])]:null;
-    }
-
-    async function buildComputedTable(){
-      const teams=Object.keys(crestMap);
-      const S={}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
-      const H2H={};
-      const snap=await getDocs(collection(db,"ucl_matches"));
-      const matchesForModule=[];
-
-      snap.forEach(d=>{
-        const m=d.data()||{};
-        const A=m.homeTeam||m.home||"";
-        const B=m.awayTeam||m.away||"";
-        const r=parseRes(m.result);
-        if(A&&B&&m.result) matchesForModule.push({homeTeam:A,awayTeam:B,result:m.result});
-        const a=S[A], b=S[B]; if(!a||!b||!r) return;
-        const [hg,ag]=r;
-        a.MP++; b.MP++;
-        a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
-        b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
-        if(hg>ag){a.W++;b.L++;a.Pts+=3}
-        else if(hg<ag){b.W++;a.L++;b.Pts+=3}
-        else{a.D++;b.D++;a.Pts+=1;b.Pts+=1}
-        const k=[A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
-        H2H[k] ||= {[A]:{Pts:0,GF:0,GA:0},[B]:{Pts:0,GF:0,GA:0}};
-        if(hg>ag){H2H[k][A].Pts+=3}
-        else if(hg<ag){H2H[k][B].Pts+=3}
-        else{H2H[k][A].Pts+=1;H2H[k][B].Pts+=1}
-        H2H[k][A].GF+=hg; H2H[k][A].GA+=ag;
-        H2H[k][B].GF+=ag; H2H[k][B].GA+=hg;
-      });
-
-      function cmp(a,b){
-        if(b.Pts!==a.Pts) return b.Pts-a.Pts;
-        if(b.W!==a.W) return b.W-a.W;
-        if(b.GD!==a.GD) return b.GD-a.GD;
-        if(b.GF!==a.GF) return b.GF-a.GF;
-        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
-        const row=H2H[k];
-        if(row){
-          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0;
-          if(pb!==pa) return pb-pa;
-          const gda=(row[a.team]?.GF??0)-(row[a.team]?.GA??0);
-          const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);
-          if(gdb!==gda) return gdb-gda;
-        }
-        return a.team.localeCompare(b.team,'hu');
-      }
-
-      const rows=Object.values(S).sort(cmp);
+    /* ===== ÚJ: Duplák stabil felépítése tippekből ===== */
+    async function dayKeyForMatchId(matchId){
       try{
-        const liveOrder=computeLiveOrderFromMatches(matchesForModule,teams);
-        window.liveStandingsOrder=liveOrder;
-        localStorage.setItem("liveStandingsOrder_ucl",JSON.stringify(liveOrder));
-      }catch(e){ console.warn("Live standings (UCL) compute failed:",e); }
-
-      renderComputedTable(rows);
+        const s = await getDoc(doc(db, "ucl_matches", matchId));
+        if (!s.exists()) return null;
+        const dt = asDate(s.data().startTime);
+        if (isNaN(+dt)) return null;
+        return dayKeyFromDate(dt);
+      }catch{ return null; }
     }
 
-    function renderComputedTable(rows){
-      const wrap=document.getElementById("tableContainer");
-      const tbl=document.createElement("table");
-      tbl.style.width="100%";
-      tbl.style.borderCollapse="separate";
-      tbl.style.borderSpacing="0";
-      tbl.innerHTML=`
-        <thead>
-          <tr>
-            <th style="text-align:right;padding:8px 10px;">H</th>
-            <th style="padding:8px 10px;">Csapat</th>
-            <th style="text-align:right;padding:8px 10px;">M</th>
-            <th style="text-align:right;padding:8px 10px;">Gy</th>
-            <th style="text-align:right;padding:8px 10px;">D</th>
-            <th style="text-align:right;padding:8px 10px;">V</th>
-            <th style="text-align:right;padding:8px 10px;">LG</th>
-            <th style="text-align:right;padding:8px 10px;">KG</th>
-            <th style="text-align:right;padding:8px 10px;">GK</th>
-            <th style="text-align:right;padding:8px 10px;">P</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((r,i)=>{
-            const trClass=i<8?'qual-green':(i>=24&&i<=35?'elim-red':'');
-            return `
-              <tr class="${trClass}">
-                <td style="text-align:right;padding:8px 10px;color:#64748b;">${i+1}.</td>
-                <td style="padding:8px 10px;display:flex;align-items:center;gap:8px;">
-                  ${crestMap[r.team]?`<img src="${crestMap[r.team]}" alt="" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff;object-fit:contain">`:""}
-                  <strong>${r.team}</strong>
-                </td>
-                <td style="text-align:right;padding:8px 10px;">${r.MP}</td>
-                <td style="text-align:right;padding:8px 10px;">${r.W}</td>
-                <td style="text-align:right;padding:8px 10px;">${r.D}</td>
-                <td style="text-align:right;padding:8px 10px;">${r.L}</td>
-                <td style="text-align:right;padding:8px 10px;">${r.GF}</td>
-                <td style="text-align:right;padding:8px 10px;">${r.GA}</td>
-                <td style="text-align:right;padding:8px 10px;">${r.GD}</td>
-                <td style="text-align:right;padding:8px 10px;font-weight:800;">${r.Pts}</td>
-              </tr>`;
-          }).join("")}
-        </tbody>
-      `;
-      wrap.innerHTML="";
-      wrap.appendChild(tbl);
+    async function rebuildDoublesFromTips(tipsArr){
+      doublesByDay.clear();
+      const latestByDay = new Map(); // dayKey -> {matchId, ts}
+
+      const pending = [];
+      for (const t of tipsArr){
+        if (!tipDouble(t)) continue;
+        const ts = tipTsMs(t) || 0;
+        if (t.day){
+          const prev = latestByDay.get(t.day);
+          if (!prev || ts > prev.ts) latestByDay.set(t.day, { matchId:t.matchId, ts });
+        }else{
+          pending.push((async()=>{
+            const dk = await dayKeyForMatchId(t.matchId);
+            if (!dk) return;
+            const prev = latestByDay.get(dk);
+            if (!prev || ts > prev.ts) latestByDay.set(dk, { matchId:t.matchId, ts });
+          })());
+        }
+      }
+      await Promise.all(pending);
+      latestByDay.forEach((v, dk)=> doublesByDay.set(dk, v.matchId));
     }
 
-    let currentUserEmail=""; let currentUserNick=""; let currentUserRole="user";
-    let favouriteTeamucl=""; let chatLastSeen=null;
+    /* Állapot */
+    let currentUserEmail = "";
+    let currentUserNick  = "";
+    let currentUserRole  = "user";
+    let favouriteTeamucl = "";
+    let chatLastSeenUcl  = null;   // <-- külön BL chat mező
 
-    document.addEventListener("DOMContentLoaded",()=>{
+    let myTipsByMatch = new Map();
+    let doublesByDay  = new Map();            // YYYY-MM-DD -> matchId
+    let earliestStartByDay = new Map();       // YYYY-MM-DD -> Date
+    let matchesByDay = new Map();             // YYYY-MM-DD -> [{match}]
+
+    const isDayLocked = dayKey => {
+      const first = earliestStartByDay.get(dayKey);
+      return first ? (new Date() >= first) : false;
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
       /* Liga-váltó mount: BAL SZÉL – cím mellett */
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
-      onAuthStateChanged(auth,async(user)=>{
-        if(!user){window.location.href="login.html";return}
-        currentUserEmail=user.email;
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "login_ucl.html"; return; }
+        currentUserEmail = user.email;
 
-        const userRef=doc(db,"users",currentUserEmail);
-        const userSnap=await getDoc(userRef);
-        if(userSnap.exists()){
-          const data=userSnap.data();
-          currentUserNick=data.nickname||currentUserEmail;
-          currentUserRole=data.role||"user";
-          favouriteTeamucl=data.favouriteTeamucl||"";
-          chatLastSeen=data[CHAT_LAST_SEEN_FIELD]||null;
-        }else{
-          currentUserNick=currentUserEmail; currentUserRole="user"; favouriteTeamucl=""; chatLastSeen=null;
+        const userRef = doc(db, "users", currentUserEmail);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const d = userSnap.data();
+          currentUserNick  = d.nickname || currentUserEmail;
+          currentUserRole  = d.role || "user";
+          favouriteTeamucl = d.favouriteTeamucl || "";
+          chatLastSeenUcl  = d.chatLastSeenUcl || null;   // <-- itt is BL mező
+        } else {
+          currentUserNick = currentUserEmail;
         }
 
-        document.getElementById("welcome").textContent=`Üdv, ${currentUserNick}!`;
-        if(currentUserRole==="admin"){document.getElementById("adminLink").style.display="flex"}
+        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
+        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
 
-        if(favouriteTeamucl){
-          const themeClass="theme-"+favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-");
+        /* THEME */
+        if (favouriteTeamucl) {
+          const themeClass = "theme-" + favouriteTeamucl.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-');
           document.body.classList.add(themeClass);
-          const crest=crestMap[favouriteTeamucl];
-          if(crest){
-            const img=document.getElementById("favCrest");
-            img.src=crest; img.alt=favouriteTeamucl; img.hidden=false;
-          }
+          const crest = crestMap[favouriteTeamucl];
+          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
-        // Onboarding (ha nincs BL kedvenc)
-        await maybeForceFavoriteSetupUcl(userRef);
-
-        // Top8 határidő visszaszámláló
+        /* === Top8 határidő beolvasása + számláló indítása === */
         try{
-          const snap=await getDoc(doc(db,'settings','positionsLock_ucl'));
-          let until=null; let isLocked=false;
-          if(snap.exists()){
-            const d=snap.data()||{};
-            until=d.lockUntil?.toDate?.()||null;
-            const now=new Date();
-            isLocked=!!d.isLocked||(until&&now>=until);
+          const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
+          let until = null, isLocked = false;
+          if (snap.exists()){
+            const d = snap.data() || {};
+            until = d.lockUntil?.toDate?.() || null;
+            const now = new Date();
+            isLocked = !!d.isLocked || (until && now >= until);
           }
-          startNavTop8Countdown(isLocked?null:until);
-        }catch(e){ startNavTop8Countdown(null); }
-
-        await buildComputedTable();
-        onSnapshot(collection(db,"ucl_matches"),()=>buildComputedTable());
+          startNavTop8Countdown(isLocked ? null : until);
+        }catch{
+          startNavTop8Countdown(null);
+        }
 
         try{
-          const fbLink=facebookLinks[favouriteTeamucl];
-          if(fbLink){
-            const fbDiv=document.createElement("div");
-            fbDiv.className="fb-wrap";
-            fbDiv.innerHTML=`
-              <iframe 
-                src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=560&height=540&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
-                scrolling="no" frameborder="0" allowfullscreen="true"
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
-            document.getElementById("facebookFeedContainer").appendChild(fbDiv);
+          const now = new Date();
+
+          // 1) Közelgő meccsek (idő szerint)
+          const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
+          const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+          // 2) Saját tippek (legfrissebb per match)
+          const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
+          const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
+          const latestByMatch = new Map();
+          for (const t of tips){
+            const k = t.matchId;
+            if (!k) continue;
+            const prev = latestByMatch.get(k);
+            if (!prev || tipTsMs(t) >= tipTsMs(prev)) latestByMatch.set(k, t);
           }
-        }catch(e){console.warn(e)}
+          myTipsByMatch = latestByMatch;
+
+          // ÚJ: duplák felépítése a tippekből
+          await rebuildDoublesFromTips(tips);
+
+          // 3) Napok előállítása + meglévő dupla per nap
+          matchesByDay.clear();
+          for (const m of upcoming){
+            const st = asDate(m.startTime);
+            const dk = dayKeyFromDate(st);
+            if (!matchesByDay.has(dk)) matchesByDay.set(dk, []);
+            matchesByDay.get(dk).push(m);
+
+            const t = myTipsByMatch.get(m.id);
+            if (t && tipDouble(t) && !doublesByDay.has(dk)) {
+              doublesByDay.set(dk, m.id);
+            }
+          }
+          for (const arr of matchesByDay.values()){
+            arr.sort((a,b)=> asDate(a.startTime) - asDate(b.startTime));
+          }
+
+          // 4) Napi zár idők: a nap első meccse
+          earliestStartByDay.clear();
+          const allSnap = await getDocs(query(collection(db,"ucl_matches"), orderBy("startTime","asc")));
+          allSnap.forEach(docu=>{
+            const m = docu.data();
+            const dt = asDate(m.startTime);
+            if (isNaN(+dt)) return;
+            const dk = dayKeyFromDate(dt);
+            const prev = earliestStartByDay.get(dk);
+            if (!prev || dt < prev) earliestStartByDay.set(dk, dt);
+          });
+
+          buildMatchesList();
+          updatePendingBadge(upcoming);
+        }catch(e){ console.warn(e); }
 
         initChat(userRef);
-        if(window.hideLoader) hideLoader();
+
+        document.getElementById("logout").addEventListener("click", () => {
+          signOut(auth).then(() => window.location.href = "login_ucl.html");
+        });
+
+        if (window.hideLoader) hideLoader();
       });
-
-      document.getElementById("logout").addEventListener("click",()=>{signOut(auth).then(()=>window.location.href="login.html")});
-
-      // Szabályzat modál
-      const rulesModal=document.getElementById('rulesModal');
-      const openRulesBtn=document.getElementById('openRules');
-      const closeRules=document.getElementById('closeRules');
-      const closeRules2=document.getElementById('closeRules2');
-      function openRulesModal(){rulesModal.classList.add('open')}
-      function closeRulesModal(){rulesModal.classList.remove('open')}
-      openRulesBtn?.addEventListener('click',openRulesModal);
-      closeRules?.addEventListener('click',closeRulesModal);
-      closeRules2?.addEventListener('click',closeRulesModal);
-      rulesModal?.addEventListener('click',(e)=>{if(e.target===rulesModal) closeRulesModal()});
     });
 
+    function updatePendingBadge(upcoming){
+      const tippedIds = new Set(Array.from(myTipsByMatch.keys()));
+      const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+      const badge = document.getElementById("tipsBadge");
+      if (badge){ if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; } }
+    }
+
+    function buildMatchesList(){
+      const wrap = document.getElementById("matchList");
+      wrap.innerHTML = "";
+
+      const dayKeys = Array.from(matchesByDay.keys()).sort();
+      for (const dk of dayKeys){
+        const dayBlock = document.createElement('div');
+        dayBlock.className = 'day-block';
+        dayBlock.dataset.day = dk;
+
+        const head = document.createElement('div');
+        head.className = 'day-head';
+        head.innerHTML = `
+          <div class="day-title">${dayLabel(dk)}</div>
+          <div class="dbl-flag" id="flag-${dk}">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.39 4.84L20 7.27l-4 3.9.94 5.49L12 14.77 7.06 16.66 8 11.94l-4-3.9 5.61-.43L12 2z"/></svg>
+            <span class="txt">Ne felejtsd el a mai duplázót ;)</span>
+          </div>`;
+        dayBlock.appendChild(head);
+
+        const list = document.createElement('div');
+        list.className = 'match-list';
+        dayBlock.appendChild(list);
+
+        wrap.appendChild(dayBlock);
+
+        const matches = matchesByDay.get(dk) || [];
+        for (const m of matches){
+          const tip = myTipsByMatch.get(m.id) || {};
+          const curChoice = tipChoice(tip);
+          const isDouble  = tipDouble(tip);
+          const roundStr  = matchRound(m);
+
+          const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
+          const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
+
+          const row = document.createElement('div');
+          row.className = 'match';
+          row.dataset.day = dk;
+          row.dataset.matchId = m.id;
+
+          const left = document.createElement('div');
+          left.innerHTML = `
+            <div class="teams">
+              <div class="team"><img class="crest" src="${crestFor(m.homeTeam)||''}" alt=""> <span>${m.homeTeam||''}</span></div>
+              <span class="vs">vs</span>
+              <div class="team"><img class="crest" src="${crestFor(m.awayTeam)||''}" alt=""> <span>${m.awayTeam||''}</span></div>
+            </div>
+            <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
+            <div class="odds">${oddsLine}</div>
+          `;
+
+          const right = document.createElement('div');
+          right.className = 'ctl';
+          const select = document.createElement('select');
+          select.className = 'select';
+          select.innerHTML = `<option value="">Válassz tippet</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>`;
+          select.value = curChoice;
+
+          const dblWrap = document.createElement('label');
+          dblWrap.className = 'double-wrap';
+          const dbl = document.createElement('input');
+          dbl.type = 'checkbox';
+          dbl.checked = isDouble;
+          dbl.dataset.kind = 'double';
+          const dblText = document.createElement('span');
+          dblText.textContent = 'Dupla';
+          dblWrap.appendChild(dbl); dblWrap.appendChild(dblText);
+
+          const saved = document.createElement('span');
+          saved.className = 'save-state';
+          saved.textContent = 'Mentve';
+
+          right.appendChild(select);
+          right.appendChild(dblWrap);
+          right.appendChild(saved);
+
+          row.appendChild(left);
+          row.appendChild(right);
+          list.appendChild(row);
+
+          if (isDayLocked(dk)){
+            dbl.disabled = true;
+            dbl.title = "Ezen a napon a duplázás már lezárt (az első meccs elkezdődött).";
+          }
+
+          select.addEventListener('change', async ()=>{ await saveTipWithAudit(m, select.value, dbl.checked, dk, saved); });
+
+          dbl.addEventListener('change', async ()=>{
+            if (isDayLocked(dk)){
+              const lockedId = doublesByDay.get(dk);
+              dbl.checked = (lockedId === m.id);
+              alert("Ezen a napon a duplázás már lezárt (az első meccs elkezdődött).");
+              return;
+            }
+            if (dbl.checked){
+              reflectDoubleStateForDay(dk, m.id);
+              await enforceSingleDoubleForDay(dk, m.id); // auditál
+              doublesByDay.set(dk, m.id);
+              updateDayFlag(dk);
+            }else{
+              if (doublesByDay.get(dk) === m.id) doublesByDay.delete(dk);
+              updateDayFlag(dk);
+            }
+            await saveTipWithAudit(m, select.value, dbl.checked, dk, saved);
+          });
+
+          const lockedId = doublesByDay.get(dk);
+          if (lockedId && lockedId !== m.id){ dbl.checked = false; }
+        }
+
+        updateDayFlag(dk);
+      }
+    }
+
+    function updateDayFlag(dayKey){
+      const flag = document.getElementById(`flag-${dayKey}`);
+      if (!flag) return;
+
+      const selId = doublesByDay.get(dayKey);
+      const has = !!selId;
+      flag.classList.toggle('done', has);
+
+      if (has){
+        const visibleRow = document.querySelector(`.match[data-day="${dayKey}"][data-match-id="${selId}"], .match[data-day="${dayKey}"][data-matchid="${selId}"]`);
+        const suffix = visibleRow ? '' : ' (már elkezdődött)';
+        flag.querySelector('.txt').textContent = 'Dupla kiválasztva' + suffix;
+        if (!visibleRow){
+          flag.title = 'A kiválasztott dupla meccs már elkezdődött, ezért nem látszik a listában.';
+        } else {
+          flag.removeAttribute('title');
+        }
+      } else {
+        flag.querySelector('.txt').textContent = 'Ne felejtsd el a mai duplázót ;)';
+        flag.removeAttribute('title');
+      }
+    }
+
+    function reflectDoubleStateForDay(dayKey, keepMatchId){
+      document.querySelectorAll(`.match[data-day="${dayKey}"]`).forEach(row=>{
+        const chk = row.querySelector('input[type="checkbox"][data-kind="double"]');
+        if (chk) chk.checked = (row.dataset.matchId === String(keepMatchId));
+      });
+    }
+
+    // --- rendszer által kényszerített dupla-levétel + AUDIT ---
+    async function enforceSingleDoubleForDay(dayKey, keepMatchId){
+      const idsForDay = new Set((matchesByDay.get(dayKey) || []).map(m=>m.id));
+      const qTips = query(collection(db,"ucl_tips"), where("user","==", currentUserEmail));
+      const snap = await getDocs(qTips);
+      for (const docu of snap.docs){
+        const d = docu.data();
+        if (!d?.matchId) continue;
+        if (!idsForDay.has(d.matchId)) continue;
+        if (d.matchId !== keepMatchId && (d.double === true || d.isDouble === true)){
+          const prevChoice = d.choice ?? d.tip ?? "";
+          try{
+            await updateDoc(doc(db,"ucl_tips", docu.id), {
+              double:false, isDouble:false, updatedAt: serverTimestamp(), timestamp: serverTimestamp(), day: dayKey
+            });
+            await addDoc(collection(db, TIP_HISTORY), {
+              user: d.user || currentUserEmail,
+              matchId: d.matchId,
+              tipDocId: docu.id,
+              day: dayKey,
+              round: String(d.round ?? d.roundId ?? ""),
+              prevChoice,
+              prevDouble: true,
+              newChoice: prevChoice,
+              newDouble: false,
+              reason: "system:enforceSingleDouble",
+              page: "matches_ucl.html",
+              ts: serverTimestamp()
+            });
+          }catch(e){ console.warn("enforceSingleDoubleForDay err:", e); }
+        }
+      }
+    }
+
+    // --- mentés + AUDIT ---
+    async function saveTipWithAudit(matchObj, choice, isDouble, dayKey, savedEl){
+      const matchId = matchObj.id;
+      const roundStr = matchRound(matchObj);
+
+      // előző állapot
+      let existingId = null, prevChoice = null, prevDouble = null;
+      try{
+        const snap = await getDocs(query(collection(db,"ucl_tips"),
+          where("user","==", currentUserEmail),
+          where("matchId","==", matchId)
+        ));
+        if (!snap.empty){
+          const d = snap.docs[0];
+          const v = d.data() || {};
+          existingId = d.id;
+          prevChoice = v.choice ?? v.tip ?? null;
+          prevDouble = !!(v.double ?? v.isDouble);
+        }
+      }catch(e){}
+
+      const newChoice = choice || "";
+      const newDouble = !!isDouble;
+
+      // nincs tényleges változás
+      if (existingId && prevChoice === newChoice && prevDouble === newDouble){
+        savedEl.classList.add("show");
+        setTimeout(()=>savedEl.classList.remove("show"), 900);
+        return;
+      }
+
+      try{
+        if (existingId){
+          await updateDoc(doc(db,"ucl_tips", existingId), {
+            choice: newChoice,
+            tip: newChoice,                // kompat
+            double: newDouble,
+            isDouble: newDouble,           // kompat
+            day: dayKey,
+            round: String(roundStr),
+            roundId: String(roundStr),     // kompat
+            updatedAt: serverTimestamp(),
+            timestamp: serverTimestamp()
+          });
+        } else {
+          const fixedId = `${sanitizeEmail(currentUserEmail)}_${matchId}`;
+          await setDoc(doc(db,"ucl_tips", fixedId), {
+            user: currentUserEmail,
+            nick: currentUserNick || currentUserEmail,
+            matchId,
+            day: dayKey,
+            round: String(roundStr),
+            roundId: String(roundStr),
+            choice: newChoice,
+            tip: newChoice,
+            double: newDouble,
+            isDouble: newDouble,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            timestamp: serverTimestamp()
+          }, { merge:true });
+          existingId = fixedId;
+        }
+
+        // AUDIT sor
+        await addDoc(collection(db, TIP_HISTORY), {
+          user: currentUserEmail,
+          matchId,
+          tipDocId: existingId,
+          day: dayKey,
+          round: String(roundStr),
+          prevChoice,
+          prevDouble,
+          newChoice,
+          newDouble,
+          oddsSnapshot: oddsSnapshotFromMatch(matchObj),
+          reason: "user",
+          page: "matches_ucl.html",
+          ts: serverTimestamp()
+        });
+
+        // lokális cache
+        myTipsByMatch.set(matchId, {
+          user: currentUserEmail,
+          matchId,
+          day: dayKey,
+          round: String(roundStr),
+          choice: newChoice,
+          double: newDouble
+        });
+
+        savedEl.classList.add("show");
+        setTimeout(()=>savedEl.classList.remove("show"), 900);
+      }catch(e){
+        console.warn("saveTipWithAudit err:", e);
+        alert("Mentési hiba: " + (e?.message || String(e)));
+      }
+    }
+
+    /* ===== Chat – BL külön: chatMessages_ucl + chatLastSeenUcl ===== */
     function initChat(userRef){
-      const fab=document.getElementById('chatToggle');
-      const fabBadge=document.getElementById('chatFabBadge');
-      const panel=document.getElementById('chatPanel');
-      const closeBtn=document.getElementById('chatClose');
-      const listEl=document.getElementById('chatMessages');
-      const inputEl=document.getElementById('chatInput');
-      const sendBtn=document.getElementById('chatSendBtn');
+      const fab = document.getElementById('chatToggle');
+      const fabBadge = document.getElementById('chatFabBadge');
+      const panel = document.getElementById('chatPanel');
+      const closeBtn = document.getElementById('chatClose');
+      const listEl = document.getElementById('chatMessages');
+      const inputEl = document.getElementById('chatInput');
+      const sendBtn = document.getElementById('chatSendBtn');
 
-      function open(){panel.classList.add('open');setTimeout(()=>inputEl?.focus(),50);markSeen()}
-      function close(){panel.classList.remove('open')}
-      function toggle(){panel.classList.contains('open')?close():open()}
-      fab.addEventListener('click',toggle);
-      closeBtn.addEventListener('click',close);
+      function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
+      function close(){ panel.classList.remove('open'); }
+      function toggle(){ panel.classList.contains('open') ? close() : open(); }
+      fab.addEventListener('click', toggle);
+      closeBtn.addEventListener('click', close);
 
-      let lastSeenMs=chatLastSeen?.toMillis?chatLastSeen.toMillis():0;
-      const qAll=query(collection(db,CHAT_COLLECTION),orderBy('ts','asc'));
-      onSnapshot(qAll,snap=>{
-        listEl.innerHTML='';
-        if(snap.empty){
-          const empty=document.createElement('div');
-          empty.className='chat-empty';
-          empty.textContent='Még nincs üzenet. Légy te az első!';
+      let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
+
+      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc')); // <-- UCL gyűjtemény
+      onSnapshot(qAll, snap => {
+        listEl.innerHTML = '';
+        if (snap.empty){
+          const empty = document.createElement('div');
+          empty.className = 'chat-empty';
+          empty.textContent = 'Még nincs üzenet. Légy te az első!';
           listEl.appendChild(empty);
-        }else{
-          let unread=0;
+        } else {
+          let unread = 0;
           snap.forEach(docu=>{
-            const d=docu.data();
-            const tsMs=d.ts?.toMillis?.()||0;
-            if(tsMs>lastSeenMs) unread++;
-            const row=document.createElement('div');
-            row.className='msg';
-            row.innerHTML=`
+            const d = docu.data();
+            const tsMs = d.ts?.toMillis?.() || 0;
+            if (tsMs > lastSeenMs) unread++;
+
+            const row = document.createElement('div');
+            row.className = 'msg';
+            row.innerHTML = `
               <div style="flex:1 1 auto">
-                <div class="meta"><strong>${d.nick||'Ismeretlen'}</strong> • ${d.ts?fmtTime(d.ts):''}</div>
-                <div class="text">${(d.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-              </div>`;
-            const canDelete=(currentUserRole==='admin')||(d.email===currentUserEmail);
-            if(canDelete){
-              const del=document.createElement('button');
-              del.className='del';
-              del.textContent='Törlés';
-              del.title='Üzenet törlése';
-              del.addEventListener('click',async()=>{try{await deleteDoc(doc(db,CHAT_COLLECTION,docu.id))}catch(e){console.warn('Del failed',e)}});
+                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
+                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+              </div>
+            `;
+            const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
+            if (canDelete){
+              const del = document.createElement('button');
+              del.className = 'del';
+              del.textContent = 'Törlés';
+              del.title = 'Üzenet törlése';
+              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch(e){} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
           });
-          if(!panel.classList.contains('open')&&unread>0){
-            fab.classList.add('has-unread');
-            fabBadge.textContent=unread>99?'99+':String(unread);
-          }else{
-            fab.classList.remove('has-unread');
-            fabBadge.textContent='';
-          }
-          setTimeout(()=>{listEl.scrollTop=listEl.scrollHeight;},0);
-        }
-      }, err => console.warn('chat snapshot error:', err));
 
-      sendBtn.addEventListener('click',async ()=>{
-        const txt=(inputEl.value||'').trim();
-        if(!txt){inputEl.focus();return}
-        const backup=txt;
-        inputEl.value='';
+          if (!panel.classList.contains('open') && unread > 0){
+            fab.classList.add('has-unread');
+            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
+          } else {
+            fab.classList.remove('has-unread');
+            fabBadge.textContent = '';
+          }
+
+          setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
+        }
+      });
+
+      sendBtn.addEventListener('click', async ()=>{
+        const txt = (inputEl.value || '').trim();
+        if (!txt){ inputEl.focus(); return; }
+        const backup = txt;
+        inputEl.value = '';
         try{
-          await addDoc(collection(db,CHAT_COLLECTION),{
+          await addDoc(collection(db,'chatMessages_ucl'), {  // <-- UCL gyűjtemény
             email: currentUserEmail,
             nick: currentUserNick || 'Ismeretlen',
             text: backup,
             ts: serverTimestamp()
           });
-          if(panel.classList.contains('open')) await markSeen();
+          if (panel.classList.contains('open')) await markSeen();
         }catch(e){
-          console.warn('Chat send failed:', e);
-          inputEl.value=backup; inputEl.focus();
+          inputEl.value = backup; inputEl.focus();
         }
       });
-      inputEl.addEventListener('keydown',(e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
+      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
 
       async function markSeen(){
         try{
-          await setDoc(userRef,{ [CHAT_LAST_SEEN_FIELD]: serverTimestamp() },{ merge:true });
-          lastSeenMs=Date.now();
+          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true }); // <-- külön mező
           fab.classList.remove('has-unread');
-          fabBadge.textContent='';
-        }catch(e){ console.warn('markSeen failed', e); }
-      }
-    }
-
-    async function maybeForceFavoriteSetupUcl(userRef){
-      const onbEl=document.getElementById("onbFav_ucl");
-      const onbSel=document.getElementById("onbFavSelect_ucl");
-      const onbRem=document.getElementById("onbRem_ucl");
-      const onbSave=document.getElementById("onbFavSave_ucl");
-
-      if(favouriteTeamucl) return;
-
-      if(onbSel){
-        onbSel.innerHTML = `<option value="">– Válassz BL-csapatot –</option>` + Object.keys(crestMap).map(t=>`<option value="${t}">${t}</option>`).join("");
-        onbSel.addEventListener("change",()=>{
-          const ok=!!onbSel.value;
-          if(onbSave){ onbSave.disabled=!ok; onbSave.classList.toggle("enabled",ok); }
-        });
-      }
-      if(onbSave){ onbSave.disabled=true; onbSave.classList.remove("enabled"); }
-      if(onbSel) onbSel.value="";
-      if(onbRem) onbRem.checked=true;
-      if(onbEl) onbEl.classList.add("open");
-
-      if(onbSave){
-        onbSave.onclick=async ()=>{
-          if(!onbSel?.value) return;
-          try{
-            await setDoc(userRef,{ favouriteTeamucl:onbSel.value, reminderEmailUcl: !!onbRem?.checked },{ merge:true });
-            favouriteTeamucl=onbSel.value;
-            const themeClass="theme-"+favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-');
-            document.body.classList.add(themeClass);
-            const crest=crestMap[favouriteTeamucl];
-            if(crest){
-              const img=document.getElementById("favCrest");
-              img.src=crest; img.alt=favouriteTeamucl; img.hidden=false;
-            }
-            onbEl?.classList.remove("open");
-          }catch(e){
-            alert("Hiba a beállítás mentésekor. Próbáld újra.");
-          }
-        };
+          fabBadge.textContent = '';
+        }catch(e){}
       }
     }
   </script>
@@ -504,129 +814,103 @@
       </div>
       <div>
         <button id="logout" class="btn-accent" aria-label="Kilépés">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+          </svg>
           Kilépés
         </button>
-        <button id="openRules" class="btn-accent" style="display:block;margin-top:10px;">Szabályzat</button>
       </div>
     </div>
 
+    <!-- UCL nav linkek -->
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></div>
-        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
-      </a>
-      <a class="nav-card" href="positions_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/>
+          </svg>
+        </div>
         <div class="text">
-          <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
+          <span class="title">Főoldal</span>
+          <span class="desc">Tabella, hírek, kedvencek</span>
+        </div>
+      </a>
+
+      <a class="nav-card" href="positions_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">
+            Szezon végi sorrend
+            <span id="top8CountdownNav" class="pill-badge countdown" hidden></span>
+          </span>
           <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
+
       <a class="nav-card" href="matches_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg></div>
-        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span>
+          <span class="desc">Közelgő meccsek & tippek</span>
+        </div>
       </a>
+
       <a class="nav-card" href="results_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg></div>
-        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Eredmények</span>
+          <span class="desc">Fordulónkénti bontás</span>
+        </div>
       </a>
+
       <a class="nav-card" href="leaderboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg></div>
-        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Összpontszám</span>
+          <span class="desc">Toplista & bónusz</span>
+        </div>
       </a>
+
       <a class="nav-card" href="profile_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg></div>
-        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Profil</span>
+          <span class="desc">Beállítások & kedvenc csapat</span>
+        </div>
       </a>
+
       <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg></div>
-        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
+        <div class="icon-wrap" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg>
+        </div>
+        <div class="text">
+          <span class="title">Admin</span>
+          <span class="desc">Szezon-zár & beállítások</span>
+        </div>
       </a>
     </nav>
 
-    <div class="content-grid">
-      <section class="card table-wrap">
-        <h3>BL tabella</h3>
-        <div id="tableContainer"></div>
-      </section>
-      <section class="card">
-        <h3>Csapatod hírei</h3>
-        <div id="facebookFeedContainer"></div>
-      </section>
-    </div>
+    <section class="card">
+      <h3>Közelgő meccsnapok</h3>
+      <div id="matchList"></div>
+    </section>
   </div>
 
-  <!-- Onboarding (BL) -->
-  <div id="onbFav_ucl" class="onb-backdrop" aria-modal="true" role="dialog" aria-labelledby="onbFavTitle_ucl">
-    <div class="onb-dialog">
-      <div class="onb-head" id="onbFavTitle_ucl">Üdv a BL TippLigában! 🎉</div>
-      <div class="onb-body">
-        <div>Először <strong>válaszd ki a kedvenc BL-csapatodat</strong>, és döntsd el, kérsz-e e-mailes emlékeztetőt a tippek leadására. <em>Később a Profil oldalon bármikor módosítható.</em></div>
-        <div class="onb-row">
-          <label for="onbFavSelect_ucl"><strong>Kedvenc BL-csapat</strong></label>
-          <select id="onbFavSelect_ucl" class="onb-sel"></select>
-        </div>
-        <div class="onb-row">
-          <label style="display:flex;align-items:center;gap:10px;">
-            <input id="onbRem_ucl" type="checkbox" checked>
-            <span>E-mailes emlékeztetőt kérek</span>
-          </label>
-        </div>
-      </div>
-      <div class="onb-foot">
-        <span class="onb-note">Tipp: Ezeket később a <strong>Profil</strong> oldalon is módosíthatod.</span>
-        <div class="onb-actions">
-          <button id="onbFavSave_ucl" class="onb-btn ok" disabled>Mentés és folytatás</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Szabályzat modál -->
-  <div id="rulesModal" class="rules-modal" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
-    <div class="rules-dialog">
-      <div class="rules-head">
-        <div id="rulesTitle" class="rules-title">BL TippLiga – Szabályzat</div>
-        <button id="closeRules" class="rules-close" aria-label="Bezárás">✕</button>
-      </div>
-      <div id="rulesBody" class="rules-body">
-<p><strong>1) A játék célja</strong><br>
-A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek a <strong>Bajnokok Ligája</strong> mérkőzéseinek eredményeinek és a <strong>szezon kimeneteleinek</strong> megtippelésével.</p>
-
-<p><strong>2) Tippelés</strong><br>
-– Minden mérkőzésre <strong>1×2</strong> (Hazai–Döntetlen–Vendég) tipp adható le.<br>
-– A tipp a mérkőzés <strong>kezdési időpontjáig</strong> szabadon módosítható.<br>
-– <strong>Minden játéknapon</strong> (nem fordulónként) <strong>egyetlen mérkőzésre kijelölhető „Dupla tét”</strong>, amely <strong>kétszeres pontszorzót</strong> ad.<br>
-– A duplázás módosítása csak az adott játéknap <strong>első mérkőzésének kezdéséig</strong> lehetséges, utána rögzül.</p>
-
-<p><strong>3) Bónusz tippek</strong><br>
-– <strong>Végső győztes</strong>: tippeld meg, ki nyeri a BL-t.<br>
-– <strong>Gólkirály</strong>: tippeld meg, ki szerzi a legtöbb gólt.<br>
-– Ezekre a bónusz tippekre <strong>odds alapján</strong> történik a pontozás, de egy képlettel módosítva van az érték, hogy ne legyenek nagyon magas bónusz értékek. A bónusz tippeknél a kijelzett <strong>százalékos érték (%)</strong> <em>pluszban hozzáadódik</em> a játékos <strong>végső pontszámához</strong>.</p>
-
-<p><strong>4) Pontszámítás</strong><br>
-– <strong>Meccsek</strong>: helyes tipp = <strong>odds × tét</strong> (alap tét = 1 pont, <strong>dupla</strong> esetén = 2 pont).<br>
-– <strong>Rossz tipp</strong>: 0 pont.<br>
-– <strong>Bónusz tippek</strong> (Végső győztes, Gólkirály): a kijelzett <strong>%</strong> hozzáadódik a <strong>végső összpontszámhoz</strong>,<br>amit a meccstippekkel gyűjtött a játékos.
-– Az oddsok <strong>manuálisan</strong> kerülnek rögzítésre a tipp(ek) feltöltésekor; a kezdésig az <strong>odds módosulhat</strong>, és nem feltétlenül egyezik az aktuálisan érvényes külső oddsokkal.</p>
-
-<p><strong>5) Eredmények és rangsor</strong><br>
-– Pontösszesítés <strong>játéknaponként</strong> és <strong>a teljes szezonra</strong>.<br>
-– A <strong>Toplista</strong> a játékosokat az <strong>összpontszám</strong> alapján sorolja.</p>
-
-<p><strong>6) Tipp</strong><br>
-– A <strong>Profil</strong> menüben válaszd ki a kedvenc <strong>BL-csapatodat</strong>, így a felület színei ahhoz igazodnak, és a <strong>klubcímere</strong> is megjelenik a profilodnál.</p>
-      </div>
-      <div class="rules-foot">
-        <span id="rulesUpdated" class="rules-updated">Utoljára frissítve: 2025. 09. 12.</span>
-        <button id="closeRules2" class="btn-accent">Bezárás</button>
-      </div>
-    </div>
-  </div>
-
+  <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+    </svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
 
