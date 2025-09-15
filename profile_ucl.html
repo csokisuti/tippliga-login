@@ -304,7 +304,7 @@
           const b = pw2.value.trim();
           const ok = a.length >= 6 && a === b;
           pwBtn.disabled = !ok;
-          if (!a && !b){ clearMsg(); return; }
+          if (!a és !b){ clearMsg(); return; }
           if (a !== b) showMsg("A két jelszó nem egyezik.", "err");
           else if (a.length < 6) showMsg("Legalább 6 karakteres legyen a jelszó.", "err");
           else clearMsg();
@@ -474,16 +474,16 @@
           <h1>BL TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
-      </div>
 
-      <!-- JOBB OLDAL: ligaváltó + kilépés -->
-      <div style="display:flex; align-items:center; gap:10px;">
         <!-- Ligaváltó (NB I ↔ BL). NB I: profile.html, BL: profile_ucl.html -->
         <div class="league-switch" role="tablist" aria-label="Liga váltó">
           <a class="ls-tab" role="tab" href="profile.html" aria-selected="false">NB I</a>
           <a class="ls-tab is-active" role="tab" href="profile_ucl.html" aria-selected="true">BL</a>
         </div>
+      </div>
 
+      <!-- JOBB OLDAL: kilépés -->
+      <div style="display:flex; align-items:center; gap:10px;">
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/>
