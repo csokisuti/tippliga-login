@@ -27,7 +27,7 @@
     .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05)}
     .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent,#3b82f6) 15%,white);color:var(--accent,#3b82f6)}
     .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
-    .nav-card .title{font-weight:800}
+    .nav-card .title{font-weight:800;display:inline-flex;align-items:center;gap:6px}
     .nav-card .desc{color:var(--muted,#64748b);font-size:12px}
     .card{background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
     .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
@@ -92,18 +92,25 @@
     .onb-btn.enabled{cursor:pointer;opacity:1}
     .onb-sel{border:1px solid var(--line,#e6eaf1);border-radius:10px;padding:8px 10px;min-width:260px}
 
-    /* ⬇⬇⬇ ÚJ: villogó nyíl az ikon fölött, ha nincs kész mindhárom tipp ⬇⬇⬇ */
-    .attn-arrow{
-      position:absolute; top:-14px; left:50%; transform:translateX(-50%);
-      width:0; height:0;
-      border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:12px solid var(--accent,#3b82f6);
-      filter:drop-shadow(0 2px 4px rgba(0,0,0,.2));
-      animation:attnBlink 1s steps(2,start) infinite, attnBob 1.8s ease-in-out infinite;
-      pointer-events:none;
+    /* NAGY SÁRGA NYÍL – csak akkor látszik, ha hiányosak a positions tippek */
+    .big-yellow-arrow{
+      color:#f59e0b;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:26px; height:26px;
+      border-radius:999px;
+      background:rgba(245,158,11,.14);
+      border:1px solid rgba(245,158,11,.35);
+      filter:drop-shadow(0 2px 6px rgba(0,0,0,.15));
+      animation:wiggle 1.15s ease-in-out infinite;
     }
-    @keyframes attnBlink{ to{ opacity:.25 } }
-    @keyframes attnBob{ 0%,100%{ transform:translateX(-50%) translateY(0) } 50%{ transform:translateX(-50%) translateY(-4px) } }
-    /* ⬆⬆⬆ ÚJ VÉGE ⬆⬆⬆ */
+    .big-yellow-arrow[hidden]{display:none!important}
+    @keyframes wiggle{
+      0%,100%{ transform:translateX(0) rotate(0deg) }
+      35%{ transform:translateX(2px) rotate(8deg) }
+      70%{ transform:translateX(0) rotate(-6deg) }
+    }
   </style>
 
   <script type="module">
@@ -149,7 +156,7 @@
       const s=total%60;
       const H=String(h).padStart(2,'0');
       const M=String(m).padStart(2,'0');
-      const S=total%60<10?`0${s}`:`${s}`;
+      const S=String(s).padStart(2,'0');
       const labelHTML=d>0?`${d}n ${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}`:`${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}`;
       const aria=d>0?`${d} nap ${h} óra ${m} perc ${s} másodperc`:`${h} óra ${m} perc ${s} másodperc`;
       return {labelHTML,aria};
@@ -353,7 +360,7 @@
           }
         }catch(e){console.warn(e)}
 
-        // ⬇⬇⬇ ÚJ: leadatlan meccstipp jelvény frissítése (változatlan logika) ⬇⬇⬇
+        // Leadatlan tippek jelvény a Meccstippek kártyán
         function updatePendingBadgeUcl(){
           const badge = document.getElementById('tipsBadgeUcl');
           if (!badge) return;
@@ -370,11 +377,52 @@
         updatePendingBadgeUcl();
         onSnapshot(collection(db,"ucl_matches"), updatePendingBadgeUcl);
         onSnapshot(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)), updatePendingBadgeUcl);
-        // ⬆⬆⬆ ÚJ VÉGE ⬆⬆⬆
 
-        // ⬇⬇⬇ ÚJ: Szezon végi sorrend ikon fölötti figyelmeztető nyíl ⬇⬇⬇
-        setupPositionsAttentionArrow(currentUserEmail);
-        // ⬆⬆⬆ ÚJ VÉGE ⬆⬆⬆
+        // 🔶 NAGY SÁRGA NYÍL – csak ha hiányosak a positions tippek ÉS nincs lezárva
+        async function checkPositionsCompleteness(){
+          const arrow = document.getElementById('posIncompleteArrowUcl');
+          if (!arrow) return;
+
+          let locked=false;
+          try{
+            const s=await getDoc(doc(db,'settings','positionsLock_ucl'));
+            if(s.exists()){
+              const d=s.data()||{};
+              const until=d.lockUntil?.toDate?.()||null;
+              const now=new Date();
+              locked = !!d.isLocked || (until && now>=until);
+            }
+          }catch{}
+
+          if(locked){ arrow.hidden = true; return; }
+
+          let top8Ok=false, champOk=false, goldenOk=false;
+          try{
+            const t=await getDoc(doc(db,"ucl_top8Tips", currentUserEmail));
+            if(t.exists()){
+              const arr=t.data()?.picks;
+              top8Ok = Array.isArray(arr) && arr.filter(Boolean).length>=8;
+            }
+          }catch{}
+          try{
+            const c=await getDoc(doc(db,"ucl_championPickTips", currentUserEmail));
+            champOk = c.exists() && !!c.data()?.team;
+          }catch{}
+          try{
+            const g=await getDoc(doc(db,"ucl_goldenBootTips", currentUserEmail));
+            goldenOk = g.exists() && !!g.data()?.player;
+          }catch{}
+
+          const incomplete = !(top8Ok && champOk && goldenOk);
+          arrow.hidden = !incomplete;
+        }
+        await checkPositionsCompleteness();
+
+        // élő frissítés: lock + saját tippek
+        onSnapshot(doc(db,'settings','positionsLock_ucl'), checkPositionsCompleteness);
+        onSnapshot(doc(db,'ucl_top8Tips', currentUserEmail), checkPositionsCompleteness);
+        onSnapshot(doc(db,'ucl_championPickTips', currentUserEmail), checkPositionsCompleteness);
+        onSnapshot(doc(db,'ucl_goldenBootTips', currentUserEmail), checkPositionsCompleteness);
 
         initChat(userRef);
         if(window.hideLoader) hideLoader();
@@ -524,47 +572,6 @@
         };
       }
     }
-
-    /* ⬇⬇⬇ ÚJ: Figyelmeztető nyíl logika ⬇⬇⬇ */
-    function setupPositionsAttentionArrow(userEmail){
-      const link = document.querySelector('a.nav-card[href="positions_ucl.html"]');
-      if(!link) return;
-      const icon = link.querySelector('.icon-wrap');
-      if(!icon) return;
-
-      let arrow = icon.querySelector('.attn-arrow');
-      if(!arrow){
-        arrow = document.createElement('div');
-        arrow.className = 'attn-arrow';
-        arrow.title = 'Egészítsd ki a szezon végi tippeket!';
-        arrow.style.display = 'none';
-        icon.appendChild(arrow);
-      }
-      const show = (v)=>{ arrow.style.display = v ? 'block' : 'none'; };
-
-      const top8Ref = doc(db,'ucl_top8Tips', userEmail);
-      const chRef   = doc(db,'ucl_championPickTips', userEmail);
-      const gbRef   = doc(db,'ucl_goldenBootTips', userEmail);
-
-      async function computeAndShow(){
-        try{
-          const [tSnap, cSnap, gSnap] = await Promise.all([getDoc(top8Ref), getDoc(chRef), getDoc(gbRef)]);
-          const picks = tSnap.exists() && Array.isArray(tSnap.data().picks) ? tSnap.data().picks.filter(Boolean) : [];
-          const top8Ok = picks.length === 8;
-          const chOk   = cSnap.exists() && !!cSnap.data().team;
-          const gbOk   = gSnap.exists() && !!gSnap.data().player;
-          show(!(top8Ok && chOk && gbOk));
-        }catch{ show(false); }
-      }
-
-      // első értékelés
-      computeAndShow();
-      // élő frissítés
-      onSnapshot(top8Ref, computeAndShow);
-      onSnapshot(chRef,   computeAndShow);
-      onSnapshot(gbRef,   computeAndShow);
-    }
-    /* ⬆⬆⬆ ÚJ VÉGE ⬆⬆⬆ */
   </script>
 </head>
 <body>
@@ -596,7 +603,14 @@
       <a class="nav-card" href="positions_ucl.html">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg></div>
         <div class="text">
-          <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
+          <span class="title">
+            Szezon végi sorrend
+            <span id="top8CountdownNav" class="pill-badge countdown" hidden></span>
+            <!-- 🔶 Nagy sárga nyíl: csak hiányos positions esetén látszik -->
+            <span id="posIncompleteArrowUcl" class="big-yellow-arrow" title="Egészítsd ki a Top 8 + bónusz tippeket!" hidden>
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 12h10l-4-4 1.4-1.4L19.8 14l-7.4 7.4L11 20l4-4H5z"/></svg>
+            </span>
+          </span>
           <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
@@ -605,11 +619,11 @@
         <div class="text"><span class="title">Meccstippek <span id="tipsBadgeUcl" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
       <a class="nav-card" href="results_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg></div>
         <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
       </a>
       <a class="nav-card" href="leaderboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg></div>
         <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
       </a>
       <a class="nav-card" href="profile_ucl.html">
