@@ -304,7 +304,7 @@
           const b = pw2.value.trim();
           const ok = a.length >= 6 && a === b;
           pwBtn.disabled = !ok;
-          if (!a és !b){ clearMsg(); return; }
+          if (!a && !b){ clearMsg(); return; }
           if (a !== b) showMsg("A két jelszó nem egyezik.", "err");
           else if (a.length < 6) showMsg("Legalább 6 karakteres legyen a jelszó.", "err");
           else clearMsg();
