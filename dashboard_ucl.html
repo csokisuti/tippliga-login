@@ -352,6 +352,7 @@
         // Leadatlan tippek jelvény a Meccstippek kártyán
         function updatePendingBadgeUcl(){
           const badge = document.getElementById('tipsBadgeUcl');
+          const matchesCard = document.getElementById('matchesCard');
           if (!badge) return;
           getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
             const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -359,7 +360,7 @@
               const tippedIds = new Set();
               tipsSnap.forEach(x=>{ const t=x.data(); if(t?.matchId) tippedIds.add(t.matchId); });
               const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-              if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+              if (pending>0){ badge.textContent = pending; badge.hidden = false; matchesCard?.classList.add('attention'); } else { badge.hidden = true; matchesCard?.classList.remove('attention'); }
             });
           });
         }
@@ -596,7 +597,7 @@
           <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
-      <a class="nav-card" href="matches_ucl.html">
+      <a id="matchesCard" class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg></div>
         <div class="text"><span class="title">Meccstippek <span id="tipsBadgeUcl" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
