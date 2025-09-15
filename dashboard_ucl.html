@@ -176,7 +176,8 @@
 
       snap.forEach(d=>{
         const m=d.data()||{};
-        const A=m.homeTeam||m.home||""; const B=m.awayTeam||m.away||"";
+        const A=m.homeTeam||m.home||"";
+        const B=m.awayTeam||m.away||"";
         const r=parseRes(m.result);
         if(A&&B&&m.result) matchesForModule.push({homeTeam:A,awayTeam:B,result:m.result});
         const a=S[A], b=S[B]; if(!a||!b||!r) return;
@@ -338,6 +339,28 @@
             document.getElementById("facebookFeedContainer").appendChild(fbDiv);
           }
         }catch(e){console.warn(e)}
+
+        // ⬇⬇⬇ ÚJ: leadatlan tippek jelvény frissítése (csak ez az extra) ⬇⬇⬇
+        function updatePendingBadgeUcl(){
+          const badge = document.getElementById('tipsBadgeUcl');
+          if (!badge) return;
+
+          // Közelgő BL meccsek
+          getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+            const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+            // Felhasználó BL tippjei
+            getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+              const tippedIds = new Set();
+              tipsSnap.forEach(x=>{ const t=x.data(); if(t?.matchId) tippedIds.add(t.matchId); });
+              const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+              if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+            });
+          });
+        }
+        updatePendingBadgeUcl();
+        onSnapshot(collection(db,"ucl_matches"), updatePendingBadgeUcl);
+        onSnapshot(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)), updatePendingBadgeUcl);
+        // ⬆⬆⬆ ÚJ VÉGE ⬆⬆⬆
 
         initChat(userRef);
         if(window.hideLoader) hideLoader();
@@ -524,7 +547,7 @@
       </a>
       <a class="nav-card" href="matches_ucl.html">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg></div>
-        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
+        <div class="text"><span class="title">Meccstippek <span id="tipsBadgeUcl" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
       <a class="nav-card" href="results_ucl.html">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg></div>
