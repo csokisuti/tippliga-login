@@ -121,6 +121,7 @@
       // + bulk mail részek:
       await loadTemplates();
       await loadMailLog();
+      await loadTipStatus();
 
       renderChampionOddsPreview();
       renderGoldenOddsPreview();
@@ -140,7 +141,7 @@
       const back=document.createElement('button'); back.className='btn'; back.textContent='⬅️ Vissza a dashboardra'; back.onclick=()=>location.href='dashboard_ucl.html';
       const expand=document.createElement('button'); expand.className='btn'; expand.textContent='Mindet nyisd le'; expand.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.add('open'));
       const collapse=document.createElement('button'); collapse.className='btn'; collapse.textContent='Mindet csukd össze'; collapse.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.remove('open'));
-      const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadBonusMarkets(); loadOfficialBonus(); renderChampionOddsPreview(); renderGoldenOddsPreview(); loadTemplates(); loadMailLog(); };
+      const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadBonusMarkets(); loadOfficialBonus(); renderChampionOddsPreview(); renderGoldenOddsPreview(); loadTemplates(); loadMailLog(); loadTipStatus(); };
 
       left.appendChild(back);
       right.append(expand, collapse, refresh);
@@ -391,11 +392,20 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
           <span class="muted small">Katt a sorra a részletekhez • <span class="kbd">↩ Betölt</span> gombbal visszatöltheted a tárgy/üzenet mezőkbe</span>
         </div>
         <div id="mailLogBox" class="xscroll"></div>`});
+      /* >>> ÚJ: Tipp leadások – státusz (nem bánt semmi mást) <<< */
+      const cTipStatus = makeCard({title:"Tipp leadások – státusz", hint:"Aktív meccsekre leadott tippek + pozíciós tippek + emlékeztetők", id:"card-tipstatus", bodyHTML:`
+        <div class="filterbar">
+          <button class="btn" id="tipstatusRefresh">Frissít</button>
+          <span class="muted small" id="tipstatusInfo"></span>
+        </div>
+        <div id="tipstatusTable" class="xscroll"></div>
+      `});
+
 
       document.body.append(wrap);
       wrap.append(
         cAdd.section, cManage.section, cRes.section, cUsers.section,
-        cBulk.section, cLog.section,  /* <<< ÚJ kártyák itt */
+        cBulk.section, cLog.section, cTipStatus.section,  /* <<< ÚJ kártyák itt */
         cLock.section,
         cBonusCh.section, cBonusGb.section,
         cOfficial.section,
@@ -469,6 +479,7 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       document.getElementById("tplDelete").onclick = deleteTemplate;
 
       document.getElementById("logRefresh").onclick = loadMailLog;
+      document.getElementById('tipstatusRefresh').onclick = loadTipStatus;
     }
 
     /* ===== Meccsek ===== */
@@ -1364,7 +1375,110 @@ verzió: ${data.version || 'n/a'}`);
     window.deleteMatch = deleteMatch;
     window.saveLock = saveLock;
     window.clearLock = clearLock;
-  </script>
+  
+    /* ===== Tipp leadások – státusz ===== */
+    async function loadTipStatus(){
+      const info = document.getElementById('tipstatusInfo');
+      const host = document.getElementById('tipstatusTable');
+      if(!host) return;
+      if(info) info.textContent = "Betöltés…";
+      host.innerHTML = "<div class='muted'>Betöltés…</div>";
+
+      // 1) Felhasználók
+      const usersSnap = await getDocs(collection(db, "users"));
+      const users = [];
+      usersSnap.forEach(d => { const u=d.data(); if(u && u.email) users.push({ email:u.email, name:u.nickname || u.email }); });
+      users.sort((a,b)=> (a.name||"").localeCompare(b.name||"","hu"));
+
+      // 2) Aktív meccsek = jövőbeni kezdésű és még nincs result
+      const matchesSnap = await getDocs(collection(db, "ucl_matches"));
+      const now = new Date();
+      const activeMatchIds = new Set();
+      matchesSnap.forEach(d => {
+        const m = d.data() || {};
+        const hasRes = !!m.result;
+        let st = null;
+        try { st = m.startTime?.toDate?.() || (m.startTime ? new Date(m.startTime) : null); } catch {}
+        if(!hasRes && st && st > now){
+          activeMatchIds.add(d.id);
+        }
+      });
+      const activeCount = activeMatchIds.size;
+
+      // 3) Leadott meccs-tippek felhasználónként (csak aktív meccsekre számolunk)
+      const tipsSnap = await getDocs(collection(db, "ucl_tips"));
+      const tipsByUser = new Map(); // email -> Set(matchId)
+      tipsSnap.forEach(d => {
+        const t = d.data() || {};
+        const email = t.user || t.email || t.uid || t.userEmail;
+        const mid   = t.matchId || t.mid || t.match || t.m;
+        if(!email || !mid) return;
+        if(!activeMatchIds.has(mid)) return;
+        if(!tipsByUser.has(email)) tipsByUser.set(email, new Set());
+        tipsByUser.get(email).add(mid);
+      });
+
+      // 4) Pozíciós tippek státusz
+      const top8Snap = await getDocs(collection(db, "ucl_top8Tips")).catch(()=>({empty:true, forEach:()=>{}}));
+      const championSnap = await getDocs(collection(db, "ucl_championPickTips")).catch(()=>({empty:true, forEach:()=>{}}));
+      const goldenSnap = await getDocs(collection(db, "ucl_goldenBootTips")).catch(()=>({empty:true, forEach:()=>{}}));
+      const top8Users = new Set();
+      const championUsers = new Set();
+      const goldenUsers = new Set();
+      if(!top8Snap.empty) top8Snap.forEach(d => { const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e) top8Users.add(e); });
+      if(!championSnap.empty) championSnap.forEach(d => { const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e) championUsers.add(e); });
+      if(!goldenSnap.empty) goldenSnap.forEach(d => { const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e) goldenUsers.add(e); });
+
+      // 5) Emlékeztető e-mail számláló (adminMailLog) – subject tartalmazza: "emlékeztető"
+      const mailLogQ = query(collection(db,"adminMailLog"), orderBy("sentAt","desc"), limit(500));
+      const mailLog = await getDocs(mailLogQ).catch(()=>({empty:true, forEach:()=>{}}));
+      const reminders = new Map(); // email -> count
+      if(!mailLog.empty){
+        mailLog.forEach(d => {
+          const x = d.data() || {};
+          const subj = (x.subject || "").toLowerCase();
+          const isReminder = subj.includes("emlékeztető") || (x.schema||"").toLowerCase().includes("reminder");
+          if(!isReminder) return;
+          const recips = Array.isArray(x.recipients) ? x.recipients : [];
+          recips.forEach(e => {
+            if(!e) return;
+            reminders.set(e, (reminders.get(e)||0) + 1);
+          });
+        });
+      }
+
+      // 6) Táblázat render
+      const rows = users.map(u => {
+        const tipSet = tipsByUser.get(u.email) || new Set();
+        const tipped = tipSet.size;
+        const allOk = (activeCount>0) ? (tipped === activeCount) : false;
+        const mark = allOk ? "✅" : (tipped>0 ? "🟡" : "—");
+        const rCount = reminders.get(u.email) || 0;
+        const hasTop8 = top8Users.has(u.email);
+        const hasCh   = championUsers.has(u.email);
+        const hasGb   = goldenUsers.has(u.email);
+        return { ...u, tipped, activeCount, mark, rCount, hasTop8, hasCh, hasGb };
+      });
+
+      let html = "<table><thead><tr><th>Felhasználó</th><th>Email</th><th>Aktív tippek</th><th>Állapot</th><th>Top8</th><th>Győztes</th><th>Gólkirály</th><th>Emlékeztetők</th></tr></thead><tbody>";
+      for(const r of rows){
+        html += `<tr>
+          <td>${r.name}</td>
+          <td class="muted">${r.email}</td>
+          <td class="mono">${r.tipped} / ${r.activeCount}</td>
+          <td>${r.mark}</td>
+          <td>${r.hasTop8 ? '✅' : '—'}</td>
+          <td>${r.hasCh ? '✅' : '—'}</td>
+          <td>${r.hasGb ? '✅' : '—'}</td>
+          <td class="mono">${r.rCount}</td>
+        </tr>`;
+      }
+      html += "</tbody></table>";
+      host.innerHTML = html;
+      if(info) info.textContent = `Aktív meccsek: ${activeCount} db • Felhasználók: ${users.length} fő`;
+    }
+
+</script>
 </head>
 <body></body>
 </html>
