@@ -1377,106 +1377,135 @@ verzió: ${data.version || 'n/a'}`);
     window.clearLock = clearLock;
   
     /* ===== Tipp leadások – státusz ===== */
-    async function loadTipStatus(){
-      const info = document.getElementById('tipstatusInfo');
-      const host = document.getElementById('tipstatusTable');
-      if(!host) return;
-      if(info) info.textContent = "Betöltés…";
-      host.innerHTML = "<div class='muted'>Betöltés…</div>";
+     async function loadTipStatus(){
+    const info = document.getElementById('tipstatusInfo');
+    const host = document.getElementById('tipstatusTable');
+    if(!host) return;
+    if(info) info.textContent = "Betöltés…";
+    host.innerHTML = "<div class='muted'>Betöltés…</div>";
 
-      // 1) Felhasználók
-      const usersSnap = await getDocs(collection(db, "users"));
-      const users = [];
-      usersSnap.forEach(d => { const u=d.data(); if(u && u.email) users.push({ email:u.email, name:u.nickname || u.email }); });
-      users.sort((a,b)=> (a.name||"").localeCompare(b.name||"","hu"));
+    const usersSnap = await getDocs(collection(db, "users"));
+    const users = [];
+    usersSnap.forEach(d => { const u=d.data(); if(u && u.email) users.push({ email:u.email, name:u.nickname || u.email }); });
+    users.sort((a,b)=> (a.name||"").localeCompare(b.name||"","hu"));
 
-      // 2) Aktív meccsek = jövőbeni kezdésű és még nincs result
-      const matchesSnap = await getDocs(collection(db, "ucl_matches"));
-      const now = new Date();
-      const activeMatchIds = new Set();
-      matchesSnap.forEach(d => {
-        const m = d.data() || {};
-        const hasRes = !!m.result;
-        let st = null;
-        try { st = m.startTime?.toDate?.() || (m.startTime ? new Date(m.startTime) : null); } catch {}
-        if(!hasRes && st && st > now){
-          activeMatchIds.add(d.id);
-        }
-      });
-      const activeCount = activeMatchIds.size;
+    const matchesSnap = await getDocs(collection(db, "ucl_matches"));
+    const now = new Date();
+    const activeMatchIds = new Set();
+    matchesSnap.forEach(d => {
+      const m = d.data() || {};
+      let st=null; try{ st = m.startTime?.toDate?.() || (m.startTime? new Date(m.startTime): null); }catch{}
+      if(!m.result && st && st>now) activeMatchIds.add(d.id);
+    });
+    const activeCount = activeMatchIds.size;
 
-      // 3) Leadott meccs-tippek felhasználónként (csak aktív meccsekre számolunk)
-      const tipsSnap = await getDocs(collection(db, "ucl_tips"));
-      const tipsByUser = new Map(); // email -> Set(matchId)
-      tipsSnap.forEach(d => {
-        const t = d.data() || {};
-        const email = t.user || t.email || t.uid || t.userEmail;
-        const mid   = t.matchId || t.mid || t.match || t.m;
-        if(!email || !mid) return;
-        if(!activeMatchIds.has(mid)) return;
+    // helper: legjobb időbélyeg kiválasztása egy doku-ból
+    const pickTs = (o)=>{
+      const c = o||{};
+      const cand = [
+        c.updatedAt, c.ts, c.timestamp, c.savedAt, c.modifiedAt, c.createdAt, c.time,
+        (c._updatedAt), (c._createdAt)
+      ];
+      for(const t of cand){ if(t && typeof t==='object') return t; }
+      return null;
+    };
+
+    // 3) Leadott meccstipp-ek felhasználónként + utolsó módosítás
+    const tipsSnap = await getDocs(collection(db, "ucl_tips"));
+    const tipsByUser = new Map();       // email -> Set(matchId)
+    const lastTsByUser = new Map();     // email -> Timestamp (max)
+
+    tipsSnap.forEach(d => {
+      const t = d.data() || {};
+      const email = t.user || t.email || t.uid || t.userEmail;
+      const mid   = t.matchId || t.mid || t.match || t.m;
+      if(!email || !mid) return;
+      if(activeMatchIds.has(mid)){
         if(!tipsByUser.has(email)) tipsByUser.set(email, new Set());
         tipsByUser.get(email).add(mid);
-      });
-
-      // 4) Pozíciós tippek státusz
-      const top8Snap = await getDocs(collection(db, "ucl_top8Tips")).catch(()=>({empty:true, forEach:()=>{}}));
-      const championSnap = await getDocs(collection(db, "ucl_championPickTips")).catch(()=>({empty:true, forEach:()=>{}}));
-      const goldenSnap = await getDocs(collection(db, "ucl_goldenBootTips")).catch(()=>({empty:true, forEach:()=>{}}));
-      const top8Users = new Set();
-      const championUsers = new Set();
-      const goldenUsers = new Set();
-      if(!top8Snap.empty) top8Snap.forEach(d => { const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e) top8Users.add(e); });
-      if(!championSnap.empty) championSnap.forEach(d => { const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e) championUsers.add(e); });
-      if(!goldenSnap.empty) goldenSnap.forEach(d => { const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e) goldenUsers.add(e); });
-
-      // 5) Emlékeztető e-mail számláló (adminMailLog) – subject tartalmazza: "emlékeztető"
-      const mailLogQ = query(collection(db,"adminMailLog"), orderBy("sentAt","desc"), limit(500));
-      const mailLog = await getDocs(mailLogQ).catch(()=>({empty:true, forEach:()=>{}}));
-      const reminders = new Map(); // email -> count
-      if(!mailLog.empty){
-        mailLog.forEach(d => {
-          const x = d.data() || {};
-          const subj = (x.subject || "").toLowerCase();
-          const isReminder = subj.includes("emlékeztető") || (x.schema||"").toLowerCase().includes("reminder");
-          if(!isReminder) return;
-          const recips = Array.isArray(x.recipients) ? x.recipients : [];
-          recips.forEach(e => {
-            if(!e) return;
-            reminders.set(e, (reminders.get(e)||0) + 1);
-          });
-        });
       }
-
-      // 6) Táblázat render
-      const rows = users.map(u => {
-        const tipSet = tipsByUser.get(u.email) || new Set();
-        const tipped = tipSet.size;
-        const allOk = (activeCount>0) ? (tipped === activeCount) : false;
-        const mark = allOk ? "✅" : (tipped>0 ? "🟡" : "—");
-        const rCount = reminders.get(u.email) || 0;
-        const hasTop8 = top8Users.has(u.email);
-        const hasCh   = championUsers.has(u.email);
-        const hasGb   = goldenUsers.has(u.email);
-        return { ...u, tipped, activeCount, mark, rCount, hasTop8, hasCh, hasGb };
-      });
-
-      let html = "<table><thead><tr><th>Felhasználó</th><th>Email</th><th>Aktív tippek</th><th>Állapot</th><th>Top8</th><th>Győztes</th><th>Gólkirály</th><th>Emlékeztetők</th></tr></thead><tbody>";
-      for(const r of rows){
-        html += `<tr>
-          <td>${r.name}</td>
-          <td class="muted">${r.email}</td>
-          <td class="mono">${r.tipped} / ${r.activeCount}</td>
-          <td>${r.mark}</td>
-          <td>${r.hasTop8 ? '✅' : '—'}</td>
-          <td>${r.hasCh ? '✅' : '—'}</td>
-          <td>${r.hasGb ? '✅' : '—'}</td>
-          <td class="mono">${r.rCount}</td>
-        </tr>`;
+      const ts = pickTs(t);
+      if(ts){
+        const cur = lastTsByUser.get(email);
+        if(!cur || (ts.toMillis?.()?ts.toMillis():+new Date(ts)) > (cur.toMillis?.()?cur.toMillis():+new Date(cur))){
+          lastTsByUser.set(email, ts);
+        }
       }
-      html += "</tbody></table>";
-      host.innerHTML = html;
-      if(info) info.textContent = `Aktív meccsek: ${activeCount} db • Felhasználók: ${users.length} fő`;
+    });
+
+    // 4) Pozíciós tippek státusz + utolsó módosítás gyűjtése
+    const top8Snap     = await getDocs(collection(db, "ucl_top8Tips")).catch(()=>({empty:true, forEach:()=>{}}));
+    const championSnap = await getDocs(collection(db, "ucl_championPickTips")).catch(()=>({empty:true, forEach:()=>{}}));
+    const goldenSnap   = await getDocs(collection(db, "ucl_goldenBootTips")).catch(()=>({empty:true, forEach:()=>{}}));
+
+    const top8Users = new Set();
+    const championUsers = new Set();
+    const goldenUsers = new Set();
+
+    if(!top8Snap.empty) top8Snap.forEach(d => {
+      const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e){ top8Users.add(e);
+        const ts = pickTs(x); if(ts){ const cur=lastTsByUser.get(e); if(!cur || ts.toMillis?.()>cur.toMillis?.()) lastTsByUser.set(e,ts); }
+      }
+    });
+    if(!championSnap.empty) championSnap.forEach(d => {
+      const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e){ championUsers.add(e);
+        const ts = pickTs(x); if(ts){ const cur=lastTsByUser.get(e); if(!cur || ts.toMillis?.()>cur.toMillis?.()) lastTsByUser.set(e,ts); }
+      }
+    });
+    if(!goldenSnap.empty) goldenSnap.forEach(d => {
+      const x=d.data()||{}; const e=x.user||x.email||x.userEmail; if(e){ goldenUsers.add(e);
+        const ts = pickTs(x); if(ts){ const cur=lastTsByUser.get(e); if(!cur || ts.toMillis?.()>cur.toMillis?.()) lastTsByUser.set(e,ts); }
+      }
+    });
+
+    // 5) Emlékeztetők számláló
+    const mailLogQ = query(collection(db,"adminMailLog"), orderBy("sentAt","desc"), limit(500));
+    const mailLog = await getDocs(mailLogQ).catch(()=>({empty:true, forEach:()=>{}}));
+    const reminders = new Map(); // email -> count
+    if(!mailLog.empty){
+      mailLog.forEach(d => {
+        const x = d.data() || {};
+        const subj = (x.subject || "").toLowerCase();
+        const isReminder = subj.includes("emlékeztető") || (x.schema||"").toLowerCase().includes("reminder");
+        if(!isReminder) return;
+        const recips = Array.isArray(x.recipients) ? x.recipients : [];
+        recips.forEach(e => { if(!e) return; reminders.set(e, (reminders.get(e)||0) + 1); });
+      });
     }
+
+    // 6) Render
+    const rows = users.map(u => {
+      const tipSet = tipsByUser.get(u.email) || new Set();
+      const tipped = tipSet.size;
+      const allOk = (activeCount>0) ? (tipped === activeCount) : false;
+      const mark = allOk ? "✅" : (tipped>0 ? "🟡" : "—");
+      const rCount = reminders.get(u.email) || 0;
+      const hasTop8 = top8Users.has(u.email);
+      const hasCh   = championUsers.has(u.email);
+      const hasGb   = goldenUsers.has(u.email);
+      const ts      = lastTsByUser.get(u.email);
+      const lastStr = ts ? (ts.toDate?.()?.toLocaleString('hu-HU') || '') : '—';
+      return { ...u, tipped, activeCount, mark, rCount, hasTop8, hasCh, hasGb, lastStr };
+    });
+
+    let html = "<table><thead><tr><th>Felhasználó</th><th>Email</th><th>Aktív tippek</th><th>Állapot</th><th>Top8</th><th>Győztes</th><th>Gólkirály</th><th>Emlékeztetők</th><th>Utoljára módosítva</th></tr></thead><tbody>";
+    for(const r of rows){
+      html += `<tr>
+        <td>${r.name}</td>
+        <td class="muted">${r.email}</td>
+        <td class="mono">${r.tipped} / ${r.activeCount}</td>
+        <td>${r.mark}</td>
+        <td>${r.hasTop8 ? '✅' : '—'}</td>
+        <td>${r.hasCh ? '✅' : '—'}</td>
+        <td>${r.hasGb ? '✅' : '—'}</td>
+        <td class="mono">${r.rCount}</td>
+        <td class="mono">${r.lastStr}</td>
+      </tr>`;
+    }
+    html += "</tbody></table>";
+    host.innerHTML = html;
+    if(info) info.textContent = `Aktív meccsek: ${activeCount} db • Felhasználók: ${users.length} fő`;
+  }
 
 </script>
 </head>
