@@ -12,16 +12,9 @@
   <script src="loader.js" defer></script>
 
   <style>
-    .layout{
-      display:flex; flex-direction:column; gap:16px;
-      max-width:1200px; margin:0 auto; padding:20px;
-    }
-    .content-grid{
-      display:grid; grid-template-columns: 1.2fr 1fr; gap:16px;
-    }
-    @media (max-width: 1000px){
-      .content-grid{ grid-template-columns: 1fr; }
-    }
+    .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
+    .content-grid{ display:grid; grid-template-columns: 1.2fr 1fr; gap:16px; }
+    @media (max-width: 1000px){ .content-grid{ grid-template-columns: 1fr; } }
 
     .header{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
     .header-left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
@@ -31,89 +24,35 @@
     .league-switch-left{ margin-left:8px; }
     @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0; } }
 
-    .nav-grid{
-      display:grid;
-      grid-template-columns: repeat(6, minmax(0,1fr));
-      gap:14px;
-    }
-    @media (max-width: 1100px){
-      .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-    }
-    @media (max-width: 700px){
-      .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-    }
-    .nav-card{
-      display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit;
-      padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px;
-      box-shadow:0 6px 18px rgba(15,23,42,.05);
-    }
-    .nav-card .icon-wrap{
-      position:relative;
-      width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-      background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white);
-      color:var(--accent,#3b82f6);
-    }
+    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
+    @media (max-width: 1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width: 700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    .nav-card .icon-wrap{ position:relative; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
     .nav-card .title{ font-weight:800; }
     .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
 
-    .card{
-      background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px;
-      box-shadow:0 6px 18px rgba(0,0,0,.06);
-      overflow:hidden;
-    }
+    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,.06); overflow:hidden; }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
-
-    .card-head-row{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd;
-    }
+    .card-head-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
     .card-head-row h3{ margin:0; padding:0; border:0; background:transparent; }
 
     .table-wrap{ overflow:auto; }
-    .pill-badge{
-      display:inline-flex; align-items:center; justify-content:center;
-      min-width:18px; height:18px; padding:0 6px; margin-left:6px;
-      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700;
-      line-height:1; vertical-align:middle;
-    }
+    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
-    .fb-wrap iframe{
-      width:100%; height:540px; border:0; overflow:hidden;
-    }
+    .fb-wrap iframe{ width:100%; height:540px; border:0; overflow:hidden; }
 
-    .chat-fab{
-      position:fixed; right:22px; bottom:22px; z-index:999;
-      width:52px; height:52px; border-radius:999px; border:0;
-      background:var(--accent,#3b82f6); color:#fff; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      box-shadow:0 8px 26px rgba(0,0,0,.15);
-    }
-    .chat-fab .fab-badge{
-      position:absolute; top:-4px; right:-4px;
-      min-width:20px; height:20px; padding:0 6px;
-      border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none;
-    }
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
 
-    .chat-panel{
-      position:fixed; right:22px; bottom:86px; z-index:998;
-      width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column;
-      background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14);
-    }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
     .chat-panel.open{ display:flex; }
-    .chat-head{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd;
-    }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
     .chat-title{ font-weight:800; }
-    #chatClose{
-      width:28px; height:28px; border-radius:8px;
-      font-size:18px; line-height:28px;
-      display:inline-flex; align-items:center; justify-content:center;
-      background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer;
-    }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
     #chatClose:hover{ filter:brightness(0.95); }
 
     .chat-list{ overflow:auto; padding:8px 10px; }
@@ -122,63 +61,13 @@
     .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
     .msg .meta{ font-size:12px; color:var(--muted,#64748b); margin-bottom:2px; }
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
-    .msg .del{
-      margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca;
-      padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none;
-    }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
 
-    #chatComposer{
-      display:flex; gap:8px; align-items:center;
-      padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff;
-    }
-    #chatInput{
-      background:#fff; color:#111;
-      border:1px solid var(--line,#e6eaf1);
-      height:40px; padding:8px 10px; border-radius:10px;
-      font-size:14px; outline:none; width:100%; box-sizing:border-box;
-    }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
-    #chatSendBtn{
-      min-width:90px; padding:8px 12px; border-radius:10px;
-      background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer;
-    }
-
-    .btn-accent{
-      min-height:40px; padding:10px 14px; border-radius:10px;
-      background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1);
-      font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
-      box-shadow:0 6px 18px rgba(0,0,0,.08);
-      text-decoration:none;
-    }
-    .btn-accent:hover{ filter:brightness(.95); }
-    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
-    .btn-icon{ width:18px; height:18px; display:inline-block; }
-
-    .rules-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
-    .rules-modal.open{display:flex}
-    .rules-dialog{width:min(900px,92vw);max-height:80vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
-    .rules-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .rules-title{font-weight:800}
-    .rules-close{width:32px;height:32px;border:1px solid var(--line,#e6eaf1);border-radius:8px;background:#eef2ff;cursor:pointer}
-    .rules-body{padding:14px;overflow:auto;line-height:1.5;color:#111;white-space:pre-wrap}
-    .rules-body p{margin:0 0 10px}
-    .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
-    .rules-updated{font-size:12px;color:var(--muted,#64748b)}
-
-    .onb-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;display:none;align-items:center;justify-content:center}
-    .onb-backdrop.open{display:flex}
-    .onb-dialog{width:min(720px,92vw);background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.25);overflow:hidden}
-    .onb-head{padding:12px 14px;background:#f7f9fd;border-bottom:1px solid var(--line,#e6eaf1);font-weight:800}
-    .onb-body{padding:14px;display:grid;gap:12px}
-    .onb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .onb-foot{padding:12px 14px;background:#fff;border-top:1px solid var(--line,#e6eaf1);display:flex;justify-content:space-between;align-items:center}
-    .onb-note{font-size:12px;color:var(--muted,#64748b)}
-    .onb-actions{display:flex;gap:8px}
-    .onb-btn{border:1px solid var(--line,#e6eaf1);background:#e5e7eb;color:#111;padding:8px 12px;border-radius:10px;font-weight:700;cursor:not-allowed;opacity:.6}
-    .onb-btn.ok{background:var(--accent,#3b82f6);color:#fff;border-color:#dbeafe}
-    .onb-btn.enabled{cursor:pointer;opacity:1}
-    .onb-sel{border:1px solid var(--line,#e6eaf1);border-radius:10px;padding:8px 10px;min-width:260px}
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
   </style>
 
   <script type="module">
@@ -186,9 +75,9 @@
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore,
-      doc, getDoc, setDoc,
+      doc, getDoc, setDoc, updateDoc,
       collection, addDoc, deleteDoc, serverTimestamp,
-      query, orderBy, onSnapshot
+      query, orderBy, onSnapshot, limit, increment   // ⟵ ADDED: limit, increment, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     import { computeLiveOrderFromMatches } from "./standings.js";
@@ -372,6 +261,7 @@
     let currentUserRole = "user";
     let favoriteTeam = "";
     let chatLastSeen = null;
+    let chatLastSeenCount = 0;          // ⟵ ADDED: utoljára látott üzenetszám
 
     document.addEventListener("DOMContentLoaded", () => {
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
@@ -407,11 +297,13 @@
           currentUserRole = data.role || "user";
           favoriteTeam = data.favoriteTeam || "";
           chatLastSeen = data.chatLastSeen || null;
+          chatLastSeenCount = data.chatLastSeenCount || 0;   // ⟵ ADDED
         } else {
           currentUserNick = currentUserEmail;
           currentUserRole = "user";
           favoriteTeam = "";
           chatLastSeen = null;
+          chatLastSeenCount = 0;
         }
 
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
@@ -433,6 +325,7 @@
 
         await maybeForceFavoriteSetup(userRef, { onbEl, onbSel, onbRem, onbSave });
 
+        // ===== TABELLÁHOZ: real-time meccsek (változatlanul) =====
         const matchesRef = collection(db, "matches");
         onSnapshot(matchesRef, snap => {
           buildComputedTableFromDocs(snap.docs);
@@ -452,6 +345,7 @@
           }
         } catch(e){ console.warn(e); }
 
+        // ===== CHAT INIT (LAZY-LOAD + META BADGE) =====
         initChat(userRef);
 
         if (window.hideLoader) hideLoader();
@@ -471,64 +365,81 @@
       const inputEl = document.getElementById('chatInput');
       const sendBtn = document.getElementById('chatSendBtn');
 
-      function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
-      function close(){ panel.classList.remove('open'); }
+      const chatMetaRef = doc(db, 'chatMeta', 'main');        // ⟵ ADDED: meta dokumentum (total számláló)
+      let metaTotal = 0;                                      // ⟵ ADDED
+      let listUnsub = null;                                   // ⟵ ADDED: üzenet-lista leiratkozó
+
+      function open(){
+        panel.classList.add('open');
+        // Lazy: csak megnyitáskor töltjük az utolsó 100 üzenetet
+        if (!listUnsub){
+          const qLast100 = query(collection(db,'chatMessages'), orderBy('ts','asc'), limit(100));
+          listUnsub = onSnapshot(qLast100, snap => {
+            listEl.innerHTML = '';
+            if (snap.empty){
+              const empty = document.createElement('div');
+              empty.className = 'chat-empty';
+              empty.textContent = 'Még nincs üzenet. Légy te az első!';
+              listEl.appendChild(empty);
+            } else {
+              snap.forEach(docu=>{
+                const d = docu.data();
+                const row = document.createElement('div');
+                row.className = 'msg';
+                row.innerHTML = `
+                  <div style="flex:1 1 auto">
+                    <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
+                    <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+                  </div>
+                `;
+                const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
+                if (canDelete){
+                  const del = document.createElement('button');
+                  del.className = 'del';
+                  del.textContent = 'Törlés';
+                  del.title = 'Üzenet törlése';
+                  del.addEventListener('click', async ()=>{
+                    try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }
+                    catch(e){ console.warn('Del failed', e); }
+                  });
+                  row.appendChild(del);
+                }
+                listEl.appendChild(row);
+              });
+              setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
+            }
+          }, err => console.warn('chat list snapshot error:', err));
+        }
+
+        setTimeout(()=>inputEl?.focus(), 50);
+        markSeen(); // jelöljük olvasottnak (lásd lent)
+      }
+
+      function close(){
+        panel.classList.remove('open');
+        // opcionális: meghagyjuk az aktuális listát és a listener-t,
+        // ha agresszíven spórolnál, itt le is iratkozhatsz:
+        // if (listUnsub) { listUnsub(); listUnsub = null; }
+      }
+
       function toggle(){ panel.classList.contains('open') ? close() : open(); }
       fab.addEventListener('click', toggle);
       closeBtn.addEventListener('click', close);
 
-      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
-
-      const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
-        listEl.innerHTML = '';
-        if (snap.empty){
-          const empty = document.createElement('div');
-          empty.className = 'chat-empty';
-          empty.textContent = 'Még nincs üzenet. Légy te az első!';
-          listEl.appendChild(empty);
+      // ===== BADGE: csak a meta doksit figyeljük (1 doksi!) =====
+      onSnapshot(chatMetaRef, snap => {
+        metaTotal = snap.exists() ? (snap.data().total || 0) : 0;
+        const unread = Math.max(0, metaTotal - (chatLastSeenCount || 0));
+        if (!panel.classList.contains('open') && unread > 0) {
+          fab.classList.add('has-unread');
+          fabBadge.textContent = unread > 99 ? '99+' : String(unread);
         } else {
-          let unread = 0;
-          snap.forEach(docu=>{
-            const d = docu.data();
-            const tsMs = d.ts?.toMillis?.() || 0;
-            if (tsMs > lastSeenMs) unread++;
-
-            const row = document.createElement('div');
-            row.className = 'msg';
-            row.innerHTML = `
-              <div style="flex:1 1 auto">
-                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
-                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-              </div>
-            `;
-            const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
-            if (canDelete){
-              const del = document.createElement('button');
-              del.className = 'del';
-              del.textContent = 'Törlés';
-              del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{
-                try{ await deleteDoc(doc(db, 'chatMessages', docu.id)); }
-                catch(e){ console.warn('Del failed', e); }
-              });
-              row.appendChild(del);
-            }
-            listEl.appendChild(row);
-          });
-
-          if (!panel.classList.contains('open') && unread > 0){
-            fab.classList.add('has-unread');
-            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
-          } else {
-            fab.classList.remove('has-unread');
-            fabBadge.textContent = '';
-          }
-
-          setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
+          fab.classList.remove('has-unread');
+          fabBadge.textContent = '';
         }
-      }, err => console.warn('chat snapshot error:', err));
+      });
 
+      // ===== Küldés: üzenet + meta számláló növelése atomikusan =====
       sendBtn.addEventListener('click', async ()=>{
         const txt = (inputEl.value || '').trim();
         if (!txt){ inputEl.focus(); return; }
@@ -541,6 +452,9 @@
             text: backup,
             ts: serverTimestamp()
           });
+          // Meta számláló ++ és utolsó TS frissítése
+          await setDoc(chatMetaRef, { total: increment(1), lastTs: serverTimestamp() }, { merge:true });
+
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){
           console.warn('Chat send failed:', e);
@@ -553,8 +467,9 @@
 
       async function markSeen(){
         try{
-          await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
-          lastSeenMs = Date.now();
+          // A jelölésnél elmentjük, hány üzenetig olvastunk
+          await setDoc(userRef, { chatLastSeen: serverTimestamp(), chatLastSeenCount: metaTotal }, { merge:true });
+          chatLastSeenCount = metaTotal;
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
         }catch(e){ console.warn('markSeen failed', e); }
@@ -713,6 +628,7 @@
       </a>
     </nav>
 
+    <!-- Onboarding -->
     <div id="onbFav" class="onb-backdrop" aria-modal="true" role="dialog" aria-labelledby="onbFavTitle">
       <div class="onb-dialog">
         <div class="onb-head" id="onbFavTitle">Üdv a TippLigában! 🎉</div>
@@ -738,6 +654,7 @@
       </div>
     </div>
 
+    <!-- Szabályzat -->
     <div id="rulesModal" class="rules-modal" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
       <div class="rules-dialog">
         <div class="rules-head">
