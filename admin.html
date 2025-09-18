@@ -428,7 +428,7 @@
       if(!data.ok){ alert("Hiba a küldésnél: " + (data.error||"")); return }
       const v  = data.version || 'n/a';
       const hl = (data.echo && typeof data.echo.htmlLen==='number') ? data.echo.htmlLen : (htmlBody||'').length;
-      const ec = (data.echo and typeof data.echo.emailsCount==='number') ? data.echo.emailsCount : emails.length;
+      const ec = (data.echo && typeof data.echo.emailsCount==='number') ? data.echo.emailsCount : emails.length;
       alert(`Kész. Kiküldve: ${data.sent} címre.
 verzió: ${v}
 htmlLen: ${hl} | címzettek: ${ec}`);
