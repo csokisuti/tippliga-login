@@ -81,11 +81,8 @@
       await loadTemplates();
       await loadMailLog();
 
-      // Real-time figyelés a lezárás állapotára (státusz azonnal frissül)
       onSnapshot(doc(db,"settings","positionsLock"), ()=> loadPositionsLock());
-
-      // ⬇️ az UI elkészülte után próbáljuk alkalmazni az esetleges #import adatot
-      tryImportFromHash();
+      tryImportFromHash(); // ← bookmarklet import alkalmazása
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=""}){
@@ -230,7 +227,6 @@
 
       document.getElementById("logRefresh").onclick = loadMailLog;
 
-      /* ÚJ: gombok bekötése a lezárás kártyán */
       document.getElementById("saveLock").onclick = saveLock;
       document.getElementById("clearLock").onclick = clearLock;
     }
@@ -276,8 +272,8 @@
               <input type="datetime-local" value="${new Date(d.startTime.toDate()).toISOString().slice(0,16)}" id="start-${d.id}">
               <input value="${d.roundId||""}" id="round-${d.id}">
               <input value="${d.odds["1"]??""}" id="odds1-${d.id}" placeholder="Odds 1" style="width:90px">
-              <input value="${d.odds["X"]??""}" id="oddsX-${d.id}" placeholder="Odds 2" style="width:90px">
-              <input value="${d.odds["2"]??""}" id="odds2-${d.id}" placeholder="Odds X" style="width:90px">
+              <input value="${d.odds["X"]??""}" id="oddsX-${d.id}" placeholder="Odds X" style="width:90px">
+              <input value="${d.odds["2"]??""}" id="odds2-${d.id}" placeholder="Odds 2" style="width:90px">
               <button class="btn primary" onclick="updateMatch('${d.id}')">Mentés</button>
               <button class="btn danger" onclick="deleteMatch('${d.id}')">Törlés</button>
             </div>
@@ -686,43 +682,36 @@ verzió: ${data.version || 'n/a'}`);
       return fromMap || s.trim();
     }
 
-    // Erős kiválasztó: először pontos value egyezés, aztán robusztus fuzzy
+    // SZEMÉT/rossz „csapatnevek” kiszűrése (NB I, FORDULÓ, MAGYARORSZÁG stb.)
+    function _looksLikeJunkTeam(s){
+      if(!s) return true;
+      const X = (s+"").normalize('NFD').replace(/\p{Diacritic}/gu,'').toUpperCase();
+      return /NB\s*I|FORDULO|MAGYARORSZAG|FOCI|TABELL|LEAGUE|ROUND/.test(X);
+    }
+
+    // Erős kiválasztó: value egyezés → text egyezés → ékezetlen egyezés → „FC/SC/TE/VTK” nélkül rész-egyezés
     function _selectTeam(sel, rawName){
       if(!sel || !rawName) return;
       const target = _normTeamName(rawName);
 
-      // 0) közvetlen beállítás value alapján (ha van ilyen opció)
       for(const o of sel.options){
         if(o.value === target){
           sel.value = target;
           return;
         }
       }
-
-      // 1) kis/nagybetű független pontos egyezés a feliraton
       let idx = [...sel.options].findIndex(o => o.text.trim().toLowerCase() === target.trim().toLowerCase());
-
-      // 2) ékezetlen pontos egyezés
       if(idx < 0){
         const wanted = _deaccent(target);
         idx = [...sel.options].findIndex(o => _deaccent(o.text) === wanted);
       }
-
-      // 3) ékezetlen + „fc/sc/te/vtk” törlés + rész-egyezés
       if(idx < 0){
-        const wanted = _deaccent(target)
-          .replace(/\b(fc|sc|te|vtk)\b/g,'')
-          .replace(/\s+/g,' ')
-          .trim();
+        const wanted = _deaccent(target).replace(/\b(fc|sc|te|vtk)\b/g,'').replace(/\s+/g,' ').trim();
         idx = [...sel.options].findIndex(o=>{
-          const t = _deaccent(o.text)
-            .replace(/\b(fc|sc|te|vtk)\b/g,'')
-            .replace(/\s+/g,' ')
-            .trim();
+          const t = _deaccent(o.text).replace(/\b(fc|sc|te|vtk)\b/g,'').replace(/\s+/g,' ').trim();
           return t === wanted || t.includes(wanted) || wanted.includes(t);
         });
       }
-
       if(idx >= 0) sel.selectedIndex = idx;
     }
 
@@ -740,10 +729,11 @@ verzió: ${data.version || 'n/a'}`);
         return;
       }
 
-      if(data.home) _selectTeam(homeSel, data.home);
-      if(data.away) _selectTeam(awaySel, data.away);
+      // csak akkor állítunk csapatot, ha nem szemét szókapcsolat
+      if(data.home && !_looksLikeJunkTeam(data.home)) _selectTeam(homeSel, data.home);
+      if(data.away && !_looksLikeJunkTeam(data.away)) _selectTeam(awaySel, data.away);
 
-      if(data.startISO){ startInp.value = data.startISO; }
+      if(data.startISO) startInp.value = data.startISO;
 
       if(data.odds){
         if(typeof data.odds.o1==="number" && !Number.isNaN(data.odds.o1)) odd1.value = String(data.odds.o1);
@@ -751,16 +741,14 @@ verzió: ${data.version || 'n/a'}`);
         if(typeof data.odds.o2==="number" && !Number.isNaN(data.odds.o2)) odd2.value = String(data.odds.o2);
       }
 
-      if(data.roundId != null){
-        roundInp.value = String(data.roundId).trim();
-      }
+      if(data.roundId != null) roundInp.value = String(data.roundId).trim();
 
-      // Hash törlése (egyszeri import)
+      // Hash törlése (egyszeri import), visszajelzés a konzolban
       history.replaceState(null, "", location.pathname + location.search);
       console.log("Import sikeres:", data);
     }
 
-    // UTF-8 biztonságos base64→JSON
+    // UTF-8 biztonságos base64 → JSON
     function _b64ToJson(b64){
       try{
         const bin = atob(b64);
@@ -768,7 +756,6 @@ verzió: ${data.version || 'n/a'}`);
         const jsonStr = new TextDecoder().decode(bytes);
         return JSON.parse(jsonStr);
       }catch(e){
-        // régi escape/encodeURIComponent párossal készült linkekhez
         try{
           const jsonStr = decodeURIComponent(escape(atob(b64)));
           return JSON.parse(jsonStr);
@@ -790,7 +777,6 @@ verzió: ${data.version || 'n/a'}`);
       }
     }
 
-    // Ha valaki kézzel illeszti be később a hash-t:
     window.addEventListener("hashchange", tryImportFromHash);
   </script>
 </head>
