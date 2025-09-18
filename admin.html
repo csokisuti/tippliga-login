@@ -655,13 +655,13 @@ verzió: ${data.version || 'n/a'}`);
        ÚJ: Bookmarklet import fogadása (#import=...)
        =========================== */
 
-    // Alias-map + ékezet- és toldalék-robosztus egyezés
+    // Aliasok a leggyakoribb eltérésekre
     const _teamNameMap = {
       "Debrecen":"Debreceni VSC","Debreceni VSC":"Debreceni VSC",
       "Diosgyor":"Diósgyőri VTK","Diósgyőr":"Diósgyőri VTK","Diósgyőri VTK":"Diósgyőri VTK",
       "Ferencvaros":"Ferencváros","Ferencváros":"Ferencváros",
       "ETO":"ETO FC Győr","Gyor":"ETO FC Győr","Győr":"ETO FC Győr","ETO FC Győr":"ETO FC Győr",
-      "Kazincbarcika":"Kazincbarcikai SC","Kazincbarcika":"Kazincbarcikai SC",
+      "Kazincbarcika":"Kazincbarcikai SC","Kazincbarcikai SC":"Kazincbarcikai SC",
       "Kisvarda":"Kisvárda FC","Kisvárda":"Kisvárda FC","Kisvárda FC":"Kisvárda FC",
       "MTK":"MTK Budapest","MTK Budapest":"MTK Budapest",
       "Nyiregyhaza":"Nyíregyháza Spartacus","Nyíregyháza":"Nyíregyháza Spartacus","Nyíregyháza Spartacus":"Nyíregyháza Spartacus",
@@ -682,26 +682,46 @@ verzió: ${data.version || 'n/a'}`);
     function _normTeamName(s){
       if(!s) return s;
       const key1 = _deaccent(s);
-      const byMap = _teamNameMap[s] || _teamNameMap[key1?.replace(/\./g,'')];
-      return byMap || s.trim();
+      const fromMap = _teamNameMap[s] || _teamNameMap[key1?.replace(/\./g,'')];
+      return fromMap || s.trim();
     }
-    function _setSelectByText(sel, value){
-      if(!sel || !value) return;
-      const wanted = _deaccent(value)
-        .replace(/\./g,'')
-        .replace(/\b(fc|te|sc|vtk)\b/g,'')
-        .replace(/\s+/g,' ')
-        .trim();
 
-      // 1) pontos egyezés (ékezetlenítve)
-      let idx = [...sel.options].findIndex(o => _deaccent(o.text) === wanted);
-      // 2) tartalmazza / rész-egyezés
-      if(idx < 0) idx = [...sel.options].findIndex(o => {
-        const t = _deaccent(o.text);
-        return t.includes(wanted) || wanted.includes(t);
-      });
-      // 3) kezdettel egyezés
-      if(idx < 0) idx = [...sel.options].findIndex(o => _deaccent(o.text).startsWith(wanted));
+    // Erős kiválasztó: először pontos value egyezés, aztán robusztus fuzzy
+    function _selectTeam(sel, rawName){
+      if(!sel || !rawName) return;
+      const target = _normTeamName(rawName);
+
+      // 0) közvetlen beállítás value alapján (ha van ilyen opció)
+      for(const o of sel.options){
+        if(o.value === target){
+          sel.value = target;
+          return;
+        }
+      }
+
+      // 1) kis/nagybetű független pontos egyezés a feliraton
+      let idx = [...sel.options].findIndex(o => o.text.trim().toLowerCase() === target.trim().toLowerCase());
+
+      // 2) ékezetlen pontos egyezés
+      if(idx < 0){
+        const wanted = _deaccent(target);
+        idx = [...sel.options].findIndex(o => _deaccent(o.text) === wanted);
+      }
+
+      // 3) ékezetlen + „fc/sc/te/vtk” törlés + rész-egyezés
+      if(idx < 0){
+        const wanted = _deaccent(target)
+          .replace(/\b(fc|sc|te|vtk)\b/g,'')
+          .replace(/\s+/g,' ')
+          .trim();
+        idx = [...sel.options].findIndex(o=>{
+          const t = _deaccent(o.text)
+            .replace(/\b(fc|sc|te|vtk)\b/g,'')
+            .replace(/\s+/g,' ')
+            .trim();
+          return t === wanted || t.includes(wanted) || wanted.includes(t);
+        });
+      }
 
       if(idx >= 0) sel.selectedIndex = idx;
     }
@@ -720,8 +740,8 @@ verzió: ${data.version || 'n/a'}`);
         return;
       }
 
-      if(data.home) _setSelectByText(homeSel, _normTeamName(data.home));
-      if(data.away) _setSelectByText(awaySel, _normTeamName(data.away));
+      if(data.home) _selectTeam(homeSel, data.home);
+      if(data.away) _selectTeam(awaySel, data.away);
 
       if(data.startISO){ startInp.value = data.startISO; }
 
@@ -740,12 +760,30 @@ verzió: ${data.version || 'n/a'}`);
       console.log("Import sikeres:", data);
     }
 
+    // UTF-8 biztonságos base64→JSON
+    function _b64ToJson(b64){
+      try{
+        const bin = atob(b64);
+        const bytes = new Uint8Array([...bin].map(c=>c.charCodeAt(0)));
+        const jsonStr = new TextDecoder().decode(bytes);
+        return JSON.parse(jsonStr);
+      }catch(e){
+        // régi escape/encodeURIComponent párossal készült linkekhez
+        try{
+          const jsonStr = decodeURIComponent(escape(atob(b64)));
+          return JSON.parse(jsonStr);
+        }catch(e2){
+          console.error("Import dekódolási hiba:", e2);
+          throw e2;
+        }
+      }
+    }
+
     function tryImportFromHash(){
       const m = (location.hash||"").match(/^#import=(.+)$/);
       if(!m) return;
       try{
-        const json = decodeURIComponent(escape(atob(m[1])));
-        const data = JSON.parse(json);
+        const data = _b64ToJson(m[1]);
         _applyImportData(data);
       }catch(e){
         console.error("Import hiba:", e);
@@ -758,4 +796,3 @@ verzió: ${data.version || 'n/a'}`);
 </head>
 <body></body>
 </html>
-
