@@ -28,7 +28,6 @@
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
     .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
 
-    /* liga-váltó balra, a cím mellé */
     .league-switch-left{ margin-left:8px; }
     @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0; } }
 
@@ -65,7 +64,6 @@
     }
     .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
 
-    /* tabella kártya – gomb a cím mellé */
     .card-head-row{
       display:flex; align-items:center; justify-content:space-between;
       padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd;
@@ -157,7 +155,6 @@
     .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
     .btn-icon{ width:18px; height:18px; display:inline-block; }
 
-    /* --- Szabályzat modál --- */
     .rules-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
     .rules-modal.open{display:flex}
     .rules-dialog{width:min(900px,92vw);max-height:80vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
@@ -169,7 +166,6 @@
     .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
     .rules-updated{font-size:12px;color:var(--muted,#64748b)}
 
-    /* ===== Onboarding ===== */
     .onb-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;display:none;align-items:center;justify-content:center}
     .onb-backdrop.open{display:flex}
     .onb-dialog{width:min(720px,92vw);background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.25);overflow:hidden}
@@ -191,8 +187,8 @@
     import {
       getFirestore,
       doc, getDoc, setDoc,
-      collection, getDocs, addDoc, deleteDoc, serverTimestamp,
-      query, where, orderBy, onSnapshot
+      collection, addDoc, deleteDoc, serverTimestamp,
+      query, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     import { computeLiveOrderFromMatches } from "./standings.js";
@@ -250,35 +246,27 @@
       return m ? [parseInt(m[1]), parseInt(m[2])] : null;
     }
 
-    async function buildComputedTable(){
+    function buildComputedTableFromDocs(docs){
       const teams = [
         "Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr",
         "Kazincbarcikai SC","Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus",
         "Paksi FC","Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"
       ];
-
       const S = {};
       teams.forEach(t=> S[t] = { team:t, MP:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 });
-
       const H2H = {};
-
-      const snap = await getDocs(collection(db,"matches"));
       const matchesForModule = [];
 
-      snap.forEach(d=>{
+      docs.forEach(d=>{
         const m = d.data() || {};
         const A = m.homeTeam || m.home || "";
         const B = m.awayTeam || m.away || "";
         const r = parseRes(m.result);
-        if (A && B && m.result) {
-          matchesForModule.push({ homeTeam:A, awayTeam:B, result:m.result });
-        }
-
+        if (A && B && m.result) matchesForModule.push({ homeTeam:A, awayTeam:B, result:m.result });
         const a = S[A], b = S[B];
-        const res = parseRes(m.result);
-        if (!a || !b || !res) return;
+        if (!a || !b || !r) return;
 
-        const [hg, ag] = res;
+        const [hg, ag] = r;
         a.MP++; b.MP++;
         a.GF += hg; a.GA += ag; a.GD = a.GF - a.GA;
         b.GF += ag; b.GA += hg; b.GD = b.GF - b.GA;
@@ -301,7 +289,6 @@
         if (b.W   !== a.W  ) return b.W   - a.W;
         if (b.GD  !== a.GD ) return b.GD  - a.GD;
         if (b.GF  !== a.GF ) return b.GF  - a.GF;
-
         const k = [a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
         const row = H2H[k];
         if (row){
@@ -387,13 +374,9 @@
     let chatLastSeen = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Liga-váltó mount: BAL SZÉL – cím mellett
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
-
-      // Szabályzat modal init
       initRulesModal();
 
-      // Onboarding DOM elemek
       const onbEl  = document.getElementById("onbFav");
       const onbSel = document.getElementById("onbFavSelect");
       const onbRem = document.getElementById("onbRem");
@@ -448,11 +431,12 @@
           }
         }
 
-        // Kötelező első beállítás (ha még nincs kedvenc)
         await maybeForceFavoriteSetup(userRef, { onbEl, onbSel, onbRem, onbSave });
 
-        await buildComputedTable();
-        onSnapshot(collection(db, "matches"), () => buildComputedTable());
+        const matchesRef = collection(db, "matches");
+        onSnapshot(matchesRef, snap => {
+          buildComputedTableFromDocs(snap.docs);
+        });
 
         try {
           const fbLink = facebookLinks[favoriteTeam];
@@ -640,12 +624,10 @@
           <h1>NB1 TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
-        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BAL OLDALON A CÍM MELLETT -->
         <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
 
       <div>
-        <!-- Kilépés – a régi liga-váltó helyén, jobb oldalon -->
         <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
@@ -653,7 +635,6 @@
           Kilépés
         </button>
 
-        <!-- Szabályzat -->
         <button id="openRules" class="btn-accent" style="display:block;margin-top:10px;">Szabályzat</button>
       </div>
     </div>
@@ -732,7 +713,6 @@
       </a>
     </nav>
 
-    <!-- Kötelező első beállítás (kedvenc + emlékeztető) -->
     <div id="onbFav" class="onb-backdrop" aria-modal="true" role="dialog" aria-labelledby="onbFavTitle">
       <div class="onb-dialog">
         <div class="onb-head" id="onbFavTitle">Üdv a TippLigában! 🎉</div>
@@ -758,7 +738,6 @@
       </div>
     </div>
 
-    <!-- Szabályzat modál -->
     <div id="rulesModal" class="rules-modal" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
       <div class="rules-dialog">
         <div class="rules-head">
@@ -796,7 +775,6 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
 
     <div class="content-grid">
       <section class="card table-wrap">
-        <!-- Fejléc sor gombbal a jobb oldalon -->
         <div class="card-head-row">
           <h3>NB I tabella</h3>
           <a id="statsLink" class="btn-accent" href="nb1-stats.html">Tippjáték statisztikák</a>
