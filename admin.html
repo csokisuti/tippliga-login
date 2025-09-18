@@ -580,7 +580,6 @@ verzió: ${data.version || 'n/a'}`);
       if(!snap.exists()){
         status.textContent="Jelenleg nyitva.";
         status.className="muted";
-        // űrlap alaphelyzet
         document.getElementById("lockNow").checked = false;
         document.getElementById("lockUntil").value = "";
         document.getElementById("lockMessage").value = "";
@@ -601,7 +600,6 @@ verzió: ${data.version || 'n/a'}`);
         status.className="ok";
       }
 
-      // Űrlap kitöltése a jelenlegi értékekkel
       document.getElementById("lockNow").checked = !!isLocked;
       document.getElementById("lockUntil").value = until ? new Date(until).toISOString().slice(0,16) : "";
       document.getElementById("lockMessage").value = msg;
@@ -657,29 +655,55 @@ verzió: ${data.version || 'n/a'}`);
        ÚJ: Bookmarklet import fogadása (#import=...)
        =========================== */
 
+    // Alias-map + ékezet- és toldalék-robosztus egyezés
     const _teamNameMap = {
       "Debrecen":"Debreceni VSC","Debreceni VSC":"Debreceni VSC",
-      "Diósgyőr":"Diósgyőri VTK","Diósgyőri VTK":"Diósgyőri VTK",
-      "Ferencváros":"Ferencváros",
-      "ETO":"ETO FC Győr","Győr":"ETO FC Győr","ETO FC Győr":"ETO FC Győr",
+      "Diosgyor":"Diósgyőri VTK","Diósgyőr":"Diósgyőri VTK","Diósgyőri VTK":"Diósgyőri VTK",
+      "Ferencvaros":"Ferencváros","Ferencváros":"Ferencváros",
+      "ETO":"ETO FC Győr","Gyor":"ETO FC Győr","Győr":"ETO FC Győr","ETO FC Győr":"ETO FC Győr",
       "Kazincbarcika":"Kazincbarcikai SC","Kazincbarcikai SC":"Kazincbarcikai SC",
-      "Kisvárda":"Kisvárda FC","Kisvárda FC":"Kisvárda FC",
+      "Kisvarda":"Kisvárda FC","Kisvárda":"Kisvárda FC","Kisvárda FC":"Kisvárda FC",
       "MTK":"MTK Budapest","MTK Budapest":"MTK Budapest",
-      "Nyíregyháza":"Nyíregyháza Spartacus","Nyíregyháza Spartacus":"Nyíregyháza Spartacus",
+      "Nyiregyhaza":"Nyíregyháza Spartacus","Nyíregyháza":"Nyíregyháza Spartacus","Nyíregyháza Spartacus":"Nyíregyháza Spartacus",
       "Paks":"Paksi FC","Paksi FC":"Paksi FC",
-      "Puskás Akadémia":"Puskás Akadémia",
-      "Újpest":"Újpest FC","Újpest FC":"Újpest FC",
+      "Puskas Akademia":"Puskás Akadémia","Puskás Akadémia":"Puskás Akadémia",
+      "Ujpest":"Újpest FC","Újpest":"Újpest FC","Újpest FC":"Újpest FC",
       "Zalaegerszeg":"Zalaegerszegi TE FC","Zalaegerszegi TE FC":"Zalaegerszegi TE FC"
     };
 
-    function _normTeamName(s){ return _teamNameMap[(s||"").trim()] || (s||"").trim(); }
-
+    function _deaccent(s){
+      return (s||"")
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu,'')
+        .replace(/\s+/g,' ')
+        .trim()
+        .toLowerCase();
+    }
+    function _normTeamName(s){
+      if(!s) return s;
+      const key1 = _deaccent(s);
+      const byMap = _teamNameMap[s] || _teamNameMap[key1?.replace(/\./g,'')];
+      return byMap || s.trim();
+    }
     function _setSelectByText(sel, value){
       if(!sel || !value) return;
-      const w = value.toLowerCase();
-      let idx = [...sel.options].findIndex(o=>o.text.trim().toLowerCase()===w);
-      if(idx<0) idx = [...sel.options].findIndex(o=>o.text.trim().toLowerCase().includes(w));
-      if(idx>=0) sel.selectedIndex = idx;
+      const wanted = _deaccent(value)
+        .replace(/\./g,'')
+        .replace(/\b(fc|te|sc|vtk)\b/g,'')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      // 1) pontos egyezés (ékezetlenítve)
+      let idx = [...sel.options].findIndex(o => _deaccent(o.text) === wanted);
+      // 2) tartalmazza / rész-egyezés
+      if(idx < 0) idx = [...sel.options].findIndex(o => {
+        const t = _deaccent(o.text);
+        return t.includes(wanted) || wanted.includes(t);
+      });
+      // 3) kezdettel egyezés
+      if(idx < 0) idx = [...sel.options].findIndex(o => _deaccent(o.text).startsWith(wanted));
+
+      if(idx >= 0) sel.selectedIndex = idx;
     }
 
     function _applyImportData(data){
@@ -689,9 +713,9 @@ verzió: ${data.version || 'n/a'}`);
       const odd1 = document.getElementById("odds1");
       const oddX = document.getElementById("oddsX");
       const odd2 = document.getElementById("odds2");
+      const roundInp = document.getElementById("roundId");
 
-      if(!homeSel || !awaySel || !startInp || !odd1 || !oddX || !odd2){
-        // ha még nincs kész az űrlap, várjunk kicsit
+      if(!homeSel || !awaySel || !startInp || !odd1 || !oddX || !odd2 || !roundInp){
         setTimeout(()=>_applyImportData(data), 200);
         return;
       }
@@ -699,7 +723,6 @@ verzió: ${data.version || 'n/a'}`);
       if(data.home) _setSelectByText(homeSel, _normTeamName(data.home));
       if(data.away) _setSelectByText(awaySel, _normTeamName(data.away));
 
-      // Ha a bookmarklet "YYYY-MM-DDTHH:MM" formátumban adja – ez jó a <input type="datetime-local">-nak
       if(data.startISO){ startInp.value = data.startISO; }
 
       if(data.odds){
@@ -708,9 +731,12 @@ verzió: ${data.version || 'n/a'}`);
         if(typeof data.odds.o2==="number" && !Number.isNaN(data.odds.o2)) odd2.value = String(data.odds.o2);
       }
 
+      if(data.roundId != null){
+        roundInp.value = String(data.roundId).trim();
+      }
+
       // Hash törlése (egyszeri import)
       history.replaceState(null, "", location.pathname + location.search);
-      // Visszajelzés
       console.log("Import sikeres:", data);
     }
 
