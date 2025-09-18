@@ -82,7 +82,7 @@
       await loadMailLog();
 
       onSnapshot(doc(db,"settings","positionsLock"), ()=> loadPositionsLock());
-      tryImportFromHash(); // ← bookmarklet import alkalmazása
+      tryImportFromHash(); // bookmarklet import
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=""}){
@@ -648,7 +648,7 @@ verzió: ${data.version || 'n/a'}`);
     }
 
     /* ===========================
-       ÚJ: Bookmarklet import fogadása (#import=...)
+       Bookmarklet import fogadása (#import=...)
        =========================== */
 
     // Aliasok a leggyakoribb eltérésekre
@@ -682,24 +682,18 @@ verzió: ${data.version || 'n/a'}`);
       return fromMap || s.trim();
     }
 
-    // SZEMÉT/rossz „csapatnevek” kiszűrése (NB I, FORDULÓ, MAGYARORSZÁG stb.)
+    // szemét/rossz csapatnevek kiszűrése
     function _looksLikeJunkTeam(s){
       if(!s) return true;
       const X = (s+"").normalize('NFD').replace(/\p{Diacritic}/gu,'').toUpperCase();
       return /NB\s*I|FORDULO|MAGYARORSZAG|FOCI|TABELL|LEAGUE|ROUND/.test(X);
     }
 
-    // Erős kiválasztó: value egyezés → text egyezés → ékezetlen egyezés → „FC/SC/TE/VTK” nélkül rész-egyezés
+    // csapat kiválasztás (value → text → ékezetlen → rész-egyezés FC/SC/TE/VTK nélkül)
     function _selectTeam(sel, rawName){
       if(!sel || !rawName) return;
       const target = _normTeamName(rawName);
-
-      for(const o of sel.options){
-        if(o.value === target){
-          sel.value = target;
-          return;
-        }
-      }
+      for(const o of sel.options){ if(o.value === target){ sel.value = target; return; } }
       let idx = [...sel.options].findIndex(o => o.text.trim().toLowerCase() === target.trim().toLowerCase());
       if(idx < 0){
         const wanted = _deaccent(target);
@@ -713,6 +707,13 @@ verzió: ${data.version || 'n/a'}`);
         });
       }
       if(idx >= 0) sel.selectedIndex = idx;
+    }
+
+    // odds string → szám (vessző is ok)
+    function _toOdd(v){
+      if (v == null) return NaN;
+      const n = parseFloat(String(v).replace(/\s+/g,'').replace(',', '.'));
+      return Number.isFinite(n) ? n : NaN;
     }
 
     function _applyImportData(data){
@@ -729,26 +730,38 @@ verzió: ${data.version || 'n/a'}`);
         return;
       }
 
-      // csak akkor állítunk csapatot, ha nem szemét szókapcsolat
+      // csapatok
       if(data.home && !_looksLikeJunkTeam(data.home)) _selectTeam(homeSel, data.home);
       if(data.away && !_looksLikeJunkTeam(data.away)) _selectTeam(awaySel, data.away);
 
+      // kezdés
       if(data.startISO) startInp.value = data.startISO;
 
-      if(data.odds){
-        if(typeof data.odds.o1==="number" && !Number.isNaN(data.odds.o1)) odd1.value = String(data.odds.o1);
-        if(typeof data.odds.oX==="number" && !Number.isNaN(data.odds.oX)) oddX.value = String(data.odds.oX);
-        if(typeof data.odds.o2==="number" && !Number.isNaN(data.odds.o2)) odd2.value = String(data.odds.o2);
+      // forduló: roundId vagy roundText-ből
+      let r = data?.roundId;
+      if((r==null || Number.isNaN(+r)) && data?.roundText){
+        const m = String(data.roundText).match(/(\d+)/);
+        if(m) r = parseInt(m[1],10);
+      }
+      if(r!=null && !Number.isNaN(+r)) roundInp.value = String(r);
+
+      // odds: o1/oX/o2 vagy "1"/"X"/"2" kulcsok – vessző is ok
+      if(data?.odds){
+        const src = data.odds;
+        const v1 = _toOdd(src.o1 ?? src["1"]);
+        const vX = _toOdd(src.oX ?? src["X"] ?? src["x"]);
+        const v2 = _toOdd(src.o2 ?? src["2"]);
+        if(!Number.isNaN(v1)) odd1.value = String(v1);
+        if(!Number.isNaN(vX)) oddX.value = String(vX);
+        if(!Number.isNaN(v2)) odd2.value = String(v2);
       }
 
-      if(data.roundId != null) roundInp.value = String(data.roundId).trim();
-
-      // Hash törlése (egyszeri import), visszajelzés a konzolban
+      // Hash törlése
       history.replaceState(null, "", location.pathname + location.search);
       console.log("Import sikeres:", data);
     }
 
-    // UTF-8 biztonságos base64 → JSON
+    // UTF-8 safe base64 → JSON
     function _b64ToJson(b64){
       try{
         const bin = atob(b64);
