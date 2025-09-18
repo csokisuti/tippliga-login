@@ -81,7 +81,11 @@
       await loadTemplates();
       await loadMailLog();
 
+      // Real-time figyelés a lezárás állapotára (státusz azonnal frissül)
       onSnapshot(doc(db,"settings","positionsLock"), ()=> loadPositionsLock());
+
+      // ⬇️ az UI elkészülte után próbáljuk alkalmazni az esetleges #import adatot
+      tryImportFromHash();
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=""}){
@@ -115,7 +119,6 @@
             <input type="number" step="0.01" placeholder="Odds X" id="oddsX" required>
             <input type="number" step="0.01" placeholder="Odds 2" id="odds2" required>
             <button type="submit" class="btn primary">Mentés</button>
-            <button type="button" id="pasteFromClipboard" class="btn" title="Másold ki az eredmenyek.com meccsblokkot, majd katt ide">Beillesztés eredmenyek.com-ról</button>
           </div>
         </form>`});
 
@@ -227,11 +230,9 @@
 
       document.getElementById("logRefresh").onclick = loadMailLog;
 
+      /* ÚJ: gombok bekötése a lezárás kártyán */
       document.getElementById("saveLock").onclick = saveLock;
       document.getElementById("clearLock").onclick = clearLock;
-
-      // ← ÚJ: beillesztés gomb bekötése
-      document.getElementById("pasteFromClipboard").addEventListener("click", handlePasteFromClipboard);
     }
 
     let _matchesCache = [];
@@ -427,7 +428,7 @@
       if(!data.ok){ alert("Hiba a küldésnél: " + (data.error||"")); return }
       const v  = data.version || 'n/a';
       const hl = (data.echo && typeof data.echo.htmlLen==='number') ? data.echo.htmlLen : (htmlBody||'').length;
-      const ec = (data.echo && typeof data.echo.emailsCount==='number') ? data.echo.emailsCount : emails.length;
+      const ec = (data.echo and typeof data.echo.emailsCount==='number') ? data.echo.emailsCount : emails.length;
       alert(`Kész. Kiküldve: ${data.sent} címre.
 verzió: ${v}
 htmlLen: ${hl} | címzettek: ${ec}`);
@@ -438,7 +439,7 @@ htmlLen: ${hl} | címzettek: ${ec}`);
       try{
         const res = await fetch(GS_BULKMAIL_URL, {
           method: "POST",
-          body: JSON.stringify({ action: "ping" })
+          body: JSON.stringify({ action:"ping" })
         });
         const data = await res.json().catch(()=>({ok:false}));
         alert(`Ping: ${data.ok ? 'OK' : 'HIBA'}
@@ -579,6 +580,7 @@ verzió: ${data.version || 'n/a'}`);
       if(!snap.exists()){
         status.textContent="Jelenleg nyitva.";
         status.className="muted";
+        // űrlap alaphelyzet
         document.getElementById("lockNow").checked = false;
         document.getElementById("lockUntil").value = "";
         document.getElementById("lockMessage").value = "";
@@ -599,6 +601,7 @@ verzió: ${data.version || 'n/a'}`);
         status.className="ok";
       }
 
+      // Űrlap kitöltése a jelenlegi értékekkel
       document.getElementById("lockNow").checked = !!isLocked;
       document.getElementById("lockUntil").value = until ? new Date(until).toISOString().slice(0,16) : "";
       document.getElementById("lockMessage").value = msg;
@@ -651,10 +654,10 @@ verzió: ${data.version || 'n/a'}`);
     }
 
     /* ===========================
-       ÚJ: eredmenyek.com → űrlap
+       ÚJ: Bookmarklet import fogadása (#import=...)
        =========================== */
 
-    const teamNameMap = {
+    const _teamNameMap = {
       "Debrecen":"Debreceni VSC","Debreceni VSC":"Debreceni VSC",
       "Diósgyőr":"Diósgyőri VTK","Diósgyőri VTK":"Diósgyőri VTK",
       "Ferencváros":"Ferencváros",
@@ -669,88 +672,62 @@ verzió: ${data.version || 'n/a'}`);
       "Zalaegerszeg":"Zalaegerszegi TE FC","Zalaegerszegi TE FC":"Zalaegerszegi TE FC"
     };
 
-    const normTeam = raw => teamNameMap[(raw||"").trim()] || (raw||"").trim();
+    function _normTeamName(s){ return _teamNameMap[(s||"").trim()] || (s||"").trim(); }
 
-    const setSelectByText = (sel, wanted) => {
-      if(!sel || !wanted) return;
-      const w = wanted.toLowerCase();
-      let idx = -1;
-      for(let i=0;i<sel.options.length;i++){
-        if(sel.options[i].text.trim().toLowerCase() === w){ idx=i; break; }
-      }
-      if(idx<0){
-        for(let i=0;i<sel.options.length;i++){
-          if(sel.options[i].text.trim().toLowerCase().includes(w)){ idx=i; break; }
-        }
-      }
+    function _setSelectByText(sel, value){
+      if(!sel || !value) return;
+      const w = value.toLowerCase();
+      let idx = [...sel.options].findIndex(o=>o.text.trim().toLowerCase()===w);
+      if(idx<0) idx = [...sel.options].findIndex(o=>o.text.trim().toLowerCase().includes(w));
       if(idx>=0) sel.selectedIndex = idx;
-    };
-
-    function toDateTimeLocalStr(y, m, d, hh, mm){
-      const pad = n => String(n).padStart(2,"0");
-      return `${y}-${pad(m)}-${pad(d)}T${pad(hh)}:${pad(mm)}`;
     }
 
-    function parseFromClipboardText(txt){
-      // Csapatok: "Nyíregyháza – Paks" vagy "Nyíregyháza - Paks"
-      let home=null, away=null;
-      const mTeams = txt.match(/([A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű0-9 .'\-]+?)\s+[–-]\s+([A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű0-9 .'\-]+)/);
-      if(mTeams){ home = mTeams[1].trim(); away = mTeams[2].trim(); }
+    function _applyImportData(data){
+      const homeSel = document.getElementById("homeTeam");
+      const awaySel = document.getElementById("awayTeam");
+      const startInp = document.getElementById("startTime");
+      const odd1 = document.getElementById("odds1");
+      const oddX = document.getElementById("oddsX");
+      const odd2 = document.getElementById("odds2");
 
-      // Dátum-idő: "20.09.2025 16:00" VAGY "2025. 09. 20. 16:00"
-      let dt=null;
-      let m1 = txt.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{1,2}):(\d{2})/); // DD.MM.YYYY HH:MM
-      if(m1){
-        const D=+m1[1], M=+m1[2], Y=+m1[3], H=+m1[4], Mi=+m1[5];
-        dt = toDateTimeLocalStr(Y,M,D,H,Mi);
-      } else {
-        const m2 = txt.match(/(\d{4})\.\s*(\d{2})\.\s*(\d{2})\.\s*(\d{1,2}):(\d{2})/); // YYYY. MM. DD. HH:MM
-        if(m2){
-          const Y=+m2[1], M=+m2[2], D=+m2[3], H=+m2[4], Mi=+m2[5];
-          dt = toDateTimeLocalStr(Y,M,D,H,Mi);
-        }
+      if(!homeSel || !awaySel || !startInp || !odd1 || !oddX || !odd2){
+        // ha még nincs kész az űrlap, várjunk kicsit
+        setTimeout(()=>_applyImportData(data), 200);
+        return;
       }
 
-      // Oddsok: tizedespontos számok (vessző vagy pont), 1.01–25 tartomány
-      const nums = (txt.match(/\b\d{1,2}[.,]\d{2}\b/g) || []).map(s=>parseFloat(s.replace(",", ".")));
-      const plausible = nums.filter(n=>n>=1.01 && n<=25);
-      const [o1, oX, o2] = plausible.slice(0,3);
+      if(data.home) _setSelectByText(homeSel, _normTeamName(data.home));
+      if(data.away) _setSelectByText(awaySel, _normTeamName(data.away));
 
-      return {
-        home: home && normTeam(home),
-        away: away && normTeam(away),
-        startISO: dt,
-        odds: { o1, oX, o2 }
-      };
+      // Ha a bookmarklet "YYYY-MM-DDTHH:MM" formátumban adja – ez jó a <input type="datetime-local">-nak
+      if(data.startISO){ startInp.value = data.startISO; }
+
+      if(data.odds){
+        if(typeof data.odds.o1==="number" && !Number.isNaN(data.odds.o1)) odd1.value = String(data.odds.o1);
+        if(typeof data.odds.oX==="number" && !Number.isNaN(data.odds.oX)) oddX.value = String(data.odds.oX);
+        if(typeof data.odds.o2==="number" && !Number.isNaN(data.odds.o2)) odd2.value = String(data.odds.o2);
+      }
+
+      // Hash törlése (egyszeri import)
+      history.replaceState(null, "", location.pathname + location.search);
+      // Visszajelzés
+      console.log("Import sikeres:", data);
     }
 
-    async function handlePasteFromClipboard(){
+    function tryImportFromHash(){
+      const m = (location.hash||"").match(/^#import=(.+)$/);
+      if(!m) return;
       try{
-        const txt = await navigator.clipboard.readText();
-        if(!txt || txt.length<10){ alert("A vágólap üresnek tűnik. Másold ki az eredmenyek.com meccsblokkot, majd próbáld újra."); return; }
-        const data = parseFromClipboardText(txt);
-
-        // mezők
-        const homeSel = document.getElementById("homeTeam");
-        const awaySel = document.getElementById("awayTeam");
-        const startInp = document.getElementById("startTime");
-        const odd1 = document.getElementById("odds1");
-        const oddX = document.getElementById("oddsX");
-        const odd2 = document.getElementById("odds2");
-
-        if(data.home) setSelectByText(homeSel, data.home);
-        if(data.away) setSelectByText(awaySel, data.away);
-        if(data.startISO) startInp.value = data.startISO;
-        if(data.odds){
-          if(data.odds.o1) odd1.value = String(data.odds.o1);
-          if(data.odds.oX) oddX.value = String(data.odds.oX);
-          if(data.odds.o2) odd2.value = String(data.odds.o2);
-        }
-      }catch(err){
-        console.error(err);
-        alert("A böngésző nem engedte a vágólap olvasását. Engedélyezd a hozzáférést, vagy használd a Ctrl+V beillesztést a mezőkbe.");
+        const json = decodeURIComponent(escape(atob(m[1])));
+        const data = JSON.parse(json);
+        _applyImportData(data);
+      }catch(e){
+        console.error("Import hiba:", e);
       }
     }
+
+    // Ha valaki kézzel illeszti be később a hash-t:
+    window.addEventListener("hashchange", tryImportFromHash);
   </script>
 </head>
 <body></body>
