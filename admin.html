@@ -66,6 +66,63 @@
 
     function esc(s){ return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+    // === NB I tabella számoló: Firestore match-dokikból → sorok (rows)
+    function computeStandingsFromMatchesDocs(docs){
+      const T = ["Debreceni VSC","Diósgyőri VTK","Ferencváros","ETO FC Győr","Kazincbarcikai SC","Kisvárda FC","MTK Budapest","Nyíregyháza Spartacus","Paksi FC","Puskás Akadémia","Újpest FC","Zalaegerszegi TE FC"];
+      const S = {}; T.forEach(t=> S[t] = { team:t, MP:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 });
+      const H2H = {};
+      const parseRes = (str)=>{ const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/); return m ? [parseInt(m[1]), parseInt(m[2])] : null; };
+
+      docs.forEach(d=>{
+        const m=d.data()||{}; const A=m.homeTeam||m.home||""; const B=m.awayTeam||m.away||""; const r=parseRes(m.result);
+        const a=S[A], b=S[B]; if(!a||!b||!r) return;
+        const [hg,ag]=r;
+        a.MP++; b.MP++;
+        a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
+        b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
+
+        if(hg>ag){ a.W++; b.L++; a.Pts+=3; }
+        else if(hg<ag){ b.W++; a.L++; b.Pts+=3; }
+        else { a.D++; b.D++; a.Pts++; b.Pts++; }
+
+        const k=[A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        H2H[k] ||= { [A]:{Pts:0,GF:0,GA:0}, [B]:{Pts:0,GF:0,GA:0} };
+        if(hg>ag)      H2H[k][A].Pts+=3;
+        else if(hg<ag) H2H[k][B].Pts+=3;
+        else           { H2H[k][A].Pts++; H2H[k][B].Pts++; }
+        H2H[k][A].GF+=hg; H2H[k][A].GA+=ag;
+        H2H[k][B].GF+=ag; H2H[k][B].GA+=hg;
+      });
+
+      function cmp(a,b){
+        if (b.Pts!==a.Pts) return b.Pts-a.Pts;
+        if (b.W!==a.W) return b.W-a.W;
+        if (b.GD!==a.GD) return b.GD-a.GD;
+        if (b.GF!==a.GF) return b.GF-a.GF;
+        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        const row=H2H[k];
+        if(row){
+          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0; if(pb!==pa) return pb-pa;
+          const gda=(row[a.team]?.GF??0)-(row[a.team]?.GA??0);
+          const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);
+          if(gdb!==gda) return gdb-gda;
+        }
+        return a.team.localeCompare(b.team,'hu');
+      }
+
+      return Object.values(S).sort(cmp);
+    }
+
+    // === Publikálás: kiszámol → computed/nb1_table doksiba kiír
+    async function recomputeAndPublishTable(){
+      const snap = await getDocs(collection(db,"matches"));
+      const rows = computeStandingsFromMatchesDocs(snap.docs);
+      await setDoc(doc(db,"computed","nb1_table"), {
+        rows,
+        updatedAt: Timestamp.fromDate(new Date())
+      });
+    }
+
     onAuthStateChanged(auth, async (user) => {
       if(!user){ document.body.innerHTML = "<h2 style='padding:20px'>⛔ Nincs jogosultságod az admin felülethez.</h2>"; return }
       const userSnap = await getDoc(doc(db, "users", user.email));
@@ -299,6 +356,7 @@
       alert("Mentve");
       await loadMatches();
       await loadResults();
+      try{ await recomputeAndPublishTable(); }catch(e){ console.warn(e); }
     }
 
     async function deleteMatch(id){
@@ -306,6 +364,7 @@
       await deleteDoc(doc(db,"matches",id));
       await loadMatches();
       await loadResults();
+      try{ await recomputeAndPublishTable(); }catch(e){ console.warn(e); }
     }
 
     async function onAddMatch(e){
@@ -314,6 +373,7 @@
       const homeTeam=document.getElementById("homeTeam"), awayTeam=document.getElementById("awayTeam"), roundId=document.getElementById("roundId"), odds1=document.getElementById("odds1"), oddsX=document.getElementById("oddsX"), odds2=document.getElementById("odds2");
       await addDoc(collection(db,"matches"),{ homeTeam:homeTeam.value, awayTeam:awayTeam.value, startTime, roundId:roundId.value, odds:{"1":parseFloat(odds1.value),"X":parseFloat(oddsX.value),"2":parseFloat(odds2.value)} });
       alert("Meccs mentve"); e.target.reset(); await loadMatches(); await loadResults();
+      try{ await recomputeAndPublishTable(); }catch(e){ console.warn(e); }
     }
 
     async function onUploadTable(){
@@ -357,6 +417,7 @@
             const oc=parseOutcome(v); if(!oc){ alert("Hibás formátum. pl. 3-1 vagy 1-1"); return }
             await updateDoc(doc(db,"matches",match.id),{ result:v, outcome:oc });
             await loadResults();
+            try{ await recomputeAndPublishTable(); }catch(e){ console.warn("Tabella publikálás hiba:", e); }
           };
           container.appendChild(div);
         });
@@ -651,7 +712,6 @@ verzió: ${data.version || 'n/a'}`);
        Bookmarklet import fogadása (#import=...)
        =========================== */
 
-    // Aliasok a leggyakoribb eltérésekre
     const _teamNameMap = {
       "Debrecen":"Debreceni VSC","Debreceni VSC":"Debreceni VSC",
       "Diosgyor":"Diósgyőri VTK","Diósgyőr":"Diósgyőri VTK","Diósgyőri VTK":"Diósgyőri VTK",
@@ -682,14 +742,12 @@ verzió: ${data.version || 'n/a'}`);
       return fromMap || s.trim();
     }
 
-    // szemét/rossz csapatnevek kiszűrése
     function _looksLikeJunkTeam(s){
       if(!s) return true;
       const X = (s+"").normalize('NFD').replace(/\p{Diacritic}/gu,'').toUpperCase();
       return /NB\s*I|FORDULO|MAGYARORSZAG|FOCI|TABELL|LEAGUE|ROUND/.test(X);
     }
 
-    // csapat kiválasztás (value → text → ékezetlen → rész-egyezés FC/SC/TE/VTK nélkül)
     function _selectTeam(sel, rawName){
       if(!sel || !rawName) return;
       const target = _normTeamName(rawName);
@@ -709,7 +767,6 @@ verzió: ${data.version || 'n/a'}`);
       if(idx >= 0) sel.selectedIndex = idx;
     }
 
-    // odds string → szám (vessző is ok)
     function _toOdd(v){
       if (v == null) return NaN;
       const n = parseFloat(String(v).replace(/\s+/g,'').replace(',', '.'));
@@ -730,14 +787,11 @@ verzió: ${data.version || 'n/a'}`);
         return;
       }
 
-      // csapatok
       if(data.home && !_looksLikeJunkTeam(data.home)) _selectTeam(homeSel, data.home);
       if(data.away && !_looksLikeJunkTeam(data.away)) _selectTeam(awaySel, data.away);
 
-      // kezdés
       if(data.startISO) startInp.value = data.startISO;
 
-      // forduló: roundId vagy roundText-ből
       let r = data?.roundId;
       if((r==null || Number.isNaN(+r)) && data?.roundText){
         const m = String(data.roundText).match(/(\d+)/);
@@ -745,7 +799,6 @@ verzió: ${data.version || 'n/a'}`);
       }
       if(r!=null && !Number.isNaN(+r)) roundInp.value = String(r);
 
-      // odds: o1/oX/o2 vagy "1"/"X"/"2" kulcsok – vessző is ok
       if(data?.odds){
         const src = data.odds;
         const v1 = _toOdd(src.o1 ?? src["1"]);
@@ -756,12 +809,10 @@ verzió: ${data.version || 'n/a'}`);
         if(!Number.isNaN(v2)) odd2.value = String(v2);
       }
 
-      // Hash törlése
       history.replaceState(null, "", location.pathname + location.search);
       console.log("Import sikeres:", data);
     }
 
-    // UTF-8 safe base64 → JSON
     function _b64ToJson(b64){
       try{
         const bin = atob(b64);
