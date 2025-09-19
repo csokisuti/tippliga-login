@@ -319,7 +319,8 @@
       try{
         const liveOrder = computeLiveOrderFromMatches(matchesForModule, teams);
         window.liveStandingsOrder = liveOrder;
-        localStorage.setItem("liveStandingsOrder", JSON.stringify(liveStandingsOrder));
+        /* ONLY CHANGE: fix the stored variable name */
+        localStorage.setItem("liveStandingsOrder", JSON.stringify(liveOrder));
       }catch(e){
         console.warn("Live standings (module) compute failed:", e);
       }
