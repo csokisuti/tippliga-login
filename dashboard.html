@@ -77,7 +77,7 @@
       getFirestore,
       doc, getDoc, setDoc, updateDoc,
       collection, addDoc, deleteDoc, serverTimestamp,
-      query, orderBy, onSnapshot, limit, increment   // ⟵ ADDED: limit, increment, updateDoc
+      query, orderBy, onSnapshot, limit, increment
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     import { computeLiveOrderFromMatches } from "./standings.js";
@@ -195,7 +195,8 @@
       try{
         const liveOrder = computeLiveOrderFromMatches(matchesForModule, teams);
         window.liveStandingsOrder = liveOrder;
-        localStorage.setItem("liveStandingsOrder", JSON.stringify(liveStandingsOrder));
+        // FIX: itt korábban hibás változónév volt, ami JS hibát dobott
+        localStorage.setItem("liveStandingsOrder", JSON.stringify(liveOrder));
       }catch(e){
         console.warn("Live standings (module) compute failed:", e);
       }
@@ -261,7 +262,7 @@
     let currentUserRole = "user";
     let favoriteTeam = "";
     let chatLastSeen = null;
-    let chatLastSeenCount = 0;          // ⟵ ADDED: utoljára látott üzenetszám
+    let chatLastSeenCount = 0;
 
     document.addEventListener("DOMContentLoaded", () => {
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
@@ -297,7 +298,7 @@
           currentUserRole = data.role || "user";
           favoriteTeam = data.favoriteTeam || "";
           chatLastSeen = data.chatLastSeen || null;
-          chatLastSeenCount = data.chatLastSeenCount || 0;   // ⟵ ADDED
+          chatLastSeenCount = data.chatLastSeenCount || 0;
         } else {
           currentUserNick = currentUserEmail;
           currentUserRole = "user";
@@ -325,7 +326,7 @@
 
         await maybeForceFavoriteSetup(userRef, { onbEl, onbSel, onbRem, onbSave });
 
-        // ===== TABELLÁHOZ: real-time meccsek (változatlanul) =====
+        // ===== TABELLA: real-time meccsek =====
         const matchesRef = collection(db, "matches");
         onSnapshot(matchesRef, snap => {
           buildComputedTableFromDocs(snap.docs);
@@ -365,13 +366,12 @@
       const inputEl = document.getElementById('chatInput');
       const sendBtn = document.getElementById('chatSendBtn');
 
-      const chatMetaRef = doc(db, 'chatMeta', 'main');        // ⟵ ADDED: meta dokumentum (total számláló)
-      let metaTotal = 0;                                      // ⟵ ADDED
-      let listUnsub = null;                                   // ⟵ ADDED: üzenet-lista leiratkozó
+      const chatMetaRef = doc(db, 'chatMeta', 'main');
+      let metaTotal = 0;
+      let listUnsub = null;
 
       function open(){
         panel.classList.add('open');
-        // Lazy: csak megnyitáskor töltjük az utolsó 100 üzenetet
         if (!listUnsub){
           const qLast100 = query(collection(db,'chatMessages'), orderBy('ts','asc'), limit(100));
           listUnsub = onSnapshot(qLast100, snap => {
@@ -412,21 +412,17 @@
         }
 
         setTimeout(()=>inputEl?.focus(), 50);
-        markSeen(); // jelöljük olvasottnak (lásd lent)
+        markSeen();
       }
 
       function close(){
         panel.classList.remove('open');
-        // opcionális: meghagyjuk az aktuális listát és a listener-t,
-        // ha agresszíven spórolnál, itt le is iratkozhatsz:
-        // if (listUnsub) { listUnsub(); listUnsub = null; }
       }
 
       function toggle(){ panel.classList.contains('open') ? close() : open(); }
       fab.addEventListener('click', toggle);
       closeBtn.addEventListener('click', close);
 
-      // ===== BADGE: csak a meta doksit figyeljük (1 doksi!) =====
       onSnapshot(chatMetaRef, snap => {
         metaTotal = snap.exists() ? (snap.data().total || 0) : 0;
         const unread = Math.max(0, metaTotal - (chatLastSeenCount || 0));
@@ -439,7 +435,6 @@
         }
       });
 
-      // ===== Küldés: üzenet + meta számláló növelése atomikusan =====
       sendBtn.addEventListener('click', async ()=>{
         const txt = (inputEl.value || '').trim();
         if (!txt){ inputEl.focus(); return; }
@@ -452,7 +447,6 @@
             text: backup,
             ts: serverTimestamp()
           });
-          // Meta számláló ++ és utolsó TS frissítése
           await setDoc(chatMetaRef, { total: increment(1), lastTs: serverTimestamp() }, { merge:true });
 
           if (panel.classList.contains('open')) await markSeen();
@@ -467,7 +461,6 @@
 
       async function markSeen(){
         try{
-          // A jelölésnél elmentjük, hány üzenetig olvastunk
           await setDoc(userRef, { chatLastSeen: serverTimestamp(), chatLastSeenCount: metaTotal }, { merge:true });
           chatLastSeenCount = metaTotal;
           fab.classList.remove('has-unread');
