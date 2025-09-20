@@ -446,6 +446,7 @@
   const matchRound = m => s(m?.round ?? m?.roundId ?? "");
   function roundNum(m){ const r = parseInt(matchRound(m),10); return isNaN(r)? null : r; }
 
+  // get odds by key
   function getOdds(m, key){
     if (m?.odds && (key in m.odds)) return Number(m.odds[key]) || 0;
     if (key==="1") return Number(m?.odds1 ?? m?.["odds1"]) || 0;
@@ -453,6 +454,7 @@
     if (key==="2") return Number(m?.odds2 ?? m?.["odds2"]) || 0;
     return 0;
   }
+  // kickoff millis (best-effort)
   function getMatchStartMs(m){
     const cand = [m?.kickoff, m?.start, m?.startTime, m?.kickoffTime, m?.dateTime, m?.ts, m?.timestamp, m?.beginAt];
     for (const x of cand){
@@ -465,6 +467,7 @@
     }
     return null;
   }
+  // tip time millis (use latest edit)
   function getTipTimeMs(t){
     const cand = [t?.updatedAt, t?.timestamp, t?.createdAt, t?.ts, t?.modifiedAt];
     for (const x of cand){
@@ -478,6 +481,11 @@
 
   onAuthStateChanged(auth, async (u) => {
     state.viewer = u?.email || null;
+
+    // Garantáltan "Összes odds" induláskor
+    const oddsSelEl = $("oddsSel");
+    if (oddsSelEl) oddsSelEl.value = "all";
+
     await loadAll();
     hydratePlayerSelect();
     populateAllUserDropdowns();
@@ -485,6 +493,10 @@
     bindUi();
     initHelpBubbles();
     recomputeAll();
+
+    // Konzolos diagnosztika elérhetővé tétele
+    window.diagTwoHourSwitches = diagTwoHourSwitches;
+    console.info("Diagnosztika: futtasd a konzolban: diagTwoHourSwitches()");
   });
 
   async function loadAll(){
@@ -494,6 +506,7 @@
       getDocs(collection(db, "users"))
     ]);
 
+    // matches (F4+)
     state.matches = {};
     mSnap.forEach(d => {
       const m = { id:d.id, ...d.data() };
@@ -502,6 +515,7 @@
       state.matches[d.id] = m;
     });
 
+    // tips (ALL versions + latest per user×match)
     state.tips = tSnap.docs.map(d=> ({ id:d.id, ...d.data() }))
       .filter(t => s(t.user).trim() && s(t.matchId).trim());
 
@@ -515,6 +529,7 @@
       if (!cur || ts >= curTs) state.perUserLatest.set(k, tip);
     }
 
+    // users
     state.users = {};
     uSnap.forEach(d=>{
       const u=d.data();
@@ -523,6 +538,7 @@
       }
     });
 
+    // rounds
     const rset = new Set();
     Object.values(state.matches).forEach(m=>{ const r = matchRound(m); if (r) rset.add(r); });
     state.roundsAsc = Array.from(rset).map(x=>parseInt(x,10)).sort((a,b)=>a-b).map(x=>String(x));
@@ -560,10 +576,12 @@
 
   function bindUi(){
     ["winSel","oddsSel"].forEach(id=> $(id).addEventListener('change', recomputeAll));
+    // master player controls all locals
     $("playerSel").addEventListener('change', ()=>{
       syncUserSelectors($("playerSel").value);
       recomputeAll();
     });
+    // local dropdowns just recompute
     document.querySelectorAll(".userSel").forEach(sel=> sel.addEventListener('change', recomputeAll));
     $("bankRecalcBtn").addEventListener('click', (e)=>{ e.preventDefault(); recomputeBankroll(); });
     $("bankStake").addEventListener('change', recomputeBankroll);
@@ -637,7 +655,7 @@
 
     // ======= EGYEDI BLOKK =======
     (function(){
-      const u = $("selFormUser").value || masterVal;
+      const u = safeUser("selFormUser", masterVal);
       const tips = filterTipsForUser(u);
       const byUser = groupBy(tips, t=> s(t.user));
       const perRoundPtsS = {}, perRoundPtsD = {};
@@ -697,7 +715,7 @@
     }
 
     (function(){
-      const u = $("selDoubleUser").value || masterVal;
+      const u = safeUser("selDoubleUser", masterVal);
       const a = computeUserAgg(u);
       const dblRate = a.dblAll? (a.dblHit/a.dblAll*100):0;
       $("kpiDouble").textContent = a.dblAll? `${fmt(dblRate)}%` : '—';
@@ -705,26 +723,26 @@
     })();
 
     (function(){
-      const u = $("selRiskUser").value || masterVal;
+      const u = safeUser("selRiskUser", masterVal);
       const a = computeUserAgg(u);
       $("kpiRisk").textContent = a.cAll? `${fmt(a.riskAll/a.cAll)} (nyerők: ${fmt(a.cWin? a.riskWin/a.cWin:0)})` : '—';
     })();
 
     (function(){
-      const u = $("selUpsetUser").value || masterVal;
+      const u = safeUser("selUpsetUser", masterVal);
       const a = computeUserAgg(u);
       $("kpiUpset").textContent = a.upsetAll? `${fmt(a.upsetWins/a.upsetAll*100)}%` : '—';
       $("noteUpset").textContent = `találat: ${a.upsetWins}/${a.upsetAll} • nyerő upset átlag: ${fmt(a.upsetWins? a.upsetPts/a.upsetWins:0)} pont`;
     })();
 
     (function(){
-      const u = $("selBiasUser").value || masterVal;
+      const u = safeUser("selBiasUser", masterVal);
       const a = computeUserAgg(u);
       fillBiasTable(a.bias);
     })();
 
     (function(){
-      const u = $("selTeamRoiUser").value || masterVal;
+      const u = safeUser("selTeamRoiUser", masterVal);
       const a = computeUserAgg(u);
       const topTeams = [...a.teamRoi.entries()].map(([team, o])=>({team, tips:o.tips, roi:o.tips? o.ptsS/o.tips:0}))
         .filter(x=>x.team).sort((a,b)=> b.roi - a.roi).slice(0,5);
@@ -732,7 +750,7 @@
     })();
 
     (function(){
-      const u = $("selFavBiasUser").value || masterVal;
+      const u = safeUser("selFavBiasUser", masterVal);
       const fav = state.users[u]?.fav || '';
       const tips = filterTipsForUser(u);
       let tipsN=0, wins=0, pts=0;
@@ -753,7 +771,7 @@
     })();
 
     (function(){
-      const u = $("selOddsRangeUser").value || masterVal;
+      const u = safeUser("selOddsRangeUser", masterVal);
       const a = computeUserAgg(u);
       const orows = Object.values(a.rangeAgg).map(b=>{
         const hit = b.tips ? b.wins/b.tips*100 : 0;
@@ -765,7 +783,7 @@
     })();
 
     (function(){
-      const u = $("selBetSimUser").value || masterVal;
+      const u = safeUser("selBetSimUser", masterVal);
       const tips = filterTipsForUser(u);
       const totalTips = tips.length;
       let flatStake=0, flatReturn=0, correct=0, mixStake=0, mixReturn=0;
@@ -967,6 +985,94 @@
       tb.appendChild(row([lab, p, fmt(sr)+'%']));
     });
     function row(cells){ const tr=document.createElement('tr'); tr.innerHTML=cells.map(c=>`<td>${c}</td>`).join(''); return tr; }
+  }
+
+  // Védett user-olvasás minden .userSel selecthez
+  function safeUser(id, masterVal){
+    const el = $(id);
+    if (!el || !el.options || el.options.length === 0) return masterVal;
+    return el.value || masterVal;
+  }
+
+  // Idő delta formázás (meccskezdésig)
+  function fmtDeltaToKick(ms){
+    if (ms==null || ms<0) return '—';
+    const m = Math.floor(ms/60000);
+    if (m < 60) return `−${m} perc`;
+    const h = Math.floor(m/60), mm = m%60;
+    return mm ? `−${h} ó ${mm} perc` : `−${h} ó`;
+  }
+
+  // ===== Konzolos diagnosztika: ≤2 órás váltások =====
+  function diagTwoHourSwitches(){
+    const TWO_H = 2*60*60*1000;
+    const groups = new Map(); // key: user|match -> array of tips (ALL versions)
+
+    // Csoportosítás minden tippre (F4+ meccsek)
+    for (const t of state.tips){
+      const mid = s(t.matchId); const m = state.matches[mid];
+      if (!m) continue;
+      const k = `${s(t.user)}|${mid}`;
+      (groups.get(k) || groups.set(k, []).get(k)).push(t);
+    }
+
+    const all = [];
+    const clutch = []; // nyerőre váltott
+    const regret = []; // nyerőt engedett el
+
+    for (const [k, arrRaw] of groups.entries()){
+      const [email, mid] = k.split('|');
+      const m = state.matches[mid]; if (!m || !m.outcome) continue;
+      const kickoff = getMatchStartMs(m); if (!kickoff) continue;
+
+      const arr = [...arrRaw].sort((a,b)=> getTipTimeMs(a) - getTipTimeMs(b));
+      if (arr.length < 2) continue;
+
+      // utolsó váltás ami ≤2h a kezdés előtt
+      let idx = -1;
+      for (let i=arr.length-1; i>0; i--){
+        const tFinMs = getTipTimeMs(arr[i]);
+        const dt = kickoff - tFinMs;
+        if (tFinMs && dt <= TWO_H && dt >= 0){ idx = i; break; }
+      }
+      if (idx < 0) continue;
+
+      const prev = arr[idx-1], fin = arr[idx];
+      const pPrev = tipChoice(prev), pFin = tipChoice(fin);
+      if (!pPrev || !pFin) continue;
+
+      const oPrev = getOdds(m, pPrev) || 0;
+      const oFin  = getOdds(m, pFin)  || 0;
+      const dt = kickoff - getTipTimeMs(fin);
+      const nick = state.users[email]?.nick || email;
+      const label = `${s(m.homeTeam||m.home||'?')} – ${s(m.awayTeam||m.away||'?')}`;
+
+      const rec = {
+        user: nick,
+        match: label,
+        change: `${pPrev} → ${pFin}`,
+        when: fmtDeltaToKick(dt),
+        prevOdds: Number(oPrev)||0,
+        finOdds: Number(oFin)||0,
+        outcome: s(m.outcome)
+      };
+      all.push(rec);
+
+      const finHit = (pFin === m.outcome);
+      const prevHit = (pPrev === m.outcome);
+      if (finHit) clutch.push(rec);
+      if (!finHit && prevHit) regret.push(rec);
+    }
+
+    console.groupCollapsed("≤2 órás váltások – diagnosztika");
+    console.log(`Összes érintett váltás: ${all.length}`);
+    console.log(`Utolsó pillanatos nyerők: ${clutch.length}`);
+    console.log(`Elengedett győztesek: ${regret.length}`);
+    if (all.length) { console.table(all); }
+    if (clutch.length) { console.groupCollapsed("Nyerőre váltások"); console.table(clutch); console.groupEnd(); }
+    if (regret.length) { console.groupCollapsed("Elengedett győztesek"); console.table(regret); console.groupEnd(); }
+    console.groupEnd();
+    return {all, clutch, regret};
   }
 </script>
 </body>
