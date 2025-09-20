@@ -440,11 +440,20 @@
   const fmt = (n)=> (Number(n)||0).toFixed(2);
   const s   = (v)=> (v==null ? "" : String(v));
 
-  // Field helpers
+  // ===== Field helpers =====
   const tipChoice  = t => t?.choice ?? t?.tip ?? "";
   const tipDouble  = t => !!(t?.double ?? t?.isDouble);
-  const matchRound = m => s(m?.round ?? m?.roundId ?? "");
-  function roundNum(m){ const r = parseInt(matchRound(m),10); return isNaN(r)? null : r; }
+
+  // Forduló mező: "F10" vagy 10 -> mindig a szám stringje ("10")
+  function matchRound(m){
+    const raw = s(m?.round ?? m?.roundId ?? "");
+    const num = raw.match(/\d+/)?.[0];
+    return num ? num : raw;
+  }
+  function roundNum(m){
+    const n = parseInt(matchRound(m), 10);
+    return Number.isNaN(n) ? null : n;
+  }
 
   // get odds by key
   function getOdds(m, key){
