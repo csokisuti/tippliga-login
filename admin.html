@@ -924,6 +924,7 @@ verzió: ${data.version || 'n/a'}`);
       const pages = new Map();
       const users = new Map();
       const lastByUser = {};
+      const pagesDetailed = new Map(); // path -> (email -> counters)
 
       try{
         const qyAll = query(collection(db,"activityLogs"), orderBy("ts","desc"), limit(5000));
@@ -954,12 +955,12 @@ verzió: ${data.version || 'n/a'}`);
         users.set(ukey, uv);
       }
 
-      renderPages7d(pages);
+      renderPages7d(pages, pagesDetailed, usersByEmail);
       renderUsers7d(users, usersByEmail);
       renderLastActions(lastByUser, usersByEmail);
     }
 
-    function renderPages7d(pages){
+    function renderPages7d(pages, pagesDetailed, usersByEmail){
       const box = document.getElementById("anPages7d");
       if(!box) return;
       const rows = [...pages.entries()].map(([path,v])=> ({
@@ -970,8 +971,40 @@ verzió: ${data.version || 'n/a'}`);
       }));
       rows.sort((a,b)=> (b.views - a.views) || (b.clicks - a.clicks));
       if(rows.length===0){ box.innerHTML = "<div class='muted'>Nincs adat az elmúlt 7 napra.</div>"; return; }
+
       let html = "<table><thead><tr><th>Oldal</th><th>Megtekintés</th><th>Kattintás</th><th>Egyedi felhasználó</th></tr></thead><tbody>";
-      html += rows.map(r=>`<tr><td>${r.path}</td><td>${r.views}</td><td>${r.clicks}</td><td>${r.uniques}</td></tr>`).join("");
+      html += rows.map(r=>{
+        const perUser = pagesDetailed.get(r.path);
+        if(!perUser || perUser.size===0){
+          return `<tr><td>${r.path}</td><td>${r.views}</td><td>${r.clicks}</td><td>${r.uniques}</td></tr>`;
+        }
+        const innerRows = [...perUser.entries()].map(([email, v])=>{
+          const nick = usersByEmail[email]?.nickname || email;
+          return `<tr><td>${nick}</td><td>${v.total}</td><td>${v.views}</td><td>${v.clicks}</td></tr>`;
+        }).join("");
+
+        const innerTable = `<table style="margin:8px 0 4px 0; width:100%">
+            <thead><tr><th>Felhasználó</th><th>Összes</th><th>Megtekintés</th><th>Kattintás</th></tr></thead>
+            <tbody>${innerRows}</tbody>
+          </table>`;
+
+        return `<tr>
+            <td colspan="4" style="padding:0">
+              <details>
+                <summary style="padding:10px 12px; list-style:none">
+                  <span style="display:inline-block; min-width:320px">${r.path}</span>
+                  <span style="display:inline-block; min-width:120px">Megtekintés: <strong>${r.views}</strong></span>
+                  <span style="display:inline-block; min-width:120px">Kattintás: <strong>${r.clicks}</strong></span>
+                  <span style="display:inline-block; min-width:160px">Egyedi felhasználó: <strong>${r.uniques}</strong></span>
+                </summary>
+                <div class="xscroll" style="padding:10px 12px; border-top:1px solid var(--border)">
+                  ${innerTable}
+                </div>
+              </details>
+            </td>
+          </tr>`;
+      }).join("");
+
       box.innerHTML = html + "</tbody></table>";
     }
 
