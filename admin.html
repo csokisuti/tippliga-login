@@ -713,7 +713,7 @@ verzió: ${data.version || 'n/a'}`);
       await loadPositionsLock();
     }
     /* ===========================
-       Bookmarklet import fogadása (#import=...)
+       Bookmarklet import fogadása (#import=)
        =========================== */
 
     const _teamNameMap = {
@@ -756,14 +756,14 @@ verzió: ${data.version || 'n/a'}`);
       if(!sel || !rawName) return;
       const target = _normTeamName(rawName);
       for(const o of sel.options){ if(o.value === target){ sel.value = target; return; } }
-      let idx = [...sel.options].findIndex(o => o.text.trim().toLowerCase() === target.trim().toLowerCase());
+      let idx = [sel.options].findIndex(o => o.text.trim().toLowerCase() === target.trim().toLowerCase());
       if(idx < 0){
         const wanted = _deaccent(target);
-        idx = [...sel.options].findIndex(o => _deaccent(o.text) === wanted);
+        idx = [sel.options].findIndex(o => _deaccent(o.text) === wanted);
       }
       if(idx < 0){
         const wanted = _deaccent(target).replace(/\b(fc|sc|te|vtk)\b/g,'').replace(/\s+/g,' ').trim();
-        idx = [...sel.options].findIndex(o=>{
+        idx = [sel.options].findIndex(o=>{
           const t = _deaccent(o.text).replace(/\b(fc|sc|te|vtk)\b/g,'').replace(/\s+/g,' ').trim();
           return t === wanted || t.includes(wanted) || wanted.includes(t);
         });
@@ -820,7 +820,7 @@ verzió: ${data.version || 'n/a'}`);
     function _b64ToJson(b64){
       try{
         const bin = atob(b64);
-        const bytes = new Uint8Array([...bin].map(c=>c.charCodeAt(0)));
+        const bytes = new Uint8Array([bin].map(c=>c.charCodeAt(0)));
         const jsonStr = new TextDecoder().decode(bytes);
         return JSON.parse(jsonStr);
       }catch(e){
@@ -847,6 +847,7 @@ verzió: ${data.version || 'n/a'}`);
 
     window.addEventListener("hashchange", tryImportFromHash);
   
+    // === Analytics helpers inserted ===
     async function loadAnalytics(){
       const usersSnap = await getDocs(collection(db,"users"));
       const usersByEmail = {};
@@ -911,7 +912,7 @@ verzió: ${data.version || 'n/a'}`);
     function renderPages7d(pages){
       const box = document.getElementById("anPages7d");
       if(!box) return;
-      const rows = [...pages.entries()].map(([path,v])=> ({
+      const rows = [pages.entries()].map(([path,v])=> ({
         path,
         views: v.views||0,
         clicks: v.clicks||0,
@@ -921,14 +922,13 @@ verzió: ${data.version || 'n/a'}`);
       if(rows.length===0){ box.innerHTML = "<div class='muted'>Nincs adat az elmúlt 7 napra.</div>"; return; }
       let html = "<table><thead><tr><th>Oldal</th><th>Megtekintés</th><th>Kattintás</th><th>Egyedi felhasználó</th></tr></thead><tbody>";
       html += rows.map(r=>`<tr><td>${r.path}</td><td>${r.views}</td><td>${r.clicks}</td><td>${r.uniques}</td></tr>`).join("");
-      html += "</tbody></table>";
-      box.innerHTML = html;
+      box.innerHTML = html + "</tbody></table>";
     }
 
     function renderUsers7d(users, usersByEmail){
       const box = document.getElementById("anUsers7d");
       if(!box) return;
-      const rows = [...users.entries()].map(([email,v])=> ({
+      const rows = [users.entries()].map(([email,v])=> ({
         email,
         nickname: usersByEmail[email]?.nickname || email,
         total: v.total||0,
@@ -941,8 +941,7 @@ verzió: ${data.version || 'n/a'}`);
       if(rows.length===0){ box.innerHTML = "<div class='muted'>Nincs adat az elmúlt 7 napra.</div>"; return; }
       let html = "<table><thead><tr><th>Felhasználó</th><th>Összes esemény</th><th>Megtekintés</th><th>Kattintás</th><th>Oldalak száma</th><th>Szerep</th></tr></thead><tbody>";
       html += rows.map(r=>`<tr><td>${(r.nickname||"")}</td><td>${r.total}</td><td>${r.views}</td><td>${r.clicks}</td><td>${r.pages}</td><td>${r.isAdmin?"admin":"user"}</td></tr>`).join("");
-      html += "</tbody></table>";
-      box.innerHTML = html;
+      box.innerHTML = html + "</tbody></table>";
     }
 
     function renderLastActions(lastByUser, usersByEmail){
@@ -957,10 +956,8 @@ verzió: ${data.version || 'n/a'}`);
       if(rows.length===0){ box.innerHTML = "<div class='muted'>Nincs adat.</div>"; return; }
       let html = "<table><thead><tr><th>Felhasználó</th><th>Utolsó akció ideje</th></tr></thead><tbody>";
       html += rows.map(r=>`<tr><td>${r.nickname}</td><td>${r.when}</td></tr>`).join("");
-      html += "</tbody></table>";
-      box.innerHTML = html;
+      box.innerHTML = html + "</tbody></table>";
     }
-
 </script>
 </head>
 <body></body>
