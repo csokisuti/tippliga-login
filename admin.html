@@ -45,10 +45,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import {
-      getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc,
-      query, orderBy, limit, onSnapshot
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { Timestamp, addDoc, collection, deleteDoc, doc, getDoc, getDocs, getFirestore, limit, onSnapshot, orderBy, query, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = { apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc", authDomain:"tippliga-4b3af.firebaseapp.com", projectId:"tippliga-4b3af", storageBucket:"tippliga-4b3af.appspot.com", messagingSenderId:"720359845241", appId:"1:720359845241:web:d3d6edcac6b43ebff053a8" };
     const app = initializeApp(firebaseConfig);
@@ -198,33 +195,33 @@ await loadTemplates();
       const cUsers = makeCard({title:"Felhasználók kezelése", hint:"Szerepkör váltás, törlés", id:"card-users", bodyHTML:`<ul id="userList" class="list" style="margin:0"></ul>`});
 
       
-      const cAnalytics = makeCard({title:"Felhasználói aktivitás", hint:"Elmúlt 7 nap + utolsó akció", id:"card-analytics", bodyHTML:`
-        <div class="row">
-          <button class="btn" id="anReload">Frissítés</button>
-          <span class="muted small">Az összesített számokból az admin jogú felhasználók ki vannak véve.</span>
-        </div>
-        <div class="card" style="margin:8px 0">
-          <div class="card-head"><h3>Oldalak megtekintése az elmúlt 7 napban (összesen)</h3></div>
-          <div class="card-body xscroll" id="anPages7d"></div>
-        </div>
-        <div class="card" style="margin:8px 0">
-          <div class="card-head"><h3>Felhasználónként az elmúlt 7 napban</h3></div>
-          <div class="card-body xscroll" id="anUsers7d"></div>
-        </div>
-        <div class="card" style="margin:8px 0">
-          <div class="card-head"><h3>Utolsó akció felhasználónként (bármikor)</h3></div>
-          <div class="card-body xscroll" id="anLast"></div>
-        </div>
-        <details style="margin-top:8px">
-          <summary class="small">Instrukció: események naplózása (másold a publikus oldalakra)</summary>
-          <div class="small" style="margin-top:6px">
-            <p><strong>JS snippet (view + kattintás loggolása Firestore-ba <code>activityLogs</code>)</strong></p>
-            <pre class="small" style="white-space:pre-wrap; background:#f8fafc; padding:8px; border:1px solid var(--border); border-radius:8px;">&lt;script type="module"&gt;
+  const cAnalytics = makeCard({title:"Felhasználói aktivitás", hint:"Elmúlt 7 nap + utolsó akció", id:"card-analytics", bodyHTML:`
+    <div class="row">
+      <button class="btn" id="anReload">Frissítés</button>
+      <span class="muted small">Az összesített számokból az admin jogú felhasználók ki vannak véve.</span>
+    </div>
+    <div class="card" style="margin:8px 0">
+      <div class="card-head"><h3>Oldalak megtekintése az elmúlt 7 napban (összesen)</h3></div>
+      <div class="card-body xscroll" id="anPages7d"></div>
+    </div>
+    <div class="card" style="margin:8px 0">
+      <div class="card-head"><h3>Felhasználónként az elmúlt 7 napban</h3></div>
+      <div class="card-body xscroll" id="anUsers7d"></div>
+    </div>
+    <div class="card" style="margin:8px 0">
+      <div class="card-head"><h3>Utolsó akció felhasználónként (bármikor)</h3></div>
+      <div class="card-body xscroll" id="anLast"></div>
+    </div>
+    <details style="margin-top:8px">
+      <summary class="small">Instrukció: események naplózása (másold a publikus oldalakra)</summary>
+      <div class="small" style="margin-top:6px">
+        <p><strong>JS snippet (view + kattintás loggolása Firestore-ba <code>activityLogs</code>)</strong></p>
+        <pre class="small" style="white-space:pre-wrap; background:#f8fafc; padding:8px; border:1px solid var(--border); border-radius:8px;">&lt;script type="module"&gt;
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const app = initializeApp({ /* TODO: fill config */ });
+const app = initializeApp({ /* add firebase config */ });
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -244,9 +241,9 @@ onAuthStateChanged(auth, ()=>{
   document.addEventListener("click", ()=> logEvent({event:"click"}), {capture:true});
 });
 &lt;/script&gt;</pre>
-          </div>
-        </details>
-      `});
+      </div>
+    </details>
+  `});
 const cBulk = makeCard({title:"Köremail küldése + sablonok", hint:"Címzettek kijelölése, tárgy, üzenet, sablonkezelés", id:"card-bulkmail", bodyHTML:`
         <div class="row">
           <button class="btn" id="bulkLoadUsers">Felhasználók betöltése</button>
