@@ -897,7 +897,7 @@ verzió: ${data.version || 'n/a'}`);
 
     window.addEventListener("hashchange", tryImportFromHash);
   
-    // === Analytics helpers inserted ===
+    // === Analytics helpers (fixed) ===
     async function loadAnalytics(){
       const usersSnap = await getDocs(collection(db,"users"));
       const usersByEmail = {};
@@ -925,7 +925,6 @@ verzió: ${data.version || 'n/a'}`);
       const users = new Map();
       const lastByUser = {};
       const pagesDetailed = new Map(); // path -> Map(email -> {total,views,clicks})
-      const pagesDetailed = new Map(); // path -> (email -> counters)
 
       try{
         const qyAll = query(collection(db,"activityLogs"), orderBy("ts","desc"), limit(5000));
@@ -939,6 +938,8 @@ verzió: ${data.version || 'n/a'}`);
 
       for(const r of logs7d){
         const isAdmin = r.userEmail && adminEmails.has(r.userEmail);
+        const email = r.userEmail || "(ismeretlen)";
+
         if(!isAdmin){
           const key = r.path;
           const val = pages.get(key) || { views:0, clicks:0, users:new Set() };
@@ -947,21 +948,22 @@ verzió: ${data.version || 'n/a'}`);
           if(r.userEmail) val.users.add(r.userEmail);
           pages.set(key, val);
 
-        // per-page, per-user breakdown (admins excluded)
-        if(r.userEmail){
-          const perUserMap = pagesDetailed.get(key) || new Map();
-          const u = perUserMap.get(r.userEmail) || { total:0, views:0, clicks:0 };
-          u.total += 1;
-          if(r.event==="view")  u.views  += 1;
-          if(r.event==="click") u.clicks += 1;
-          perUserMap.set(r.userEmail, u);
-          pagesDetailed.set(key, perUserMap);
+          // per-page, per-user fill
+          if(r.userEmail){
+            const perUserMap = pagesDetailed.get(key) || new Map();
+            const u = perUserMap.get(r.userEmail) || { total:0, views:0, clicks:0 };
+            u.total += 1;
+            if(r.event==="view")  u.views  += 1;
+            if(r.event==="click") u.clicks += 1;
+            perUserMap.set(r.userEmail, u);
+            pagesDetailed.set(key, perUserMap);
+          }
         }
-      }
-      const ukey = r.userEmail || "(ismeretlen)";
+
+        const ukey = email;
         const uv = users.get(ukey) || { total:0, views:0, clicks:0, paths:new Set(), isAdmin: adminEmails.has(ukey) };
         uv.total += 1;
-        if(r.event==="view") uv.views += 1;
+        if(r.event==="view")  uv.views  += 1;
         if(r.event==="click") uv.clicks += 1;
         uv.paths.add(r.path);
         users.set(ukey, uv);
@@ -1021,43 +1023,6 @@ verzió: ${data.version || 'n/a'}`);
       box.innerHTML = html + "</tbody></table>";
     }
 
-      let html = "<table><thead><tr><th>Oldal</th><th>Megtekintés</th><th>Kattintás</th><th>Egyedi felhasználó</th></tr></thead><tbody>";
-      html += rows.map(r=>{
-        const perUser = pagesDetailed.get(r.path);
-        if(!perUser || perUser.size===0){
-          return `<tr><td>${r.path}</td><td>${r.views}</td><td>${r.clicks}</td><td>${r.uniques}</td></tr>`;
-        }
-        const innerRows = [...perUser.entries()].map(([email, v])=>{
-          const nick = usersByEmail[email]?.nickname || email;
-          return `<tr><td>${nick}</td><td>${v.total}</td><td>${v.views}</td><td>${v.clicks}</td></tr>`;
-        }).join("");
-
-        const innerTable = `<table style="margin:8px 0 4px 0; width:100%">
-            <thead><tr><th>Felhasználó</th><th>Összes</th><th>Megtekintés</th><th>Kattintás</th></tr></thead>
-            <tbody>${innerRows}</tbody>
-          </table>`;
-
-        return `<tr>
-            <td colspan="4" style="padding:0">
-              <details>
-                <summary style="padding:10px 12px; list-style:none; cursor:pointer">
-                  <span style="display:inline-block; width:20px">▶</span>
-                  <span style="display:inline-block; min-width:320px">${r.path}</span>
-                  <span style="display:inline-block; min-width:120px">Megtekintés: <strong>${r.views}</strong></span>
-                  <span style="display:inline-block; min-width:120px">Kattintás: <strong>${r.clicks}</strong></span>
-                  <span style="display:inline-block; min-width:160px">Egyedi felhasználó: <strong>${r.uniques}</strong></span>
-                </summary>
-                <div class="xscroll" style="padding:10px 12px; border-top:1px solid var(--border)">
-                  ${innerTable}
-                </div>
-              </details>
-            </td>
-          </tr>`;
-      }).join("");
-
-      box.innerHTML = html + "</tbody></table>";
-    }
-
     function renderUsers7d(users, usersByEmail){
       const box = document.getElementById("anUsers7d");
       if(!box) return;
@@ -1095,11 +1060,12 @@ verzió: ${data.version || 'n/a'}`);
 </head>
 <body>
 <script>
+// ▶ / ▼ ikon váltás a lenyílóknál
 document.addEventListener("click", function(e){
   const sm = e.target.closest("summary");
   if(!sm) return;
+  const icon = sm.querySelector(".an-toggle");
   const det = sm.parentNode;
-  const icon = sm.querySelector("span");
   setTimeout(()=>{ if(icon){ icon.textContent = det.open ? "▼" : "▶"; } }, 0);
 });
 </script>
