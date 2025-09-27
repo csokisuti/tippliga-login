@@ -89,7 +89,7 @@
     .modal-body{ padding:12px; overflow:auto; }
     .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
 
-    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:#ef4444; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
     .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
@@ -109,7 +109,7 @@
     #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line); background:#fff; }
     #chatInput{ background:#fff; color:#111; border:1px solid var(--line); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
-    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:#3b82f6; color:#fff; border:0; font-weight:600; cursor:pointer; }
 
     .ok{ color:#15803d; font-weight:700; }
     .wrong{ color:#b91c1c; font-weight:700; }
@@ -130,8 +130,14 @@
       .nav-card .icon-wrap { width:38px; height:38px; }
       .link-btn { padding:5px 9px; }
     }
-    @media (pointer: coarse) {
-      .btn, .link-btn, #chatSendBtn { min-height:40px; }
+    /* Kifejezetten mobil (<=480px): rejtsük a bónusz és alap oszlopokat, kicsit kisebb tipográfia */
+    @media (max-width: 480px) {
+      .cell { padding:6px 8px; height:40px; font-size:13px; }
+      .hdr .cell { height:36px; font-size:12px; }
+      .round-cell { min-width:56px; }
+      .col-bonus, .col-base { display:none !important; }
+      .name-text, .name-subtle { max-width: 52vw; }
+      .chat-fab { right:16px; bottom:16px; }
     }
   </style>
 
@@ -248,12 +254,14 @@
 
     function leftCols() {
       const w = window.innerWidth || 1200;
-      if (w <= 820)   return "60px 2.2fr 110px 150px 110px";
+      if (w <= 480)   return "54px 2.4fr 110px 0px 0px"; /* mobilon bónusz + alap oszlop 0 szélesség */
+      if (w <= 820)   return "60px 2.2fr 110px 120px 110px";
       if (w <= 1024)  return "64px 2.4fr 120px 160px 115px";
       return "70px 2.8fr 130px 170px 120px";
     }
     function roundCellWidth() {
       const w = window.innerWidth || 1200;
+      if (w <= 480)  return 56;
       if (w <= 820)  return 60;
       if (w <= 1024) return 68;
       return 78;
@@ -262,7 +270,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       /* liga-váltó mount */
       const mount = document.getElementById('leagueSwitchMount');
-      if (mount) initLeagueSwitcher({ mountTarget: mount });
+      if (mount) import('./league-switcher.js').then(m => m.initLeagueSwitcher({ mountTarget: mount })).catch(()=>{});
 
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
@@ -278,14 +286,15 @@
         } else {
           currentUserNick = currentUserEmail;
         }
-        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
+        const w = document.getElementById("welcome"); if (w) w.textContent = `Üdv, ${currentUserNick}!`;
+        const al = document.getElementById("adminLink"); if (currentUserRole === "admin" && al) al.style.display = "flex";
 
         if (favoriteTeam) {
           const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
           document.body.classList.add(themeClass);
           const crest = crestMap[favoriteTeam];
-          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
+          const img = document.getElementById("favCrest");
+          if (crest && img) { img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
         }
 
         const lbSnap = await getDoc(doc(db,"settings","leaderboardConfig"));
@@ -303,11 +312,11 @@
         if (window.hideLoader) hideLoader();
       });
 
-      document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login.html");
-      });
+      const lo = document.getElementById("logout");
+      lo?.addEventListener("click", () => { signOut(auth).then(() => window.location.href = "login.html"); });
 
-      document.getElementById('toggleAll').addEventListener('click', ()=>{
+      const tgl = document.getElementById('toggleAll');
+      tgl?.addEventListener('click', ()=>{
         showAllView = !showAllView;
         updateControlsText();
         renderTable();
@@ -347,6 +356,7 @@
     function updateControlsText(){
       const btn = document.getElementById('toggleAll');
       const rangeLabel = document.getElementById('rangeLabel');
+      if (!btn || !rangeLabel) return;
       btn.textContent = showAllView ? 'Csak az utolsó 5 forduló' : 'Mutasd az összes fordulót';
       rangeLabel.textContent =
         (LB_MODE==='fromRound'
@@ -523,6 +533,7 @@
 
     function renderTable(){
       const mount = document.getElementById('tableMount');
+      if (!mount) return;
       if (!rows.length){ mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>"; return; }
 
       const roundsDesc = roundsAsc.slice().reverse();
@@ -536,11 +547,11 @@
 
       const leftHeader = `
         <div class="hdr">
-          <div class="cell left rank">Hely</div>
-          <div class="cell left">Játékos</div>
-          <div class="cell left num">Összesen</div>
-          <div class="cell left num">Bónusz (pont + %)</div>
-          <div class="cell left num">Alap pont</div>
+          <div class="cell left rank col-rank">Hely</div>
+          <div class="cell left col-name">Játékos</div>
+          <div class="cell left num col-total">Összesen</div>
+          <div class="cell left num col-bonus">Bónusz (pont + %)</div>
+          <div class="cell left num col-base">Alap pont</div>
         </div>`;
 
       const rightHeader = toShow.map(r=>`<div class="cell round-cell"><a class="round-link" href="results.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
@@ -609,14 +620,14 @@
       }
       return `
         <div class="row row-bg">
-          <div class="cell left rank">${i+1}.</div>
-          <div class="cell left">${nameHtml}</div>
-          <div class="cell left num total">${fmt(r.total)}</div>
-          <div class="cell left num">
+          <div class="cell left rank col-rank">${i+1}.</div>
+          <div class="cell left col-name">${nameHtml}</div>
+          <div class="cell left num total col-total">${fmt(r.total)}</div>
+          <div class="cell left num col-bonus">
             +${r.bonusPts}
             <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
           </div>
-          <div class="cell left num">${fmt(r.base)}</div>
+          <div class="cell left num col-base">${fmt(r.base)}</div>
         </div>
       `;
     }
@@ -695,7 +706,9 @@
           const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
           const badge = document.getElementById("tipsBadge");
-          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+          if (badge){
+            if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+          }
         });
       });
     }
@@ -707,17 +720,19 @@
       const closeBtn = document.getElementById('chatClose');
       const listEl = document.getElementById('chatMessages');
       const inputEl = document.getElementById('chatInput');
+      if (!fab || !panel) return;
 
       function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
       function close(){ panel.classList.remove('open'); }
       function toggle(){ panel.classList.contains('open') ? close() : open(); }
       fab.addEventListener('click', toggle);
-      closeBtn.addEventListener('click', close);
+      closeBtn?.addEventListener('click', close);
 
       let lastSeenMs = 0;
 
       const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
       onSnapshot(qAll, snap => {
+        if (!listEl) return;
         listEl.innerHTML = '';
         if (snap.empty){
           const empty = document.createElement('div');
@@ -735,7 +750,7 @@
             row.className = 'msg';
             row.innerHTML = `
               <div style="flex:1 1 auto">
-                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
+                <div class="meta"><strong>${(d.nick || 'Ismeretlen').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
                 <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
               </div>`;
             const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
@@ -752,10 +767,10 @@
 
           if (!panel.classList.contains('open') && unread > 0){
             fab.classList.add('has-unread');
-            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
+            if (fabBadge) fabBadge.textContent = unread > 99 ? '99+' : String(unread);
           } else {
             fab.classList.remove('has-unread');
-            fabBadge.textContent = '';
+            if (fabBadge) fabBadge.textContent = '';
           }
 
           setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
@@ -767,21 +782,21 @@
           await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
           lastSeenMs = Date.now();
           fab.classList.remove('has-unread');
-          fabBadge.textContent = '';
+          if (fabBadge) fabBadge.textContent = '';
         }catch(e){}
       }
 
       const inputSend = async ()=>{
         const txt = (inputEl.value || '').trim();
-        if (!txt){ inputEl.focus(); return; }
-        const backup = txt; inputEl.value = '';
+        if (!txt){ inputEl?.focus(); return; }
+        const backup = txt; if (inputEl) inputEl.value = '';
         try{
           await addDoc(collection(db,'chatMessages'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
           if (panel.classList.contains('open')) await markSeen();
-        }catch(e){ inputEl.value = backup; inputEl.focus(); }
+        }catch(e){ if (inputEl){ inputEl.value = backup; inputEl.focus(); } }
       };
-      document.getElementById('chatSendBtn').addEventListener('click', inputSend);
-      document.getElementById('chatInput').addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); inputSend(); } });
+      document.getElementById('chatSendBtn')?.addEventListener('click', inputSend);
+      document.getElementById('chatInput')?.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); inputSend(); } });
     }
   </script>
 </head>
@@ -797,7 +812,7 @@
         <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
-        <button id="logout" class="btn" aria-label="Kilépés" style="background:var(--accent);color:#fff;border:1px solid var(--line);">
+        <button id="logout" class="btn" aria-label="Kilépés" style="background:#3b82f6;color:#fff;border:1px solid var(--line);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
           </svg>
@@ -939,4 +954,3 @@
   <script type="module" src="logger.js"></script>
 </body>
 </html>
-
