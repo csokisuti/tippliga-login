@@ -131,7 +131,8 @@
       await loadUsers();
       await loadResults();
       await loadPositionsLock();
-await loadTemplates();
+      await loadOfficialOrder();
+      await loadTemplates();
       await loadMailLog();
       await loadAnalytics();
 
@@ -195,28 +196,28 @@ await loadTemplates();
       const cUsers = makeCard({title:"Felhasználók kezelése", hint:"Szerepkör váltás, törlés", id:"card-users", bodyHTML:`<ul id="userList" class="list" style="margin:0"></ul>`});
 
       
-  const cAnalytics = makeCard({title:"Felhasználói aktivitás", hint:"Elmúlt 7 nap + utolsó akció", id:"card-analytics", bodyHTML:`
-    <div class="row">
-      <button class="btn" id="anReload">Frissítés</button>
-      <span class="muted small">Az összesített számokból az admin jogú felhasználók ki vannak véve.</span>
-    </div>
-    <div class="card" style="margin:8px 0">
-      <div class="card-head"><h3>Oldalak megtekintése az elmúlt 7 napban (összesen)</h3></div>
-      <div class="card-body xscroll" id="anPages7d"></div>
-    </div>
-    <div class="card" style="margin:8px 0">
-      <div class="card-head"><h3>Felhasználónként az elmúlt 7 napban</h3></div>
-      <div class="card-body xscroll" id="anUsers7d"></div>
-    </div>
-    <div class="card" style="margin:8px 0">
-      <div class="card-head"><h3>Utolsó akció felhasználónként (bármikor)</h3></div>
-      <div class="card-body xscroll" id="anLast"></div>
-    </div>
-    <details style="margin-top:8px">
-      <summary class="small">Instrukció: események naplózása (másold a publikus oldalakra)</summary>
-      <div class="small" style="margin-top:6px">
-        <p><strong>JS snippet (view + kattintás loggolása Firestore-ba <code>activityLogs</code>)</strong></p>
-        <pre class="small" style="white-space:pre-wrap; background:#f8fafc; padding:8px; border:1px solid var(--border); border-radius:8px;">&lt;script type="module"&gt;
+      const cAnalytics = makeCard({title:"Felhasználói aktivitás", hint:"Elmúlt 7 nap + utolsó akció", id:"card-analytics", bodyHTML:`
+        <div class="row">
+          <button class="btn" id="anReload">Frissítés</button>
+          <span class="muted small">Az összesített számokból az admin jogú felhasználók ki vannak véve.</span>
+        </div>
+        <div class="card" style="margin:8px 0">
+          <div class="card-head"><h3>Oldalak megtekintése az elmúlt 7 napban (összesen)</h3></div>
+          <div class="card-body xscroll" id="anPages7d"></div>
+        </div>
+        <div class="card" style="margin:8px 0">
+          <div class="card-head"><h3>Felhasználónként az elmúlt 7 napban</h3></div>
+          <div class="card-body xscroll" id="anUsers7d"></div>
+        </div>
+        <div class="card" style="margin:8px 0">
+          <div class="card-head"><h3>Utolsó akció felhasználónként (bármikor)</h3></div>
+          <div class="card-body xscroll" id="anLast"></div>
+        </div>
+        <details style="margin-top:8px">
+          <summary class="small">Instrukció: események naplózása (másold a publikus oldalakra)</summary>
+          <div class="small" style="margin-top:6px">
+            <p><strong>JS snippet (view + kattintás loggolása Firestore-ba <code>activityLogs</code>)</strong></p>
+            <pre class="small" style="white-space:pre-wrap; background:#f8fafc; padding:8px; border:1px solid var(--border); border-radius:8px;">&lt;script type="module"&gt;
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -241,9 +242,9 @@ onAuthStateChanged(auth, ()=>{
   document.addEventListener("click", ()=> logEvent({event:"click"}), {capture:true});
 });
 &lt;/script&gt;</pre>
-      </div>
-    </details>
-  `});
+          </div>
+        </details>
+      `});
 const cBulk = makeCard({title:"Köremail küldése + sablonok", hint:"Címzettek kijelölése, tárgy, üzenet, sablonkezelés", id:"card-bulkmail", bodyHTML:`
         <div class="row">
           <button class="btn" id="bulkLoadUsers">Felhasználók betöltése</button>
@@ -281,7 +282,19 @@ const cBulk = makeCard({title:"Köremail küldése + sablonok", hint:"Címzettek
           <span class="muted small">Katt a sorra a részletekhez • <span class="kbd">↩ Betölt</span> gombbal visszatöltheted a tárgy/üzenet mezőkbe</span>
         </div>
         <div id="mailLogBox" class="xscroll"></div>`});
-const cLock = makeCard({title:"Pozíciós tipp lezárás", hint:"Azonnal vagy időpontra", id:"card-lock", bodyHTML:`
+
+      const cTable = makeCard({title:"NB1 tabella kép feltöltése", hint:"PNG/JPG, base64 tárolás", id:"card-table", bodyHTML:`
+        <div class="row">
+          <input type="file" id="tableImageInput" accept="image/*">
+          <button id="uploadTableImage" class="btn primary">Feltöltés</button>
+        </div>`});
+
+      const cOrder = makeCard({title:"Hivatalos szezon végi sorrend", hint:"Húzd–és–vidd, mentés", id:"card-order", bodyHTML:`
+        <button id="toggleOrder" class="btn">Sorrend szerkesztése/elrejtése</button>
+        <ul id="sortableList" class="sortable" style="display:none; margin-top:10px;"></ul>
+        <button id="saveOrderBtn" style="display:none;" class="btn primary">Mentés</button>`});
+
+      const cLock = makeCard({title:"Pozíciós tipp lezárás", hint:"Azonnal vagy időpontra", id:"card-lock", bodyHTML:`
         <div class="muted">Itt szabályozható a Szezon végi pozíciós sorrend módosíthatósága.</div>
         <div class="row" style="margin-top:8px">
           <label><input type="checkbox" id="lockNow"> Azonnali lezárás</label>
@@ -296,12 +309,19 @@ const cLock = makeCard({title:"Pozíciós tipp lezárás", hint:"Azonnal vagy id
         </div>`});
 
       document.body.appendChild(wrap);
-      wrap.append(cAdd.section, cManage.section, cRes.section, cUsers.section, cAnalytics.section, cBulk.section, cLog.section, cLock.section);
+      /* hide obsolete cards */
+      if(typeof cTable!=="undefined") cTable.section.style.display='none';
+      if(typeof cOrder!=="undefined") cOrder.section.style.display='none';
+
+      wrap.append(cAdd.section, cManage.section, cRes.section, cUsers.section, cAnalytics.section, cBulk.section, cLog.section, cTable.section, cOrder.section, cLock.section);
 
       document.getElementById("matchForm").addEventListener("submit", onAddMatch);
-document.getElementById("withResultHeader").onclick=()=>{ const c=document.getElementById("withResultContent"); c.style.display = c.style.display==="none" ? "block":"none" };
-sortableList.style.display = vis? "none":"block"; document.getElementById("saveOrderBtn").style.display = vis? "none":"inline-block" };
-document.getElementById("applyFilters").onclick = renderMatchesFiltered;
+      document.getElementById("uploadTableImage").addEventListener("click", onUploadTable);
+      document.getElementById("withResultHeader").onclick=()=>{ const c=document.getElementById("withResultContent"); c.style.display = c.style.display==="none" ? "block":"none" };
+      const sortableList = document.getElementById("sortableList");
+      document.getElementById("toggleOrder").onclick=()=>{ const vis = sortableList.style.display==="block"; sortableList.style.display = vis? "none":"block"; document.getElementById("saveOrderBtn").style.display = vis? "none":"inline-block" };
+      document.getElementById("saveOrderBtn").onclick = saveOfficialOrder;
+      document.getElementById("applyFilters").onclick = renderMatchesFiltered;
       document.getElementById("resetFilters").onclick = ()=>{ document.getElementById("filterRound").value=""; document.getElementById("filterTeam").value=""; renderMatchesFiltered() };
       document.getElementById("bulkLoadUsers").onclick = bulkLoadUsers;
       document.getElementById("bulkSelectAll").onchange = (e)=>{ document.querySelectorAll("#bulkUsersBox input[type=checkbox]").forEach(cb=> cb.checked = e.target.checked) };
@@ -408,6 +428,12 @@ document.getElementById("applyFilters").onclick = renderMatchesFiltered;
       alert("Meccs mentve"); e.target.reset(); await loadMatches(); await loadResults();
       try{ await recomputeAndPublishTable(); }catch(e){ console.warn(e); }
     }
+
+    async function onUploadTable(){
+      const f=document.getElementById("tableImageInput").files[0]; if(!f) return alert("Válassz ki egy képet!");
+      const rd=new FileReader(); rd.onload=async()=>{ const b64=rd.result.split(",")[1]; await setDoc(doc(db,"settings","nbi_table_image"),{ base64:b64 }); alert("Kép elmentve Firestore-ba!"); }; rd.readAsDataURL(f);
+    }
+
     async function loadResults(){
       const noC=document.getElementById("noResultContent");
       const withC=document.getElementById("withResultContent");
@@ -712,8 +738,32 @@ verzió: ${data.version || 'n/a'}`);
       alert("Lezárás feloldva.");
       await loadPositionsLock();
     }
+
+    async function loadOfficialOrder(){
+      const ref=doc(db,"finalStandings","official");
+      const listEl=document.getElementById("sortableList");
+      listEl.innerHTML="";
+      const snap=await getDoc(ref);
+      const source = snap.exists() && Array.isArray(snap.data().teams) ? snap.data().teams : teams;
+      const arr = source.map(stripNumPrefix);
+      let dragged=null;
+      arr.forEach(team=>{
+        const li=document.createElement("li"); li.textContent=team; li.draggable=true;
+        li.addEventListener("dragstart",()=>{ dragged=li; li.classList.add("dragging") });
+        li.addEventListener("dragend",()=>{ dragged=null; li.classList.remove("dragging") });
+        li.addEventListener("dragover",(e)=>{ e.preventDefault(); const r=li.getBoundingClientRect(); const after=(e.clientY - (r.top + r.height/2))>0; const p=li.parentNode; p.insertBefore(dragged, after? li.nextSibling: li) });
+        listEl.appendChild(li);
+      });
+    }
+
+    async function saveOfficialOrder(){
+      const list=[...document.querySelectorAll("#sortableList li")].map(li=> stripNumPrefix(li.textContent.trim()));
+      await setDoc(doc(db,"finalStandings","official"),{ teams:list, positions:list.map((t,i)=>({ team:t, position:i+1 })) });
+      alert("Sorrend elmentve.");
+    }
+
     /* ===========================
-       Bookmarklet import fogadása (#import=)
+       Bookmarklet import fogadása (#import=...)
        =========================== */
 
     const _teamNameMap = {
@@ -756,14 +806,14 @@ verzió: ${data.version || 'n/a'}`);
       if(!sel || !rawName) return;
       const target = _normTeamName(rawName);
       for(const o of sel.options){ if(o.value === target){ sel.value = target; return; } }
-      let idx = [sel.options].findIndex(o => o.text.trim().toLowerCase() === target.trim().toLowerCase());
+      let idx = [...sel.options].findIndex(o => o.text.trim().toLowerCase() === target.trim().toLowerCase());
       if(idx < 0){
         const wanted = _deaccent(target);
-        idx = [sel.options].findIndex(o => _deaccent(o.text) === wanted);
+        idx = [...sel.options].findIndex(o => _deaccent(o.text) === wanted);
       }
       if(idx < 0){
         const wanted = _deaccent(target).replace(/\b(fc|sc|te|vtk)\b/g,'').replace(/\s+/g,' ').trim();
-        idx = [sel.options].findIndex(o=>{
+        idx = [...sel.options].findIndex(o=>{
           const t = _deaccent(o.text).replace(/\b(fc|sc|te|vtk)\b/g,'').replace(/\s+/g,' ').trim();
           return t === wanted || t.includes(wanted) || wanted.includes(t);
         });
@@ -820,7 +870,7 @@ verzió: ${data.version || 'n/a'}`);
     function _b64ToJson(b64){
       try{
         const bin = atob(b64);
-        const bytes = new Uint8Array([bin].map(c=>c.charCodeAt(0)));
+        const bytes = new Uint8Array([...bin].map(c=>c.charCodeAt(0)));
         const jsonStr = new TextDecoder().decode(bytes);
         return JSON.parse(jsonStr);
       }catch(e){
@@ -912,7 +962,7 @@ verzió: ${data.version || 'n/a'}`);
     function renderPages7d(pages){
       const box = document.getElementById("anPages7d");
       if(!box) return;
-      const rows = [pages.entries()].map(([path,v])=> ({
+      const rows = [...pages.entries()].map(([path,v])=> ({
         path,
         views: v.views||0,
         clicks: v.clicks||0,
@@ -928,7 +978,7 @@ verzió: ${data.version || 'n/a'}`);
     function renderUsers7d(users, usersByEmail){
       const box = document.getElementById("anUsers7d");
       if(!box) return;
-      const rows = [users.entries()].map(([email,v])=> ({
+      const rows = [...users.entries()].map(([email,v])=> ({
         email,
         nickname: usersByEmail[email]?.nickname || email,
         total: v.total||0,
