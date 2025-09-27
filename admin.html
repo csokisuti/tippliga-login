@@ -991,7 +991,8 @@ verzió: ${data.version || 'n/a'}`);
         return `<tr>
             <td colspan="4" style="padding:0">
               <details>
-                <summary style="padding:10px 12px; list-style:none">
+                <summary style="padding:10px 12px; list-style:none; cursor:pointer">
+                  <span style="display:inline-block; width:20px">▶</span>
                   <span style="display:inline-block; min-width:320px">${r.path}</span>
                   <span style="display:inline-block; min-width:120px">Megtekintés: <strong>${r.views}</strong></span>
                   <span style="display:inline-block; min-width:120px">Kattintás: <strong>${r.clicks}</strong></span>
@@ -1043,5 +1044,15 @@ verzió: ${data.version || 'n/a'}`);
     }
 </script>
 </head>
-<body></body>
+<body>
+<script>
+document.addEventListener("click", function(e){
+  const sm = e.target.closest("summary");
+  if(!sm) return;
+  const det = sm.parentNode;
+  const icon = sm.querySelector("span");
+  setTimeout(()=>{ if(icon){ icon.textContent = det.open ? "▼" : "▶"; } }, 0);
+});
+</script>
+</body>
 </html>
