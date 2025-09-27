@@ -134,9 +134,9 @@
       await loadUsers();
       await loadResults();
       await loadPositionsLock();
-      await loadOfficialOrder();
-      await loadTemplates();
+await loadTemplates();
       await loadMailLog();
+      await loadAnalytics();
 
       onSnapshot(doc(db,"settings","positionsLock"), ()=> loadPositionsLock());
       tryImportFromHash(); // bookmarklet import
@@ -197,7 +197,57 @@
 
       const cUsers = makeCard({title:"Felhasználók kezelése", hint:"Szerepkör váltás, törlés", id:"card-users", bodyHTML:`<ul id="userList" class="list" style="margin:0"></ul>`});
 
-      const cBulk = makeCard({title:"Köremail küldése + sablonok", hint:"Címzettek kijelölése, tárgy, üzenet, sablonkezelés", id:"card-bulkmail", bodyHTML:`
+      
+      const cAnalytics = makeCard({title:"Felhasználói aktivitás", hint:"Elmúlt 7 nap + utolsó akció", id:"card-analytics", bodyHTML:`
+        <div class="row">
+          <button class="btn" id="anReload">Frissítés</button>
+          <span class="muted small">Az összesített számokból az admin jogú felhasználók ki vannak véve.</span>
+        </div>
+        <div class="card" style="margin:8px 0">
+          <div class="card-head"><h3>Oldalak megtekintése az elmúlt 7 napban (összesen)</h3></div>
+          <div class="card-body xscroll" id="anPages7d"></div>
+        </div>
+        <div class="card" style="margin:8px 0">
+          <div class="card-head"><h3>Felhasználónként az elmúlt 7 napban</h3></div>
+          <div class="card-body xscroll" id="anUsers7d"></div>
+        </div>
+        <div class="card" style="margin:8px 0">
+          <div class="card-head"><h3>Utolsó akció felhasználónként (bármikor)</h3></div>
+          <div class="card-body xscroll" id="anLast"></div>
+        </div>
+        <details style="margin-top:8px">
+          <summary class="small">Instrukció: események naplózása (másold a publikus oldalakra)</summary>
+          <div class="small" style="margin-top:6px">
+            <p><strong>JS snippet (view + kattintás loggolása Firestore-ba <code>activityLogs</code>)</strong></p>
+            <pre class="small" style="white-space:pre-wrap; background:#f8fafc; padding:8px; border:1px solid var(--border); border-radius:8px;">&lt;script type="module"&gt;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const app = initializeApp({ /* TODO: fill config */ });
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+function logEvent(ev){
+  const u = auth.currentUser;
+  addDoc(collection(db,"activityLogs"),{
+    ts: Timestamp.fromDate(new Date()),
+    event: ev.event,
+    path: location.pathname,
+    userEmail: u?.email || null,
+    ua: navigator.userAgent
+  }).catch(()=>{});
+}
+
+onAuthStateChanged(auth, ()=>{
+  logEvent({event:"view"});
+  document.addEventListener("click", ()=> logEvent({event:"click"}), {capture:true});
+});
+&lt;/script&gt;</pre>
+          </div>
+        </details>
+      `});
+const cBulk = makeCard({title:"Köremail küldése + sablonok", hint:"Címzettek kijelölése, tárgy, üzenet, sablonkezelés", id:"card-bulkmail", bodyHTML:`
         <div class="row">
           <button class="btn" id="bulkLoadUsers">Felhasználók betöltése</button>
           <label class="inline"><input type="checkbox" id="bulkSelectAll"> Mind kijelöl</label>
@@ -234,19 +284,7 @@
           <span class="muted small">Katt a sorra a részletekhez • <span class="kbd">↩ Betölt</span> gombbal visszatöltheted a tárgy/üzenet mezőkbe</span>
         </div>
         <div id="mailLogBox" class="xscroll"></div>`});
-
-      const cTable = makeCard({title:"NB1 tabella kép feltöltése", hint:"PNG/JPG, base64 tárolás", id:"card-table", bodyHTML:`
-        <div class="row">
-          <input type="file" id="tableImageInput" accept="image/*">
-          <button id="uploadTableImage" class="btn primary">Feltöltés</button>
-        </div>`});
-
-      const cOrder = makeCard({title:"Hivatalos szezon végi sorrend", hint:"Húzd–és–vidd, mentés", id:"card-order", bodyHTML:`
-        <button id="toggleOrder" class="btn">Sorrend szerkesztése/elrejtése</button>
-        <ul id="sortableList" class="sortable" style="display:none; margin-top:10px;"></ul>
-        <button id="saveOrderBtn" style="display:none;" class="btn primary">Mentés</button>`});
-
-      const cLock = makeCard({title:"Pozíciós tipp lezárás", hint:"Azonnal vagy időpontra", id:"card-lock", bodyHTML:`
+const cLock = makeCard({title:"Pozíciós tipp lezárás", hint:"Azonnal vagy időpontra", id:"card-lock", bodyHTML:`
         <div class="muted">Itt szabályozható a Szezon végi pozíciós sorrend módosíthatósága.</div>
         <div class="row" style="margin-top:8px">
           <label><input type="checkbox" id="lockNow"> Azonnali lezárás</label>
@@ -261,15 +299,12 @@
         </div>`});
 
       document.body.appendChild(wrap);
-      wrap.append(cAdd.section, cManage.section, cRes.section, cUsers.section, cBulk.section, cLog.section, cTable.section, cOrder.section, cLock.section);
+      wrap.append(cAdd.section, cManage.section, cRes.section, cUsers.section, cAnalytics.section, cBulk.section, cLog.section, cLock.section);
 
       document.getElementById("matchForm").addEventListener("submit", onAddMatch);
-      document.getElementById("uploadTableImage").addEventListener("click", onUploadTable);
-      document.getElementById("withResultHeader").onclick=()=>{ const c=document.getElementById("withResultContent"); c.style.display = c.style.display==="none" ? "block":"none" };
-      const sortableList = document.getElementById("sortableList");
-      document.getElementById("toggleOrder").onclick=()=>{ const vis = sortableList.style.display==="block"; sortableList.style.display = vis? "none":"block"; document.getElementById("saveOrderBtn").style.display = vis? "none":"inline-block" };
-      document.getElementById("saveOrderBtn").onclick = saveOfficialOrder;
-      document.getElementById("applyFilters").onclick = renderMatchesFiltered;
+document.getElementById("withResultHeader").onclick=()=>{ const c=document.getElementById("withResultContent"); c.style.display = c.style.display==="none" ? "block":"none" };
+sortableList.style.display = vis? "none":"block"; document.getElementById("saveOrderBtn").style.display = vis? "none":"inline-block" };
+document.getElementById("applyFilters").onclick = renderMatchesFiltered;
       document.getElementById("resetFilters").onclick = ()=>{ document.getElementById("filterRound").value=""; document.getElementById("filterTeam").value=""; renderMatchesFiltered() };
       document.getElementById("bulkLoadUsers").onclick = bulkLoadUsers;
       document.getElementById("bulkSelectAll").onchange = (e)=>{ document.querySelectorAll("#bulkUsersBox input[type=checkbox]").forEach(cb=> cb.checked = e.target.checked) };
@@ -283,6 +318,7 @@
       document.getElementById("tplDelete").onclick = deleteTemplate;
 
       document.getElementById("logRefresh").onclick = loadMailLog;
+      const anBtn = document.getElementById("anReload"); if(anBtn) anBtn.onclick = loadAnalytics;
 
       document.getElementById("saveLock").onclick = saveLock;
       document.getElementById("clearLock").onclick = clearLock;
@@ -375,12 +411,6 @@
       alert("Meccs mentve"); e.target.reset(); await loadMatches(); await loadResults();
       try{ await recomputeAndPublishTable(); }catch(e){ console.warn(e); }
     }
-
-    async function onUploadTable(){
-      const f=document.getElementById("tableImageInput").files[0]; if(!f) return alert("Válassz ki egy képet!");
-      const rd=new FileReader(); rd.onload=async()=>{ const b64=rd.result.split(",")[1]; await setDoc(doc(db,"settings","nbi_table_image"),{ base64:b64 }); alert("Kép elmentve Firestore-ba!"); }; rd.readAsDataURL(f);
-    }
-
     async function loadResults(){
       const noC=document.getElementById("noResultContent");
       const withC=document.getElementById("withResultContent");
@@ -490,6 +520,7 @@
 verzió: ${v}
 htmlLen: ${hl} | címzettek: ${ec}`);
       await loadMailLog();
+      await loadAnalytics();
     }
 
     async function pingServer(){
@@ -684,30 +715,6 @@ verzió: ${data.version || 'n/a'}`);
       alert("Lezárás feloldva.");
       await loadPositionsLock();
     }
-
-    async function loadOfficialOrder(){
-      const ref=doc(db,"finalStandings","official");
-      const listEl=document.getElementById("sortableList");
-      listEl.innerHTML="";
-      const snap=await getDoc(ref);
-      const source = snap.exists() && Array.isArray(snap.data().teams) ? snap.data().teams : teams;
-      const arr = source.map(stripNumPrefix);
-      let dragged=null;
-      arr.forEach(team=>{
-        const li=document.createElement("li"); li.textContent=team; li.draggable=true;
-        li.addEventListener("dragstart",()=>{ dragged=li; li.classList.add("dragging") });
-        li.addEventListener("dragend",()=>{ dragged=null; li.classList.remove("dragging") });
-        li.addEventListener("dragover",(e)=>{ e.preventDefault(); const r=li.getBoundingClientRect(); const after=(e.clientY - (r.top + r.height/2))>0; const p=li.parentNode; p.insertBefore(dragged, after? li.nextSibling: li) });
-        listEl.appendChild(li);
-      });
-    }
-
-    async function saveOfficialOrder(){
-      const list=[...document.querySelectorAll("#sortableList li")].map(li=> stripNumPrefix(li.textContent.trim()));
-      await setDoc(doc(db,"finalStandings","official"),{ teams:list, positions:list.map((t,i)=>({ team:t, position:i+1 })) });
-      alert("Sorrend elmentve.");
-    }
-
     /* ===========================
        Bookmarklet import fogadása (#import=...)
        =========================== */
@@ -842,7 +849,122 @@ verzió: ${data.version || 'n/a'}`);
     }
 
     window.addEventListener("hashchange", tryImportFromHash);
-  </script>
+  
+    async function loadAnalytics(){
+      const usersSnap = await getDocs(collection(db,"users"));
+      const usersByEmail = {};
+      const adminEmails = new Set();
+      usersSnap.forEach(d=>{
+        const u=d.data()||{};
+        if(u.email){ usersByEmail[u.email]=u; if((u.role||"user")==="admin") adminEmails.add(u.email); }
+      });
+
+      const weekAgo = new Date(Date.now()-7*24*60*60*1000);
+      let logs7d = [];
+      try{
+        const qy = query(collection(db,"activityLogs"), orderBy("ts","desc"));
+        const snap = await getDocs(qy);
+        snap.forEach(docSnap=>{
+          const x = docSnap.data()||{};
+          const t = x.ts?.toDate?.() || null;
+          if(t && t >= weekAgo) logs7d.push({ ts:t, event:x.event||"view", path:x.path||"(ismeretlen)", userEmail:x.userEmail||null });
+        });
+      }catch(e){
+        console.warn("activityLogs lekérdezés hiba (fallback):", e);
+      }
+
+      const pages = new Map();
+      const users = new Map();
+      const lastByUser = {};
+
+      try{
+        const qyAll = query(collection(db,"activityLogs"), orderBy("ts","desc"), limit(5000));
+        const snapAll = await getDocs(qyAll);
+        snapAll.forEach(d=>{
+          const x=d.data()||{};
+          const em = x.userEmail || "(ismeretlen)";
+          if(!lastByUser[em]) lastByUser[em] = x.ts?.toDate?.() || null;
+        });
+      }catch(e){ console.warn("all-time last action lekérdezés hiba:", e); }
+
+      for(const r of logs7d){
+        const isAdmin = r.userEmail && adminEmails.has(r.userEmail);
+        if(!isAdmin){
+          const key = r.path;
+          const val = pages.get(key) || { views:0, clicks:0, users:new Set() };
+          if(r.event==="view") val.views += 1;
+          if(r.event==="click") val.clicks += 1;
+          if(r.userEmail) val.users.add(r.userEmail);
+          pages.set(key, val);
+        }
+        const ukey = r.userEmail || "(ismeretlen)";
+        const uv = users.get(ukey) || { total:0, views:0, clicks:0, paths:new Set(), isAdmin: adminEmails.has(ukey) };
+        uv.total += 1;
+        if(r.event==="view") uv.views += 1;
+        if(r.event==="click") uv.clicks += 1;
+        uv.paths.add(r.path);
+        users.set(ukey, uv);
+      }
+
+      renderPages7d(pages);
+      renderUsers7d(users, usersByEmail);
+      renderLastActions(lastByUser, usersByEmail);
+    }
+
+    function renderPages7d(pages){
+      const box = document.getElementById("anPages7d");
+      if(!box) return;
+      const rows = [...pages.entries()].map(([path,v])=> ({
+        path,
+        views: v.views||0,
+        clicks: v.clicks||0,
+        uniques: (v.users ? v.users.size : 0)
+      }));
+      rows.sort((a,b)=> (b.views - a.views) || (b.clicks - a.clicks));
+      if(rows.length===0){ box.innerHTML = "<div class='muted'>Nincs adat az elmúlt 7 napra.</div>"; return; }
+      let html = "<table><thead><tr><th>Oldal</th><th>Megtekintés</th><th>Kattintás</th><th>Egyedi felhasználó</th></tr></thead><tbody>";
+      html += rows.map(r=>`<tr><td>${r.path}</td><td>${r.views}</td><td>${r.clicks}</td><td>${r.uniques}</td></tr>`).join("");
+      html += "</tbody></table>";
+      box.innerHTML = html;
+    }
+
+    function renderUsers7d(users, usersByEmail){
+      const box = document.getElementById("anUsers7d");
+      if(!box) return;
+      const rows = [...users.entries()].map(([email,v])=> ({
+        email,
+        nickname: usersByEmail[email]?.nickname || email,
+        total: v.total||0,
+        views: v.views||0,
+        clicks: v.clicks||0,
+        pages: v.paths ? v.paths.size : 0,
+        isAdmin: !!v.isAdmin
+      }));
+      rows.sort((a,b)=> b.total - a.total);
+      if(rows.length===0){ box.innerHTML = "<div class='muted'>Nincs adat az elmúlt 7 napra.</div>"; return; }
+      let html = "<table><thead><tr><th>Felhasználó</th><th>Összes esemény</th><th>Megtekintés</th><th>Kattintás</th><th>Oldalak száma</th><th>Szerep</th></tr></thead><tbody>";
+      html += rows.map(r=>`<tr><td>${(r.nickname||"")}</td><td>${r.total}</td><td>${r.views}</td><td>${r.clicks}</td><td>${r.pages}</td><td>${r.isAdmin?"admin":"user"}</td></tr>`).join("");
+      html += "</tbody></table>";
+      box.innerHTML = html;
+    }
+
+    function renderLastActions(lastByUser, usersByEmail){
+      const box = document.getElementById("anLast");
+      if(!box) return;
+      const rows = Object.entries(lastByUser).map(([email,dt])=> ({
+        email,
+        nickname: usersByEmail[email]?.nickname || email,
+        when: dt ? dt.toLocaleString("hu-HU") : "—"
+      }));
+      rows.sort((a,b)=> (b.when||"").localeCompare(a.when||""));
+      if(rows.length===0){ box.innerHTML = "<div class='muted'>Nincs adat.</div>"; return; }
+      let html = "<table><thead><tr><th>Felhasználó</th><th>Utolsó akció ideje</th></tr></thead><tbody>";
+      html += rows.map(r=>`<tr><td>${r.nickname}</td><td>${r.when}</td></tr>`).join("");
+      html += "</tbody></table>";
+      box.innerHTML = html;
+    }
+
+</script>
 </head>
 <body></body>
 </html>
