@@ -10,14 +10,13 @@
   <link rel="icon" type="image/png" href="fav2.png" sizes="16x16">
   <link rel="icon" type="image/png" href="fav2.png" sizes="32x32">
   <link rel="icon" type="image/png" href="fav2.png">
-  <script src="loader.js" defer></script>
 
   <style>
     :root{ --line:#e6eaf1; --muted:#64748b; --accent:#3b82f6; --rowh:48px; --hdrh:44px; }
     .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
 
-    .header{ display:flex; align-items:center; justify-content:space-between; }
-    .header-left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .header{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .header-left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; min-width:0; }
     .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line); background:#fff; }
     .welcome{ color:var(--muted); margin:4px 0 0; }
 
@@ -41,17 +40,24 @@
     .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
-    /* SCROLL-OS TÁBLA — fő container görgethető */
-    .table-wrap{ display:flex; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; }
-    .table-wrap > div{ flex:0 0 auto; } /* ne törjön sorba, vízszintesen fűződjön */
+    /* A teljes táblázat EGY vízszintesen görgethető felületen, hogy mobil ÁLLÓ módban is elérhető legyen minden oszlop */
+    .table-outer {
+      overflow-x:auto; -webkit-overflow-scrolling:touch;
+      background:#fff;
+      border-top:1px solid var(--line);
+    }
+    .table-wrap{ display:flex; min-width:900px; } /* min-szélesség, hogy mindig legyen vízszintes görgetés ha kell */
     .grid{ display:grid; }
     .hdr, .row{ display:contents; }
     .cell{ padding:8px 12px; border-bottom:1px solid var(--line); background:#fff; display:flex; align-items:center; gap:8px; box-sizing:border-box; height:var(--rowh); overflow:hidden; }
     .hdr .cell{ font-weight:700; background:#f7f8fc; height:var(--hdrh); }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
+    /* Bal oldali (rang, név, pontok) oszlopok alaphelyzetben sticky, mobilon nem */
     .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
     .left .cell{ background:#fff; }
+    @media (max-width: 900px){ .left{ position:relative; left:auto; z-index:1; border-right:0; } }
+
     .rank{ text-align:right; color:#64748b; white-space:nowrap; }
     .num{ text-align:right; white-space:nowrap; }
     .total{ font-weight:800; }
@@ -115,16 +121,8 @@
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
 
-    /* Scroll hint mobilra */
-    .scroll-hint{ display:none; position:relative; font-size:12px; color:#64748b; padding:6px 10px; }
-    .scroll-hint::after{ content:"← húzd oldalra →"; position:absolute; right:10px; top:6px; }
-    @media (max-width: 820px) {
-      .scroll-hint{ display:block; }
-    }
-
     /* Tablet- és mobilbarát finomhangolás */
     @media (max-width: 1024px) {
-      .left { position:relative; left:auto; z-index:1; border-right:0; } /* mobilon ne ragadjon, gördülhessen együtt */
       .cell { padding:8px 10px; }
       .round-cell { min-width:64px; }
     }
@@ -149,8 +147,19 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { initLeagueSwitcher } from "./league-switcher.js";
 
+    /* ===== Dinamikus liga-váltó import (nem akad meg, ha nincs meg a file) ===== */
+    let initLeagueSwitcher = null;
+    const safeInitLeagueSwitcher = (mountEl) => {
+      if (!mountEl) return;
+      if (initLeagueSwitcher) { try { initLeagueSwitcher({ mountTarget: mountEl }); } catch(_){}; return; }
+      import("./league-switcher.js").then(m=>{
+        initLeagueSwitcher = m?.initLeagueSwitcher || null;
+        if (initLeagueSwitcher) initLeagueSwitcher({ mountTarget: mountEl });
+      }).catch(()=>{/* no-op */});
+    };
+
+    /* --- Robot meta: mottó + részletes bio is --- */
     const BOT_META = {
       "Evidens Elek": {
         avatar:"elek-256.webp", avatar2x:"elek-512.webp",
@@ -265,8 +274,8 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      const mount = document.getElementById('leagueSwitchMount');
-      if (mount) initLeagueSwitcher({ mountTarget: mount });
+      /* liga-váltó mount (safe) */
+      safeInitLeagueSwitcher(document.getElementById('leagueSwitchMount'));
 
       onAuthStateChanged(auth, async (user) => {
         if (!user) { window.location.href = "login.html"; return; }
@@ -282,16 +291,16 @@
         } else {
           currentUserNick = currentUserEmail;
         }
-        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
+        const wc = document.getElementById("welcome"); if (wc) wc.textContent = `Üdv, ${currentUserNick}!`;
+        const adminLink = document.getElementById("adminLink");
+        if (currentUserRole === "admin" && adminLink) adminLink.style.display = "flex";
 
         if (favoriteTeam) {
           const themeClass = "theme-" + favoriteTeam.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
           document.body.classList.add(themeClass);
-          const crest = ({
-            "Debreceni VSC":"crest/crest-dvsc.png","Diósgyőri VTK":"crest/crest-dvtk.png","Ferencváros":"crest/crest-fradi.png","ETO FC Győr":"crest/crest-gyor.png","Kazincbarcikai SC":"crest/crest-kazincbarcika.png","Kisvárda FC":"crest/crest-kisvarda.png","MTK Budapest":"crest/crest-mtk.png","Nyíregyháza Spartacus":"crest/crest-nyiregyhaza.png","Paksi FC":"crest/crest-paks.png","Puskás Akadémia":"crest/crest-puskas.png","Újpest FC":"crest/crest-ujpest.png","Zalaegerszegi TE FC":"crest/crest-zte.png"
-          })[favoriteTeam];
-          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
+          const crest = crestMap[favoriteTeam];
+          const img = document.getElementById("favCrest");
+          if (crest && img) { img.src = crest; img.alt = favoriteTeam; img.hidden = false; }
         }
 
         const lbSnap = await getDoc(doc(db,"settings","leaderboardConfig"));
@@ -306,14 +315,18 @@
         updatePendingBadge();
         initChat(userRef);
 
-        if (window.hideLoader) hideLoader();
+        // loader failsafe: ha a loader.js nem hívná meg
+        if (window.hideLoader) { try { hideLoader(); } catch(_){} }
+        setTimeout(()=>{ document.getElementById('loader')?.remove?.(); }, 1200);
       });
 
-      document.getElementById("logout").addEventListener("click", () => {
+      const logoutBtn = document.getElementById("logout");
+      if (logoutBtn) logoutBtn.addEventListener("click", () => {
         signOut(auth).then(() => window.location.href = "login.html");
       });
 
-      document.getElementById('toggleAll').addEventListener('click', ()=>{
+      const toggleAllBtn = document.getElementById('toggleAll');
+      if (toggleAllBtn) toggleAllBtn.addEventListener('click', ()=>{
         showAllView = !showAllView;
         updateControlsText();
         renderTable();
@@ -340,21 +353,20 @@
         if (e.target.matches('[data-bc-close]')){ closeBotCard(); return; }
         if (!e.target.closest('#botCard')) closeBotCard();
       });
-      window.addEventListener('keydown', e=>{ if (e.key==='Escape') closeBotCard(); });
-
       let rbTimer=null;
       window.addEventListener('resize', ()=>{
         closeBotCard();
         clearTimeout(rbTimer);
         rbTimer=setTimeout(()=>renderTable(),120);
       });
+      window.addEventListener('keydown', e=>{ if (e.key==='Escape') closeBotCard(); });
     });
 
     function updateControlsText(){
       const btn = document.getElementById('toggleAll');
       const rangeLabel = document.getElementById('rangeLabel');
-      btn.textContent = showAllView ? 'Csak az utolsó 5 forduló' : 'Mutasd az összes fordulót';
-      rangeLabel.textContent =
+      if (btn) btn.textContent = showAllView ? 'Csak az utolsó 5 forduló' : 'Mutasd az összes fordulót';
+      if (rangeLabel) rangeLabel.textContent =
         (LB_MODE==='fromRound'
           ? `Számolás: ${LB_START}. fordulótól • Nézet: ${showAllView ? 'összes forduló' : 'utolsó 5 forduló'}`
           : `Számolás: teljes szezon • Nézet: ${showAllView ? 'összes forduló' : 'utolsó 5 forduló'}`);
@@ -440,7 +452,7 @@
         return { nick, email: obj.email, team: obj.team || "", base: obj.base, perRound: obj.perRound, bonusPct, bonusPts, total, isBot:false };
       });
 
-      if (showBots){
+      if (document.getElementById('showBots')?.checked){
         const botRows = addBotRows(matchesCache, roundsAsc);
         rows = rows.concat(botRows);
       }
@@ -457,6 +469,7 @@
       return [];
     }
 
+    /* --- BOT logika --- */
     function addBotRows(matches, roundsAsc){
       botPickStore = {};
       const bots = [];
@@ -528,10 +541,11 @@
 
     function renderTable(){
       const mount = document.getElementById('tableMount');
+      if (!mount) return;
       if (!rows.length){ mount.innerHTML = "<div style='padding:12px'>Még nincs megjeleníthető pontszám.</div>"; return; }
 
       const roundsDesc = roundsAsc.slice().reverse();
-      const toShow = showAllView ? roundsDesc : roundsDesc.slice(0, 5);
+      const toShow = (document.getElementById('toggleAll')?.textContent?.includes('Csak az utolsó 5') ? roundsDesc : roundsDesc.slice(0,5));
 
       const maxPerRound = toShow.map(r=>{
         let m = -Infinity;
@@ -554,7 +568,6 @@
 
       const left = document.createElement('div');
       left.className = 'left';
-      left.style.flex = '0 0 auto';
       left.innerHTML = `
         <div class="grid" style="grid-template-columns:${leftCols()};">
           ${leftHeader}
@@ -563,8 +576,6 @@
       `;
 
       const right = document.createElement('div');
-      right.style.overflow = 'visible';
-      right.style.flex = '0 0 auto';
       const rcw = roundCellWidth();
       right.innerHTML = `
         <div class="grid" style="grid-template-columns:${(`${rcw}px `).repeat(toShow.length)};">
@@ -582,15 +593,13 @@
         </div>
       `;
 
-      mount.innerHTML = '<div class="scroll-hint"></div>';
-      const hint = mount.firstChild;
+      mount.innerHTML = '';
+      const outer = document.createElement('div');
+      outer.className = 'table-outer';
       container.appendChild(left);
       container.appendChild(right);
-      mount.appendChild(container);
-
-      // első görgetésre eltűnik a hint
-      const onScrollOnce = () => { hint.style.display='none'; container.removeEventListener('scroll', onScrollOnce); };
-      container.addEventListener('scroll', onScrollOnce, { passive:true });
+      outer.appendChild(container);
+      mount.appendChild(outer);
     }
 
     function renderLeftRow(r,i){
@@ -610,26 +619,24 @@
             </span>
           </div>`;
       } else {
-        const crest = r.team && ${'{'}"Debreceni VSC":"crest/crest-dvsc.png","Diósgyőri VTK":"crest/crest-dvtk.png","Ferencváros":"crest/crest-fradi.png","ETO FC Győr":"crest/crest-gyor.png","Kazincbarcikai SC":"crest/crest-kazincbarcika.png","Kisvárda FC":"crest/crest-kisvarda.png","MTK Budapest":"crest/crest-mtk.png","Nyíregyháza Spartacus":"crest/crest-nyiregyhaza.png","Paksi FC":"crest/crest-paks.png","Puskás Akadémia":"crest/crest-puskas.png","Újpest FC":"crest/crest-ujpest.png","Zalaegerszegi TE FC":"crest/crest-zte.png"${'}'}[r.team]
-          ? `<img class="name-crest" src="${'${'}({"Debreceni VSC":"crest/crest-dvsc.png","Diósgyőri VTK":"crest/crest-dvtk.png","Ferencváros":"crest/crest-fradi.png","ETO FC Győr":"crest/crest-gyor.png","Kazincbarcikai SC":"crest/crest-kazincbarcika.png","Kisvárda FC":"crest/crest-kisvarda.png","MTK Budapest":"crest/crest-mtk.png","Nyíregyháza Spartacus":"crest/crest-nyiregyhaza.png","Paksi FC":"crest/crest-paks.png","Puskás Akadémia":"crest/crest-puskas.png","Újpest FC":"crest/crest-ujpest.png","Zalaegerszegi TE FC":"crest/crest-zte.png"}[r.team]${'}'}" alt="${'${'}escapeHtml(r.team)${'}'}">`
-          : "";
-        const color = r.team && ${'{'}"Debreceni VSC":"#b91c1c","Diósgyőri VTK":"#dc2626","Ferencváros":"#166534","ETO FC Győr":"#14532d","Kazincbarcikai SC":"#1d4ed8","Kisvárda FC":"#991b1b","MTK Budapest":"#2563eb","Nyíregyháza Spartacus":"#1e40af","Paksi FC":"#047857","Puskás Akadémia":"#065f46","Újpest FC":"#6b21a8","Zalaegerszegi TE FC":"#1d4ed8"${'}'}[r.team] ? ${'{'}"Debreceni VSC":"#b91c1c","Diósgyőri VTK":"#dc2626","Ferencváros":"#166534","ETO FC Győr":"#14532d","Kazincbarcikai SC":"#1d4ed8","Kisvárda FC":"#991b1b","MTK Budapest":"#2563eb","Nyíregyháza Spartacus":"#1e40af","Paksi FC":"#047857","Puskás Akadémia":"#065f46","Újpest FC":"#6b21a8","Zalaegerszegi TE FC":"#1d4ed8"${'}'}[r.team] : "#111827";
+        const crest = r.team && crestMap[r.team] ? `<img class="name-crest" src="${crestMap[r.team]}" alt="${escapeHtml(r.team)}">` : "";
+        const color = r.team && teamColor[r.team] ? teamColor[r.team] : "#111827";
         nameHtml = `
           <div class="name-wrap">
             ${crest || ""}
-            <span class="name-text" style="color:${'${'}color${'}'}">${'${'}escapeHtml(r.nick)${'}'}</span>
+            <span class="name-text" style="color:${color}">${escapeHtml(r.nick)}</span>
           </div>`;
       }
       return `
         <div class="row row-bg">
-          <div class="cell left rank">${'${'}i+1${'}' }.</div>
-          <div class="cell left">${'${'}nameHtml${'}'}</div>
-          <div class="cell left num total">${'${'}fmt(r.total)${'}'}</div>
+          <div class="cell left rank">${i+1}.</div>
+          <div class="cell left">${nameHtml}</div>
+          <div class="cell left num total">${fmt(r.total)}</div>
           <div class="cell left num">
-            +${'${'}r.bonusPts${'}'}
-            <span style="color:${'${'}pctColor(r.bonusPct)${'}'}"> ( +${'${'}r.bonusPct${'}'}% )</span>
+            +${r.bonusPts}
+            <span style="color:${pctColor(r.bonusPct)}"> ( +${r.bonusPct}% )</span>
           </div>
-          <div class="cell left num">${'${'}fmt(r.base)${'}'}</div>
+          <div class="cell left num">${fmt(r.base)}</div>
         </div>
       `;
     }
@@ -640,13 +647,13 @@
       pop.dataset.name = name;
       const imgEl = pop.querySelector('.bc-img');
       imgEl.src = meta.avatar || '';
-      imgEl.srcset = meta.avatar2x ? `${'${'}meta.avatar${'}'} 1x, ${'${'}meta.avatar2x${'}'} 2x` : '';
+      imgEl.srcset = meta.avatar2x ? `${meta.avatar} 1x, ${meta.avatar2x} 2x` : '';
       imgEl.loading = 'lazy'; imgEl.decoding = 'async';
       pop.querySelector('.bc-title').textContent = name;
 
       const body = pop.querySelector('.body');
-      body.innerHTML = `<p class="bc-intro" style="margin:0 0 8px 0;">${'${'}escapeHtml(meta.intro||"")${'}'}</p>
-                        <p style="margin:0;">${'${'}escapeHtml(meta.bio||"")${'}'}</p>`;
+      body.innerHTML = `<p class="bc-intro" style="margin:0 0 8px 0;">${escapeHtml(meta.intro||"")}</p>
+                        <p style="margin:0;">${escapeHtml(meta.bio||"")}</p>`;
 
       pop.style.top = '0px'; pop.style.left = '0px';
       pop.classList.add('open');
@@ -657,8 +664,8 @@
       let left = Math.min(Math.max(margin, r.left), window.innerWidth - pw - margin);
       if (top + ph > window.innerHeight - margin) top = r.top - ph - 8;
       if (top < margin) top = margin;
-      pop.style.top  = `${'${'}Math.round(top)${'}'}px`;
-      pop.style.left = `${'${'}Math.round(left)${'}'}px`;
+      pop.style.top  = `${Math.round(top)}px`;
+      pop.style.left = `${Math.round(left)}px`;
     }
     function closeBotCard(){ const pop = document.getElementById('botCard'); pop.classList.remove('open'); pop.removeAttribute('data-name'); }
 
@@ -674,7 +681,7 @@
       } else {
         let html = "";
         rounds.forEach(r=>{
-          html += `<h3 style="margin:12px 0 6px;font-weight:800;">Forduló ${'${'}r${'}'}</h3>`;
+          html += `<h3 style="margin:12px 0 6px;font-weight:800;">Forduló ${r}</h3>`;
           html += `<div class="grid" style="grid-template-columns:1.4fr 1.4fr 80px 80px 90px 90px;">
             <div class="hdr"><div class="cell">Hazai</div></div>
             <div class="hdr"><div class="cell">Vendég</div></div>
@@ -685,12 +692,12 @@
           (data[r]||[]).forEach(x=>{
             html += `
               <div class="row row-bg">
-                <div class="cell">${'${'}escapeHtml(x.homeTeam||"")${'}'}</div>
-                <div class="cell">${'${'}escapeHtml(x.awayTeam||"")${'}'}</div>
-                <div class="cell">${'${'}escapeHtml(x.pick||"")${'}'}</div>
-                <div class="cell">${'${'}fmt(x.odds||0)${'}'}</div>
-                <div class="cell ${'${'}x.doubled?'dbl':''${'}'}">${'${'}x.doubled?'Igen':'-'${'}'}</div>
-                <div class="cell ${'${'}x.correct?'ok':'wrong'${'}'}">${'${'}x.correct?'Talált':'Mellé'${'}'}${'${'}x.outcome?`&nbsp;(${escapeHtml(x.outcome)})`:""${'}'}</div>
+                <div class="cell">${escapeHtml(x.homeTeam||"")}</div>
+                <div class="cell">${escapeHtml(x.awayTeam||"")}</div>
+                <div class="cell">${escapeHtml(x.pick||"")}</div>
+                <div class="cell">${fmt(x.odds||0)}</div>
+                <div class="cell ${x.doubled?'dbl':''}">${x.doubled?'Igen':'-'}</div>
+                <div class="cell ${x.correct?'ok':'wrong'}">${x.correct?'Talált':'Mellé'}${x.outcome?`&nbsp;(${escapeHtml(x.outcome)})`:""}</div>
               </div>`;
           });
           html += `</div>`;
@@ -708,7 +715,9 @@
           const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
           const badge = document.getElementById("tipsBadge");
-          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+          if (badge){
+            if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
+          }
         });
       });
     }
@@ -724,13 +733,14 @@
       function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
       function close(){ panel.classList.remove('open'); }
       function toggle(){ panel.classList.contains('open') ? close() : open(); }
-      fab.addEventListener('click', toggle);
-      closeBtn.addEventListener('click', close);
+      fab?.addEventListener('click', toggle);
+      closeBtn?.addEventListener('click', close);
 
       let lastSeenMs = 0;
 
       const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
       onSnapshot(qAll, snap => {
+        if (!listEl) return;
         listEl.innerHTML = '';
         if (snap.empty){
           const empty = document.createElement('div');
@@ -748,8 +758,8 @@
             row.className = 'msg';
             row.innerHTML = `
               <div style="flex:1 1 auto">
-                <div class="meta"><strong>${'${'}d.nick || 'Ismeretlen'${'}'}</strong> • ${'${'}d.ts ? fmtTime(d.ts) : ''${'}'}</div>
-                <div class="text">${'${'}(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')${'}'}</div>
+                <div class="meta"><strong>${(d.nick || 'Ismeretlen').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
+                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
               </div>`;
             const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
             if (canDelete){
@@ -764,11 +774,11 @@
           });
 
           if (!panel.classList.contains('open') && unread > 0){
-            fab.classList.add('has-unread');
-            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
+            fab?.classList.add('has-unread');
+            if (fabBadge) fabBadge.textContent = unread > 99 ? '99+' : String(unread);
           } else {
-            fab.classList.remove('has-unread');
-            fabBadge.textContent = '';
+            fab?.classList.remove('has-unread');
+            if (fabBadge) fabBadge.textContent = '';
           }
 
           setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
@@ -779,8 +789,8 @@
         try{
           await setDoc(userRef, { chatLastSeen: serverTimestamp() }, { merge:true });
           lastSeenMs = Date.now();
-          fab.classList.remove('has-unread');
-          fabBadge.textContent = '';
+          fab?.classList.remove('has-unread');
+          if (fabBadge) fabBadge.textContent = '';
         }catch(e){}
       }
 
@@ -793,8 +803,8 @@
           if (panel.classList.contains('open')) await markSeen();
         }catch(e){ inputEl.value = backup; inputEl.focus(); }
       };
-      document.getElementById('chatSendBtn').addEventListener('click', inputSend);
-      document.getElementById('chatInput').addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); inputSend(); } });
+      document.getElementById('chatSendBtn')?.addEventListener('click', inputSend);
+      document.getElementById('chatInput')?.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); inputSend(); } });
     }
   </script>
 </head>
@@ -949,6 +959,8 @@
     </div>
   </div>
 
+  <!-- ha használtok loader.js-t, maradhat. Ha nincs, a failsafe fent kezeli -->
   <script type="module" src="logger.js"></script>
+  <script src="loader.js" defer></script>
 </body>
 </html>
