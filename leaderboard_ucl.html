@@ -112,6 +112,83 @@
     @media (pointer: coarse) {
       .btn, .link-btn, #chatSendBtn { min-height:40px; }
     }
+
+    /* ====== PATCH #1: bot gombok és név tördelés (PC + mobil) ====== */
+    .name-wrap{
+      flex-wrap: wrap;
+      min-width: 0;
+      white-space: normal;
+    }
+    .name-text,
+    .name-subtle{
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .name-actions{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-left: 6px;
+      max-width: 100%;
+    }
+    .name-actions .link-btn{
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+    @media (max-width: 700px){
+      .name-actions{
+        width: 100%;
+        margin-left: 0;
+        margin-top: 4px;
+      }
+    }
+
+    /* Chat – meglévő alapok */
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
+    .chat-fab.has-unread .fab-badge{ display:inline-block; }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel.open{ display:flex; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .chat-title{ font-weight:800; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+    #chatClose:hover{ filter:brightness(0.95); }
+    .chat-list{ overflow:auto; padding:8px 10px; }
+    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start; }
+    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
+    .msg .text{ white-space:pre-wrap; word-break:break-word; }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
+    .msg:hover .del{ display:inline-block; }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatInput::placeholder{ color:#6b7280; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
+
+    /* ====== PATCH #2: chat rugalmas elrendezés (ne csússzon szét) ====== */
+    .chat-panel{ display:none; flex-direction:column; }
+    .chat-panel.open{ display:flex; }
+    .chat-list{ flex:1 1 auto; min-height:0; overflow:auto; }
+    #chatComposer{ flex:0 0 auto; }
+    #chatInput{ flex:1 1 auto; min-width:0; }
+    @media (max-width: 480px){
+      .chat-panel{
+        right:12px;
+        bottom:80px;
+        width:calc(100vw - 24px);
+        max-height:70vh;
+      }
+    }
+
+    /* ====== PATCH #3: bot mini-kártya ne lógjon ki ====== */
+    .bot-card{
+      inset:auto auto auto auto;
+      max-width:calc(100vw - 32px);
+      max-height:80vh;
+      overflow:auto;
+    }
   </style>
 
   <script type="module">
