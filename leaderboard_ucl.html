@@ -42,7 +42,7 @@
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
-    /* Countdown badge a Top8-hoz – meglévő viselkedés marad */
+    /* Countdown badge a Top8-hoz */
     .pill-badge.countdown{
       background:#ef4444;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
@@ -62,7 +62,7 @@
     .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
-    /* TÁBLÁZAT – NB1 stílus, pontosan */
+    /* TÁBLÁZAT – NB1 stílus */
     .table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; background:#fff; border-top:1px solid var(--line); }
     .table-wrap{ display:flex; min-width:900px; }
     .grid{ display:grid; }
@@ -83,16 +83,50 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    /* Név + címer / bot mini avatar */
-    .name-wrap{ display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; min-width:0; }
+    /* ====== JÁTÉKOS-OSZLOP KIMAXOLÁSA ======
+       - A „gépi tippelők” gombjai jobbra igazítva, nem csúsznak szét
+       - Mobilon a gombok a név alá törnek
+       - Csak a játékos-cellában engedjük a változó magasságot
+    */
+    .player-cell{ height:auto; min-height:var(--rowh); align-items:center; }
+    .player-flex{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      align-items:center;
+      gap:6px 10px; /* sor, oszlop */
+      width:100%;
+      min-width:0;
+    }
+    .player-main{
+      display:flex; align-items:center; gap:6px; min-width:0;
+    }
     .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
     .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
-    .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
-    .name-subtle{ font-weight:700; opacity:.9; overflow:hidden; text-overflow:ellipsis; font-size:14px; }
-    .name-actions{ display:inline-flex; gap:4px; margin-left:6px; white-space:normal; flex-wrap:wrap; }
-    .link-btn{ font-size:11px; padding:3px 7px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1.2; white-space:normal; }
+
+    .name-text,
+    .name-subtle{
+      font-weight:700;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .name-subtle{ opacity:.9; font-size:14px; }
+
+    .player-actions{
+      display:flex; gap:6px; flex-wrap:nowrap;
+      justify-self:end;
+    }
+    .link-btn{ font-size:11px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1.1; }
     .bot-btn{ border-color: color-mix(in oklab, var(--accent) 40%, white); background: color-mix(in oklab, var(--accent) 12%, white); color: var(--accent); font-weight:700; }
 
+    /* Mobilon a gombok a név alá törnek, teljes szélességen igazodnak balra */
+    @media (max-width: 900px){
+      .player-flex{ grid-template-columns: 1fr; }
+      .player-actions{ justify-self:start; flex-wrap:wrap; }
+    }
+
+    /* Egyéb elemek */
     .ok{ color:#15803d; font-weight:700; }
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
@@ -113,39 +147,7 @@
       .btn, .link-btn, #chatSendBtn { min-height:40px; }
     }
 
-    /* ====== PATCH #1: bot gombok és név tördelés (PC + mobil) ====== */
-    .name-wrap{
-      flex-wrap: wrap;
-      min-width: 0;
-      white-space: normal;
-    }
-    .name-text,
-    .name-subtle{
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .name-actions{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-left: 6px;
-      max-width: 100%;
-    }
-    .name-actions .link-btn{
-      flex: 0 0 auto;
-      white-space: nowrap;
-    }
-    @media (max-width: 700px){
-      .name-actions{
-        width: 100%;
-        margin-left: 0;
-        margin-top: 4px;
-      }
-    }
-
-    /* Chat – meglévő alapok */
+    /* Chat – alap + rugalmas elrendezés */
     .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
@@ -167,10 +169,8 @@
     #chatInput::placeholder{ color:#6b7280; }
     #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
 
-    /* ====== PATCH #2: chat rugalmas elrendezés (ne csússzon szét) ====== */
-    .chat-panel{ display:none; flex-direction:column; }
-    .chat-panel.open{ display:flex; }
-    .chat-list{ flex:1 1 auto; min-height:0; overflow:auto; }
+    /* Rugalmas chat – ne csússzon szét szűk kijelzőn */
+    .chat-list{ flex:1 1 auto; min-height:0; }
     #chatComposer{ flex:0 0 auto; }
     #chatInput{ flex:1 1 auto; min-width:0; }
     @media (max-width: 480px){
@@ -182,13 +182,27 @@
       }
     }
 
-    /* ====== PATCH #3: bot mini-kártya ne lógjon ki ====== */
+    /* Bot mini-kártya (popover) – ne lógjon ki */
     .bot-card{
-      inset:auto auto auto auto;
-      max-width:calc(100vw - 32px);
-      max-height:80vh;
-      overflow:auto;
+      position:fixed; z-index:1200; display:none; width:min(420px, calc(100vw - 32px));
+      background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.18);
+      inset:auto auto auto auto; max-width:calc(100vw - 32px); max-height:80vh; overflow:auto;
     }
+    .bot-card.open{ display:block; }
+    .bot-card .head{ display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .bot-card .avatar{ width:140px; height:140px; border-radius:14px; object-fit:cover; border:1px solid var(--line); flex:0 0 auto; }
+    .bot-card .title{ font-weight:800; line-height:1.1; }
+    .bot-card .tag{ font-size:12px; color:#64748b; }
+    .bot-card .body{ padding:12px; font-size:14px; line-height:1.35; }
+    .bot-card .actions{ display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line); background:#fff; }
+
+    .modal{ position:fixed; inset:0; background:rgba(15,23,42,.35); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal.open{ display:flex; }
+    .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
+    .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .modal-title{ font-weight:800; font-size:18px; white-space:nowrap; }
+    .modal-body{ padding:12px; overflow:auto; }
+    .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
   </style>
 
   <script type="module">
@@ -205,7 +219,7 @@
     const firebaseConfig={apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",authDomain:"tippliga-4b3af.firebaseapp.com",projectId:"tippliga-4b3af",storageBucket:"tippliga-4b3af.appspot.com",messagingSenderId:"720359845241",appId:"1:720359845241:web:d3d6edcac6b43ebff053a8"};
     const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);
 
-    /* --- Robot meta: NB1-tel egyező --- */
+    /* --- Robot meta (ikonok/szöveg) --- */
     const BOT_META = {
       "Evidens Elek": { avatar:"elek-256.webp", avatar2x:"elek-512.webp", intro:"„A legkisebb kockázat is kockázat, de még mindig a legkisebb.”", bio:"Elek a „krétázó” tippmester: odds-alapon mindig a legalacsonyabb kimenetelt választja. Stabil, apró hozamokra épít, ritkán borul nagyot. A dupláját mindig a forduló LEGKISEBB releváns oddsára teszi." },
       "Hazai Hugó":  { avatar:"hugo-256.webp", avatar2x:"hugo-512.webp", intro:"„Otthon a pálya, otthon a pont.”", bio:"Hugó a hazai pályában hisz: minden meccsen 1-re megy. Amikor a favoritok hozzák a kötelezőt, szépen termel. A duplája a forduló LEGKISEBB 1-es oddsára kerül." },
@@ -228,22 +242,12 @@
     const tipTsMs=t=>t?.updatedAt?.toMillis?.()||t?.createdAt?.toMillis?.()||t?.timestamp?.toMillis?.()||0;
     const matchRound=m=>String(m?.round??m?.roundId??"");
 
-    /* Top8 deriválás és bónuszok – a meglévő UCL-logika érintetlen marad */
+    /* UCL: outcome meghatározása result-ból, ha outcome nincs */
     function parseRes(str){const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);return m?[parseInt(m[1]),parseInt(m[2])]:null}
-    function deriveTop8FromMatches(allMatches){
-      const teams=Object.keys(crestMap);const S={};teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});const H2H={};
-      (allMatches||[]).forEach(m=>{const A=m.homeTeam||m.home||"";const B=m.awayTeam||m.away||"";const r=parseRes(m.result);const a=S[A],b=S[B];if(!a||!b||!r)return;
-        const[hg,ag]=r;a.MP++;b.MP++;a.GF+=hg;a.GA+=ag;a.GD=a.GF-a.GA;b.GF+=ag;b.GA+=hg;b.GD=b.GF-b.GA;
-        if(hg>ag){a.W++;b.L++;a.Pts+=3}else if(hg<ag){b.W++;a.L++;b.Pts+=3}else{a.D++;b.D++;a.Pts+=1;b.Pts+=1}
-        const k=[A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');H2H[k]||={[A]:{Pts:0,GF:0,GA:0},[B]:{Pts:0,GF:0,GA:0}};
-        if(hg>ag){H2H[k][A].Pts+=3}else if(hg<ag){H2H[k][B].Pts+=3}else{H2H[k][A].Pts+=1;H2H[k][B].Pts+=1}
-        H2H[k][A].GF+=hg;H2H[k][A].GA+=ag;H2H[k][B].GF+=ag;H2H[k][B].GA+=hg
-      });
-      function cmp(a,b){if(b.Pts!==a.Pts)return b.Pts-a.Pts;if(b.W!==a.W)return b.W-a.W;if(b.GD!==a.GD)return b.GD-a.GD;if(b.GF!==a.GF)return b.GF-a.GF;
-        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');const row=H2H[k];
-        if(row){const pa=row[a.team]?.Pts??0,pb=row[b.team]?.Pts??0;if(pb!==pa)return pb-pa;const gda=(row[a.team]?.GF??0)-(row[a.team]?.GA??0);const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);if(gdb!==gda)return gdb-gda}
-        return a.team.localeCompare(b.team,'hu')}
-      const rows=Object.values(S).sort(cmp);return rows.slice(0,8).map(r=>r.team)
+    function outcomeOfMatch(m){
+      if (m && (m.outcome==="1"||m.outcome==="X"||m.outcome==="2")) return m.outcome;
+      const r=parseRes(m?.result); if(!r) return ""; const [hg,ag]=r;
+      if(hg>ag) return "1"; if(hg<ag) return "2"; return "X";
     }
     const BONUS_CFG=Object.freeze({winnerPct:10,topScorerPct:5,top8PerHitPct:1,top8MaxPct:8});
 
@@ -258,7 +262,7 @@
     let showBots=false;
     let botPickStore={};
 
-    /* NAV top8 visszaszámláló – meglévő */
+    /* NAV top8 visszaszámláló */
     let POS_LOCK={active:false,until:null};
     let navCdTimer=null;
     function formatCountdown(ms){
@@ -302,9 +306,9 @@
     /* Reszponzív oszlopszélességek – NB1-azonos */
     function leftCols() {
       const w = window.innerWidth || 1200;
-      if (w <= 820)   return "60px 2.2fr 110px 150px 110px";
-      if (w <= 1024)  return "64px 2.4fr 120px 160px 115px";
-      return "70px 2.8fr 130px 170px 120px";
+      if (w <= 820)   return "60px 2.4fr 110px 150px 110px";
+      if (w <= 1024)  return "64px 2.6fr 120px 160px 115px";
+      return "70px 3fr 130px 170px 120px";
     }
     function roundCellWidth() {
       const w = window.innerWidth || 1200;
@@ -350,7 +354,6 @@
           const roundSet=new Set();
           snap.forEach(d=>{const m={id:d.id,...d.data()};matchesById[m.id]=m;const r=matchRound(m);if(r)roundSet.add(r)});
           roundsAsc=Array.from(roundSet).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
-          officialTop8=deriveTop8FromMatches(Object.values(matchesById));
           recomputeRows(); renderTable();
         });
 
@@ -362,7 +365,7 @@
           recomputeRows(); renderTable();
         });
 
-        /* OFFICIAL */
+        /* OFFICIAL (csak bónuszokhoz szükséges – logika változatlan) */
         onSnapshot(doc(db,"ucl_official","current"), snap=>{
           const d=snap.exists()?snap.data():{};
           officialChampion=d.champion||"";
@@ -370,7 +373,7 @@
           recomputeRows(); renderTable();
         });
 
-        /* TOP8/CHAMP/GOLDEN tippek */
+        /* TOP8/CHAMP/GOLDEN tippek (bónusz) */
         onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
           top8TipsByEmail={};
           snap.forEach(docu=>{const t=docu.data()||{};const email=t.email||docu.id; top8TipsByEmail[email]=(Array.isArray(t.picks)?t.picks.slice(0,8):[])});
@@ -450,31 +453,36 @@
       return{hits,pct};
     }
 
-    /* ---------- ROBOTOK számolása (NB1-azonos logika) ---------- */
+    /* ---------- ROBOTOK (UCL outcome figyelembe véve) ---------- */
     function addBotRows(matches, roundsAsc){
       botPickStore={};
       const bots=[];
       function calcForBot(type){
         let base=0; const perRound={}; const byRound={};
         for(const r of roundsAsc){
-          const ms=Object.values(matches).filter(m=>matchRound(m)===r && m.outcome);
+          const ms=Object.values(matches).filter(m=>{
+            if(matchRound(m)!==r) return false;
+            const oc=outcomeOfMatch(m);
+            return oc==="1"||oc==="X"||oc==="2";
+          });
           if(!ms.length) continue;
+
           const tips=ms.map(m=>{
-            let pick="",odds=0;
             const o1=getOdds(m,"1"), oX=getOdds(m,"X"), o2=getOdds(m,"2");
+            let pick="",odds=0;
             if(type==="Evidens Elek"){
               const minVal=Math.min(o1 ?? Number.POSITIVE_INFINITY, oX ?? Number.POSITIVE_INFINITY, o2 ?? Number.POSITIVE_INFINITY);
-              if(minVal===o1){ pick="1"; odds=o1; }
-              else if(minVal===oX){ pick="X"; odds=oX; }
-              else if(minVal===o2){ pick="2"; odds=o2; }
-            }else if(type==="Hazai Hugó"){ pick="1"; odds=o1; }
-            else if(type==="Ikszes Ilona"){ pick="X"; odds=oX; }
-            else if(type==="Vendég Vendel"){ pick="2"; odds=o2; }
+              if (minVal===o1){ pick="1"; odds=o1; }
+              else if (minVal===oX){ pick="X"; odds=oX; }
+              else if (minVal===o2){ pick="2"; odds=o2; }
+            } else if (type==="Hazai Hugó"){ pick="1"; odds=o1; }
+            else if (type==="Ikszes Ilona"){ pick="X"; odds=oX; }
+            else if (type==="Vendég Vendel"){ pick="2"; odds=o2; }
             return {m,pick,odds};
           });
+
           let bestIdx=-1, bestVal=Number.POSITIVE_INFINITY;
           tips.forEach((t,i)=>{
-            if(!t||!t.m) return;
             let val;
             if(type==="Evidens Elek"){ const a=getOdds(t.m,"1"),b=getOdds(t.m,"X"),c=getOdds(t.m,"2"); val=Math.min(a??Infinity,b??Infinity,c??Infinity); }
             else if(type==="Hazai Hugó"){ val=getOdds(t.m,"1"); }
@@ -483,13 +491,15 @@
             if(val==null||!isFinite(val)||val<=0) return;
             if(val<bestVal){ bestVal=val; bestIdx=i; }
           });
+
           const list=[];
           tips.forEach((t,i)=>{
             if(!t.pick||!t.odds||!isFinite(t.odds)) return;
-            const doubled=i===bestIdx; const correct=t.m.outcome===t.pick; const mult=doubled?2:1;
+            const doubled=i===bestIdx; const oc=outcomeOfMatch(t.m);
+            const correct=oc===t.pick; const mult=doubled?2:1;
             if(correct){ base+=t.odds*mult; perRound[r]=(perRound[r]||0)+t.odds*mult; }
             else { perRound[r]=(perRound[r]||0)+0; }
-            list.push({matchId:t.m.id,homeTeam:t.m.homeTeam||t.m.home||"",awayTeam:t.m.awayTeam||t.m.away||"",pick:t.pick,odds:t.odds||0,doubled,correct,outcome:t.m.outcome||""});
+            list.push({matchId:t.m.id,homeTeam:t.m.homeTeam||t.m.home||"",awayTeam:t.m.awayTeam||t.m.away||"",pick:t.pick,odds:t.odds||0,doubled,correct,outcome:oc});
           });
           if(list.length) byRound[r]=list;
         }
@@ -510,9 +520,10 @@
       latest.forEach(tip=>{
         const m=matchesById[tip.matchId]; if(!m) return;
         const r=matchRound(m); if(!r) return;
-        rounds.add(r); if(!m.outcome) return;
+        rounds.add(r);
         const pick=tipChoice(tip); if(!pick) return;
-        const correct=pick===m.outcome; const ov=getOdds(m,pick); const mult=tipDouble(tip)?2:1;
+        const oc=outcomeOfMatch(m); if(!oc) return; /* csak lezárt meccs */
+        const correct=pick===oc; const ov=getOdds(m,pick); const mult=tipDouble(tip)?2:1;
         const pts=(correct && ov)? Number(ov)*mult : 0;
         const email=tip.user; const nick=usersMap[email]||email;
         if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
@@ -577,7 +588,7 @@
 
       const container = document.createElement('div'); container.className = 'table-wrap';
 
-      /* LEFT (sticky) – NB1-hez igazítva, reszponzív */
+      /* LEFT (sticky) */
       const left = document.createElement('div');
       left.className = 'left';
       left.innerHTML = `
@@ -587,7 +598,7 @@
         </div>
       `;
 
-      /* RIGHT (scroll) – NB1-hez igazítva, reszponzív cellaszélesség */
+      /* RIGHT (scroll) */
       const right = document.createElement('div');
       const rcw = roundCellWidth();
       right.innerHTML = `
@@ -606,7 +617,6 @@
         </div>
       `;
 
-      /* NB1 módra: outer wrapper az overflow-x-hez */
       mount.innerHTML = '';
       const outer = document.createElement('div');
       outer.className = 'table-outer';
@@ -618,26 +628,34 @@
 
     function renderLeftRow(r,i){
       const crest = r.fav && crestFor(r.fav) ? `<img class="name-crest" src="${crestFor(r.fav)}" alt="${escapeHtml(r.fav)}">` : "";
-      let nameHtml = "";
+      let playerHtml = "";
+
       if(r.isBot){
         const meta = BOT_META[r.nick] || {};
         const av = meta.avatar
           ? `<img class="avatar-mini" src="${meta.avatar}" ${meta.avatar2x ? `srcset="${meta.avatar} 1x, ${meta.avatar2x} 2x"` : ""} alt="${escapeHtml(r.nick)}" loading="lazy" decoding="async">`
           : "";
-        nameHtml = `
-          <div class="name-wrap">
-            ${av}
-            <span class="name-subtle">${escapeHtml(r.nick)}</span>
-            <span class="name-actions">
+        playerHtml = `
+          <div class="player-flex">
+            <div class="player-main">
+              ${av}
+              <span class="name-subtle">${escapeHtml(r.nick)}</span>
+            </div>
+            <div class="player-actions">
               <button class="link-btn bot-btn" data-bot-card="${escapeHtml(r.nick)}">Profil</button>
               <button class="link-btn bot-btn" data-bot-view="${escapeHtml(r.nick)}">Tippjei</button>
-            </span>
+            </div>
           </div>`;
       }else{
-        nameHtml = `<div class="name-wrap">${crest}<span class="name-text">${escapeHtml(r.nick)}</span></div>`;
+        playerHtml = `
+          <div class="player-flex">
+            <div class="player-main">
+              ${crest}
+              <span class="name-text">${escapeHtml(r.nick)}</span>
+            </div>
+          </div>`;
       }
 
-      /* Bónusz breakdown – UCL-specifikus (top8/champ/golden), megjelenítés ugyanott */
       const bonusParts = r.parts ? `
         <span class="bonus-chip">
           +${fmt(r.bonusPts)}
@@ -648,7 +666,7 @@
       return `
         <div class="row row-bg">
           <div class="cell left rank">${i+1}.</div>
-          <div class="cell left">${nameHtml}</div>
+          <div class="cell left player-cell">${playerHtml}</div>
           <div class="cell left num total">${fmt(r.total)}</div>
           <div class="cell left num bonus-cell">${bonusParts}</div>
           <div class="cell left num">${fmt(r.base)}</div>
@@ -656,7 +674,7 @@
       `;
     }
 
-    /* ---- Pending badge (meccs tippek) – UCL kollekciók szerint ---- */
+    /* ---- Pending badge ---- */
     function updatePendingBadge(){
       getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -671,7 +689,7 @@
       });
     }
 
-    /* ---- Bot kártya / modál: NB1-azonos UI ---- */
+    /* ---- Bot kártya / modál ---- */
     function openBotCard(name, anchorEl){
       const meta = BOT_META[name]; if (!meta) return;
       const pop = document.getElementById('botCard');
@@ -738,7 +756,7 @@
     }
     function closeBotModal(){ document.getElementById('botModal').classList.remove('open'); }
 
-    /* ---- Chat (UCL) – változatlan funkciók ---- */
+    /* ---- Chat (UCL) ---- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -924,7 +942,7 @@
   <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
     </svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
@@ -941,7 +959,7 @@
     </div>
   </section>
 
-  <!-- Bot modál és kártya (NB1-azonos) -->
+  <!-- Bot modál és kártya -->
   <div id="botModal" class="modal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="botModalTitle">
       <div class="modal-head">
