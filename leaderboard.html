@@ -26,34 +26,35 @@
     .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
     @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
     @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
-    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent) 15%, white); color:var(--accent); }
-    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
-    .nav-card .title{ font-weight:800; }
-    .nav-card .desc{ color:var(--muted); font-size:12px; }
+
+    .nav-card{ display:flex; gap:12px; align-items:flex-start; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); min-width:0; }
+    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent) 15%, white); color:var(--accent); flex:0 0 auto; }
+    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; min-width:0; }
+    .nav-card .title{ font-weight:800; overflow-wrap:anywhere; word-break:break-word; }
+    .nav-card .desc{ color:var(--muted); font-size:12px; overflow-wrap:anywhere; word-break:break-word; }
+
+    @media (max-width:700px){
+      .nav-card .title{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+      .nav-card .desc{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+    }
+
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
 
-    .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; }
+    .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; max-width:100%; white-space:normal; }
     .muted{ color:var(--muted); }
 
     .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
-    /* A teljes táblázat EGY vízszintesen görgethető felületen, hogy mobil ÁLLÓ módban is elérhető legyen minden oszlop */
-    .table-outer {
-      overflow-x:auto; -webkit-overflow-scrolling:touch;
-      background:#fff;
-      border-top:1px solid var(--line);
-    }
-    .table-wrap{ display:flex; min-width:900px; } /* min-szélesség, hogy mindig legyen vízszintes görgetés ha kell */
+    .table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; background:#fff; border-top:1px solid var(--line); }
+    .table-wrap{ display:flex; min-width:900px; }
     .grid{ display:grid; }
     .hdr, .row{ display:contents; }
     .cell{ padding:8px 12px; border-bottom:1px solid var(--line); background:#fff; display:flex; align-items:center; gap:8px; box-sizing:border-box; height:var(--rowh); overflow:hidden; }
     .hdr .cell{ font-weight:700; background:#f7f8fc; height:var(--hdrh); }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
-    /* Bal oldali (rang, név, pontok) oszlopok alaphelyzetben sticky, mobilon nem */
     .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
     .left .cell{ background:#fff; }
     @media (max-width: 900px){ .left{ position:relative; left:auto; z-index:1; border-right:0; } }
@@ -71,9 +72,8 @@
     .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
     .name-text{ font-weight:700; overflow:hidden; text-overflow:ellipsis; }
     .name-subtle{ font-weight:700; opacity:.9; overflow:hidden; text-overflow:ellipsis; font-size:14px; }
-    .name-actions{ display:inline-flex; gap:4px; margin-left:6px; white-space:nowrap; flex-shrink:0; }
-    .link-btn{ font-size:11px; padding:3px 7px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1; white-space:nowrap; }
-    .bot-btn{ border-color: color-mix(in oklab, var(--accent) 40%, white); background: color-mix(in oklab, var(--accent) 12%, white); color: var(--accent); font-weight:700; }
+    .name-actions{ display:inline-flex; gap:4px; margin-left:6px; white-space:normal; flex-wrap:wrap; }
+    .link-btn{ font-size:11px; padding:3px 7px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1.2; white-space:normal; }
 
     .btn-accent{ background:var(--accent); color:#fff; border:1px solid color-mix(in oklab, var(--accent) 40%, white); }
     .btn-accent:hover{ filter:brightness(.96); }
@@ -121,7 +121,6 @@
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
 
-    /* Tablet- és mobilbarát finomhangolás */
     @media (max-width: 1024px) {
       .cell { padding:8px 10px; }
       .round-cell { min-width:64px; }
@@ -148,7 +147,6 @@
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    /* ===== Dinamikus liga-váltó import (nem akad meg, ha nincs meg a file) ===== */
     let initLeagueSwitcher = null;
     const safeInitLeagueSwitcher = (mountEl) => {
       if (!mountEl) return;
@@ -156,10 +154,9 @@
       import("./league-switcher.js").then(m=>{
         initLeagueSwitcher = m?.initLeagueSwitcher || null;
         if (initLeagueSwitcher) initLeagueSwitcher({ mountTarget: mountEl });
-      }).catch(()=>{/* no-op */});
+      }).catch(()=>{});
     };
 
-    /* --- Robot meta: mottó + részletes bio is --- */
     const BOT_META = {
       "Evidens Elek": {
         avatar:"elek-256.webp", avatar2x:"elek-512.webp",
@@ -274,7 +271,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      /* liga-váltó mount (safe) */
       safeInitLeagueSwitcher(document.getElementById('leagueSwitchMount'));
 
       onAuthStateChanged(auth, async (user) => {
@@ -315,7 +311,6 @@
         updatePendingBadge();
         initChat(userRef);
 
-        // loader failsafe: ha a loader.js nem hívná meg
         if (window.hideLoader) { try { hideLoader(); } catch(_){} }
         setTimeout(()=>{ document.getElementById('loader')?.remove?.(); }, 1200);
       });
@@ -469,7 +464,6 @@
       return [];
     }
 
-    /* --- BOT logika --- */
     function addBotRows(matches, roundsAsc){
       botPickStore = {};
       const bots = [];
@@ -959,7 +953,6 @@
     </div>
   </div>
 
-  <!-- ha használtok loader.js-t, maradhat. Ha nincs, a failsafe fent kezeli -->
   <script type="module" src="logger.js"></script>
   <script src="loader.js" defer></script>
 </body>
