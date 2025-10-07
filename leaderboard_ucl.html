@@ -13,14 +13,15 @@
   <script src="loader.js" defer></script>
 
   <style>
+    /* --- ugyanazok a tokenek és keverések, mint a dashboardon --- */
     :root{ --line:#e6eaf1; --muted:#64748b; --accent:#3b82f6; --rowh:48px; --hdrh:44px; }
     .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
 
     /* Header / nav */
     .header{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .header-left{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; min-width:0; }
-    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line); background:#fff; }
-    .welcome{ color:var(--muted); margin:4px 0 0; }
+    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
+    .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
     .league-switch-left{ margin-left:8px; }
     @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0; } }
 
@@ -28,47 +29,47 @@
     @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
     @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
 
-    /* Kártyák: mobilon ne lógjon ki a szöveg (NB1 formátum) */
-    .nav-card{ display:flex; gap:12px; align-items:flex-start; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); min-width:0; }
-    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(59,130,246,.12); color:var(--accent); flex:0 0 auto; }
+    /* Kártyák – NB1 formátum + dashboard színkeverések */
+    .nav-card{ display:flex; gap:12px; align-items:flex-start; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); min-width:0; }
+    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); flex:0 0 auto; }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; min-width:0; }
     .nav-card .title{ font-weight:800; overflow-wrap:anywhere; word-break:break-word; }
-    .nav-card .desc{ color:var(--muted); font-size:12px; overflow-wrap:anywhere; word-break:break-word; }
+    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; overflow-wrap:anywhere; word-break:break-word; }
     @media (max-width:700px){
       .nav-card .title{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
       .nav-card .desc{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
     }
+
     .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
     .pill-badge[hidden]{ display:none !important; }
     .pill-badge.countdown{
-      background:#ef4444;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
-      font-variant-numeric: tabular-nums;
-      letter-spacing:.2px;
+      font-variant-numeric: tabular-nums; letter-spacing:.2px;
     }
     .pill-badge.countdown.urgent{ animation:pulse 1s ease-in-out infinite }
     @keyframes pulse{ 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
     .blink{ animation:blink 1s steps(2,start) infinite }
     @keyframes blink{ to{ opacity:.2 } }
 
-    .btn{ border:0; background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; max-width:100%; white-space:normal; }
-    .btn-accent{ background:var(--accent); color:#fff; border:1px solid var(--line); }
+    .btn{ border:1px solid var(--line,#e6eaf1); background:#e5e7eb; color:#111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600; max-width:100%; white-space:normal; }
+    .btn-accent{ background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); box-shadow:0 6px 18px rgba(0,0,0,.08); }
     .btn-accent:hover{ filter:brightness(.95); }
-    .muted{ color:var(--muted); }
+    .btn-accent:focus{ outline:2px solid color-mix(in oklab,var(--accent,#3b82f6) 30%,white); outline-offset:2px; }
+    .muted{ color:var(--muted,#64748b); }
 
-    .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
-    .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
+    .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line,#e6eaf1); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 
     /* Táblázat (NB1) */
-    .table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; background:#fff; border-top:1px solid var(--line); }
+    .table-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; background:#fff; border-top:1px solid var(--line,#e6eaf1); }
     .table-wrap{ display:flex; min-width:900px; }
     .grid{ display:grid; }
     .hdr, .row{ display:contents; }
-    .cell{ padding:8px 12px; border-bottom:1px solid var(--line); background:#fff; display:flex; align-items:center; gap:8px; box-sizing:border-box; height:var(--rowh); overflow:hidden; }
+    .cell{ padding:8px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#fff; display:flex; align-items:center; gap:8px; box-sizing:border-box; height:var(--rowh); overflow:hidden; }
     .hdr .cell{ font-weight:700; background:#f7f8fc; height:var(--hdrh); }
     .row-bg:nth-child(even) .cell{ background:#fcfdff; }
 
-    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line); }
+    .left{ position:sticky; left:0; z-index:3; background:#fff; border-right:1px solid var(--line,#e6eaf1); }
     .left .cell{ background:#fff; }
     @media (max-width: 900px){ .left{ position:relative; left:auto; z-index:1; border-right:0; } }
 
@@ -84,13 +85,13 @@
     .player-cell{ height:auto; min-height:var(--rowh); align-items:center; }
     .player-flex{ display:grid; grid-template-columns: 1fr auto; align-items:center; gap:6px 10px; width:100%; min-width:0; }
     .player-main{ display:flex; align-items:center; gap:6px; min-width:0; }
-    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
-    .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
+    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line,#e6eaf1); background:#fff; flex:0 0 auto; }
+    .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line,#e6eaf1); flex:0 0 auto; }
     .name-text,.name-subtle{ font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .name-subtle{ opacity:.9; font-size:14px; }
     .player-actions{ display:flex; gap:6px; flex-wrap:nowrap; justify-self:end; }
-    .link-btn{ font-size:11px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1.1; }
-    .bot-btn{ border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.12); color: var(--accent); font-weight:700; }
+    .link-btn{ font-size:11px; padding:4px 8px; border:1px solid var(--line,#e6eaf1); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1.1; }
+    .bot-btn{ border-color: color-mix(in oklab, var(--accent,#3b82f6) 40%, white); background: color-mix(in oklab, var(--accent,#3b82f6) 12%, white); color: var(--accent,#3b82f6); font-weight:700; }
     @media (max-width: 900px){ .player-flex{ grid-template-columns: 1fr; } .player-actions{ justify-self:start; flex-wrap:wrap; } }
 
     .ok{ color:#15803d; font-weight:700; }
@@ -109,70 +110,66 @@
       .nav-card .icon-wrap { width:38px; height:38px; }
       .link-btn { padding:5px 9px; }
     }
-    @media (pointer: coarse) {
-      .btn, .link-btn, #chatSendBtn { min-height:40px; }
-    }
+    @media (pointer: coarse) { .btn, .link-btn, #chatSendBtn { min-height:40px; } }
 
     /* Chat */
-    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
     .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
     .chat-fab.has-unread .fab-badge{ display:inline-block; }
-    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
     .chat-panel.open{ display:flex; }
-    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
     .chat-title{ font-weight:800; }
-    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
     #chatClose:hover{ filter:brightness(0.95); }
     .chat-list{ overflow:auto; padding:8px 10px; }
     .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
-    .msg{ padding:8px 10px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
     .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
     .msg .text{ white-space:pre-wrap; word-break:break-word; }
     .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
     .msg:hover .del{ display:inline-block; }
-    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line); background:#fff; }
-    #chatInput{ background:#fff; color:#111; border:1px solid var(--line); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
     #chatInput::placeholder{ color:#6b7280; }
-    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
 
     .chat-list{ flex:1 1 auto; min-height:0; }
     #chatComposer{ flex:0 0 auto; }
     #chatInput{ flex:1 1 auto; min-width:0; }
-    @media (max-width: 480px){
-      .chat-panel{ right:12px; bottom:80px; width:calc(100vw - 24px); max-height:70vh; }
-    }
+    @media (max-width: 480px){ .chat-panel{ right:12px; bottom:80px; width:calc(100vw - 24px); max-height:70vh; } }
 
     /* Bot kártya / modál */
     .bot-card{
       position:fixed; z-index:1200; display:none; width:min(420px, calc(100vw - 32px));
-      background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.18);
+      background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.18);
       inset:auto auto auto auto; max-width:calc(100vw - 32px); max-height:80vh; overflow:auto;
     }
     .bot-card.open{ display:block; }
-    .bot-card .head{ display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
-    .bot-card .avatar{ width:140px; height:140px; border-radius:14px; object-fit:cover; border:1px solid var(--line); flex:0 0 auto; }
+    .bot-card .head{ display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
+    .bot-card .avatar{ width:140px; height:140px; border-radius:14px; object-fit:cover; border:1px solid var(--line,#e6eaf1); flex:0 0 auto; }
     .bot-card .title{ font-weight:800; line-height:1.1; }
     .bot-card .tag{ font-size:12px; color:#64748b; }
     .bot-card .body{ padding:12px; font-size:14px; line-height:1.35; }
-    .bot-card .actions{ display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line); background:#fff; }
+    .bot-card .actions{ display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
 
     .modal{ position:fixed; inset:0; background:rgba(15,23,42,.35); display:none; align-items:center; justify-content:center; z-index:1000; }
     .modal.open{ display:flex; }
-    .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
-    .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
+    .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
     .modal-title{ font-weight:800; font-size:18px; white-space:nowrap; }
     .modal-body{ padding:12px; overflow:auto; }
-    .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+    .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
 
     /* ===== Bonus popover (v2) ===== */
     .bonus-backdrop{ position:fixed; inset:0; z-index:9998; background:transparent; }
     .bonus-pop{
       position:fixed; z-index:9999; width:min(460px, calc(100vw - 32px));
-      background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.22); padding:12px;
+      background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.22); padding:12px;
     }
     .bonus-pop .title{ font-weight:800; margin-bottom:8px; }
     .grid2{ display:grid; grid-template-columns:140px 1fr; gap:8px 12px; align-items:center; }
-    .btag{ display:inline-flex; gap:6px; align-items:center; font-weight:700; font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; color:#334155; }
+    .btag{ display:inline-flex; gap:6px; align-items:center; font-weight:700; font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--line,#e6eaf1); background:#fff; color:#334155; }
     .btag.ok{ background:#ecfdf5; border-color:#bbf7d0; color:#166534; }
     .btag.pending{ background:#fffbeb; border-color:#fde68a; color:#a16207; }
     .btag.no{ background:#fef2f2; border-color:#fecaca; color:#991b1b; }
@@ -392,7 +389,6 @@
 
         updatePendingBadge();
 
-        /* <<< itt volt a hiba: gondoskodunk róla, hogy a függvény létezzen >>> */
         if (typeof initChat === 'function') initChat(userRef);
 
         if(window.hideLoader)hideLoader();
@@ -670,7 +666,7 @@
 
       const bonusCell = r.isBot
         ? `+0.00 <span class="muted">( +0% )</span>`
-        : `<button class="btn btn-accent bonus-chip" data-idx="${i}" title="Bónusz részletek">
+        : `<button class="btn-accent bonus-chip" data-idx="${i}" title="Bónusz részletek">
              +${fmt(r.bonusPts)} <span class="muted">(+${r.bonusPct}%)</span>
              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="margin-left:4px"><path d="M7 10l5 5 5-5z"/></svg>
            </button>`;
@@ -914,7 +910,7 @@
         <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
-        <button id="logout" class="btn" aria-label="Kilépés" style="background:var(--accent);color:#fff;border:1px solid var(--line);">
+        <button id="logout" class="btn-accent" aria-label="Kilépés">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
             <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
           </svg>
@@ -924,18 +920,18 @@
     </div>
 
     <nav class="nav-grid">
-      <a class="nav-card" href="dashboard_ucl.html">
+      <a class="nav-card" href="dashboard_ucl.html" id="dashboardCard">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></div>
         <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
       </a>
-      <a class="nav-card" href="positions_ucl.html">
+      <a class="nav-card" href="positions_ucl.html" id="positionsCard">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg></div>
         <div class="text">
           <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
           <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
-      <a class="nav-card" href="matches_ucl.html">
+      <a class="nav-card" href="matches_ucl.html" id="matchesCard">
         <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg></div>
         <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
@@ -966,7 +962,7 @@
         <span id="rangeLabel" class="muted"></span>
       </div>
       <div id="tableMount" data-mode="last"></div>
-      <div style="padding:8px 12px; font-size:12px; color:var(--muted)">⭐ = adott forduló legmagasabb pontja</div>
+      <div style="padding:8px 12px; font-size:12px; color:var(--muted,#64748b)">⭐ = adott forduló legmagasabb pontja</div>
     </section>
   </div>
 
