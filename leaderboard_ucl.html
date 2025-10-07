@@ -83,23 +83,17 @@
     .round-link:hover{ text-decoration:underline; }
     .top{ background:#fff8e1 !important; font-weight:700; }
 
-    /* ====== JÁTÉKOS-OSZLOP KIMAXOLÁSA ======
-       - A „gépi tippelők” gombjai jobbra igazítva, nem csúsznak szét
-       - Mobilon a gombok a név alá törnek
-       - Csak a játékos-cellában engedjük a változó magasságot
-    */
+    /* ====== JÁTÉKOS-OSZLOP (bot gombok helyrehozva) ====== */
     .player-cell{ height:auto; min-height:var(--rowh); align-items:center; }
     .player-flex{
       display:grid;
       grid-template-columns: 1fr auto;
       align-items:center;
-      gap:6px 10px; /* sor, oszlop */
+      gap:6px 10px;
       width:100%;
       min-width:0;
     }
-    .player-main{
-      display:flex; align-items:center; gap:6px; min-width:0;
-    }
+    .player-main{ display:flex; align-items:center; gap:6px; min-width:0; }
     .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
     .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
 
@@ -120,13 +114,11 @@
     .link-btn{ font-size:11px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1.1; }
     .bot-btn{ border-color: color-mix(in oklab, var(--accent) 40%, white); background: color-mix(in oklab, var(--accent) 12%, white); color: var(--accent); font-weight:700; }
 
-    /* Mobilon a gombok a név alá törnek, teljes szélességen igazodnak balra */
     @media (max-width: 900px){
       .player-flex{ grid-template-columns: 1fr; }
       .player-actions{ justify-self:start; flex-wrap:wrap; }
     }
 
-    /* Egyéb elemek */
     .ok{ color:#15803d; font-weight:700; }
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
@@ -249,6 +241,64 @@
       const r=parseRes(m?.result); if(!r) return ""; const [hg,ag]=r;
       if(hg>ag) return "1"; if(hg<ag) return "2"; return "X";
     }
+
+    /* Top8 deriválása meccsekből – bónuszhoz szükséges */
+    function deriveTop8FromMatches(allMatches){
+      const teams = Array.from(new Set(
+        (allMatches||[]).flatMap(m => [m.homeTeam||m.home||"", m.awayTeam||m.away||""])
+      )).filter(Boolean);
+
+      const S = {}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
+      const H2H = {};
+
+      function parseResLocal(str){
+        const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
+        return m ? [parseInt(m[1]), parseInt(m[2])] : null;
+      }
+
+      (allMatches||[]).forEach(m=>{
+        const A=m.homeTeam||m.home||"", B=m.awayTeam||m.away||"";
+        const r=parseResLocal(m.result);
+        const a=S[A], b=S[B]; if(!a||!b||!r) return;
+
+        const [hg,ag]=r;
+        a.MP++; b.MP++;
+        a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
+        b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
+        if(hg>ag){ a.W++; b.L++; a.Pts+=3; }
+        else if(hg<ag){ b.W++; a.L++; b.Pts+=3; }
+        else { a.D++; b.D++; a.Pts+=1; b.Pts+=1; }
+
+        const k=[A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        H2H[k] ||= { [A]:{Pts:0,GF:0,GA:0}, [B]:{Pts:0,GF:0,GA:0} };
+        if(hg>ag){ H2H[k][A].Pts+=3; }
+        else if(hg<ag){ H2H[k][B].Pts+=3; }
+        else { H2H[k][A].Pts+=1; H2H[k][B].Pts+=1; }
+        H2H[k][A].GF+=hg; H2H[k][A].GA+=ag;
+        H2H[k][B].GF+=ag; H2H[k][B].GA+=hg;
+      });
+
+      function cmp(a,b){
+        if(b.Pts!==a.Pts) return b.Pts-a.Pts;
+        if(b.W!==a.W)     return b.W-a.W;
+        if(b.GD!==a.GD)   return b.GD-a.GD;
+        if(b.GF!==a.GF)   return b.GF-a.GF;
+        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        const row=H2H[k];
+        if(row){
+          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0;
+          if(pb!==pa) return pb-pa;
+          const gda=(row[a.team]?.GF??0)-(row[a.team]?.GA??0);
+          const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);
+          if(gdb!==gda) return gdb-gda;
+        }
+        return a.team.localeCompare(b.team,'hu');
+      }
+
+      const rows=Object.values(S).sort(cmp);
+      return rows.slice(0,8).map(r=>r.team);
+    }
+
     const BONUS_CFG=Object.freeze({winnerPct:10,topScorerPct:5,top8PerHitPct:1,top8MaxPct:8});
 
     /* Állapot */
@@ -352,8 +402,16 @@
         onSnapshot(collection(db,"ucl_matches"), snap=>{
           matchesById={};
           const roundSet=new Set();
-          snap.forEach(d=>{const m={id:d.id,...d.data()};matchesById[m.id]=m;const r=matchRound(m);if(r)roundSet.add(r)});
+          snap.forEach(d=>{
+            const m={id:d.id,...d.data()};
+            matchesById[m.id]=m;
+            const r=matchRound(m); if(r) roundSet.add(r);
+          });
           roundsAsc=Array.from(roundSet).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+
+          /* >>> Top8 frissítése a meccsekből – bónuszhoz szükséges */
+          officialTop8 = deriveTop8FromMatches(Object.values(matchesById));
+
           recomputeRows(); renderTable();
         });
 
@@ -365,7 +423,7 @@
           recomputeRows(); renderTable();
         });
 
-        /* OFFICIAL (csak bónuszokhoz szükséges – logika változatlan) */
+        /* OFFICIAL (győztes/gólkirály) */
         onSnapshot(doc(db,"ucl_official","current"), snap=>{
           const d=snap.exists()?snap.data():{};
           officialChampion=d.champion||"";
@@ -599,8 +657,8 @@
       `;
 
       /* RIGHT (scroll) */
-      const right = document.createElement('div');
       const rcw = roundCellWidth();
+      const right = document.createElement('div');
       right.innerHTML = `
         <div class="grid" style="grid-template-columns:${(`${rcw}px `).repeat(toShow.length)};">
           <div class="hdr">${rightHeader}</div>
@@ -656,12 +714,11 @@
           </div>`;
       }
 
-      const bonusParts = r.parts ? `
+      const bonusParts = `
         <span class="bonus-chip">
           +${fmt(r.bonusPts)}
           <span class="muted"> ( +${r.bonusPct}% )</span>
-        </span>
-      ` : `+${fmt(r.bonusPts)} <span class="muted"> ( +${r.bonusPct}% )</span>`;
+        </span>`;
 
       return `
         <div class="row row-bg">
