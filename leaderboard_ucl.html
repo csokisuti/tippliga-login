@@ -174,6 +174,19 @@
     .btag.pending{ background:#fffbeb; border-color:#fde68a; color:#a16207; }
     .btag.no{ background:#fef2f2; border-color:#fecaca; color:#991b1b; }
     .muted-xs{ color:#64748b; font-size:12px; }
+  
+    /* === PATCH: bonus column visibility === */
+    .bonus-chip{ background: var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); box-shadow:0 6px 18px rgba(0,0,0,.08); }
+    .bonus-chip .muted{ color:#fff; opacity:1; }
+
+    /* === PATCH: row alignment on desktop (names vs rounds) === */
+    .player-cell{ height: var(--rowh); }
+    @media (max-width:900px){ .player-cell{ height:auto; } }
+
+    /* === PATCH: vertical separators between round columns === */
+    .grid.rounds .round-cell{ border-left:1px solid var(--line,#e6eaf1); }
+    .grid.rounds .round-cell.first-col{ border-left:0; }
+
   </style>
 
   <script type="module">
@@ -583,7 +596,7 @@
           <div class="cell left num">Alap pont</div>
         </div>`;
 
-      const rightHeader = toShow.map(r=>`<div class="cell round-cell"><a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
+      const rightHeader = toShow.map((r,ix)=>`<div class="cell round-cell ${ix===0?'first-col':''}"><a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
 
       const container = document.createElement('div'); container.className = 'table-wrap';
 
@@ -601,13 +614,13 @@
       const rcw = roundCellWidth();
       const right = document.createElement('div');
       right.innerHTML = `
-        <div class="grid" style="grid-template-columns:${(`${rcw}px `).repeat(toShow.length)};">
+        <div class="grid rounds" style="grid-template-columns:${(`${rcw}px `).repeat(toShow.length)};">
           <div class="hdr">${rightHeader}</div>
           ${rows.map(r=>{
             const cells = toShow.map((rid, idx)=>{
               const val = r.perRound[rid]||0;
               const isTop = val === maxPerRound[idx] && val !== 0;
-              return `<div class="cell round-cell num ${isTop?'top':''}">
+              return `<div class="cell round-cell num ${isTop?'top':''} ${idx===0?'first-col':''}">
                         <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
                       </div>`;
             }).join('');
