@@ -30,7 +30,7 @@
 
     /* Kártyák: mobilon ne lógjon ki a szöveg */
     .nav-card{ display:flex; gap:12px; align-items:flex-start; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); min-width:0; }
-    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(59,130,246,.12); color:var(--accent); flex:0 0 auto; }
+    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; background:transparent; color:inherit; }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; min-width:0; }
     .nav-card .title{ font-weight:800; overflow-wrap:anywhere; word-break:break-word; }
     .nav-card .desc{ color:var(--muted); font-size:12px; overflow-wrap:anywhere; word-break:break-word; }
@@ -55,6 +55,7 @@
     .btn-accent{ background:var(--accent); color:#fff; border:1px solid var(--line); }
     .btn-accent:hover{ filter:brightness(.95); }
     .muted{ color:var(--muted); }
+    .muted-xs{ color:#64748b; font-size:12px; }
 
     .card{ background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
     .subhdr{ background:#f7f9fd; border-bottom:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
@@ -92,33 +93,99 @@
     .grid.rounds .round-cell{ border-left:1px solid var(--line); }
     .grid.rounds .round-cell.first-col{ border-left:0; }
 
-    /* Rendezés UI a forduló-fejlécekben */
+    /* Rendezés UI a forduló-fejlécekben – kontrasztos nyíl */
     .round-sort{
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:8px;
-      font-size:12px;
-      padding:2px 6px;
+      font-size:14px;
+      padding:4px 8px;
       line-height:1;
+      border:1px solid rgba(59,130,246,.65);
+      background:#ffffff;
+      color:#0f172a; /* sötét nyíl */
+      border-radius:8px;
+      font-weight:800;
       cursor:pointer;
       margin-left:6px;
     }
     .round-sort:hover{ background:#f1f5f9; }
+    .grid.rounds .cell.sorted .round-sort{
+      background: var(--accent);
+      border-color: var(--accent);
+      color:#ffffff; /* aktív: fehér nyíl */
+    }
+    .round-sort:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
     .grid.rounds .cell.sorted{ background:#f0f7ff; }
     .grid.rounds .cell.sorted.top{ background:#e7f1ff; }
-    .hdr .cell .hdr-click{ cursor:pointer; text-decoration:underline dotted; }
-    .muted-xs{ color:#64748b; font-size:12px; }
 
-    /* Bot és chat (rövidítve csak ami kell) */
-    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
-    .name-text,.name-subtle{ font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
+    /* Chat */
+    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
+    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
+    .chat-fab.has-unread .fab-badge{ display:inline-block; }
+    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
+    .chat-panel.open{ display:flex; }
+    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .chat-title{ font-weight:800; }
+    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+    #chatClose:hover{ filter:brightness(0.95); }
+    .chat-list{ overflow:auto; padding:8px 10px; }
+    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
+    .msg{ padding:8px 10px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:flex-start; }
+    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
+    .msg .text{ white-space:pre-wrap; word-break:break-word; }
+    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
+    .msg:hover .del{ display:inline-block; }
+    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line); background:#fff; }
+    #chatInput{ background:#fff; color:#111; border:1px solid var(--line); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
+    #chatInput::placeholder{ color:#6b7280; }
+    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; font-weight:600; cursor:pointer; }
+    @media (max-width: 480px){
+      .chat-panel{ right:12px; bottom:80px; width:calc(100vw - 24px); max-height:70vh; }
+    }
+
+    /* Bot kártya / modál */
+    .bot-card{
+      position:fixed; z-index:1200; display:none; width:min(420px, calc(100vw - 32px));
+      background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 36px rgba(0,0,0,.18);
+      inset:auto auto auto auto; max-width:calc(100vw - 32px); max-height:80vh; overflow:auto;
+    }
+    .bot-card.open{ display:block; }
+    .bot-card .head{ display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .bot-card .avatar{ width:140px; height:140px; border-radius:14px; object-fit:cover; border:1px solid var(--line); flex:0 0 auto; }
+    .bot-card .title{ font-weight:800; line-height:1.1; }
+    .bot-card .tag{ font-size:12px; color:#64748b; }
+    .bot-card .body{ padding:12px; font-size:14px; line-height:1.35; }
+    .bot-card .actions{ display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line); background:#fff; }
+
+    .modal{ position:fixed; inset:0; background:rgba(15,23,42,.35); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal.open{ display:flex; }
+    .modal-card{ width:min(900px, 96vw); max-height:84vh; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2); display:flex; flex-direction:column; }
+    .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-bottom:1px solid var(--line); background:#f7f9fd; }
+    .modal-title{ font-weight:800; font-size:18px; white-space:nowrap; }
+    .modal-body{ padding:12px; overflow:auto; }
+    .close-x{ width:32px; height:32px; border-radius:8px; background:#eef2ff; color:#111; border:1px solid var(--line); cursor:pointer; }
+
+    /* Bonus popover */
+    .bonus-backdrop{ position:fixed; inset:0; z-index:9998; background:transparent; }
+    .bonus-pop{
+      position:fixed; z-index:9999; width:min(460px, calc(100vw - 32px));
+      background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.22); padding:12px;
+    }
+    .bonus-pop .title{ font-weight:800; margin-bottom:8px; }
+    .grid2{ display:grid; grid-template-columns:140px 1fr; gap:8px 12px; align-items:center; }
+    .btag{ display:inline-flex; gap:6px; align-items:center; font-weight:700; font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; color:#334155; }
+    .btag.ok{ background:#ecfdf5; border-color:#bbf7d0; color:#166534; }
+    .btag.pending{ background:#fffbeb; border-color:#fde68a; color:#a16207; }
+    .btag.no{ background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+
+    /* kisebb UI finomságok */
+    @media (pointer: coarse) { .btn, .link-btn, #chatSendBtn { min-height:40px; } }
+    .link-btn{ font-size:11px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1.1; }
     .player-flex{ display:grid; grid-template-columns: 1fr auto; align-items:center; gap:6px 10px; width:100%; min-width:0; }
     .player-main{ display:flex; align-items:center; gap:6px; min-width:0; }
     .player-actions{ display:flex; gap:6px; flex-wrap:nowrap; justify-self:end; }
-    .link-btn{ font-size:11px; padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; cursor:pointer; line-height:1.1; }
+    .name-crest{ width:22px; height:22px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:#fff; flex:0 0 auto; }
+    .avatar-mini{ width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:0 0 auto; }
+    .name-text,.name-subtle{ font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .bot-btn{ border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.12); color: var(--accent); font-weight:700; }
-    @media (max-width: 900px){ .player-flex{ grid-template-columns: 1fr; } .player-actions{ justify-self:start; flex-wrap:wrap; } }
     .ok{ color:#15803d; font-weight:700; }
     .wrong{ color:#b91c1c; font-weight:700; }
     .dbl{ font-weight:800; }
@@ -134,15 +201,16 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
+    /* ---------------- Firebase ---------------- */
     const firebaseConfig={apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",authDomain:"tippliga-4b3af.firebaseapp.com",projectId:"tippliga-4b3af",storageBucket:"tippliga-4b3af.appspot.com",messagingSenderId:"720359845241",appId:"1:720359845241:web:d3d6edcac6b43ebff053a8"};
     const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);
 
     /* --- Robot meta (ikonok/szöveg) --- */
     const BOT_META = {
-      "Evidens Elek": { avatar:"elek-256.webp", avatar2x:"elek-512.webp", intro:"„A legkisebb kockázat is kockázat, de még mindig a legkisebb.”", bio:"Elek a „krétázó” tippmester..." },
-      "Hazai Hugó":  { avatar:"hugo-256.webp", avatar2x:"hugo-512.webp", intro:"„Otthon a pálya, otthon a pont.”", bio:"Hugó a hazai pályában hisz..." },
-      "Ikszes Ilona":{ avatar:"ilona-256.webp", avatar2x:"ilona-512.webp", intro:"„Az egyensúly szép – főleg a jegyzőkönyvben.”", bio:"Ilona a döntetlenek specialistája..." },
-      "Vendég Vendel":{ avatar:"vendel-256.webp", avatar2x:"vendel-512.webp", intro:"„Az idegen győzelem a legédesebb meglepetés.”", bio:"Vendel a vendégsikerekre játszik..." }
+      "Evidens Elek": { avatar:"elek-256.webp", avatar2x:"elek-512.webp", intro:"„A legkisebb kockázat is kockázat, de még mindig a legkisebb.”", bio:"Elek a „krétázó” tippmester: odds-alapon mindig a legalacsonyabb kimenetelt választja. Stabil, apró hozamokra épít, ritkán borul nagyot. A dupláját mindig a forduló LEGKISEBB releváns oddsára teszi." },
+      "Hazai Hugó":  { avatar:"hugo-256.webp", avatar2x:"hugo-512.webp", intro:"„Otthon a pálya, otthon a pont.”", bio:"Hugó a hazai pályában hisz: minden meccsen 1-re megy. Amikor a favoritok hozzák a kötelezőt, szépen termel. A duplája a forduló LEGKISEBB 1-es oddsára kerül." },
+      "Ikszes Ilona":{ avatar:"ilona-256.webp", avatar2x:"ilona-512.webp", intro:"„Az egyensúly szép – főleg a jegyzőkönyvben.”", bio:"Ilona a döntetlenek specialistája: minden meccsen X. Nagyobb egyedi találatokra hajt, de nagyobb a szórása is. A duplája a forduló LEGKISEBB X-oddsára megy." },
+      "Vendég Vendel":{ avatar:"vendel-256.webp", avatar2x:"vendel-512.webp", intro:"„Az idegen győzelem a legédesebb meglepetés.”", bio:"Vendel a vendégsikerekre játszik, különösen billegő papírformánál. Underdog-hullámban sokat ugrik. A duplája a forduló LEGKISEBB 2-es oddsára kerül." }
     };
 
     /* ---------------- Helpers (UCL) ---------------- */
@@ -167,6 +235,7 @@
       if(hg>ag) return "1"; if(hg<ag) return "2"; return "X";
     }
 
+    /* Top8 – bónuszhoz */
     function deriveTop8FromMatches(allMatches){
       const teams = Array.from(new Set((allMatches||[]).flatMap(m => [m.homeTeam||m.home||"", m.awayTeam||m.away||""]))).filter(Boolean);
       const S = {}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
@@ -201,7 +270,7 @@
     let botPickStore={};
 
     /* RENDEZÉS ÁLLAPOT */
-    let sortBy = { type:'total', round:null, dir:'desc' }; // type: 'total' | 'round' ; dir: 'desc'|'asc'
+    let sortBy = { type:'total', round:null, dir:'desc' }; // 'total' | 'round' ; 'desc'|'asc'
 
     /* NAV top8 visszaszámláló */
     let POS_LOCK={active:false,until:null};
@@ -355,6 +424,7 @@
 
         updatePendingBadge();
 
+        /* Chat indítás feltételesen */
         if (typeof initChat === 'function') initChat(userRef);
 
         if(window.hideLoader)hideLoader();
@@ -517,7 +587,7 @@
       });
 
       if(showBots){ rows = rows.concat(addBotRows(matchesById, roundsAsc)); }
-      sortRows(); /* <<< fontos: minden frissítés után az aktuális rendezéssel átrendezzük */
+      sortRows(); /* mindig az aktuális rendezés szerint */
     }
 
     function renderTable(){
@@ -738,7 +808,7 @@
       });
     }
 
-    /* ---- Chat (ha kell) ---- */
+    /* ---- Chat ---- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -824,10 +894,71 @@
       document.getElementById('chatInput')?.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); inputSend(); } });
     }
 
-    /* ---- Bot kártya / modál (változatlan) ---- */
-    function openBotCard(name, anchorEl){ /* ... rövidítve ... */ }
+    /* ---- Bot kártya / modál ---- */
+    function openBotCard(name, anchorEl){
+      const meta = BOT_META[name]; if (!meta) return;
+      const pop = document.getElementById('botCard');
+      pop.dataset.name = name;
+      const imgEl = pop.querySelector('.bc-img');
+      imgEl.src = meta.avatar || '';
+      imgEl.srcset = meta.avatar2x ? `${meta.avatar} 1x, ${meta.avatar2x} 2x` : '';
+      imgEl.loading = 'lazy'; imgEl.decoding = 'async';
+      pop.querySelector('.bc-title').textContent = name;
+
+      const body = pop.querySelector('.body');
+      body.innerHTML = `<p class="bc-intro" style="margin:0 0 8px 0;">${escapeHtml(meta.intro||"")}</p>
+                        <p style="margin:0;">${escapeHtml(meta.bio||"")}</p>`;
+
+      pop.style.top = '0px'; pop.style.left = '0px';
+      pop.classList.add('open');
+      const r = anchorEl.getBoundingClientRect();
+      const margin = 10;
+      const pw = pop.offsetWidth, ph = pop.offsetHeight;
+      let top = r.bottom + 8;
+      let left = Math.min(Math.max(margin, r.left), window.innerWidth - pw - margin);
+      if (top + ph > window.innerHeight - margin) top = r.top - ph - 8;
+      if (top < margin) top = margin;
+      pop.style.top  = `${Math.round(top)}px`;
+      pop.style.left = `${Math.round(left)}px`;
+    }
     function closeBotCard(){ const pop = document.getElementById('botCard'); pop.classList.remove('open'); pop.removeAttribute('data-name'); }
-    function openBotModal(botName){ /* ... rövidítve ... */ }
+    function openBotModal(botName){
+      const modal = document.getElementById('botModal');
+      const title = document.getElementById('botModalTitle');
+      const body = document.getElementById('botModalBody');
+      title.textContent = botName + " – tippjei";
+      const data = botPickStore[botName] || {};
+      const rounds = Object.keys(data).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+      if (!rounds.length){
+        body.innerHTML = "<div class='muted'>Nincs megjeleníthető adat.</div>";
+      } else {
+        let html = "";
+        rounds.forEach(r=>{
+          html += `<h3 style="margin:12px 0 6px;font-weight:800;">Forduló ${r}</h3>`;
+          html += `<div class="grid" style="grid-template-columns:1.4fr 1.4fr 80px 80px 90px 90px;">
+            <div class="hdr"><div class="cell">Hazai</div></div>
+            <div class="hdr"><div class="cell">Vendég</div></div>
+            <div class="hdr"><div class="cell">Tipp</div></div>
+            <div class="hdr"><div class="cell">Odds</div></div>
+            <div class="hdr"><div class="cell">Dupla</div></div>
+            <div class="hdr"><div class="cell">Eredmény</div></div>`;
+          (data[r]||[]).forEach(x=>{
+            html += `
+              <div class="row row-bg">
+                <div class="cell">${escapeHtml(x.homeTeam||"")}</div>
+                <div class="cell">${escapeHtml(x.awayTeam||"")}</div>
+                <div class="cell">${escapeHtml(x.pick||"")}</div>
+                <div class="cell">${fmt(x.odds||0)}</div>
+                <div class="cell ${x.doubled?'dbl':''}">${x.doubled?'Igen':'-'}</div>
+                <div class="cell ${x.correct?'ok':'wrong'}">${x.correct?'Talált':'Mellé'}${x.outcome?`&nbsp;(${escapeHtml(x.outcome)})`:""}</div>
+              </div>`;
+          });
+          html += `</div>`;
+        });
+        body.innerHTML = html;
+      }
+      modal.classList.add('open');
+    }
     function closeBotModal(){ document.getElementById('botModal').classList.remove('open'); }
   </script>
 </head>
@@ -844,20 +975,46 @@
       </div>
       <div>
         <button id="logout" class="btn" aria-label="Kilépés" style="background:var(--accent);color:#fff;border:1px solid var(--line);">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px"><path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+          </svg>
           Kilépés
         </button>
       </div>
     </div>
 
     <nav class="nav-grid">
-      <a class="nav-card" href="dashboard_ucl.html"><div class="icon-wrap"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></div><div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div></a>
-      <a class="nav-card" href="positions_ucl.html"><div class="icon-wrap"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg></div><div class="text"><span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div></a>
-      <a class="nav-card" href="matches_ucl.html"><div class="icon-wrap"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg></div><div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div></a>
-      <a class="nav-card" href="results_ucl.html"><div class="icon-wrap"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg></div><div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div></a>
-      <a class="nav-card" href="leaderboard_ucl.html"><div class="icon-wrap"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2Z"/></svg></div><div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div></a>
-      <a class="nav-card" href="profile_ucl.html"><div class="icon-wrap"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg></div><div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div></a>
-      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;"><div class="icon-wrap"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg></div><div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div></a>
+      <a class="nav-card" href="dashboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></div>
+        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
+      </a>
+      <a class="nav-card" href="positions_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg></div>
+        <div class="text">
+          <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
+          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
+        </div>
+      </a>
+      <a class="nav-card" href="matches_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg></div>
+        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
+      </a>
+      <a class="nav-card" href="results_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg></div>
+        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
+      </a>
+      <a class="nav-card" href="leaderboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2Z"/></svg></div>
+        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
+      </a>
+      <a class="nav-card" href="profile_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg></div>
+        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
+      </a>
+      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg></div>
+        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
+      </a>
     </nav>
 
     <!-- Ranglista -->
@@ -874,12 +1031,49 @@
     </section>
   </div>
 
-  <!-- Chat (opcionális UI, működés a JS-ben) -->
+  <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
-  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat" style="display:none"></section>
+
+  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
+    <div class="chat-head">
+      <div class="chat-title">Közösségi chat</div>
+      <button id="chatClose" class="close-x" aria-label="Bezárás">✕</button>
+    </div>
+    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
+    <div id="chatComposer">
+      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
+      <button id="chatSendBtn">Küldés</button>
+    </div>
+  </section>
+
+  <!-- Bot modál és kártya -->
+  <div id="botModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="botModalTitle">
+      <div class="modal-head">
+        <div id="botModalTitle" class="modal-title"></div>
+        <button class="close-x" aria-label="Bezárás">✕</button>
+      </div>
+      <div id="botModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="botCard" class="bot-card" role="dialog" aria-modal="false" aria-hidden="true">
+    <div class="head">
+      <img class="avatar bc-img" alt="">
+      <div>
+        <div class="title bc-title"></div>
+        <div class="tag">Gépi tippelő</div>
+      </div>
+    </div>
+    <div class="body"><p class="bc-intro" style="margin:0;"></p></div>
+    <div class="actions">
+      <button class="link-btn bot-btn" data-bc-open-tips>Mutasd a tippjeit</button>
+      <button class="link-btn btn-accent" data-bc-close>Bezár</button>
+    </div>
+  </div>
 
   <script type="module" src="logger.js"></script>
 </body>
