@@ -28,9 +28,14 @@
     @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
     @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
 
-    /* Kártyák: mobilon ne lógjon ki a szöveg */
+    /* Kártyák: mobilon ne lógjon ki a szöveg + SZÍNES ikon-háttér */
     .nav-card{ display:flex; gap:12px; align-items:flex-start; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); min-width:0; }
-    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; background:transparent; color:inherit; }
+    .nav-card .icon-wrap{
+      width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+      background: rgba(59,130,246,.12); /* fallback */
+      color: var(--accent, #3b82f6);
+      border: 1px solid var(--line);
+    }
     .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; min-width:0; }
     .nav-card .title{ font-weight:800; overflow-wrap:anywhere; word-break:break-word; }
     .nav-card .desc{ color:var(--muted); font-size:12px; overflow-wrap:anywhere; word-break:break-word; }
@@ -201,7 +206,6 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
-    /* ---------------- Firebase ---------------- */
     const firebaseConfig={apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",authDomain:"tippliga-4b3af.firebaseapp.com",projectId:"tippliga-4b3af",storageBucket:"tippliga-4b3af.appspot.com",messagingSenderId:"720359845241",appId:"1:720359845241:web:d3d6edcac6b43ebff053a8"};
     const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);
 
@@ -303,7 +307,7 @@
         const snap=await getDoc(doc(db,"settings","positionsLock_ucl"));
         let until=null,active=false;
         if(snap.exists()){
-          const d=snap.data()||{};
+          const d=snap.data()||{}
           until=d.lockUntil?.toDate?.()||null;
           const now=new Date(); const timeLocked=until && now>=until;
           active=!!d.isLocked || timeLocked;
