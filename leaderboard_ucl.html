@@ -175,17 +175,21 @@
     .btag.no{ background:#fef2f2; border-color:#fecaca; color:#991b1b; }
     .muted-xs{ color:#64748b; font-size:12px; }
   
-    /* === PATCH: bonus column visibility === */
-    .bonus-chip{ background: var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); box-shadow:0 6px 18px rgba(0,0,0,.08); }
-    .bonus-chip .muted{ color:#fff; opacity:1; }
-
-    /* === PATCH: row alignment on desktop (names vs rounds) === */
-    .player-cell{ height: var(--rowh); }
-    @media (max-width:900px){ .player-cell{ height:auto; } }
-
-    /* === PATCH: vertical separators between round columns === */
-    .grid.rounds .round-cell{ border-left:1px solid var(--line,#e6eaf1); }
-    .grid.rounds .round-cell.first-col{ border-left:0; }
+    /* === PATCH: round sort UI === */
+    .round-sort{
+      border:1px solid var(--line,#e6eaf1);
+      background:#fff;
+      border-radius:8px;
+      font-size:12px;
+      padding:2px 6px;
+      line-height:1;
+      cursor:pointer;
+      margin-left:6px;
+    }
+    .round-sort:hover{ background:#f1f5f9; }
+    .grid.rounds .cell.sorted{ background:#f0f7ff; }
+    .grid.rounds .cell.sorted.top{ background:#e7f1ff; }
+    .hdr .cell .hdr-click{ cursor:pointer; text-decoration:underline dotted; }
 
   </style>
 
@@ -264,6 +268,7 @@
     let top8TipsByEmail={}, championPickByEmail={}, goldenPickByEmail={};
     let latestTipsByUserMatch=new Map();
     let rows=[];
+    let sortBy = { type:'total', round:null, desc:true };
     let showBots=false;
     let botPickStore={};
 
@@ -527,6 +532,27 @@
       return bots;
     }
 
+    
+    /* ---- Sorting helper ---- */
+    function sortRows(){
+      if(!Array.isArray(rows)) return;
+      if (sortBy.type === 'round' && sortBy.round){
+        const rid = String(sortBy.round);
+        rows.sort((a,b)=>{
+          const av = Number(a.perRound?.[rid]||0);
+          const bv = Number(b.perRound?.[rid]||0);
+          if (bv !== av) return (sortBy.desc? (bv-av) : (av-bv));
+          if (b.total !== a.total) return b.total - a.total;
+          return a.nick.localeCompare(b.nick,'hu');
+        });
+      } else {
+        rows.sort((a,b)=>{
+          if (b.total !== a.total) return b.total - a.total;
+          return a.nick.localeCompare(b.nick,'hu');
+        });
+      }
+    }
+
     function recomputeRows(){
       const latest = latestTipsByUserMatch;
       const player={}; const rounds=new Set();
@@ -591,12 +617,12 @@
         <div class="hdr">
           <div class="cell left rank">Hely</div>
           <div class="cell left">Játékos</div>
-          <div class="cell left num">Összesen</div>
+          <div class="cell left num"><span id="hdrTotalSort" class="hdr-click" title="Rendezés összes pont szerint">Összesen</span></div>
           <div class="cell left num">Bónusz (pont + %)</div>
           <div class="cell left num">Alap pont</div>
         </div>`;
 
-      const rightHeader = toShow.map((r,ix)=>`<div class="cell round-cell ${ix===0?'first-col':''}"><a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
+      const rightHeader = toShow.map(r=>`<div class="cell round-cell"><a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a></div>`).join('');
 
       const container = document.createElement('div'); container.className = 'table-wrap';
 
@@ -620,7 +646,7 @@
             const cells = toShow.map((rid, idx)=>{
               const val = r.perRound[rid]||0;
               const isTop = val === maxPerRound[idx] && val !== 0;
-              return `<div class="cell round-cell num ${isTop?'top':''} ${idx===0?'first-col':''}">
+              return `<div class="cell round-cell num ${isTop?'top':''}">
                         <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
                       </div>`;
             }).join('');
@@ -636,6 +662,20 @@
       container.appendChild(right);
       outer.appendChild(container);
       mount.appendChild(outer);
+      /* Sorting interactions */
+      const totalHdr = mount.querySelector('#hdrTotalSort');
+      totalHdr?.addEventListener('click', ()=>{ sortBy={type:'total',round:null,desc:true}; sortRows(); renderTable(); });
+
+      mount.querySelectorAll('.round-sort[data-round]').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          e.preventDefault();
+          const rid = btn.getAttribute('data-round');
+          sortBy = { type:'round', round: rid, desc:true };
+          sortRows();
+          renderTable();
+        });
+      });
+
 
       /* Bonus chip kattintás – popover */
       mount.querySelectorAll('.bonus-chip[data-idx]').forEach(btn=>{
