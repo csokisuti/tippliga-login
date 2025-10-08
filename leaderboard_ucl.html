@@ -86,7 +86,7 @@
     .grid.rounds .round-cell{border-left:1px solid var(--line,#e6eaf1)}
     .grid.rounds .round-cell.first-col{border-left:0}
 
-    /* Rendező nyilak – kontraszt */
+    /* Rendező nyilak – kétállású logika vizuál */
     .round-sort{font-size:14px;padding:4px 8px;line-height:1;border:1px solid rgba(59,130,246,.65);background:#ffffff;color:#0f172a;border-radius:8px;font-weight:800;cursor:pointer;margin-left:6px}
     .round-sort:hover{background:#f1f5f9}
     .grid.rounds .cell.sorted .round-sort{background:var(--accent,#3b82f6);border-color:var(--accent,#3b82f6);color:#ffffff}
@@ -237,7 +237,7 @@
     let botPickStore={};
 
     /* RENDEZÉS ÁLLAPOT */
-    let sortBy = { type:'total', round:null, dir:'desc' }; // 'total' | 'round' ; 'desc'|'asc'
+    let sortBy = { type:'total', round:null, dir:'desc' }; // 'total' | 'round' ; 'desc'|'asc' (roundnál most csak 'desc' használjuk)
 
     /* NAV top8 visszaszámláló */
     let POS_LOCK={active:false,until:null};
@@ -301,7 +301,7 @@
         rows.sort((a,b)=>{
           const av = Number(a.perRound?.[rid]||0);
           const bv = Number(b.perRound?.[rid]||0);
-          if (av !== bv) return (sortBy.dir==='desc' ? (bv-av) : (av-bv));
+          if (av !== bv) return (bv-av); // csak csökkenő
           if (b.total !== a.total) return b.total - a.total;
           return a.nick.localeCompare(b.nick,'hu');
         });
@@ -581,14 +581,14 @@
         <div class="hdr">
           <div class="cell left rank">Hely</div>
           <div class="cell left">Játékos</div>
-          <div class="cell left num"><span id="hdrTotalSort" class="hdr-click" title="Rendezés összes pont szerint">Összesen</span></div>
+          <div class="cell left num"><span id="hdrTotalSort" class="hdr-click" title="Összes pont">Összesen</span></div>
           <div class="cell left num">Bónusz (pont + %)</div>
           <div class="cell left num">Alap pont</div>
         </div>`;
 
       const rightHeader = toShow.map((r,ix)=>{
         const active = (sortBy.type==='round' && String(sortBy.round)===String(r));
-        const arrow = active ? (sortBy.dir==='desc' ? '▼' : '▲') : '↕';
+        const arrow = active ? '▼' : '↕';
         return `<div class="cell round-cell ${ix===0?'first-col':''} ${active?'sorted':''}">
                   <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a>
                   <button class="round-sort" data-round="${r}" title="Rendezés F${r} szerint">${arrow}</button>
@@ -636,18 +636,19 @@
       mount.appendChild(outer);
 
       /* --- Rendezés események --- */
-      mount.querySelector('#hdrTotalSort')?.addEventListener('click', ()=>{
-        sortBy = { type:'total', round:null, dir:'desc' };
-        sortRows();
-        renderTable();
-      });
+      /* Összesen fejlécre NEM állítunk vissza funkciót */
+      // mount.querySelector('#hdrTotalSort')?.addEventListener('click', ()=>{});
+
+      /* Forduló-gomb: kétállású – aktív (csökkenő) <-> vissza eredetire */
       mount.querySelectorAll('.round-sort[data-round]').forEach(btn=>{
         btn.addEventListener('click', (e)=>{
           e.preventDefault();
           const rid = btn.getAttribute('data-round');
           if (sortBy.type==='round' && String(sortBy.round)===String(rid)){
-            sortBy.dir = (sortBy.dir==='desc' ? 'asc' : 'desc');
+            // kikapcsolás -> vissza az eredeti (összesen) nézetre
+            sortBy = { type:'total', round:null, dir:'desc' };
           } else {
+            // bekapcsolás -> adott forduló szerint, csökkenő
             sortBy = { type:'round', round: rid, dir:'desc' };
           }
           sortRows();
@@ -972,7 +973,7 @@
         <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
       </a>
       <a class="nav-card" href="leaderboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2Z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0  1 1 2-2h3a2 2 0 0 1 2-2Z"/></svg></div>
         <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
       </a>
       <a class="nav-card" href="profile_ucl.html">
