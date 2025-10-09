@@ -86,11 +86,25 @@
     .grid.rounds .round-cell{border-left:1px solid var(--line,#e6eaf1)}
     .grid.rounds .round-cell.first-col{border-left:0}
 
-    /* Rendező gomb (▼ / x váltókapcsoló) */
-    .round-sort{font-size:14px;padding:4px 8px;line-height:1;border:1px solid rgba(59,130,246,.65);background:#ffffff;color:#0f172a;border-radius:8px;font-weight:800;cursor:pointer;margin-left:6px}
+    /* --- Rendező gomb – egységes stílus (▼ és x ugyanúgy) --- */
+    .round-sort{
+      font-size:14px;
+      padding:4px 9px;
+      line-height:1;
+      border:1px solid #e5e7eb;
+      background:#ffffff;
+      color:#0f172a;
+      border-radius:8px;
+      font-weight:800;
+      cursor:pointer;
+      margin-left:6px;
+      user-select:none;
+      min-width:28px;
+      text-align:center;
+    }
     .round-sort:hover{background:#f1f5f9}
-    .grid.rounds .cell.sorted .round-sort{background:var(--accent,#3b82f6);border-color:var(--accent,#3b82f6);color:#ffffff}
     .round-sort:focus-visible{outline:2px solid var(--accent,#3b82f6);outline-offset:2px}
+    /* Aktív rendezésnél a cella kap halvány háttért – a gomb külseje változatlan */
     .grid.rounds .cell.sorted{background:#f0f7ff}
     .grid.rounds .cell.sorted.top{background:#e7f1ff}
 
