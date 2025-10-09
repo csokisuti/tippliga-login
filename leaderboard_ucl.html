@@ -86,14 +86,11 @@
     .grid.rounds .round-cell{border-left:1px solid var(--line,#e6eaf1)}
     .grid.rounds .round-cell.first-col{border-left:0}
 
-    /* Rendező és reset gombok (▼ és x) */
+    /* Rendező gomb (▼ / x váltókapcsoló) */
     .round-sort{font-size:14px;padding:4px 8px;line-height:1;border:1px solid rgba(59,130,246,.65);background:#ffffff;color:#0f172a;border-radius:8px;font-weight:800;cursor:pointer;margin-left:6px}
     .round-sort:hover{background:#f1f5f9}
     .grid.rounds .cell.sorted .round-sort{background:var(--accent,#3b82f6);border-color:var(--accent,#3b82f6);color:#ffffff}
     .round-sort:focus-visible{outline:2px solid var(--accent,#3b82f6);outline-offset:2px}
-
-    .round-reset{font-size:13px;padding:3px 7px;line-height:1;border:1px solid #e5e7eb;background:#ffffff;color:#0f172a;border-radius:8px;font-weight:800;cursor:pointer;margin-left:4px}
-    .round-reset:hover{background:#f1f5f9}
     .grid.rounds .cell.sorted{background:#f0f7ff}
     .grid.rounds .cell.sorted.top{background:#e7f1ff}
 
@@ -591,10 +588,11 @@
 
       const rightHeader = toShow.map((r,ix)=>{
         const active = (sortBy.type==='round' && String(sortBy.round)===String(r));
+        const label = active ? 'x' : '▼';
+        const title = active ? `Vissza az alap rendezésre` : `Rendezés F${r} szerint (csökkenő)`;
         return `<div class="cell round-cell ${ix===0?'first-col':''} ${active?'sorted':''}">
                   <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a>
-                  <button class="round-sort" data-round="${r}" title="Rendezés F${r} szerint">▼</button>
-                  ${active?`<button class="round-reset" data-round-reset="${r}" title="Vissza az alap rendezésre">x</button>`:""}
+                  <button class="round-sort" data-round="${r}" title="${title}">${label}</button>
                 </div>`;
       }).join('');
 
@@ -639,22 +637,16 @@
       mount.appendChild(outer);
 
       /* --- Rendezés események --- */
-      // ▼ = aktiválja a forduló szerinti (csökkenő) rendezést
+      // Váltókapcsoló: ▼ -> adott forduló szerint (desc), x -> vissza alapra
       mount.querySelectorAll('.round-sort[data-round]').forEach(btn=>{
         btn.addEventListener('click', (e)=>{
           e.preventDefault();
           const rid = btn.getAttribute('data-round');
-          sortBy = { type:'round', round: rid, dir:'desc' };
-          sortRows();
-          renderTable();
-        });
-      });
-
-      // x = vissza az alap (összesen szerinti) rendezésre
-      mount.querySelectorAll('.round-reset[data-round-reset]').forEach(btn=>{
-        btn.addEventListener('click', (e)=>{
-          e.preventDefault();
-          sortBy = { type:'total', round:null, dir:'desc' };
+          if (sortBy.type==='round' && String(sortBy.round)===String(rid)){
+            sortBy = { type:'total', round:null, dir:'desc' }; // vissza alapra
+          } else {
+            sortBy = { type:'round', round: rid, dir:'desc' }; // csökkenő az adott fordulóra
+          }
           sortRows();
           renderTable();
         });
