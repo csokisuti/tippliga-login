@@ -7,128 +7,364 @@
 
   <link rel="stylesheet" href="style-themed.css" />
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" type="image/png" href="fav2.png" sizes="16x16">
   <link rel="icon" type="image/png" href="fav2.png" sizes="32x32">
   <link rel="icon" type="image/png" href="fav2.png">
   <script src="loader.js" defer></script>
 
   <style>
-    /* ===== Layout (változatlan) ===== */
-    .layout{display:flex;flex-direction:column;gap:16px;max-width:1200px;margin:0 auto;padding:20px}
-    .header{display:flex;align-items:center;justify-content:space-between}
-    .header-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-    .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
-    .welcome{color:var(--muted,#64748b);margin:4px 0 0}
-    .league-switch-left{margin-left:8px}
-    @media (max-width:700px){.league-switch-left{width:100%;margin-left:0}}
-
-    /* ===== NAV – 1:1 a dashboardból ===== */
-    .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
-    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05);min-width:0}
-    .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent,#3b82f6) 15%,white);color:var(--accent,#3b82f6);border:1px solid var(--line,#e6eaf1);flex:0 0 auto}
-    .nav-card .text{display:flex;flex-direction:column;line-height:1.2;min-width:0}
-    .nav-card .title{font-weight:800;overflow-wrap:anywhere;word-break:break-word}
-    .nav-card .desc{color:var(--muted,#64748b);font-size:12px;overflow-wrap:anywhere;word-break:break-word}
-    @media (max-width:700px){
-      .nav-card .title{-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
-      .nav-card .desc{-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+    :root{
+      --accent:#80003c;
+      --line:#e6eaf1;
+      --muted:#64748b;
+      --good:#16a34a;
+      --bad:#dc2626;
     }
-    /* Csak az Összpontszám kártya maradjon egysoros címmel desktopon */
-    @media (min-width:701px){ .nav-card.nowrap-title .title{white-space:nowrap} }
 
-    /* ===== A TÖBBI STÍLUS VÁLTOZATLAN (rangsor, nyilak, bónusz, chat, stb.) ===== */
-    .card{background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
-    .subhdr{background:#f7f9fd;border-bottom:1px solid var(--line,#e6eaf1);padding:10px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-    .btn-accent{min-height:40px;padding:10px 14px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
-    .btn{border:1px solid var(--line,#e6eaf1);background:#e5e7eb;color:#111;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
-    .table-outer{overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff;border-top:1px solid var(--line,#e6eaf1)}
-    .table-wrap{display:flex;min-width:900px}
-    .grid{display:grid}
-    .hdr,.row{display:contents}
-    .cell{padding:8px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#fff;display:flex;align-items:center;gap:8px;box-sizing:border-box;height:48px;overflow:hidden}
-    .hdr .cell{font-weight:800;background:#f7f8fc;height:44px}
-    .row-bg:nth-child(even) .cell{background:#fcfdff}
-    .left{position:sticky;left:0;z-index:3;background:#fff;border-right:1px solid var(--line,#e6eaf1)}
-    .left .cell{background:#fff}
-    @media (max-width:900px){.left{position:relative;left:auto;z-index:1;border-right:0}}
-    .rank{text-align:right;color:#64748b;white-space:nowrap}
-    .num{text-align:right;white-space:nowrap}
-    .total{font-weight:800}
-    .round-cell{min-width:78px;text-align:right}
-    .round-link{display:block;color:inherit;text-decoration:none}
-    .round-link:hover{text-decoration:underline}
-    .top{background:#fff8e1!important;font-weight:700}
-    .player-cell{height:48px}
-    @media (max-width:900px){.player-cell{height:auto}}
-    .bonus-chip{background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);box-shadow:0 6px 18px rgba(0,0,0,.08);padding:6px 10px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
-    .bonus-chip .muted{color:#fff;opacity:1}
-    .grid.rounds .round-cell{border-left:1px solid var(--line,#e6eaf1)}
+    body{
+      background:#f6f7fb;
+      margin:0;
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      color:#111827;
+    }
+
+    .layout{
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+      max-width:1200px;
+      margin:0 auto;
+      padding:20px;
+    }
+
+    .header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    .header-left{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .fav-crest{
+      width:46px;
+      height:46px;
+      object-fit:contain;
+      border-radius:8px;
+      border:1px solid var(--line);
+      background:#fff;
+    }
+
+    .welcome{
+      color:var(--muted);
+      margin:4px 0 0;
+    }
+
+    .league-switch-left{
+      margin-left:8px;
+    }
+
+    @media (max-width:700px){
+      .league-switch-left{width:100%;margin-left:0}
+    }
+
+    /* === Dashboard-stílusú nav === */
+    .nav-grid{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(0,1fr));
+      gap:14px;
+    }
+    @media (max-width:1100px){
+      .nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+    @media (max-width:700px){
+      .nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    .nav-card{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      text-decoration:none;
+      color:inherit;
+      padding:14px;
+      background:#fff;
+      border:1px solid var(--line,#e6eaf1);
+      border-radius:14px;
+      box-shadow:0 6px 18px rgba(15,23,42,.05);
+      min-width:0;
+    }
+
+    .nav-card .icon-wrap{
+      position:relative;
+      width:42px;
+      height:42px;
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:color-mix(in oklab,var(--accent,#3b82f6) 15%,white);
+      color:var(--accent,#3b82f6);
+      border:1px solid var(--line,#e6eaf1);
+      flex:0 0 auto;
+    }
+
+    .nav-card .text{
+      display:flex;
+      flex-direction:column;
+      line-height:1.2;
+      min-width:0;
+      flex:1 1 auto;
+    }
+
+    .nav-card .title{
+      font-weight:800;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+
+    .nav-card .desc{
+      color:var(--muted,#64748b);
+      font-size:12px;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+
+    @media (max-width:700px){
+      .nav-card .title{
+        -webkit-line-clamp:2;
+        display:-webkit-box;
+        -webkit-box-orient:vertical;
+        overflow:hidden;
+      }
+      .nav-card .desc{
+        -webkit-line-clamp:2;
+        display:-webkit-box;
+        -webkit-box-orient:vertical;
+        overflow:hidden;
+      }
+    }
+
+    @media (min-width:701px){
+      .nav-card.nowrap-title .title{white-space:nowrap}
+    }
+
+    /* === Ranglista, táblázat, chat === */
+    .table-wrap{
+      overflow-x:auto;
+      background:#fff;
+      border-radius:16px;
+      padding:16px;
+      border:1px solid var(--line);
+    }
+
+    .hdr,.row{
+      display:flex;
+      align-items:center;
+    }
+
+    .hdr{
+      font-weight:600;
+      color:#374151;
+      background:#f9fafb;
+      border-bottom:1px solid var(--line);
+    }
+
+    .row:nth-child(even){background:#fafafa}
+    .cell{padding:8px;text-align:left;flex:1;min-width:60px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .left{justify-content:flex-start}
+    .num{text-align:right}
+    .player-cell{min-width:140px}
+    .grid.rounds .round-cell{border-left:1px solid var(--line)}
     .grid.rounds .round-cell.first-col{border-left:0}
-    .round-sort{font-size:14px;padding:4px 9px;line-height:1;border:1px solid #e5e7eb;background:#ffffff;color:#0f172a;border-radius:8px;font-weight:800;cursor:pointer;margin-left:6px;user-select:none;min-width:28px;text-align:center}
-    .round-sort:hover{background:#f1f5f9}
-    .grid.rounds .cell.sorted{background:#f0f7ff}
-    .grid.rounds .cell.sorted.top{background:#e7f1ff}
 
-    /* Chat (változatlan) */
-    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
-    .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
-    .chat-fab.has-unread .fab-badge{display:inline-block}
-    .chat-panel{position:fixed;right:22px;bottom:86px;z-index:998;width:380px;max-width:calc(100vw - 32px);max-height:70vh;display:none;flex-direction:column;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.14)}
+    .round-sort{
+      font-size:14px;
+      padding:4px 8px;
+      line-height:1;
+      border:1px solid var(--accent);
+      background:var(--accent);
+      color:#fff;
+      border-radius:8px;
+      cursor:pointer;
+      margin-left:6px;
+      font-weight:700;
+    }
+
+    .round-sort:hover{opacity:.85}
+
+    .chat-fab{
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      border-radius:50%;
+      width:60px;
+      height:60px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:26px;
+      box-shadow:0 4px 12px rgba(0,0,0,.2);
+    }
+    .chat-fab:hover{transform:scale(1.05)}
+
+    .chat-panel{
+      position:fixed;
+      bottom:100px;
+      right:20px;
+      width:340px;
+      max-height:70vh;
+      background:#fff;
+      border-radius:14px;
+      box-shadow:0 6px 16px rgba(0,0,0,.2);
+      display:none;
+      flex-direction:column;
+      overflow:hidden;
+      border:1px solid var(--line);
+    }
     .chat-panel.open{display:flex}
-    .chat-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .chat-title{font-weight:800}
-    #chatClose{width:28px;height:28px;border-radius:8px;font-size:18px;line-height:28px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#111;border:1px solid var(--line,#e6eaf1);cursor:pointer}
-    #chatClose:hover{filter:brightness(.95)}
-    .chat-list{overflow:auto;padding:8px 10px}
-    .chat-empty{color:#64748b;font-size:13px;padding:8px 10px}
-    .msg{padding:8px 10px;border-bottom:1px solid var(--line,#e6eaf1);display:flex;gap:8px;align-items:flex-start}
-    .msg .meta{font-size:12px;color:#64748b;margin-bottom:2px}
-    .msg .text{white-space:pre-wrap;word-break:break-word}
-    .msg .del{margin-left:auto;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:2px 8px;border-radius:8px;font-size:12px;cursor:pointer;display:none}
-    .msg:hover .del{display:inline-block}
-    #chatComposer{display:flex;gap:8px;align-items:center;padding:10px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
-    #chatInput{background:#fff;color:#111;border:1px solid var(--line,#e6eaf1);height:40px;padding:8px 10px;border-radius:10px;font-size:14px;outline:none;width:100%;box-sizing:border-box}
-    #chatInput::placeholder{color:#6b7280}
-    #chatSendBtn{min-width:90px;padding:8px 12px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:0;font-weight:600;cursor:pointer}
-    .link-btn{font-size:11px;padding:4px 8px;border:1px solid var(--line,#e6eaf1);border-radius:8px;background:#f8fafc;cursor:pointer;line-height:1.1}
-    .bot-btn{border-color:rgba(59,130,246,.4);background:color-mix(in oklab,var(--accent,#3b82f6) 15%, white);color:var(--accent,#3b82f6);font-weight:700}
-    .bot-card{position:fixed;z-index:1200;display:none;width:min(420px,calc(100vw - 32px));background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 14px 36px rgba(0,0,0,.18)}
-    .bot-card.open{display:block}
-    .bot-card .head{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .bot-card .avatar{width:140px;height:140px;border-radius:14px;object-fit:cover;border:1px solid var(--line,#e6eaf1);flex:0 0 auto}
-    .bot-card .title{font-weight:800;line-height:1.1}
-    .bot-card .tag{font-size:12px;color:#64748b}
-    .bot-card .body{padding:12px;font-size:14px;line-height:1.35}
-    .bot-card .actions{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
-    .modal{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:center;justify-content:center;z-index:1000}
-    .modal.open{display:flex}
-    .modal-card{width:min(900px,96vw);max-height:84vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.2);display:flex;flex-direction:column}
-    .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
-    .modal-title{font-weight:800;font-size:18px;white-space:nowrap}
-    .modal-body{padding:12px;overflow:auto}
-    .close-x{width:32px;height:32px;border-radius:8px;background:#eef2ff;color:#111;border:1px solid var(--line,#e6eaf1);cursor:pointer}
-    .bonus-backdrop{position:fixed;inset:0;z-index:9998;background:transparent}
-    .bonus-pop{position:fixed;z-index:9999;width:min(460px,calc(100vw - 32px));background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.22);padding:12px}
-    .bonus-pop .title{font-weight:800;margin-bottom:8px}
-    .grid2{display:grid;grid-template-columns:140px 1fr;gap:8px 12px;align-items:center}
-    .btag{display:inline-flex;gap:6px;align-items:center;font-weight:700;font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#fff;color:#334155}
-    .btag.ok{background:#ecfdf5;border-color:#bbf7d0;color:#166534}
-    .btag.pending{background:#fffbeb;border-color:#fde68a;color:#a16207}
-    .btag.no{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-    @media (pointer:coarse){.btn,.link-btn,#chatSendBtn{min-height:40px}}
-    .player-flex{display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 10px;width:100%;min-width:0}
-    .player-main{display:flex;align-items:center;gap:6px;min-width:0}
-    .player-actions{display:flex;gap:6px;flex-wrap:nowrap;justify-self:end}
-    .name-crest{width:22px;height:22px;object-fit:contain;border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff;flex:0 0 auto}
-    .avatar-mini{width:22px;height:22px;object-fit:cover;border-radius:6px;border:1px solid var(--line,#e6eaf1);flex:0 0 auto}
-    .name-text,.name-subtle{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .ok{color:#15803d;font-weight:700}
-    .wrong{color:#b91c1c;font-weight:700}
-    .dbl{font-weight:800}
+    .chat-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;background:#f9fafb}
+    .chat-list{flex:1;overflow-y:auto;padding:10px}
+    .msg{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f1f1}
+    .msg .meta{font-size:12px;color:var(--muted)}
+    .msg .text{font-size:14px}
+    #chatComposer{display:flex;border-top:1px solid var(--line);background:#fff}
+    #chatInput{flex:1;padding:8px;border:none;outline:none}
+    #chatSendBtn{background:var(--accent);color:#fff;border:none;padding:0 12px;cursor:pointer;border-left:1px solid var(--line)}
   </style>
 
+  <!-- (Ha használtok külön CSS/JS fájlokat, azok maradnak változatlanul betöltve) -->
+</head>
+
+<body>
+  <div class="layout">
+    <!-- FEJLÉC -->
+    <div class="header">
+      <div class="header-left">
+        <img id="favCrest" class="fav-crest" alt="" hidden>
+        <div>
+          <h1>BL TippLiga</h1>
+          <p id="welcome" class="welcome"></p>
+        </div>
+        <!-- Liga / tippjáték váltó (dashboardhoz igazítva) -->
+        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
+      </div>
+      <div>
+        <button id="logout" class="btn-accent" aria-label="Kilépés">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
+            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+          </svg>
+          Kilépés
+        </button>
+      </div>
+    </div>
+
+    <!-- NAV – 1:1 a dashboardról, de az Összpontszám egysoros cím (nowrap-title) -->
+    <nav class="nav-grid">
+      <a class="nav-card" href="dashboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">🏠</div>
+        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
+      </a>
+
+      <a class="nav-card" href="positions_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">📊</div>
+        <div class="text">
+          <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
+          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
+        </div>
+      </a>
+
+      <a class="nav-card" href="matches_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">🎯</div>
+        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
+      </a>
+
+      <a class="nav-card" href="results_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">📑</div>
+        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
+      </a>
+
+      <!-- ITT a nowrap-title, hogy ne törjön az Összpontszám -->
+      <a class="nav-card nowrap-title" href="leaderboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">💯</div>
+        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
+      </a>
+
+      <a class="nav-card" href="profile_ucl.html">
+        <div class="icon-wrap" aria-hidden="true">👤</div>
+        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
+      </a>
+
+      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
+        <div class="icon-wrap" aria-hidden="true">🛠</div>
+        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
+      </a>
+    </nav>
+    <!-- RANGLISTA -->
+    <section class="card" style="background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden">
+      <div class="subhdr" style="background:#f7f9fd;border-bottom:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <button id="toggleAll" class="btn" style="border:1px solid var(--line);background:#e5e7eb;color:#111;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600">Mutasd az összes fordulót</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;user-select:none;">
+          <input type="checkbox" id="showBots"> Mutasd a gépi tippelőket (Elek, Hugó, Ilona, Vendel)
+        </label>
+        <span id="rangeLabel" class="welcome"></span>
+      </div>
+
+      <div id="tableMount" data-mode="last"></div>
+      <div style="padding:8px 12px;font-size:12px;color:var(--muted)">⭐ = adott forduló legmagasabb pontja</div>
+    </section>
+  </div><!-- /.layout -->
+
+  <!-- CHAT GOMB -->
+  <button id="chatToggle" class="chat-fab" title="Közösségi chat">💬</button>
+
+  <!-- CHAT PANEL -->
+  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
+    <div class="chat-head">
+      <div class="chat-title">Közösségi chat</div>
+      <button id="chatClose" class="close-x" aria-label="Bezárás" style="background:#eef2ff;border:1px solid var(--line);border-radius:8px;padding:4px 8px;cursor:pointer">✕</button>
+    </div>
+    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
+    <div id="chatComposer">
+      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
+      <button id="chatSendBtn">Küldés</button>
+    </div>
+  </section>
+
+  <!-- BOT MODÁL -->
+  <div id="botModal" class="modal" aria-hidden="true" style="position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:center;justify-content:center;z-index:1000">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="botModalTitle" style="width:min(900px,96vw);max-height:84vh;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.2);display:flex;flex-direction:column">
+      <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-bottom:1px solid var(--line);background:#f7f9fd">
+        <div id="botModalTitle" class="modal-title" style="font-weight:800;font-size:18px;white-space:nowrap"></div>
+        <button class="close-x" aria-label="Bezárás" style="width:32px;height:32px;border-radius:8px;background:#eef2ff;color:#111;border:1px solid var(--line);cursor:pointer">✕</button>
+      </div>
+      <div id="botModalBody" class="modal-body" style="padding:12px;overflow:auto"></div>
+    </div>
+  </div>
+
+  <!-- BOT KÁRTYA (POPOVER) -->
+  <div id="botCard" class="bot-card" role="dialog" aria-modal="false" aria-hidden="true" style="position:fixed;z-index:1200;display:none;width:min(420px,calc(100vw - 32px));background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 36px rgba(0,0,0,.18)">
+    <div class="head" style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line);background:#f7f9fd">
+      <img class="avatar bc-img" alt="" style="width:140px;height:140px;border-radius:14px;object-fit:cover;border:1px solid var(--line);flex:0 0 auto">
+      <div>
+        <div class="title bc-title" style="font-weight:800;line-height:1.1"></div>
+        <div class="tag" style="font-size:12px;color:#64748b">Gépi tippelő</div>
+      </div>
+    </div>
+    <div class="body" style="padding:12px;font-size:14px;line-height:1.35"><p class="bc-intro" style="margin:0;"></p></div>
+    <div class="actions" style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:#fff">
+      <button class="link-btn bot-btn" data-bc-open-tips style="font-size:11px;padding:4px 8px;border:1px solid rgba(59,130,246,.4);border-radius:8px;background:color-mix(in oklab,var(--accent) 15%, white);cursor:pointer;line-height:1.1;color:var(--accent);font-weight:700">Mutasd a tippjeit</button>
+      <button class="link-btn btn-accent" data-bc-close style="font-size:11px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#f8fafc;cursor:pointer;line-height:1.1">Bezár</button>
+    </div>
+  </div>
+  <!-- ==== APP SCRIPT – 1/2 ==== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -526,7 +762,6 @@
       if(showBots){ rows = rows.concat(addBotRows(matchesById, roundsAsc)); }
       sortRows();
     }
-
     function renderTable(){
       const mount=document.getElementById("tableMount");
       const mode=mount.dataset.mode==="all"?"all":"last";
@@ -548,19 +783,19 @@
       const maxPerRound=toShow.map(r=>{let m=-Infinity;rows.forEach(row=>{m=Math.max(m,row.perRound[r]||0)});return m===-Infinity?0:m});
 
       const leftHeader = `
-        <div class="hdr">
-          <div class="cell left rank">Hely</div>
+        <div class="hdr" style="display:grid;grid-template-columns:${leftCols()};">
+          <div class="cell left">Hely</div>
           <div class="cell left">Játékos</div>
-          <div class="cell left num"><span class="hdr-click" title="Összes pont">Összesen</span></div>
-          <div class="cell left num">Bónusz (pont + %)</div>
-          <div class="cell left num">Alap pont</div>
+          <div class="cell num">Összesen</div>
+          <div class="cell num">Bónusz (pont + %)</div>
+          <div class="cell num">Alap pont</div>
         </div>`;
 
       const rightHeader = toShow.map((r,ix)=>{
         const active = (sortBy.type==='round' && String(sortBy.round)===String(r));
-        const label = active ? 'x' : '▼';
+        const label = active ? '✕' : '▼';
         const title = active ? `Vissza az alap rendezésre` : `Rendezés F${r} szerint (csökkenő)`;
-        return `<div class="cell round-cell ${ix===0?'first-col':''} ${active?'sorted':''}">
+        return `<div class="cell round-cell ${ix===0?'first-col':''} ${active?'sorted':''}" style="text-align:right">
                   <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(r)}">F${r}</a>
                   <button class="round-sort" data-round="${r}" title="${title}">${label}</button>
                 </div>`;
@@ -568,22 +803,26 @@
 
       const container = document.createElement('div'); container.className = 'table-wrap';
 
-      /* LEFT (sticky) */
+      /* LEFT (sticky-szerű grid) */
       const left = document.createElement('div');
       left.className = 'left';
+      left.style.position = 'sticky';
+      left.style.left = '0';
+      left.style.zIndex = '3';
       left.innerHTML = `
-        <div class="grid" style="grid-template-columns:${leftCols()};">
+        <div class="grid" style="display:block">
           ${leftHeader}
           ${rows.map((r,i)=> renderLeftRow(r,i)).join('')}
         </div>
       `;
 
-      /* RIGHT (scroll) */
+      /* RIGHT (scrollable rounds) */
       const rcw = roundCellWidth();
       const right = document.createElement('div');
+      right.style.overflow = 'hidden';
       right.innerHTML = `
-        <div class="grid rounds" style="grid-template-columns:${(`${rcw}px `).repeat(toShow.length)};">
-          <div class="hdr">${rightHeader}</div>
+        <div class="grid rounds" style="display:grid;grid-template-columns:${(`${rcw}px `).repeat(toShow.length)};">
+          <div class="hdr" style="display:contents">${rightHeader}</div>
           ${rows.map(r=>{
             const cells = toShow.map((rid, idx)=>{
               const val = r.perRound[rid]||0;
@@ -593,7 +832,7 @@
                         <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
                       </div>`;
             }).join('');
-            return `<div class="row row-bg">${cells}</div>`;
+            return `<div class="row row-bg" style="display:contents">${cells}</div>`;
           }).join('')}
         </div>
       `;
@@ -601,15 +840,22 @@
       mount.innerHTML = '';
       const outer = document.createElement('div');
       outer.className = 'table-outer';
-      container.appendChild(left);
-      container.appendChild(right);
-      outer.appendChild(container);
+      outer.style.overflowX = 'auto';
+      outer.style.webkitOverflowScrolling = 'touch';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'table-wrap';
+      wrap.style.display = 'flex';
+      wrap.style.minWidth = '900px';
+
+      wrap.appendChild(left);
+      wrap.appendChild(right);
+      outer.appendChild(wrap);
       mount.appendChild(outer);
 
-      /* --- Rendezés események --- */
-      // Váltókapcsoló: ▼ -> adott forduló szerint (desc), x -> vissza alapra
+      /* --- Rendezés események (váltókapcsoló: ▼ -> adott forduló (desc), ✕ -> vissza alap) --- */
       mount.querySelectorAll('.round-sort[data-round]').forEach(btn=>{
-        btn.addEventListener('click', (e)=>{
+        btn.addEventListener('click',(e)=>{
           e.preventDefault();
           const rid = btn.getAttribute('data-round');
           if (sortBy.type==='round' && String(sortBy.round)===String(rid)){
@@ -633,49 +879,49 @@
     }
 
     function renderLeftRow(r,i){
-      const crest = r.fav && crestFor(r.fav) ? `<img class="name-crest" src="${crestFor(r.fav)}" alt="${escapeHtml(r.fav)}">` : "";
+      const crest = r.fav && crestFor(r.fav) ? `<img class="name-crest" src="${crestFor(r.fav)}" alt="${escapeHtml(r.fav)}" style="width:22px;height:22px;object-fit:contain;border-radius:6px;border:1px solid var(--line);background:#fff;flex:0 0 auto">` : "";
       let playerHtml = "";
 
       if(r.isBot){
         const meta = BOT_META[r.nick] || {};
         const av = meta.avatar
-          ? `<img class="avatar-mini" src="${meta.avatar}" ${meta.avatar2x ? `srcset="${meta.avatar} 1x, ${meta.avatar2x} 2x"` : ""} alt="${escapeHtml(r.nick)}" loading="lazy" decoding="async">`
+          ? `<img class="avatar-mini" src="${meta.avatar}" ${meta.avatar2x ? `srcset="${meta.avatar} 1x, ${meta.avatar2x} 2x"` : ""} alt="${escapeHtml(r.nick)}" loading="lazy" decoding="async" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--line);object-fit:cover;flex:0 0 auto">`
           : "";
         playerHtml = `
-          <div class="player-flex">
-            <div class="player-main">
+          <div class="player-flex" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 10px;width:100%;min-width:0">
+            <div class="player-main" style="display:flex;align-items:center;gap:6px;min-width:0">
               ${av}
-              <span class="name-subtle">${escapeHtml(r.nick)}</span>
+              <span class="name-subtle" style="font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.nick)}</span>
             </div>
-            <div class="player-actions">
-              <button class="link-btn bot-btn" data-bot-card="${escapeHtml(r.nick)}">Profil</button>
-              <button class="link-btn bot-btn" data-bot-view="${escapeHtml(r.nick)}">Tippjei</button>
+            <div class="player-actions" style="display:flex;gap:6px;flex-wrap:nowrap;justify-self:end">
+              <button class="link-btn bot-btn" data-bot-card="${escapeHtml(r.nick)}" style="font-size:11px;padding:4px 8px;border:1px solid rgba(59,130,246,.4);border-radius:8px;background:color-mix(in oklab,var(--accent) 15%, white);cursor:pointer;line-height:1.1;color:var(--accent);font-weight:700">Profil</button>
+              <button class="link-btn bot-btn" data-bot-view="${escapeHtml(r.nick)}" style="font-size:11px;padding:4px 8px;border:1px solid rgba(59,130,246,.4);border-radius:8px;background:color-mix(in oklab,var(--accent) 15%, white);cursor:pointer;line-height:1.1;color:var(--accent);font-weight:700">Tippjei</button>
             </div>
           </div>`;
       }else{
         playerHtml = `
-          <div class="player-flex">
-            <div class="player-main">
+          <div class="player-flex" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 10px;width:100%;min-width:0">
+            <div class="player-main" style="display:flex;align-items:center;gap:6px;min-width:0">
               ${crest}
-              <span class="name-text">${escapeHtml(r.nick)}</span>
+              <span class="name-text" style="font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.nick)}</span>
             </div>
           </div>`;
       }
 
       const bonusCell = r.isBot
-        ? `+0.00 <span class="muted">( +0% )</span>`
-        : `<button class="bonus-chip" data-idx="${i}" title="Bónusz részletek">
-             +${fmt(r.bonusPts)} <span class="muted">(+${r.bonusPct}%)</span>
+        ? `+0.00 <span class="muted" style="color:#334155;opacity:.7">( +0% )</span>`
+        : `<button class="bonus-chip" data-idx="${i}" title="Bónusz részletek" style="background:var(--accent);color:#fff;border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.08);padding:6px 10px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+             +${fmt(r.bonusPts)} <span class="muted" style="color:#fff;opacity:1">(+${r.bonusPct}%)</span>
              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="margin-left:4px"><path d="M7 10l5 5 5-5z"/></svg>
            </button>`;
 
       return `
-        <div class="row row-bg">
-          <div class="cell left rank">${i+1}.</div>
+        <div class="row row-bg" style="display:grid;grid-template-columns:${leftCols()};border-bottom:1px solid var(--line)">
+          <div class="cell left" style="color:#64748b">${i+1}.</div>
           <div class="cell left player-cell">${playerHtml}</div>
-          <div class="cell left num total">${fmt(r.total)}</div>
-          <div class="cell left num bonus-cell">${bonusCell}</div>
-          <div class="cell left num">${fmt(r.base)}</div>
+          <div class="cell num" style="font-weight:800">${fmt(r.total)}</div>
+          <div class="cell num bonus-cell">${bonusCell}</div>
+          <div class="cell num">${fmt(r.base)}</div>
         </div>
       `;
     }
@@ -686,30 +932,43 @@
 
       const backdrop=document.createElement("div");
       backdrop.className="bonus-backdrop";
+      backdrop.style.position="fixed";
+      backdrop.style.inset="0";
+      backdrop.style.zIndex="9998";
+      backdrop.style.background="transparent";
       backdrop.addEventListener("click",closeBonusPopover);
 
       const pop=document.createElement("div");
       pop.className="bonus-pop";
+      pop.style.position="fixed";
+      pop.style.zIndex="9999";
+      pop.style.width="min(460px, calc(100vw - 32px))";
+      pop.style.background="#fff";
+      pop.style.border="1px solid var(--line)";
+      pop.style.borderRadius="12px";
+      pop.style.boxShadow="0 14px 40px rgba(0,0,0,.22)";
+      pop.style.padding="12px";
+
       const stW=row.parts.winner.status;const clW=stW==='ok'?'ok':(stW==='pending'?'pending':'no');const icW=stW==='ok'?'✔':(stW==='pending'?'🕒':'✖');
       const stG=row.parts.topScorer.status;const clG=stG==='ok'?'ok':(stG==='pending'?'pending':'no');const icG=stG==='ok'?'✔':(stG==='pending'?'🕒':'✖');
 
       pop.innerHTML=`
-        <div class="title">${escapeHtml(row.nick)} – Bónusz összefoglaló</div>
-        <div class="grid2">
+        <div class="title" style="font-weight:800;margin-bottom:8px">${escapeHtml(row.nick)} – Bónusz összefoglaló</div>
+        <div class="grid2" style="display:grid;grid-template-columns:140px 1fr;gap:8px 12px;align-items:center">
           <div class="muted-xs">Képlet</div>
           <div><strong>${fmt(row.base)} × ${row.bonusPct}% = +${fmt(row.bonusPts)}</strong></div>
 
           <div class="muted-xs">Végső győztes</div>
-          <div><span class="btag ${clW}">🏆 ${icW} +${row.parts.winner.pct}%</span> <span class="muted-xs">Tipped: <strong>${escapeHtml(row.parts.winner.pick||'—')}</strong> • Official: <strong>${escapeHtml(row.parts.winner.official||'—')}</strong></span></div>
+          <div><span class="btag ${clW}" style="display:inline-flex;gap:6px;align-items:center;font-weight:700;font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#334155">${icW} +${row.parts.winner.pct}%</span> <span class="muted-xs" style="color:#64748b;font-size:12px">Tipped: <strong>${escapeHtml(row.parts.winner.pick||'—')}</strong> • Official: <strong>${escapeHtml(row.parts.winner.official||'—')}</strong></span></div>
 
           <div class="muted-xs">Gólkirály</div>
-          <div><span class="btag ${clG}">⚽ ${icG} +${row.parts.topScorer.pct}%</span> <span class="muted-xs">Tipped: <strong>${escapeHtml(row.parts.topScorer.pick||'—')}</strong> • Official: <strong>${escapeHtml(row.parts.topScorer.official||'—')}</strong></span></div>
+          <div><span class="btag ${clG}" style="display:inline-flex;gap:6px;align-items:center;font-weight:700;font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#334155">${icG} +${row.parts.topScorer.pct}%</span> <span class="muted-xs" style="color:#64748b;font-size:12px">Tipped: <strong>${escapeHtml(row.parts.topScorer.pick||'—')}</strong> • Official: <strong>${escapeHtml(row.parts.topScorer.official||'—')}</strong></span></div>
 
           <div class="muted-xs">Top 8</div>
-          <div><span class="btag">📈 ${row.parts.top8.hits} találat</span> <span class="muted-xs">(+${row.parts.top8.pct}%)</span></div>
+          <div><span class="btag" style="display:inline-flex;gap:6px;align-items:center;font-weight:700;font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#334155">📈 ${row.parts.top8.hits} találat</span> <span class="muted-xs" style="color:#64748b;font-size:12px">(+${row.parts.top8.pct}%)</span></div>
 
           <div class="muted-xs">Összes bónusz</div>
-          <div><strong>+${fmt(row.bonusPts)} <span class="muted-xs">( +${row.bonusPct}% )</span></strong></div>
+          <div><strong>+${fmt(row.bonusPts)} <span class="muted-xs" style="color:#64748b;font-size:12px">( +${row.bonusPct}% )</span></strong></div>
         </div>
       `;
 
@@ -717,8 +976,9 @@
       document.body.appendChild(pop);
 
       const popW = Math.min(460, window.innerWidth-32);
+      const rectH = 0;
       let left = Math.max(16, Math.min(clientX - popW, window.innerWidth - popW - 16));
-      let top  = Math.max(16, Math.min(clientY + 8, window.innerHeight - pop.clientHeight - 16));
+      let top  = Math.max(16, Math.min(clientY + 8, window.innerHeight - (rectH||300) - 16));
       pop.style.width = popW + 'px';
       pop.style.left  = left + 'px';
       pop.style.top   = top + 'px';
@@ -745,7 +1005,6 @@
     /* ---- Chat ---- */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
-      const fabBadge = document.getElementById('chatFabBadge');
       const panel = document.getElementById('chatPanel');
       const closeBtn = document.getElementById('chatClose');
       const listEl = document.getElementById('chatMessages');
@@ -769,12 +1028,8 @@
           empty.textContent = 'Még nincs üzenet. Légy te az első!';
           listEl.appendChild(empty);
         } else {
-          let unread = 0;
           snap.forEach(docu=>{
             const d = docu.data();
-            const tsMs = d.ts?.toMillis?.() || 0;
-            if (tsMs > lastSeenMs) unread++;
-
             const row = document.createElement('div');
             row.className = 'msg';
             row.innerHTML = `
@@ -787,21 +1042,12 @@
               const del = document.createElement('button');
               del.className = 'del';
               del.textContent = 'Törlés';
-              del.title = 'Üzenet törlése';
+              del.style.cssText = 'margin-left:auto;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:2px 8px;border-radius:8px;font-size:12px;cursor:pointer;display:inline-block';
               del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch(e){} });
               row.appendChild(del);
             }
             listEl.appendChild(row);
           });
-
-          if (!panel.classList.contains('open') && unread > 0){
-            fab?.classList.add('has-unread');
-            if (fabBadge) fabBadge.textContent = unread > 99 ? '99+' : String(unread);
-          } else {
-            fab?.classList.remove('has-unread');
-            if (fabBadge) fabBadge.textContent = '';
-          }
-
           setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
         }
       });
@@ -810,8 +1056,6 @@
         try{
           await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true });
           lastSeenMs = Date.now();
-          fab?.classList.remove('has-unread');
-          if (fabBadge) fabBadge.textContent = '';
         }catch(e){}
       }
 
@@ -844,7 +1088,7 @@
                         <p style="margin:0;">${escapeHtml(meta.bio||"")}</p>`;
 
       pop.style.top = '0px'; pop.style.left = '0px';
-      pop.classList.add('open');
+      pop.style.display = 'block';
       const r = anchorEl.getBoundingClientRect();
       const margin = 10;
       const pw = pop.offsetWidth, ph = pop.offsetHeight;
@@ -855,7 +1099,7 @@
       pop.style.top  = `${Math.round(top)}px`;
       pop.style.left = `${Math.round(left)}px`;
     }
-    function closeBotCard(){ const pop = document.getElementById('botCard'); pop.classList.remove('open'); pop.removeAttribute('data-name'); }
+    function closeBotCard(){ const pop = document.getElementById('botCard'); pop.style.display='none'; pop.removeAttribute('data-name'); }
     function openBotModal(botName){
       const modal = document.getElementById('botModal');
       const title = document.getElementById('botModalTitle');
@@ -869,16 +1113,11 @@
         let html = "";
         rounds.forEach(r=>{
           html += `<h3 style="margin:12px 0 6px;font-weight:800;">Forduló ${r}</h3>`;
-          html += `<div class="grid" style="grid-template-columns:1.4fr 1.4fr 80px 80px 90px 90px;">
-            <div class="hdr"><div class="cell">Hazai</div></div>
-            <div class="hdr"><div class="cell">Vendég</div></div>
-            <div class="hdr"><div class="cell">Tipp</div></div>
-            <div class="hdr"><div class="cell">Odds</div></div>
-            <div class="hdr"><div class="cell">Dupla</div></div>
-            <div class="hdr"><div class="cell">Eredmény</div></div>`;
+          html += `<div class="grid" style="display:grid;grid-template-columns:1.4fr 1.4fr 80px 80px 90px 90px;">
+            <div class="hdr" style="display:contents"><div class="cell">Hazai</div><div class="cell">Vendég</div><div class="cell">Tipp</div><div class="cell">Odds</div><div class="cell">Dupla</div><div class="cell">Eredmény</div></div>`;
           (data[r]||[]).forEach(x=>{
             html += `
-              <div class="row row-bg">
+              <div class="row row-bg" style="display:contents">
                 <div class="cell">${escapeHtml(x.homeTeam||"")}</div>
                 <div class="cell">${escapeHtml(x.awayTeam||"")}</div>
                 <div class="cell">${escapeHtml(x.pick||"")}</div>
@@ -891,125 +1130,12 @@
         });
         body.innerHTML = html;
       }
-      modal.classList.add('open');
+      modal.style.display='flex';
     }
-    function closeBotModal(){ document.getElementById('botModal').classList.remove('open'); }
+    function closeBotModal(){ document.getElementById('botModal').style.display='none'; }
   </script>
-</head>
-<body>
-  <div class="layout">
-    <div class="header">
-      <div class="header-left">
-        <img id="favCrest" class="fav-crest" alt="" hidden>
-        <div>
-          <h1>BL TippLiga</h1>
-          <p id="welcome" class="welcome"></p>
-        </div>
-        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BALRA, mint a Dashboardon -->
-        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
-      </div>
-      <div>
-        <button id="logout" class="btn-accent" aria-label="Kilépés">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
-          </svg>
-          Kilépés
-        </button>
-      </div>
-    </div>
 
-    <nav class="nav-grid">
-      <a class="nav-card" href="dashboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></div>
-        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
-      </a>
-      <a class="nav-card" href="positions_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg></div>
-        <div class="text">
-          <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
-          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
-        </div>
-      </a>
-      <a class="nav-card" href="matches_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg></div>
-        <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
-      </a>
-      <a class="nav-card" href="results_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0  0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg></div>
-        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
-      </a>
-      <a class="nav-card" href="leaderboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2Z"/></svg></div>
-        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
-      </a>
-      <a class="nav-card" href="profile_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg></div>
-        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
-      </a>
-      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0  0 1 4-4Z"/></svg></div>
-        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
-      </a>
-    </nav>
-
-    <!-- Ranglista -->
-    <section class="card">
-      <div class="subhdr">
-        <button id="toggleAll" class="btn">Mutasd az összes fordulót</button>
-        <label style="display:flex;align-items:center;gap:6px;font-size:14px;user-select:none;">
-          <input type="checkbox" id="showBots"> Mutasd a gépi tippelőket (Elek, Hugó, Ilona, Vendel)
-        </label>
-        <span id="rangeLabel" class="welcome"></span>
-      </div>
-      <div id="tableMount" data-mode="last"></div>
-      <div style="padding:8px 12px;font-size:12px;color:var(--muted,#64748b)">⭐ = adott forduló legmagasabb pontja</div>
-    </section>
-  </div>
-
-  <!-- Chat -->
-  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
-  </button>
-
-  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
-    <div class="chat-head">
-      <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" class="close-x" aria-label="Bezárás">✕</button>
-    </div>
-    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
-    <div id="chatComposer">
-      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
-      <button id="chatSendBtn">Küldés</button>
-    </div>
-  </section>
-
-  <!-- Bot modál és kártya -->
-  <div id="botModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="botModalTitle">
-      <div class="modal-head">
-        <div id="botModalTitle" class="modal-title"></div>
-        <button class="close-x" aria-label="Bezárás">✕</button>
-      </div>
-      <div id="botModalBody" class="modal-body"></div>
-    </div>
-  </div>
-
-  <div id="botCard" class="bot-card" role="dialog" aria-modal="false" aria-hidden="true">
-    <div class="head">
-      <img class="avatar bc-img" alt="">
-      <div>
-        <div class="title bc-title"></div>
-        <div class="tag">Gépi tippelő</div>
-      </div>
-    </div>
-    <div class="body"><p class="bc-intro" style="margin:0;"></p></div>
-    <div class="actions">
-      <button class="link-btn bot-btn" data-bc-open-tips>Mutasd a tippjeit</button>
-      <button class="link-btn btn-accent" data-bc-close>Bezár</button>
-    </div>
-  </div>
-
+  <!-- Opcionális naplózó, ha használtok -->
   <script type="module" src="logger.js"></script>
 </body>
 </html>
