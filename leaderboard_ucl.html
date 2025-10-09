@@ -30,10 +30,10 @@
     @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
     .nav-card{display:flex;gap:12px;align-items:flex-start;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05);min-width:0}
-    /* ⬇️ Csak desktopon igazítjuk középre, mint a dashboardon */
+    /* ⬇️ Csak desktopon középre igazítjuk és NEM törjük a címet (Összpontszám egy sorban marad) */
     @media (min-width:701px){
       .nav-card{align-items:center}
-      .nav-card .title{line-height:1.15}
+      .nav-card .title{white-space:nowrap}
       .nav-card .desc{margin-top:2px}
     }
     .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent,#3b82f6) 15%, white);color:var(--accent,#3b82f6);border:1px solid var(--line,#e6eaf1);flex:0 0 auto}
@@ -85,7 +85,7 @@
     .player-cell{height:48px}
     @media (max-width:900px){.player-cell{height:auto}}
 
-    /* Bónusz – kontrasztos és látható */
+    /* Bónusz – legyen kontrasztos és látható */
     .bonus-chip{background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);box-shadow:0 6px 18px rgba(0,0,0,.08);padding:6px 10px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
     .bonus-chip .muted{color:#fff;opacity:1}
 
@@ -93,7 +93,7 @@
     .grid.rounds .round-cell{border-left:1px solid var(--line,#e6eaf1)}
     .grid.rounds .round-cell.first-col{border-left:0}
 
-    /* Rendező gomb – egységes stílus (▼ és x ugyanúgy) */
+    /* --- Rendező gomb – egységes stílus (▼ és x ugyanúgy) --- */
     .round-sort{
       font-size:14px;
       padding:4px 9px;
@@ -111,6 +111,7 @@
     }
     .round-sort:hover{background:#f1f5f9}
     .round-sort:focus-visible{outline:2px solid var(--accent,#3b82f6);outline-offset:2px}
+    /* Aktív rendezésnél a cella kap halvány háttért – a gomb külseje változatlan */
     .grid.rounds .cell.sorted{background:#f0f7ff}
     .grid.rounds .cell.sorted.top{background:#e7f1ff}
 
@@ -257,7 +258,7 @@
     let botPickStore={};
 
     /* RENDEZÉS ÁLLAPOT */
-    let sortBy = { type:'total', round:null, dir:'desc' };
+    let sortBy = { type:'total', round:null, dir:'desc' }; // 'total' | 'round' ; 'desc'
 
     /* NAV top8 visszaszámláló */
     let POS_LOCK={active:false,until:null};
@@ -321,7 +322,7 @@
         rows.sort((a,b)=>{
           const av = Number(a.perRound?.[rid]||0);
           const bv = Number(b.perRound?.[rid]||0);
-          if (av !== bv) return (bv-av); // csökkenő
+          if (av !== bv) return (bv-av); // mindig csökkenő
           if (b.total !== a.total) return b.total - a.total;
           return a.nick.localeCompare(b.nick,'hu');
         });
@@ -657,6 +658,7 @@
       mount.appendChild(outer);
 
       /* --- Rendezés események --- */
+      // Váltókapcsoló: ▼ -> adott forduló szerint (desc), x -> vissza alapra
       mount.querySelectorAll('.round-sort[data-round]').forEach(btn=>{
         btn.addEventListener('click', (e)=>{
           e.preventDefault();
@@ -979,16 +981,16 @@
           <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
         </div>
       </a>
-      <a class="nav-card" href="matches_ucl.html" id="matchesCard">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0  0 0 0-20Z"/></svg></div>
+      <a class="nav-card" href="matches_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg></div>
         <div class="text"><span class="title">Meccstippek <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
       </a>
       <a class="nav-card" href="results_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0  0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg></div>
         <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
       </a>
       <a class="nav-card" href="leaderboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0  0 1-5 5h-1a6 6 0  0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2Z"/></svg></div>
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2Z"/></svg></div>
         <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
       </a>
       <a class="nav-card" href="profile_ucl.html">
