@@ -152,6 +152,17 @@
       return first ? (new Date() >= first) : false;
     }
 
+    let matchStartById = new Map();
+    function isMatchStartedById(matchId){
+      const s = matchStartById.get(String(matchId));
+      return s ? (new Date() >= s) : false;
+    }
+    function hasRoundFrozenDouble(roundKey){
+      const id = doublesByRound.get(String(roundKey));
+      if (!id) return false;
+      return isMatchStartedById(id);
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       const mount = document.getElementById('leagueSwitchMount');
       if (mount) initLeagueSwitcher({ mountTarget: mount });
@@ -210,12 +221,14 @@
           }
 
           earliestStartByRound.clear();
+          matchStartById.clear();
           const allSnap = await getDocs(query(collection(db,"matches"), orderBy("startTime","asc")));
           allSnap.forEach(docu=>{
             const m = docu.data();
             const r = matchRound(m);
             const start = m.startTime?.toDate ? m.startTime.toDate() : new Date(m.startTime);
             if (!r || !start) return;
+            matchStartById.set(String(docu.id), start);
             const prev = earliestStartByRound.get(r);
             if (!prev || start < prev) earliestStartByRound.set(r, start);
           });
@@ -299,9 +312,15 @@
         row.appendChild(right);
         wrap.appendChild(row);
 
-        if (isRoundLocked(roundStr)) {
+        if (isMatchStartedById(m.id)) {
           dbl.disabled = true;
-          dbl.title = "Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).";
+          dbl.title = "Ez a meccs már elkezdődött, erre nem duplázhatsz.";
+        }
+        const frozen = hasRoundFrozenDouble(String(roundStr));
+        const currentDoubleId = doublesByRound.get(String(roundStr));
+        if (frozen && currentDoubleId !== m.id) {
+          dbl.disabled = true;
+          dbl.title = "A duplád ebben a fordulóban már rögzült (a duplának jelölt meccs elkezdődött).";
         }
 
         select.addEventListener("change", async ()=>{
@@ -310,25 +329,38 @@
 
         dbl.addEventListener("change", async ()=>{
           const rKey = String(roundStr);
+          const frozenNow = hasRoundFrozenDouble(rKey);
+          const currentId = doublesByRound.get(rKey);
+          const thisStarted = isMatchStartedById(m.id);
 
-          if (isRoundLocked(rKey)) {
-            const lockedId = doublesByRound.get(rKey);
-            const shouldBeChecked = lockedId === m.id;
-            dbl.checked = !!shouldBeChecked;
-            alert("Ebben a fordulóban a duplázás már lezárt (az első meccs elkezdődött).");
-            return;
-          }
-
-          if (dbl.checked){
+          if (dbl.checked) {
+            if (thisStarted) {
+              dbl.checked = false;
+              alert("Ez a meccs már elkezdődött, erre nem duplázhatsz.");
+              return;
+            }
+            if (frozenNow && currentId !== m.id) {
+              dbl.checked = false;
+              alert("A forduló duplája már rögzült, mert a duplának jelölt meccs elkezdődött.");
+              return;
+            }
             reflectDoubleStateForRound(rKey, m.id);
             await enforceSingleDouble(rKey, m.id);
             doublesByRound.set(rKey, m.id);
-          } else {
-            if (doublesByRound.get(rKey) === m.id) {
-              doublesByRound.delete(rKey);
-            }
+            await saveTipWithAudit(m, select.value, true, saved);
+            return;
           }
-          await saveTipWithAudit(m, select.value, dbl.checked, saved);
+
+          if (currentId === m.id && isMatchStartedById(m.id)) {
+            dbl.checked = true;
+            alert("Ezt a duplát már nem lehet levenni, mert a meccs elkezdődött.");
+            return;
+          }
+
+          if (currentId === m.id) {
+            doublesByRound.delete(rKey);
+          }
+          await saveTipWithAudit(m, select.value, false, saved);
         });
 
         const locked = doublesByRound.get(String(roundStr));
@@ -683,4 +715,3 @@
   <script type="module" src="logger.js"></script>
 </body>
 </html>
-
