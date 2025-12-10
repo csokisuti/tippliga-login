@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <title>BL TippLiga</title>
+
+  <link rel="stylesheet" href="style-themed.css" />
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="fav2.png" sizes="16x16">
+  <link rel="icon" type="image/png" href="fav2.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="fav2.png">
+  <script src="loader.js" defer></script>
+
+  <style>
+    .layout{display:flex;flex-direction:column;gap:16px;max-width:1200px;margin:0 auto;padding:20px}
+    .content-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+    @media (max-width:900px){.content-grid{grid-template-columns:1fr}}
+
+    .card{border-radius:14px;border:1px solid var(--line,#e6eaf1);background:#fff;box-shadow:0 6px 25px rgba(15,23,42,.04);padding:16px 18px}
+    .card h3{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--text,#0f172a)}
+    .card p{margin:0}
+
+    .header-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .user-info{display:flex;align-items:center;gap:10px;min-width:0}
+    .user-info-main{min-width:0}
+    .user-row{display:flex;flex-direction:column}
+    .user-name{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .user-email{font-size:12px;color:var(--muted,#64748b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fav-row{display:flex;align-items:center;gap:8px;margin-top:2px}
+    .fav-label{font-size:12px;color:var(--muted,#64748b)}
+    .fav-team{font-size:13px;font-weight:600}
+    .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
+    .welcome{color:var(--muted,#64748b);margin:4px 0 0}
+
+    /* liga-váltó balra, a cím mellé */
+    .league-switch-left{margin-left:8px}
+    @media (max-width:700px){.league-switch-left{width:100%;margin-left:0}}
+
+    .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;padding:10px 12px;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05);background:#fff;color:var(--text,#0f172a);transition:transform .08s ease,box-shadow .08s ease,border-color .08s ease,background .08s ease}
+    .nav-card:hover{transform:translateY(-1px);box-shadow:0 10px 30px rgba(15,23,42,.08);border-color:var(--accent,#3b82f6);background:linear-gradient(135deg,#ffffff,#f9fbff)}
+    .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 0 0,#dbeafe 0,#bfdbfe 40%,#eff6ff 100%);color:#1d4ed8;border:1px solid rgba(59,130,246,.2)}
+    .nav-card .icon-wrap::after{content:"";position:absolute;inset:6px;border-radius:inherit;border:1px dashed rgba(255,255,255,.8);opacity:.8}
+    .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
+    .nav-card .title{font-weight:800}
+    .nav-card .desc{font-size:12px;color:var(--muted,#64748b);margin-top:2px}
+    .pill-badge{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:rgba(15,23,42,.02);font-size:11px;font-weight:500;color:var(--muted,#64748b);margin-left:4px}
+    .pill-badge svg{width:12px;height:12px}
+
+    .table-wrap{overflow:auto}
+    .table-wrap table{width:100%;border-collapse:separate;border-spacing:0;min-width:500px}
+    .table-wrap th,.table-wrap td{padding:6px 8px;font-size:13px;text-align:right;border-bottom:1px solid var(--line,#e6eaf1);white-space:nowrap}
+    .table-wrap th:first-child,.table-wrap td:first-child{text-align:left}
+    .table-wrap th:nth-child(2),.table-wrap td:nth-child(2){text-align:left}
+    .table-wrap thead{background:linear-gradient(180deg,#f9fafb,#f3f4f6)}
+    .table-wrap thead th{position:sticky;top:0;z-index:1}
+    .table-wrap tbody tr:nth-child(even){background:#f9fafb}
+    .table-wrap tbody tr:hover{background:#eff6ff}
+
+    .pos-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;border:1px solid var(--line,#e5e7eb);background:#f9fafb;font-size:12px;font-weight:600}
+    .pos-1{background:#fef3c7;border-color:#facc15}
+    .pos-2,.pos-3,.pos-4{background:#ecfdf5;border-color:#22c55e}
+    .pos-5,.pos-6,.pos-7,.pos-8{background:#eff6ff;border-color:#3b82f6}
+
+    .points-strong{font-weight:700}
+
+    /* Countdown badge */
+    .countdown{background:#fef3c7;border-color:#facc15;color:#92400e}
+    .countdown svg{color:#f59e0b}
+
+    /* Facebook feed placeholder */
+    #facebookFeedContainer{min-height:160px;border-radius:10px;border:1px dashed var(--line,#e6eaf1);display:flex;align-items:center;justify-content:center;color:var(--muted,#64748b);font-size:13px;padding:12px;text-align:center}
+
+    .onb-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:50}
+    .onb-backdrop.open{display:flex}
+    .onb-dialog{max-width:420px;width:100%;background:#fff;border-radius:16px;box-shadow:0 18px 55px rgba(15,23,42,.35);padding:18px 18px 14px}
+    .onb-head{font-weight:800;font-size:17px;margin-bottom:8px}
+    .onb-body{font-size:14px;color:var(--muted,#64748b);margin-bottom:12px}
+    .onb-footer{display:flex;justify-content:flex-end;gap:8px}
+    .onb-footer .btn{font-size:13px}
+
+    .btn{appearance:none;border:1px solid var(--line,#e6eaf1);background:#fff;color:var(--text,#0f172a);padding:7px 10px;border-radius:999px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .btn.primary{background:var(--accent,#3b82f6);border-color:var(--accent,#3b82f6);color:#fff}
+    .btn.outline{background:transparent}
+    .btn svg{width:16px;height:16px}
+
+    /* Favorite badge */
+    .fav-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#f9fafb;font-size:11px;color:var(--muted,#64748b);margin-top:4px}
+    .fav-pill svg{width:13px;height:13px;color:#facc15}
+
+    /* League switcher mount */
+    #leagueSwitchMount{display:inline-block}
+
+    /* új: BL ágrajz */
+    .bracket-card{margin-top:12px}
+    .bracket-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;overflow-x:auto}
+    .bracket-round{display:flex;flex-direction:column;gap:8px}
+    .bracket-round-title{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--muted,#64748b)}
+    .bracket-tie{border-radius:10px;border:1px solid var(--line,#e6eaf1);background:#ffffff;padding:6px 8px;box-shadow:0 1px 2px rgba(15,23,42,.08)}
+    .bracket-team{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:13px}
+    .bracket-team-name{display:flex;align-items:center;gap:6px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bracket-team img{width:18px;height:18px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#fff}
+    .bracket-score{font-variant-numeric:tabular-nums;font-size:13px}
+    .bracket-meta{margin-top:4px;font-size:11px;color:var(--muted,#64748b);display:flex;justify-content:space-between;align-items:center;gap:6px}
+    .bracket-pill{border-radius:999px;padding:2px 6px;border:1px solid var(--line,#e6eaf1);background:#f9fafb;font-size:10px;white-space:nowrap}
+    .bracket-pen{font-size:10px;font-weight:600;color:#b91c1c}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div class="header-row">
+      <div class="user-info">
+        <img id="favCrest_ucl" class="fav-crest" src="fav2.png" alt="Kedvenc címere">
+        <div class="user-info-main">
+          <div class="user-row">
+            <div class="user-name" id="userNick">–</div>
+            <div class="user-email" id="userEmail">–</div>
+          </div>
+          <div class="fav-row">
+            <span class="fav-label">Kedvenc BL-csapat:</span>
+            <span class="fav-team" id="favTeamLabel">–</span>
+          </div>
+          <div id="favPill_ucl" class="fav-pill" hidden>
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10 2.5l2.39 4.84 5.34.78-3.86 3.76.91 5.32L10 14.77l-4.78 2.51.91-5.32-3.86-3.76 5.34-.78L10 2.5z"/>
+            </svg>
+            <span>Beállítva</span>
+          </div>
+        </div>
+      </div>
+      <div class="user-actions">
+        <div id="leagueSwitchMount" class="league-switch-left"></div>
+      </div>
+    </div>
+
+    <p class="welcome">Itt látod a BL ligatáblát, a saját profilod adatait és a kedvenc csapatod híreit.</p>
+
+    <nav class="nav-grid">
+      <a class="nav-card" href="dashboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z" fill="currentColor"/></svg></div>
+        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
+      </a>
+      <a id="positionsCard" class="nav-card" href="positions_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z" fill="currentColor"/></svg></div>
+        <div class="text">
+          <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
+          <span class="desc">Top8, BL-győztes, gólkirály</span>
+        </div>
+      </a>
+      <a class="nav-card" href="matches_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 4h14a2 2 0 0 1 2 2v2H3V6a2 2 0 0 1 2-2zm-2 8h18v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4z" fill="currentColor"/></svg></div>
+        <div class="text"><span class="title">Meccsek & tippek</span><span class="desc">Aktuális fordulók</span></div>
+      </a>
+      <a class="nav-card" href="results_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v4H4zm0 6h10v4H4zm0 6h7v4H4z" fill="currentColor"/></svg></div>
+        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti pontok</span></div>
+      </a>
+      <a class="nav-card" href="leaderboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 14h4v7H4zm6-5h4v12h-4zm6-7h4v19h-4z" fill="currentColor"/></svg></div>
+        <div class="text"><span class="title">Össz pontszám</span><span class="desc">Ranglista, statisztika</span></div>
+      </a>
+      <a class="nav-card" href="profile.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 12a4 4 0 1 0-4-4 4.003 4.003 0 0 0 4 4zm-7 8a7 7 0 0 1 14 0z" fill="currentColor"/></svg></div>
+        <div class="text"><span class="title">Profil</span><span class="desc">Becenév, kedvenc csapat, beállítások</span></div>
+      </a>
+    </nav>
+
+    <section class="card bracket-card">
+      <h3>BL kieséses ágrajz</h3>
+      <div id="bracketContainer" class="bracket-grid"></div>
+    </section>
+
+    <div class="content-grid">
+      <section class="card table-wrap">
+        <h3>BL tabella</h3>
+        <div id="tableContainer"></div>
+      </section>
+      <section class="card">
+        <h3>Csapatod hírei</h3>
+        <div id="facebookFeedContainer"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Onboarding (BL) -->
+  <div id="onbFav_ucl" class="onb-backdrop" aria-modal="true" role="dialog" aria-labelledby="onbFavTitle_ucl">
+    <div class="onb-dialog">
+      <div class="onb-head" id="onbFavTitle_ucl">Üdv a BL TippLigában! 🎉</div>
+      <div class="onb-body">
+        <div>Először <strong>válaszd ki a kedvenc BL-csapatod</strong>, hogy a tabella és a hírek személyre szabva jelenjenek meg.</div>
+        <div style="margin-top:8px">Ezt bármikor módosíthatod a profilodban.</div>
+      </div>
+      <div class="onb-footer">
+        <button class="btn outline" id="onbFavSkip_ucl">Később beállítom</button>
+        <button class="btn primary" id="onbFavGo_ucl">
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.293 3.293a1 1 0 0 1 1.414 0L17 8.586a1 1 0 0 1 0 1.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L13.586 11H4a1 1 0 1 1 0-2h9.586L10.293 4.707a1 1 0 0 1 0-1.414z"/></svg>
+          Kedvenc beállítása
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
+    import { getFirestore, collection, doc, getDoc, getDocs, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+
+    import { firebaseConfig } from "./firebase-config.js";
+    import { initLeagueSwitcher } from "./league-switcher.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserEmail = null;
+    let currentUserNick = null;
+    let currentUserRole = "user";
+    let favouriteTeamucl = "";
+    let chatLastSeen = null;
+
+    const CHAT_LAST_SEEN_FIELD = "ucl_chatLastSeen";
+
+    const crestMap = {
+      "Real Madrid": "crest/real.png",
+      "Manchester City": "crest/mancity.png",
+      "Bayern München": "crest/bayern.png",
+      "Paris Saint-Germain": "crest/psg.png",
+      "Liverpool": "crest/liverpool.png",
+      "Barcelona": "crest/barca.png",
+      "Arsenal": "crest/arsenal.png",
+      "Inter": "crest/inter.png",
+      "Milan": "crest/milan.png",
+      "Juventus": "crest/juve.png",
+      "Napoli": "crest/napoli.png",
+      "Dortmund": "crest/bvb.png"
+      // többi csapat...
+    };
+
+    const facebookLinks = {
+      "Real Madrid": "https://www.facebook.com/RealMadrid",
+      "Manchester City": "https://www.facebook.com/mancity",
+      "Bayern München": "https://www.facebook.com/fcbayern",
+      "Paris Saint-Germain": "https://www.facebook.com/PSG",
+      "Liverpool": "https://www.facebook.com/LiverpoolFC",
+      "Barcelona": "https://www.facebook.com/fcbarcelona",
+      "Arsenal": "https://www.facebook.com/Arsenal",
+      "Inter": "https://www.facebook.com/Inter",
+      "Milan": "https://www.facebook.com/ACMilan",
+      "Juventus": "https://www.facebook.com/Juventus",
+      "Napoli": "https://www.facebook.com/SSCNapoli",
+      "Dortmund": "https://www.facebook.com/bvb09"
+      // többi, ha kell
+    };
+
+    function parseRes(str){
+      if(!str||typeof str!=="string") return null;
+      const m=str.trim().match(/^(\d+)\s*[:\-]\s*(\d+)$/);
+      if(!m) return null;
+      return [parseInt(m[1],10),parseInt(m[2],10)];
+    }
+
+    async function buildComputedTable(){
+      const teams=Object.keys(crestMap);
+      const S={}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
+      const H2H={};
+      const snap=await getDocs(collection(db,"ucl_matches"));
+      const matchesForModule=[];
+
+      snap.forEach(d=>{
+        const m=d.data()||{};
+        const A=m.homeTeam||m.home||"";
+        const B=m.awayTeam||m.away||"";
+        const r=parseRes(m.result);
+
+        const roundRaw=m.roundId??m.round??"";
+        const roundNum=parseInt(roundRaw,10);
+        const isLeaguePhase=!Number.isFinite(roundNum)||roundNum<9;
+
+        if(isLeaguePhase && A&&B&&m.result) matchesForModule.push({homeTeam:A,awayTeam:B,result:m.result});
+        const a=S[A], b=S[B]; if(!a||!b||!r||!isLeaguePhase) return;
+        const [hg,ag]=r;
+        a.MP++; b.MP++;
+        a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
+        b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
+        if(hg>ag){a.W++;b.L++;a.Pts+=3}
+        else if(hg<ag){b.W++;a.L++;b.Pts+=3}
+        else{a.D++;b.D++;a.Pts+=1;b.Pts+=1}
+        const k=[A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        H2H[k] ||= {[A]:{Pts:0,GF:0,GA:0},[B]:{Pts:0,GF:0,GA:0}};
+        if(hg>ag){H2H[k][A].Pts+=3}
+        else if(hg<ag){H2H[k][B].Pts+=3}
+        else{H2H[k][A].Pts+=1;H2H[k][B].Pts+=1}
+        H2H[k][A].GF+=hg; H2H[k][A].GA+=ag;
+        H2H[k][B].GF+=ag; H2H[k][B].GA+=hg;
+      });
+
+      function cmp(a,b){
+        if(b.Pts!==a.Pts) return b.Pts-a.Pts;
+        if(b.W!==a.W) return b.W-a.W;
+        if(b.GD!==a.GD) return b.GD-a.GD;
+        if(b.GF!==a.GF) return b.GF-a.GF;
+        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        const row=H2H[k];
+        if(row){
+          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0;
+          if(pb!==pa) return pb-pa;
+          const ga=row[a.team]?.GF??0, gb=row[b.team]?.GF??0;
+          const gaa=row[a.team]?.GA??0, gba=row[b.team]?.GA??0;
+          const gda=ga-gaa, gdb=gb-gba;
+          if(gdb!==gda) return gdb-gda;
+          if(gb!==ga) return gb-ga;
+        }
+        return a.team.localeCompare(b.team,'hu');
+      }
+
+      const rows=Object.values(S).sort(cmp);
+
+      try{
+        renderComputedTable(rows);
+      }catch(e){ console.warn("Live standings (UCL) compute failed:",e); }
+
+      renderComputedTable(rows);
+    }
+
+    function renderComputedTable(rows){
+      const wrap=document.getElementById("tableContainer");
+      const tbl=document.createElement("table");
+      tbl.style.width="100%";
+      tbl.style.borderCollapse="separate";
+      tbl.style.borderSpacing="0";
+      tbl.innerHTML=`
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:10px">Hely</th>
+            <th style="text-align:left">Csapat</th>
+            <th>M</th>
+            <th>Gy</th>
+            <th>D</th>
+            <th>V</th>
+            <th>LG</th>
+            <th>KG</th>
+            <th>GK</th>
+            <th>Pont</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      const tbody=tbl.querySelector("tbody");
+
+      rows.forEach((row,idx)=>{
+        const tr=document.createElement("tr");
+        const pos=idx+1;
+        const crest=crestMap[row.team];
+        tr.innerHTML=`
+          <td><span class="pos-badge pos-${pos<=8?pos:''}">${pos}</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              ${crest?`<img src="${crest}" alt="" style="width:20px;height:20px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#fff">`:""}
+              <span>${row.team}</span>
+            </div>
+          </td>
+          <td>${row.MP}</td>
+          <td>${row.W}</td>
+          <td>${row.D}</td>
+          <td>${row.L}</td>
+          <td>${row.GF}</td>
+          <td>${row.GA}</td>
+          <td>${row.GD}</td>
+          <td class="points-strong">${row.Pts}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      wrap.innerHTML="";
+      wrap.appendChild(tbl);
+    }
+
+    const BRACKET_ROUNDS = [
+      {id:"PO",label:"Rájátszás a 16 közé",ties:8},
+      {id:"R16",label:"Nyolcaddöntő",ties:8},
+      {id:"QF",label:"Negyeddöntő",ties:4},
+      {id:"SF",label:"Elődöntő",ties:2},
+      {id:"F",label:"Döntő",ties:1}
+    ];
+
+    function computeTieScore(tie,matchesById){
+      const arr=Array.isArray(tie.matchIds)?tie.matchIds:(tie.matchId?[tie.matchId]:[]);
+      if(!arr.length) return null;
+      let homeGoals=0, awayGoals=0;
+      arr.forEach(id=>{
+        const m=matchesById[id];
+        if(!m||!m.result) return;
+        const res=parseRes(m.result);
+        if(!res) return;
+        const [gh,ga]=res;
+        const mh=m.homeTeam||m.home||"";
+        const ma=m.awayTeam||m.away||"";
+        const bh=tie.homeTeam||"";
+        const ba=tie.awayTeam||"";
+        let homeIsBracketHome=true;
+        if(bh&&ba){
+          if(mh===bh&&ma===ba) homeIsBracketHome=true;
+          else if(mh===ba&&ma===bh) homeIsBracketHome=false;
+        }
+        if(homeIsBracketHome){homeGoals+=gh;awayGoals+=ga}
+        else{homeGoals+=ga;awayGoals+=gh}
+      });
+      if(homeGoals===0&&awayGoals===0) return null;
+      let winner="draw";
+      if(homeGoals>awayGoals) winner="home";
+      else if(awayGoals>homeGoals) winner="away";
+      if(tie.penaltyWinner==="home"||tie.penaltyWinner==="away") winner=tie.penaltyWinner;
+      return {home:String(homeGoals),away:String(awayGoals),winner};
+    }
+
+    function renderBracketTie(tie,matchesById){
+      const div=document.createElement("div");
+      div.className="bracket-tie";
+      const homeName=tie.homeTeam||tie.homeSeedLabel||"–";
+      const awayName=tie.awayTeam||tie.awaySeedLabel||"–";
+      const homeCrest=crestMap[homeName];
+      const awayCrest=crestMap[awayName];
+
+      const top=document.createElement("div");
+      top.className="bracket-team";
+      top.innerHTML=`
+        <div class="bracket-team-name">
+          ${homeCrest?`<img src="${homeCrest}" alt="">`:""}
+          <span>${homeName}</span>
+        </div>
+        <div class="bracket-score" data-side="home"></div>
+      `;
+
+      const bottom=document.createElement("div");
+      bottom.className="bracket-team";
+      bottom.innerHTML=`
+        <div class="bracket-team-name">
+          ${awayCrest?`<img src="${awayCrest}" alt="">`:""}
+          <span>${awayName}</span>
+        </div>
+        <div class="bracket-score" data-side="away"></div>
+      `;
+
+      const meta=document.createElement("div");
+      meta.className="bracket-meta";
+
+      const left=document.createElement("span");
+      if(tie.decidedByPenalties){
+        left.className="bracket-pen";
+        left.textContent="11-esekkel";
+      }else{
+        left.textContent="";
+      }
+
+      const pill=document.createElement("span");
+      pill.className="bracket-pill";
+      pill.textContent=tie.label||(tie.index?`${tie.index}. pár`:"");
+
+      const winnerSpan=document.createElement("span");
+      winnerSpan.className="bracket-winner";
+
+      meta.appendChild(left);
+      meta.appendChild(pill);
+      meta.appendChild(winnerSpan);
+
+      div.appendChild(top);
+      div.appendChild(bottom);
+      div.appendChild(meta);
+
+      const scores=computeTieScore(tie,matchesById);
+      if(scores){
+        top.querySelector(".bracket-score").textContent=scores.home;
+        bottom.querySelector(".bracket-score").textContent=scores.away;
+        if(scores.winner==="home") winnerSpan.textContent=homeName;
+        else if(scores.winner==="away") winnerSpan.textContent=awayName;
+        else winnerSpan.textContent="";
+      }
+
+      return div;
+    }
+
+    async function loadBracket(){
+      const container=document.getElementById("bracketContainer");
+      if(!container) return;
+      container.innerHTML="";
+      const [matchesSnap,bracketSnap]=await Promise.all([
+        getDocs(collection(db,"ucl_matches")),
+        getDocs(collection(db,"ucl_bracket"))
+      ]);
+
+      const matchesById={};
+      matchesSnap.forEach(d=>{matchesById[d.id]=d.data()||{};});
+
+      const byRound={};
+      bracketSnap.forEach(d=>{
+        const data=d.data()||{};
+        const r=data.round;
+        if(!r) return;
+        if(!byRound[r]) byRound[r]=[];
+        byRound[r].push(Object.assign({id:d.id},data));
+      });
+
+      BRACKET_ROUNDS.forEach(cfg=>{
+        const col=document.createElement("div");
+        col.className="bracket-round";
+        const title=document.createElement("div");
+        title.className="bracket-round-title";
+        title.textContent=cfg.label;
+        col.appendChild(title);
+        const arr=(byRound[cfg.id]||[]).slice().sort((a,b)=>(a.index||0)-(b.index||0));
+        if(arr.length===0){
+          for(let i=1;i<=cfg.ties;i++){
+            const placeholder=renderBracketTie({index:i},matchesById);
+            col.appendChild(placeholder);
+          }
+        }else{
+          arr.forEach(tie=>{col.appendChild(renderBracketTie(tie,matchesById));});
+        }
+        container.appendChild(col);
+      });
+    }
+
+    function startNavTop8Countdown(until){
+      const el=document.getElementById("top8CountdownNav");
+      if(!el) return;
+      if(!until){el.hidden=true;return;}
+      function update(){
+        const now=new Date();
+        const diff=until-now;
+        if(diff<=0){el.textContent="Lezárva";return;}
+        const d=Math.floor(diff/86400000);
+        const h=Math.floor((diff%86400000)/3600000);
+        el.hidden=false;
+        el.innerHTML=`<svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 1 1 8-8 8.01 8.01 0 0 1-8 8zm.75-8.75V6a.75.75 0 0 0-1.5 0v4a.75.75 0 0 0 .44.68l3.5 1.75a.75.75 0 1 0 .66-1.34z"/></svg>${d} nap ${h} óra`;
+      }
+      update();
+      setInterval(update,60000);
+    }
+
+    document.addEventListener("DOMContentLoaded",()=>{
+      /* Liga-váltó mount: BAL SZÉL – cím mellett */
+      initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
+
+      onAuthStateChanged(auth,async(user)=>{
+        if(!user){window.location.href="login.html";return}
+        currentUserEmail=user.email;
+
+        const userRef=doc(db,"users",currentUserEmail);
+        const userSnap=await getDoc(userRef);
+        if(userSnap.exists()){
+          const data=userSnap.data();
+          currentUserNick=data.nickname||currentUserEmail;
+          currentUserRole=data.role||"user";
+          favouriteTeamucl=data.favouriteTeamucl||"";
+          chatLastSeen=data[CHAT_LAST_SEEN_FIELD]||null;
+        }else{
+          currentUserNick=currentUserEmail; currentUserRole="user";
+          favouriteTeamucl="";
+        }
+
+        document.getElementById("userNick").textContent=currentUserNick;
+        document.getElementById("userEmail").textContent=currentUserEmail;
+
+        const favLabel=document.getElementById("favTeamLabel");
+        const favCrest=document.getElementById("favCrest_ucl");
+        const favPill=document.getElementById("favPill_ucl");
+        if(favouriteTeamucl){
+          favLabel.textContent=favouriteTeamucl;
+          const src=crestMap[favouriteTeamucl]||"fav2.png";
+          favCrest.src=src;
+          favPill.hidden=false;
+        }else{
+          favLabel.textContent="Még nincs beállítva";
+          favCrest.src="fav2.png";
+          favPill.hidden=true;
+          const onb=document.getElementById("onbFav_ucl");
+          const go=document.getElementById("onbFavGo_ucl");
+          const skip=document.getElementById("onbFavSkip_ucl");
+          if(onb&&go&&skip){
+            onb.classList.add("open");
+            go.onclick=()=>{onb.classList.remove("open");window.location.href="profile.html";};
+            skip.onclick=()=>{onb.classList.remove("open");};
+          }
+        }
+
+        try{
+          const lockDoc=await getDoc(doc(db,"settings","positionsLock_ucl"));
+          const isLocked=lockDoc.exists()?!!lockDoc.data().locked:false;
+          let until=null;
+          if(lockDoc.exists()&&lockDoc.data().until){
+            const ts=lockDoc.data().until;
+            if(ts&&ts.toDate) until=ts.toDate();
+          }
+          startNavTop8Countdown(isLocked?null:until);
+        }catch(e){ startNavTop8Countdown(null); }
+
+        await buildComputedTable();
+        onSnapshot(collection(db,"ucl_matches"),()=>buildComputedTable());
+
+        await loadBracket();
+        onSnapshot(collection(db,"ucl_matches"),()=>loadBracket());
+        onSnapshot(collection(db,"ucl_bracket"),()=>loadBracket());
+
+        try{
+          const fbLink=facebookLinks[favouriteTeamucl];
+          if(fbLink){
+            const fbDiv=document.createElement("div");
+            fbDiv.innerHTML=`<a href="${fbLink}" target="_blank" rel="noopener">Nyisd meg a ${favouriteTeamucl} Facebook-oldalát egy új fülön.</a>`;
+            const cont=document.getElementById("facebookFeedContainer");
+            cont.innerHTML="";
+            cont.appendChild(fbDiv);
+          }else{
+            document.getElementById("facebookFeedContainer").textContent="Itt fog megjelenni a kedvenc csapatod hírfolyama.";
+          }
+        }catch(e){
+          document.getElementById("facebookFeedContainer").textContent="Nem sikerült betölteni a hírfolyamot.";
+        }
+      });
+    });
+  </script>
+</body>
+</html>
