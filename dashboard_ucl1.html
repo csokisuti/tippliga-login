@@ -14,86 +14,73 @@
   <style>
     .layout{display:flex;flex-direction:column;gap:16px;max-width:1200px;margin:0 auto;padding:20px}
     .content-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
-    @media (max-width:900px){.content-grid{grid-template-columns:1fr}}
-
-    .card{border-radius:14px;border:1px solid var(--line,#e6eaf1);background:#fff;box-shadow:0 6px 25px rgba(15,23,42,.04);padding:16px 18px}
-    .card h3{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--text,#0f172a)}
-    .card p{margin:0}
-
-    .header-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
-    .user-info{display:flex;align-items:center;gap:10px;min-width:0}
-    .user-info-main{min-width:0}
-    .user-row{display:flex;flex-direction:column}
-    .user-name{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .user-email{font-size:12px;color:var(--muted,#64748b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .fav-row{display:flex;align-items:center;gap:8px;margin-top:2px}
-    .fav-label{font-size:12px;color:var(--muted,#64748b)}
-    .fav-team{font-size:13px;font-weight:600}
-    .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
-    .welcome{color:var(--muted,#64748b);margin:4px 0 0}
-
-    /* liga-váltó balra, a cím mellé */
-    .league-switch-left{margin-left:8px}
-    @media (max-width:700px){.league-switch-left{width:100%;margin-left:0}}
-
-    .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
-    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;padding:10px 12px;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05);background:#fff;color:var(--text,#0f172a);transition:transform .08s ease,box-shadow .08s ease,border-color .08s ease,background .08s ease}
-    .nav-card:hover{transform:translateY(-1px);box-shadow:0 10px 30px rgba(15,23,42,.08);border-color:var(--accent,#3b82f6);background:linear-gradient(135deg,#ffffff,#f9fbff)}
-    .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 0 0,#dbeafe 0,#bfdbfe 40%,#eff6ff 100%);color:#1d4ed8;border:1px solid rgba(59,130,246,.2)}
-    .nav-card .icon-wrap::after{content:"";position:absolute;inset:6px;border-radius:inherit;border:1px dashed rgba(255,255,255,.8);opacity:.8}
-    .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
-    .nav-card .title{font-weight:800}
-    .nav-card .desc{font-size:12px;color:var(--muted,#64748b);margin-top:2px}
-    .pill-badge{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:rgba(15,23,42,.02);font-size:11px;font-weight:500;color:var(--muted,#64748b);margin-left:4px}
-    .pill-badge svg{width:12px;height:12px}
-
+    .card{background:#fff;border-radius:16px;border:1px solid var(--line,#e6eaf1);box-shadow:0 10px 30px rgba(15,23,42,.08);padding:16px;position:relative;overflow:hidden}
+    .card h3{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px}
+    .card h3 svg{width:18px;height:18px;color:#0f172a}
+    .hero{display:flex;flex-direction:column;gap:12px;padding:18px 16px;border-radius:16px;background:radial-gradient(circle at 0 0,#22d3ee33 0,#0f172a 45%,#020617 100%);color:#e5e7eb;position:relative;overflow:hidden}
+    .hero-main{display:flex;justify-content:space-between;gap:16px}
+    .hero-left h1{margin:0;font-size:20px;letter-spacing:0.02em}
+    .hero-left p{margin:4px 0 0;font-size:13px;color:#e5e7ebcc}
+    .hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.6);font-size:11px}
+    .hero-badge svg{width:14px;height:14px}
+    .hero-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:10px;min-width:160px}
+    .hero-team{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(15,23,42,.85);border:1px solid rgba(148,163,184,.5)}
+    .hero-team-logo{width:28px;height:28px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .hero-team-logo img{width:100%;height:100%;object-fit:contain}
+    .hero-team-text{display:flex;flex-direction:column}
+    .hero-team-name{font-size:13px;font-weight:600}
+    .hero-team-sub{font-size:11px;color:#cbd5f5}
+    .hero-pill{font-size:11px;border-radius:999px;padding:3px 8px;border:1px solid rgba(148,163,184,.6);background:rgba(15,23,42,.85);display:inline-flex;align-items:center;gap:4px}
+    .hero-pill svg{width:12px;height:12px}
+    .hero-bg-ball{position:absolute;right:-40px;bottom:-40px;width:160px;height:160px;opacity:.12;filter:drop-shadow(0 0 40px rgba(56,189,248,.8))}
+    .hero-bg-ball svg{width:100%;height:100%}
+    .nav-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .nav-card{display:flex;align-items:flex-start;gap:10px;padding:10px 10px;border-radius:12px;border:1px solid var(--line,#e6eaf1);background:#fff;cursor:pointer;text-decoration:none;color:inherit;transition:.16s ease box-shadow,.16s ease transform,.16s ease border-color}
+    .nav-card:hover{box-shadow:0 10px 26px rgba(15,23,42,.12);transform:translateY(-1px);border-color:#0ea5e9}
+    .nav-icon{width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#eff6ff;color:#1d4ed8;flex-shrink:0}
+    .nav-card.matches .nav-icon{background:#ecfeff;color:#0891b2}
+    .nav-card.old .nav-icon{background:#fefce8;color:#ca8a04}
+    .nav-card.points .nav-icon{background:#f5f3ff;color:#7c3aed}
+    .nav-card.admin .nav-icon{background:#fef2f2;color:#b91c1c}
+    .nav-icon svg{width:16px;height:16px}
+    .nav-card .text{display:flex;flex-direction:column;gap:2px}
+    .nav-card .title{font-size:13px;font-weight:600}
+    .nav-card .desc{font-size:11px;color:#64748b}
     .table-wrap{overflow:auto}
-    .table-wrap table{width:100%;border-collapse:separate;border-spacing:0;min-width:500px}
-    .table-wrap th,.table-wrap td{padding:6px 8px;font-size:13px;text-align:right;border-bottom:1px solid var(--line,#e6eaf1);white-space:nowrap}
-    .table-wrap th:first-child,.table-wrap td:first-child{text-align:left}
-    .table-wrap th:nth-child(2),.table-wrap td:nth-child(2){text-align:left}
-    .table-wrap thead{background:linear-gradient(180deg,#f9fafb,#f3f4f6)}
-    .table-wrap thead th{position:sticky;top:0;z-index:1}
-    .table-wrap tbody tr:nth-child(even){background:#f9fafb}
-    .table-wrap tbody tr:hover{background:#eff6ff}
+    .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#e11d48;color:#fff;font-size:12px;font-weight:700;line-height:1;vertical-align:middle}
+    .pill-badge[hidden]{display:none!important}
+    .pill-badge.countdown{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+    .pill-badge.countdown.urgent{animation:pulse 1s ease-in-out infinite}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+    .blink{animation:blink 1s steps(2,start) infinite}
+    @keyframes blink{to{opacity:.2}}
+    .fb-wrap iframe{width:100%;height:540px;border:0;overflow:hidden}
+    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
+    .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;margin:0;width:20px;height:20px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
+    .chat-fab.has-unread .fab-badge{display:inline-block}
+    .chat-panel{position:fixed;right:22px;bottom:86px;z-index:999;display:none;flex-direction:column;width:320px;max-height:440px;background:#0b1120;color:#e5e7eb;border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.14)}
+    .chat-panel.open{display:flex}
+    .chat-panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #1f2937;background:linear-gradient(120deg,#0f172a,#020617)}
+    .chat-panel-head span{font-size:13px;font-weight:600}
+    .chat-panel-body{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:12px}
+    .chat-msg{padding:6px 8px;border-radius:10px;max-width:88%}
+    .chat-msg.me{align-self:flex-end;background:#0369a1}
+    .chat-msg.other{align-self:flex-start;background:#111827}
+    .chat-meta{font-size:10px;color:#9ca3af;margin-top:2px}
+    .chat-input{display:flex;gap:6px;padding:8px 10px;border-top:1px solid #1f2937;background:#020617}
+    .chat-input textarea{flex:1;resize:none;border-radius:10px;border:1px solid #1f2937;background:#020617;color:#e5e7eb;padding:6px 8px;font-size:12px;min-height:34px;max-height:80px}
+    .chat-input button{border-radius:10px;border:none;background:#22c55e;color:#022c22;font-size:13px;font-weight:600;padding:6px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+    .chat-input button svg{width:14px;height:14px}
+    .chat-tagline{font-size:10px;color:#6b7280;margin-top:4px;text-align:right;padding:0 10px 6px}
+    .nav-top8{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#64748b}
+    .nav-top8 .pill-badge{background:#0ea5e9}
+    .nav-top8 .pill-badge.urgent{background:#b91c1c}
+    .nav-top8 .pill-badge.disabled{background:#9ca3af}
+    .nav-top8 .label{display:inline-flex;align-items:center;gap:4px}
+    .nav-top8 svg{width:13px;height:13px}
 
-    .pos-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;border:1px solid var(--line,#e5e7eb);background:#f9fafb;font-size:12px;font-weight:600}
-    .pos-1{background:#fef3c7;border-color:#facc15}
-    .pos-2,.pos-3,.pos-4{background:#ecfdf5;border-color:#22c55e}
-    .pos-5,.pos-6,.pos-7,.pos-8{background:#eff6ff;border-color:#3b82f6}
-
-    .points-strong{font-weight:700}
-
-    /* Countdown badge */
-    .countdown{background:#fef3c7;border-color:#facc15;color:#92400e}
-    .countdown svg{color:#f59e0b}
-
-    /* Facebook feed placeholder */
-    #facebookFeedContainer{min-height:160px;border-radius:10px;border:1px dashed var(--line,#e6eaf1);display:flex;align-items:center;justify-content:center;color:var(--muted,#64748b);font-size:13px;padding:12px;text-align:center}
-
-    .onb-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:50}
-    .onb-backdrop.open{display:flex}
-    .onb-dialog{max-width:420px;width:100%;background:#fff;border-radius:16px;box-shadow:0 18px 55px rgba(15,23,42,.35);padding:18px 18px 14px}
-    .onb-head{font-weight:800;font-size:17px;margin-bottom:8px}
-    .onb-body{font-size:14px;color:var(--muted,#64748b);margin-bottom:12px}
-    .onb-footer{display:flex;justify-content:flex-end;gap:8px}
-    .onb-footer .btn{font-size:13px}
-
-    .btn{appearance:none;border:1px solid var(--line,#e6eaf1);background:#fff;color:var(--text,#0f172a);padding:7px 10px;border-radius:999px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-    .btn.primary{background:var(--accent,#3b82f6);border-color:var(--accent,#3b82f6);color:#fff}
-    .btn.outline{background:transparent}
-    .btn svg{width:16px;height:16px}
-
-    /* Favorite badge */
-    .fav-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#f9fafb;font-size:11px;color:var(--muted,#64748b);margin-top:4px}
-    .fav-pill svg{width:13px;height:13px;color:#facc15}
-
-    /* League switcher mount */
-    #leagueSwitchMount{display:inline-block}
-
-    /* új: BL ágrajz */
+    /* BL kieséses ágrajz */
     .bracket-card{margin-top:12px}
     .bracket-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;overflow-x:auto}
     .bracket-round{display:flex;flex-direction:column;gap:8px}
@@ -106,64 +93,134 @@
     .bracket-meta{margin-top:4px;font-size:11px;color:var(--muted,#64748b);display:flex;justify-content:space-between;align-items:center;gap:6px}
     .bracket-pill{border-radius:999px;padding:2px 6px;border:1px solid var(--line,#e6eaf1);background:#f9fafb;font-size:10px;white-space:nowrap}
     .bracket-pen{font-size:10px;font-weight:600;color:#b91c1c}
+
+    @media (max-width:960px){
+      .content-grid{grid-template-columns:1fr}
+      .hero-main{flex-direction:column;align-items:flex-start}
+      .hero-right{align-items:flex-start}
+      .nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width:640px){
+      .layout{padding:12px}
+      .nav-grid{grid-template-columns:1fr}
+      .hero{padding:14px 12px}
+    }
   </style>
 </head>
 <body>
   <div class="layout">
-    <div class="header-row">
-      <div class="user-info">
-        <img id="favCrest_ucl" class="fav-crest" src="fav2.png" alt="Kedvenc címere">
-        <div class="user-info-main">
-          <div class="user-row">
-            <div class="user-name" id="userNick">–</div>
-            <div class="user-email" id="userEmail">–</div>
+    <section class="hero">
+      <div class="hero-main">
+        <div class="hero-left">
+          <h1>BL TippLiga – dashboard</h1>
+          <p>Állás, kedvenc csapatod hírei és közös chat egy helyen.</p>
+          <div class="hero-badges">
+            <span class="hero-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16v4H4zM4 10h16v10H4z"/>
+                <path d="M10 14h4M10 17h4"/>
+              </svg>
+              <span>Élő BL tabella</span>
+            </span>
+            <span class="hero-badge" id="top8Badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20v-6M8 20V10M16 20V4"/>
+              </svg>
+              <span>Top8 / győztes / gólkirály tippek</span>
+            </span>
+            <span class="hero-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 5v14l7-4 7 4V5z"/>
+              </svg>
+              <span>Közös BL chat</span>
+            </span>
           </div>
-          <div class="fav-row">
-            <span class="fav-label">Kedvenc BL-csapat:</span>
-            <span class="fav-team" id="favTeamLabel">–</span>
+        </div>
+        <div class="hero-right">
+          <div class="hero-team">
+            <div class="hero-team-logo" id="favTeamLogo">
+              <img id="favTeamLogoImg" src="" alt="" style="display:none">
+              <span id="favTeamLogoPlaceholder">?</span>
+            </div>
+            <div class="hero-team-text">
+              <span class="hero-team-name" id="favTeamName">Nincs kedvenc beállítva</span>
+              <span class="hero-team-sub">Profil / BL fül alatt tudod módosítani</span>
+            </div>
           </div>
-          <div id="favPill_ucl" class="fav-pill" hidden>
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M10 2.5l2.39 4.84 5.34.78-3.86 3.76.91 5.32L10 14.77l-4.78 2.51.91-5.32-3.86-3.76 5.34-.78L10 2.5z"/>
+          <div class="hero-pill" id="leagueSwitchMount">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 12h16M4 6h16M4 18h16"/>
             </svg>
-            <span>Beállítva</span>
+            <span>NB I. / BL váltás</span>
           </div>
         </div>
       </div>
-      <div class="user-actions">
-        <div id="leagueSwitchMount" class="league-switch-left"></div>
+      <div class="hero-bg-ball" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <defs>
+            <radialGradient id="g1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(16 10) rotate(45) scale(40)">
+              <stop stop-color="#22d3ee"/>
+              <stop offset="1" stop-color="#0ea5e9" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="32" cy="32" r="26" fill="url(#g1)" stroke="#22d3ee" stroke-width="1.4"/>
+          <path d="M32 8 24 20l8 6 8-6-8-12Zm0 48 8-12-8-6-8 6 8 12Zm-21-26 12-2 4 8-6 8-10-4 0-10Zm42 0-12-2-4 8 6 8 10-4 0-10Z" fill="none" stroke="#e5e7eb" stroke-width="1.1"/>
+        </svg>
       </div>
-    </div>
-
-    <p class="welcome">Itt látod a BL ligatáblát, a saját profilod adatait és a kedvenc csapatod híreit.</p>
+    </section>
 
     <nav class="nav-grid">
-      <a class="nav-card" href="dashboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z" fill="currentColor"/></svg></div>
-        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
-      </a>
-      <a id="positionsCard" class="nav-card" href="positions_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z" fill="currentColor"/></svg></div>
+      <a href="matches_ucl.html" class="nav-card matches" id="matchesCard">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2"/>
+            <path d="M3 10h18M8 2v4M16 2v4M9 16h6"/>
+          </svg>
+        </div>
         <div class="text">
-          <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
-          <span class="desc">Top8, BL-győztes, gólkirály</span>
+          <span class="title">Meccstippek</span>
+          <span class="desc">Hátralévő BL forduló(k) – 1X2 + duplázás</span>
+        </div>
+        <span class="pill-badge" id="tipsBadgeUcl" hidden>!</span>
+      </a>
+
+      <a href="old_matches_ucl.html" class="nav-card old">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 8v5l3 2"/>
+            <circle cx="12" cy="12" r="9"/>
+          </svg>
+        </div>
+        <div class="text">
+          <span class="title">Lezárt meccsek</span>
+          <span class="desc">Eredmények, szerzett pontok, statisztikák</span>
         </div>
       </a>
-      <a class="nav-card" href="matches_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 4h14a2 2 0 0 1 2 2v2H3V6a2 2 0 0 1 2-2zm-2 8h18v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4z" fill="currentColor"/></svg></div>
-        <div class="text"><span class="title">Meccsek & tippek</span><span class="desc">Aktuális fordulók</span></div>
+
+      <a href="leaderboard_ucl.html" class="nav-card points">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 21V10M12 21V3M16 21v-6"/>
+            <path d="M4 21h16"/>
+          </svg>
+        </div>
+        <div class="text">
+          <span class="title">Ponttábla</span>
+          <span class="desc">Összesített TippLiga állás</span>
+        </div>
       </a>
-      <a class="nav-card" href="results_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v4H4zm0 6h10v4H4zm0 6h7v4H4z" fill="currentColor"/></svg></div>
-        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti pontok</span></div>
-      </a>
-      <a class="nav-card" href="leaderboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 14h4v7H4zm6-5h4v12h-4zm6-7h4v19h-4z" fill="currentColor"/></svg></div>
-        <div class="text"><span class="title">Össz pontszám</span><span class="desc">Ranglista, statisztika</span></div>
-      </a>
-      <a class="nav-card" href="profile.html">
-        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 12a4 4 0 1 0-4-4 4.003 4.003 0 0 0 4 4zm-7 8a7 7 0 0 1 14 0z" fill="currentColor"/></svg></div>
-        <div class="text"><span class="title">Profil</span><span class="desc">Becenév, kedvenc csapat, beállítások</span></div>
+
+      <a href="admin_ucl.html" class="nav-card admin">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.78 1.78 0 0 0 .35 1.94l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.78 1.78 0 0 0-1.94-.35 1.78 1.78 0 0 0-1.06 1.64V22a2 2 0 0 1-4 0v-.09A1.78 1.78 0 0 0 8 20.27a1.78 1.78 0 0 0-1.94.35l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.78 1.78 0 0 0 3.73 15a1.78 1.78 0 0 0-1.64-1.06H2a2 2 0 0 1 0-4h.09A1.78 1.78 0 0 0 3.73 8a1.78 1.78 0 0 0-.35-1.94l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.78 1.78 0 0 0 8 3.73 1.78 1.78 0 0 0 9.06 2.09V2a2 2 0 0 1 4 0v.09A1.78 1.78 0 0 0 15 3.73a1.78 1.78 0 0 0 1.94-.35l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.78 1.78 0 0 0 20.27 8a1.78 1.78 0 0 0 1.64 1.06H22a2 2 0 0 1 0 4h-.09A1.78 1.78 0 0 0 19.4 15Z"/>
+          </svg>
+        </div>
+        <div class="text">
+          <span class="title">Admin</span>
+          <span class="desc">Szezon-zár & beállítások</span>
+        </div>
       </a>
     </nav>
 
@@ -181,84 +238,88 @@
         <h3>Csapatod hírei</h3>
         <div id="facebookFeedContainer"></div>
       </section>
+  
     </div>
   </div>
 
-  <!-- Onboarding (BL) -->
-  <div id="onbFav_ucl" class="onb-backdrop" aria-modal="true" role="dialog" aria-labelledby="onbFavTitle_ucl">
-    <div class="onb-dialog">
-      <div class="onb-head" id="onbFavTitle_ucl">Üdv a BL TippLigában! 🎉</div>
-      <div class="onb-body">
-        <div>Először <strong>válaszd ki a kedvenc BL-csapatod</strong>, hogy a tabella és a hírek személyre szabva jelenjenek meg.</div>
-        <div style="margin-top:8px">Ezt bármikor módosíthatod a profilodban.</div>
-      </div>
-      <div class="onb-footer">
-        <button class="btn outline" id="onbFavSkip_ucl">Később beállítom</button>
-        <button class="btn primary" id="onbFavGo_ucl">
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.293 3.293a1 1 0 0 1 1.414 0L17 8.586a1 1 0 0 1 0 1.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L13.586 11H4a1 1 0 1 1 0-2h9.586L10.293 4.707a1 1 0 0 1 0-1.414z"/></svg>
-          Kedvenc beállítása
-        </button>
-      </div>
+  <button class="chat-fab" id="chatFab" aria-label="BL chat megnyitása">
+    <span class="fab-badge" id="chatUnreadBadge">!</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5A8.48 8.48 0 0 1 21 11v.5z"/>
+    </svg>
+  </button>
+
+  <div class="chat-panel" id="chatPanel" aria-hidden="true">
+    <div class="chat-panel-head">
+      <span>BL TippLiga chat</span>
+      <button id="chatCloseBtn" class="btn" style="padding:4px 8px;font-size:11px;border-radius:999px;border:1px solid #374151;background:#020617;color:#e5e7eb">
+        Bezár
+      </button>
     </div>
+    <div class="chat-panel-body" id="chatMessages"></div>
+    <div class="chat-input">
+      <textarea id="chatInput" rows="1" placeholder="Írj üzenetet a többieknek…"></textarea>
+      <button id="chatSendBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 2 11 13"/>
+          <path d="M22 2 15 22 11 13 2 9 22 2z"/>
+        </svg>
+        Küldés
+      </button>
+    </div>
+    <div class="chat-tagline">A BL TippLiga résztvevőinek közös beszélgetése</div>
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
-    import { getFirestore, collection, doc, getDoc, getDocs, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
-
-    import { firebaseConfig } from "./firebase-config.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { computeLiveOrderFromMatches } from "./standings.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
+      authDomain: "tippliga-4b3af.firebaseapp.com",
+      projectId: "tippliga-4b3af",
+      storageBucket: "tippliga-4b3af.appspot.com",
+      messagingSenderId: "720359845241",
+      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let currentUserEmail = null;
-    let currentUserNick = null;
-    let currentUserRole = "user";
-    let favouriteTeamucl = "";
-    let chatLastSeen = null;
-
-    const CHAT_LAST_SEEN_FIELD = "ucl_chatLastSeen";
+    const CHAT_COLLECTION = 'chatMessages_ucl';
+    const CHAT_LAST_SEEN_FIELD = 'chatLastSeenUcl';
 
     const crestMap = {
-      "Real Madrid": "crest/real.png",
-      "Manchester City": "crest/mancity.png",
-      "Bayern München": "crest/bayern.png",
-      "Paris Saint-Germain": "crest/psg.png",
-      "Liverpool": "crest/liverpool.png",
-      "Barcelona": "crest/barca.png",
-      "Arsenal": "crest/arsenal.png",
-      "Inter": "crest/inter.png",
-      "Milan": "crest/milan.png",
-      "Juventus": "crest/juve.png",
-      "Napoli": "crest/napoli.png",
-      "Dortmund": "crest/bvb.png"
-      // többi csapat...
+      "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barca.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/dortmund.png","Bologna":"ucl_crest/bologna.png","Braga":"ucl_crest/braga.png","Brest":"ucl_crest/brest.png","Celtic":"ucl_crest/celtic.png","Crvena zvezda":"ucl_crest/crvena.png","Dinamo Zagreb":"ucl_crest/dinamo.png","Feyenoord":"ucl_crest/feyenoord.png","Galatasaray":"ucl_crest/gala.png","Girona":"ucl_crest/girona.png","Inter":"ucl_crest/inter.png","Juventus":"ucl_crest/juve.png","Lazio":"ucl_crest/lazio.png","Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Lille":"ucl_crest/lille.png","Milan":"ucl_crest/milan.png","Monaco":"ucl_crest/monaco.png","Newcastle":"ucl_crest/newcastle.png","PSG":"ucl_crest/psg.png","Porto":"ucl_crest/porto.png","PSV":"ucl_crest/psv.png","Real Madrid":"ucl_crest/real.png","Real Sociedad":"ucl_crest/sociedad.png","RB Leipzig":"ucl_crest/rbleipzig.png","Roma":"ucl_crest/roma.png","Salzburg":"ucl_crest/salzburg.png","Shakhtar Donetsk":"ucl_crest/shakhtar.png","Sparta Praha":"ucl_crest/sparta.png","Sporting CP":"ucl_crest/sporting.png","Stuttgart":"ucl_crest/stuttgart.png","Tottenham Hotspur":"ucl_crest/spurs.png","Union Berlin":"ucl_crest/union.png","Villarreal":"ucl_crest/villarreal.png","Young Boys":"ucl_crest/yb.png","Dinamo Tbilisi":"ucl_crest/tbilisi.png","Bodo/Glimt":"ucl_crest/bodo.png","Ludogorec":"ucl_crest/ludogorec.png","Slovan Bratislava":"ucl_crest/slovan.png"
     };
 
     const facebookLinks = {
-      "Real Madrid": "https://www.facebook.com/RealMadrid",
-      "Manchester City": "https://www.facebook.com/mancity",
-      "Bayern München": "https://www.facebook.com/fcbayern",
-      "Paris Saint-Germain": "https://www.facebook.com/PSG",
-      "Liverpool": "https://www.facebook.com/LiverpoolFC",
-      "Barcelona": "https://www.facebook.com/fcbarcelona",
-      "Arsenal": "https://www.facebook.com/Arsenal",
-      "Inter": "https://www.facebook.com/Inter",
-      "Milan": "https://www.facebook.com/ACMilan",
-      "Juventus": "https://www.facebook.com/Juventus",
-      "Napoli": "https://www.facebook.com/SSCNapoli",
-      "Dortmund": "https://www.facebook.com/bvb09"
-      // többi, ha kell
+      "Barcelona":"https://www.facebook.com/fcbarcelona",
+      "Real Madrid":"https://www.facebook.com/RealMadrid",
+      "Bayern München":"https://www.facebook.com/fcbayern",
+      "Liverpool":"https://www.facebook.com/lfc",
+      "PSG":"https://www.facebook.com/PSG",
+      "Manchester City":"https://www.facebook.com/mancity",
+      "Arsenal":"https://www.facebook.com/Arsenal",
+      "Juventus":"https://www.facebook.com/Juventus",
+      "Inter":"https://www.facebook.com/Inter",
+      "Milan":"https://www.facebook.com/ACMilan"
     };
 
+    let currentUserEmail = null;
+    let currentUserNick = null;
+    let currentUserRole = null;
+    let favouriteTeamucl = null;
+    let chatLastSeen = null;
+    let chatUnsub = null;
+
     function parseRes(str){
-      if(!str||typeof str!=="string") return null;
-      const m=str.trim().match(/^(\d+)\s*[:\-]\s*(\d+)$/);
-      if(!m) return null;
-      return [parseInt(m[1],10),parseInt(m[2],10)];
+      const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
+      return m?[parseInt(m[1]),parseInt(m[2])]:null;
     }
 
     async function buildComputedTable(){
@@ -272,14 +333,13 @@
         const m=d.data()||{};
         const A=m.homeTeam||m.home||"";
         const B=m.awayTeam||m.away||"";
+        const roundRaw = m.roundId ?? m.round ?? "";
+        const roundNum = parseInt(roundRaw,10);
+        const isLeaguePhase = !Number.isFinite(roundNum) || roundNum < 9;
         const r=parseRes(m.result);
-
-        const roundRaw=m.roundId??m.round??"";
-        const roundNum=parseInt(roundRaw,10);
-        const isLeaguePhase=!Number.isFinite(roundNum)||roundNum<9;
-
         if(isLeaguePhase && A&&B&&m.result) matchesForModule.push({homeTeam:A,awayTeam:B,result:m.result});
-        const a=S[A], b=S[B]; if(!a||!b||!r||!isLeaguePhase) return;
+        const a=S[A], b=S[B];
+        if(!a||!b||!r || !isLeaguePhase) return;
         const [hg,ag]=r;
         a.MP++; b.MP++;
         a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
@@ -301,80 +361,77 @@
         if(b.W!==a.W) return b.W-a.W;
         if(b.GD!==a.GD) return b.GD-a.GD;
         if(b.GF!==a.GF) return b.GF-a.GF;
-        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
-        const row=H2H[k];
-        if(row){
-          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0;
-          if(pb!==pa) return pb-pa;
-          const ga=row[a.team]?.GF??0, gb=row[b.team]?.GF??0;
-          const gaa=row[a.team]?.GA??0, gba=row[b.team]?.GA??0;
-          const gda=ga-gaa, gdb=gb-gba;
-          if(gdb!==gda) return gdb-gda;
-          if(gb!==ga) return gb-ga;
+        const la=a.team.toLowerCase(), lb=b.team.toLowerCase();
+        const key=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        const h=H2H[key];
+        if(h){
+          const ha=h[a.team], hb=h[b.team];
+          if(ha && hb){
+            if(ha.Pts!==hb.Pts) return hb.Pts-ha.Pts;
+            const gdA=ha.GF-ha.GA, gdB=hb.GF-hb.GA;
+            if(gdA!==gdB) return gdB-gdA;
+            if(ha.GF!==hb.GF) return hb.GF-ha.GF;
+          }
         }
         return a.team.localeCompare(b.team,'hu');
       }
 
       const rows=Object.values(S).sort(cmp);
-
       try{
-        renderComputedTable(rows);
+        const liveOrder=computeLiveOrderFromMatches(matchesForModule,teams);
+        window.liveStandingsOrder=liveOrder;
+        localStorage.setItem("liveStandingsOrder_ucl",JSON.stringify(liveOrder));
       }catch(e){ console.warn("Live standings (UCL) compute failed:",e); }
 
       renderComputedTable(rows);
     }
 
     function renderComputedTable(rows){
-      const wrap=document.getElementById("tableContainer");
-      const tbl=document.createElement("table");
-      tbl.style.width="100%";
-      tbl.style.borderCollapse="separate";
-      tbl.style.borderSpacing="0";
-      tbl.innerHTML=`
+      const tableContainer=document.getElementById("tableContainer");
+      if(!tableContainer) return;
+      const table=document.createElement("table");
+      table.style.width="100%";
+      table.style.borderCollapse="collapse";
+      table.innerHTML=`
         <thead>
-          <tr>
-            <th style="text-align:left;padding-left:10px">Hely</th>
-            <th style="text-align:left">Csapat</th>
-            <th>M</th>
-            <th>Gy</th>
-            <th>D</th>
-            <th>V</th>
-            <th>LG</th>
-            <th>KG</th>
-            <th>GK</th>
-            <th>Pont</th>
+          <tr style="font-size:12px;color:#6b7280;border-bottom:1px solid var(--line,#e6eaf1);">
+            <th style="text-align:right;padding:8px 10px;width:32px">#</th>
+            <th style="text-align:left;padding:8px 10px;">Csapat</th>
+            <th style="text-align:right;padding:8px 10px;">M</th>
+            <th style="text-align:right;padding:8px 10px;">GY</th>
+            <th style="text-align:right;padding:8px 10px;">D</th>
+            <th style="text-align:right;padding:8px 10px;">V</th>
+            <th style="text-align:right;padding:8px 10px;">LG</th>
+            <th style="text-align:right;padding:8px 10px;">KG</th>
+            <th style="text-align:right;padding:8px 10px;">GK</th>
+            <th style="text-align:right;padding:8px 10px;">P</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+          ${rows.map((r,i)=>{
+            const trClass=i<8?'qual-green':(i>=24&&i<=35?'elim-red':'');
+            return `
+              <tr class="${trClass}">
+                <td style="text-align:right;padding:8px 10px;color:#64748b;">${i+1}.</td>
+                <td style="padding:8px 10px;display:flex;align-items:center;gap:8px;">
+                  ${crestMap[r.team]?`<img src="${crestMap[r.team]}" alt="" style="width:20px;height:20px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#fff;object-fit:contain">`:""}
+                  <strong>${r.team}</strong>
+                </td>
+                <td style="text-align:right;padding:8px 10px;">${r.MP}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.W}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.D}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.L}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.GF}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.GA}</td>
+                <td style="text-align:right;padding:8px 10px;">${r.GD}</td>
+                <td style="text-align:right;padding:8px 10px;font-weight:600;">${r.Pts}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
       `;
-      const tbody=tbl.querySelector("tbody");
-
-      rows.forEach((row,idx)=>{
-        const tr=document.createElement("tr");
-        const pos=idx+1;
-        const crest=crestMap[row.team];
-        tr.innerHTML=`
-          <td><span class="pos-badge pos-${pos<=8?pos:''}">${pos}</span></td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              ${crest?`<img src="${crest}" alt="" style="width:20px;height:20px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#fff">`:""}
-              <span>${row.team}</span>
-            </div>
-          </td>
-          <td>${row.MP}</td>
-          <td>${row.W}</td>
-          <td>${row.D}</td>
-          <td>${row.L}</td>
-          <td>${row.GF}</td>
-          <td>${row.GA}</td>
-          <td>${row.GD}</td>
-          <td class="points-strong">${row.Pts}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      wrap.innerHTML="";
-      wrap.appendChild(tbl);
+      tableContainer.innerHTML = '';
+      tableContainer.appendChild(table);
     }
 
     const BRACKET_ROUNDS = [
@@ -523,24 +580,169 @@
     }
 
     function startNavTop8Countdown(until){
-      const el=document.getElementById("top8CountdownNav");
-      if(!el) return;
-      if(!until){el.hidden=true;return;}
+      const badge=document.getElementById('top8Badge');
+      if(!badge) return;
+      if(!until){
+        badge.innerHTML='<span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l3 3"/></svg><span>Top8 / győztes / gólkirály szerkesztés lezárva</span></span>';
+        badge.classList.remove('countdown','urgent');
+        return;
+      }
       function update(){
         const now=new Date();
         const diff=until-now;
-        if(diff<=0){el.textContent="Lezárva";return;}
-        const d=Math.floor(diff/86400000);
-        const h=Math.floor((diff%86400000)/3600000);
-        el.hidden=false;
-        el.innerHTML=`<svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 1 1 8-8 8.01 8.01 0 0 1-8 8zm.75-8.75V6a.75.75 0 0 0-1.5 0v4a.75.75 0 0 0 .44.68l3.5 1.75a.75.75 0 1 0 .66-1.34z"/></svg>${d} nap ${h} óra`;
+        if(diff<=0){
+          badge.innerHTML='<span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l3 3"/></svg><span>Top8 / győztes / gólkirály lezárva</span></span>';
+          badge.classList.remove('countdown','urgent');
+          return;
+        }
+        const totalSeconds=Math.floor(diff/1000);
+        const h=Math.floor(totalSeconds/3600);
+        const m=Math.floor((totalSeconds%3600)/60);
+        const s=totalSeconds%60;
+        const mm=String(m).padStart(2,'0');
+        const ss=String(s).padStart(2,'0');
+        badge.innerHTML='<span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l3 3"/></svg><span>Top8 / győztes / gólkirály zárásig: '+h+':'+mm+':'+ss+'</span></span>';
+        badge.classList.add('countdown');
+        if(diff<3600_000) badge.classList.add('urgent'); else badge.classList.remove('urgent');
+        requestAnimationFrame(update);
       }
       update();
-      setInterval(update,60000);
+    }
+
+    function renderChatMessage(docData, isOwn){
+      const div=document.createElement('div');
+      div.className='chat-msg '+(isOwn?'me':'other');
+      const text=document.createElement('div');
+      text.textContent=docData.text||'';
+      const meta=document.createElement('div');
+      meta.className='chat-meta';
+      const nick=docData.nick||docData.user||'';
+      let t='';
+      try{
+        const ts=docData.createdAt?.toDate?.()||null;
+        if(ts){
+          const hh=String(ts.getHours()).padStart(2,'0');
+          const mm=String(ts.getMinutes()).padStart(2,'0');
+          t=`${hh}:${mm}`;
+        }
+      }catch(e){}
+      meta.textContent = nick + (t?' • '+t:'');
+      div.appendChild(text);
+      div.appendChild(meta);
+      return div;
+    }
+
+    function subscribeChat(){
+      const listEl=document.getElementById('chatMessages');
+      const badge=document.getElementById('chatUnreadBadge');
+      if(!listEl) return;
+      if(chatUnsub) chatUnsub();
+      const qRef=query(collection(db,CHAT_COLLECTION),orderBy('createdAt','asc'),limit(200));
+      chatUnsub=onSnapshot(qRef,snap=>{
+        listEl.innerHTML='';
+        let lastTs=null;
+        snap.forEach(docSnap=>{
+          const d=docSnap.data();
+          const node=renderChatMessage(d, d.user===currentUserEmail);
+          listEl.appendChild(node);
+          lastTs=d.createdAt?.toMillis?.()||lastTs;
+        });
+        listEl.scrollTop=listEl.scrollHeight;
+        if(chatLastSeen && lastTs && lastTs>chatLastSeen){
+          const panelOpen=document.getElementById('chatPanel')?.classList.contains('open');
+          if(!panelOpen){
+            const fab=document.getElementById('chatFab');
+            if(fab) fab.classList.add('has-unread');
+            if(badge) badge.style.display='';
+          }
+        }
+      });
+    }
+
+    async function sendChatMessage(){
+      const input=document.getElementById('chatInput');
+      if(!input) return;
+      const text=input.value.trim();
+      if(!text) return;
+      input.value='';
+      try{
+        await addDoc(collection(db,CHAT_COLLECTION),{
+          text,
+          user:currentUserEmail,
+          nick:currentUserNick||currentUserEmail,
+          createdAt:serverTimestamp()
+        });
+      }catch(e){
+        console.error("chat send failed",e);
+      }
+    }
+
+    async function markChatSeen(){
+      if(!currentUserEmail) return;
+      const now=Date.now();
+      try{
+        await setDoc(doc(db,"users",currentUserEmail),{ [CHAT_LAST_SEEN_FIELD]: now },{ merge:true });
+        chatLastSeen=now;
+      }catch(e){
+        console.warn("chat lastSeen update failed",e);
+      }
+      const fab=document.getElementById('chatFab');
+      const badge=document.getElementById('chatUnreadBadge');
+      if(fab) fab.classList.remove('has-unread');
+      if(badge) badge.style.display='none';
+    }
+
+    function setupChatUI(){
+      const fab=document.getElementById('chatFab');
+      const panel=document.getElementById('chatPanel');
+      const closeBtn=document.getElementById('chatCloseBtn');
+      const sendBtn=document.getElementById('chatSendBtn');
+      const input=document.getElementById('chatInput');
+      if(!fab||!panel||!closeBtn||!sendBtn||!input) return;
+      fab.onclick=()=>{
+        const open=panel.classList.toggle('open');
+        if(open){
+          markChatSeen();
+        }
+      };
+      closeBtn.onclick=()=>{ panel.classList.remove('open'); };
+      sendBtn.onclick=()=>sendChatMessage();
+      input.addEventListener('keydown',e=>{
+        if(e.key==="Enter"&&!e.shiftKey){
+          e.preventDefault();
+          sendChatMessage();
+        }
+      });
+    }
+
+    async function loadFavouriteTeamProfile(userDoc){
+      const fav=userDoc?.favouriteTeamucl||'';
+      favouriteTeamucl=fav;
+      const nameEl=document.getElementById('favTeamName');
+      const logoWrap=document.getElementById('favTeamLogo');
+      const img=document.getElementById('favTeamLogoImg');
+      const ph=document.getElementById('favTeamLogoPlaceholder');
+      if(!nameEl||!logoWrap||!img||!ph) return;
+      if(!fav){
+        nameEl.textContent='Nincs kedvenc beállítva';
+        ph.style.display='';
+        img.style.display='none';
+        return;
+      }
+      nameEl.textContent=fav;
+      const crest=crestMap[fav];
+      if(crest){
+        img.src=crest;
+        img.alt=fav;
+        img.style.display='';
+        ph.style.display='none';
+      }else{
+        img.style.display='none';
+        ph.style.display='';
+      }
     }
 
     document.addEventListener("DOMContentLoaded",()=>{
-      /* Liga-váltó mount: BAL SZÉL – cím mellett */
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
       onAuthStateChanged(auth,async(user)=>{
@@ -555,45 +757,28 @@
           currentUserRole=data.role||"user";
           favouriteTeamucl=data.favouriteTeamucl||"";
           chatLastSeen=data[CHAT_LAST_SEEN_FIELD]||null;
-        }else{
-          currentUserNick=currentUserEmail; currentUserRole="user";
-          favouriteTeamucl="";
+          loadFavouriteTeamProfile(data);
         }
 
-        document.getElementById("userNick").textContent=currentUserNick;
-        document.getElementById("userEmail").textContent=currentUserEmail;
-
-        const favLabel=document.getElementById("favTeamLabel");
-        const favCrest=document.getElementById("favCrest_ucl");
-        const favPill=document.getElementById("favPill_ucl");
-        if(favouriteTeamucl){
-          favLabel.textContent=favouriteTeamucl;
-          const src=crestMap[favouriteTeamucl]||"fav2.png";
-          favCrest.src=src;
-          favPill.hidden=false;
-        }else{
-          favLabel.textContent="Még nincs beállítva";
-          favCrest.src="fav2.png";
-          favPill.hidden=true;
-          const onb=document.getElementById("onbFav_ucl");
-          const go=document.getElementById("onbFavGo_ucl");
-          const skip=document.getElementById("onbFavSkip_ucl");
-          if(onb&&go&&skip){
-            onb.classList.add("open");
-            go.onclick=()=>{onb.classList.remove("open");window.location.href="profile.html";};
-            skip.onclick=()=>{onb.classList.remove("open");};
-          }
-        }
+        subscribeChat();
+        setupChatUI();
 
         try{
           const lockDoc=await getDoc(doc(db,"settings","positionsLock_ucl"));
-          const isLocked=lockDoc.exists()?!!lockDoc.data().locked:false;
-          let until=null;
-          if(lockDoc.exists()&&lockDoc.data().until){
-            const ts=lockDoc.data().until;
-            if(ts&&ts.toDate) until=ts.toDate();
+          if(lockDoc.exists()){
+            const d=lockDoc.data();
+            const isLocked=!!d.isLocked;
+            const until=d.lockUntil?.toDate?.()||null;
+            const now=new Date();
+            const locked = isLocked || (until && now>=until);
+            if(locked){
+              startNavTop8Countdown(null);
+            }else{
+              startNavTop8Countdown(until);
+            }
+          }else{
+            startNavTop8Countdown(null);
           }
-          startNavTop8Countdown(isLocked?null:until);
         }catch(e){ startNavTop8Countdown(null); }
 
         await buildComputedTable();
@@ -607,16 +792,39 @@
           const fbLink=facebookLinks[favouriteTeamucl];
           if(fbLink){
             const fbDiv=document.createElement("div");
-            fbDiv.innerHTML=`<a href="${fbLink}" target="_blank" rel="noopener">Nyisd meg a ${favouriteTeamucl} Facebook-oldalát egy új fülön.</a>`;
-            const cont=document.getElementById("facebookFeedContainer");
-            cont.innerHTML="";
-            cont.appendChild(fbDiv);
-          }else{
-            document.getElementById("facebookFeedContainer").textContent="Itt fog megjelenni a kedvenc csapatod hírfolyama.";
+            fbDiv.className="fb-wrap";
+            fbDiv.innerHTML=`
+              <iframe 
+                src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=560&height=540&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
+                scrolling="no" frameborder="0" allowfullscreen="true"
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
+            document.getElementById("facebookFeedContainer").appendChild(fbDiv);
           }
-        }catch(e){
-          document.getElementById("facebookFeedContainer").textContent="Nem sikerült betölteni a hírfolyamot.";
+        }catch(e){console.warn(e)}
+
+        function updatePendingBadgeUcl(){
+          const badge = document.getElementById('tipsBadgeUcl');
+          const matchesCard = document.getElementById('matchesCard');
+          if (!badge) return;
+          getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+            const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+            getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+              const tippedIds = new Set();
+              tipsSnap.forEach(t => tippedIds.add(t.data().matchId));
+              const pending = upcoming.filter(m => !tippedIds.has(m.id));
+              const hasPending = pending.length > 0;
+              badge.hidden = !hasPending;
+              if(matchesCard){
+                if(hasPending) matchesCard.classList.add('attention');
+                else matchesCard.classList.remove('attention');
+              }
+            });
+          });
         }
+        updatePendingBadgeUcl();
+        onSnapshot(collection(db,"ucl_matches"), updatePendingBadgeUcl);
+        onSnapshot(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)), updatePendingBadgeUcl);
+
       });
     });
   </script>
