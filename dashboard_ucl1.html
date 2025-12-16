@@ -104,7 +104,42 @@
       0%,100%{ background:#ffffff; box-shadow:0 6px 18px rgba(15,23,42,.05); }
       50%{ background:#FFF5CC; box-shadow:0 8px 24px rgba(245,158,11,.25); }
     }
-  </style>
+  
+/* UCL Bracket collapsible card */
+#uclBracketDetails summary{
+  cursor:pointer;
+  list-style:none;
+}
+#uclBracketDetails summary::-webkit-details-marker{display:none;}
+#uclBracketDetails .ucl-bracket-placeholder{
+  padding: 18px;
+  text-align:center;
+  font-size:14px;
+  color: var(--muted, #64748b);
+  border: 1px dashed rgba(148,163,184,.6);
+  border-radius: 12px;
+  background: rgba(248,250,252,.9);
+}
+#uclBracketDetails .ucl-bracket-wrap{
+  margin-top: 12px;
+  overflow-x: auto;
+}
+#uclBracketDetails .ucl-bracket-toolbar{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+}
+#uclBracketDetails .ucl-bracket-title{
+  font-size: 16px;
+  font-weight: 700;
+}
+#uclBracketDetails .ucl-bracket-sub{
+  font-size: 12px;
+  opacity: .8;
+}
+
+</style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -125,6 +160,29 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+  async function loadUclBracketUiSetting() {
+    const detailsEl = document.getElementById('uclBracketDetails');
+    const pillEl = document.getElementById('uclBracketTogglePill');
+    if (!detailsEl) return;
+
+    try {
+      const uiRef = doc(db, "settings", "ucl_bracket_ui");
+      const snap = await getDoc(uiRef);
+      const openByDefault = snap.exists() ? !!snap.data().openByDefault : false;
+      if (openByDefault) detailsEl.setAttribute('open', '');
+      else detailsEl.removeAttribute('open');
+    } catch (e) {
+    }
+
+    const syncPill = () => {
+      const isOpen = detailsEl.hasAttribute('open');
+      if (pillEl) pillEl.textContent = isOpen ? 'Bezár' : 'Megnyit';
+    };
+    detailsEl.addEventListener('toggle', syncPill);
+    syncPill();
+  }
+
 
     const CHAT_COLLECTION = 'chatMessages_ucl';
     const CHAT_LAST_SEEN_FIELD = 'chatLastSeenUcl';
@@ -188,8 +246,6 @@
 
       snap.forEach(d=>{
         const m=d.data()||{};
-        const roundNum = parseInt((m.roundId ?? m.round ?? 0), 10);
-        if (Number.isFinite(roundNum) && roundNum >= 9) return;
         const A=m.homeTeam||m.home||"";
         const B=m.awayTeam||m.away||"";
         const r=parseRes(m.result);
@@ -567,7 +623,9 @@
         };
       }
     }
-  </script>
+  
+  loadUclBracketUiSetting();
+</script>
 </head>
 <body>
   <div class="layout">
@@ -623,6 +681,27 @@
         <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
       </a>
     </nav>
+
+<section class="card" id="uclBracketCard">
+  <details id="uclBracketDetails">
+    <summary>
+      <div class="ucl-bracket-toolbar">
+        <div>
+          <div class="ucl-bracket-title">BL kieséses ágrajz</div>
+          <div class="ucl-bracket-sub">A 9. fordulótól a meccsek már csak itt számítanak.</div>
+        </div>
+        <span class="pill" id="uclBracketTogglePill">Megnyit</span>
+      </div>
+    </summary>
+
+    <div class="ucl-bracket-wrap" id="uclBracketContainer">
+      <div class="ucl-bracket-placeholder">
+        Az ágrajz adatait az admin oldalon tudod feltölteni.
+      </div>
+    </div>
+  </details>
+</section>
+
 
     <div class="content-grid">
       <section class="card table-wrap">
