@@ -14,41 +14,28 @@
   <style>
     .layout{display:flex;flex-direction:column;gap:16px;max-width:1200px;margin:0 auto;padding:20px}
     .content-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
-    .card{background:#fff;border-radius:16px;border:1px solid var(--line,#e6eaf1);box-shadow:0 10px 30px rgba(15,23,42,.08);padding:16px;position:relative;overflow:hidden}
-    .card h3{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px}
-    .card h3 svg{width:18px;height:18px;color:#0f172a}
-    .hero{display:flex;flex-direction:column;gap:12px;padding:18px 16px;border-radius:16px;background:radial-gradient(circle at 0 0,#22d3ee33 0,#0f172a 45%,#020617 100%);color:#e5e7eb;position:relative;overflow:hidden}
-    .hero-main{display:flex;justify-content:space-between;gap:16px}
-    .hero-left h1{margin:0;font-size:20px;letter-spacing:0.02em}
-    .hero-left p{margin:4px 0 0;font-size:13px;color:#e5e7ebcc}
-    .hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.6);font-size:11px}
-    .hero-badge svg{width:14px;height:14px}
-    .hero-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:10px;min-width:160px}
-    .hero-team{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(15,23,42,.85);border:1px solid rgba(148,163,184,.5)}
-    .hero-team-logo{width:28px;height:28px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .hero-team-logo img{width:100%;height:100%;object-fit:contain}
-    .hero-team-text{display:flex;flex-direction:column}
-    .hero-team-name{font-size:13px;font-weight:600}
-    .hero-team-sub{font-size:11px;color:#cbd5f5}
-    .hero-pill{font-size:11px;border-radius:999px;padding:3px 8px;border:1px solid rgba(148,163,184,.6);background:rgba(15,23,42,.85);display:inline-flex;align-items:center;gap:4px}
-    .hero-pill svg{width:12px;height:12px}
-    .hero-bg-ball{position:absolute;right:-40px;bottom:-40px;width:160px;height:160px;opacity:.12;filter:drop-shadow(0 0 40px rgba(56,189,248,.8))}
-    .hero-bg-ball svg{width:100%;height:100%}
-    .nav-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-    .nav-card{display:flex;align-items:flex-start;gap:10px;padding:10px 10px;border-radius:12px;border:1px solid var(--line,#e6eaf1);background:#fff;cursor:pointer;text-decoration:none;color:inherit;transition:.16s ease box-shadow,.16s ease transform,.16s ease border-color}
-    .nav-card:hover{box-shadow:0 10px 26px rgba(15,23,42,.12);transform:translateY(-1px);border-color:#0ea5e9}
-    .nav-icon{width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#eff6ff;color:#1d4ed8;flex-shrink:0}
-    .nav-card.matches .nav-icon{background:#ecfeff;color:#0891b2}
-    .nav-card.old .nav-icon{background:#fefce8;color:#ca8a04}
-    .nav-card.points .nav-icon{background:#f5f3ff;color:#7c3aed}
-    .nav-card.admin .nav-icon{background:#fef2f2;color:#b91c1c}
-    .nav-icon svg{width:16px;height:16px}
-    .nav-card .text{display:flex;flex-direction:column;gap:2px}
-    .nav-card .title{font-size:13px;font-weight:600}
-    .nav-card .desc{font-size:11px;color:#64748b}
+    @media (max-width:1000px){.content-grid{grid-template-columns:1fr}}
+    .header{display:flex;align-items:center;justify-content:space-between}
+    .header-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .fav-crest{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line,#e6eaf1);background:#fff}
+    .welcome{color:var(--muted,#64748b);margin:4px 0 0}
+
+    /* liga-váltó balra, a cím mellé */
+    .league-switch-left{margin-left:8px}
+    @media (max-width:700px){.league-switch-left{width:100%;margin-left:0}}
+
+    .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05)}
+    .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent,#3b82f6) 15%,white);color:var(--accent,#3b82f6)}
+    .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
+    .nav-card .title{font-weight:800}
+    .nav-card .desc{color:var(--muted,#64748b);font-size:12px}
+    .card{background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.06);overflow:hidden}
+    .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
     .table-wrap{overflow:auto}
-    .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#e11d48;color:#fff;font-size:12px;font-weight:700;line-height:1;vertical-align:middle}
+    .pill-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;line-height:1;vertical-align:middle}
     .pill-badge[hidden]{display:none!important}
     .pill-badge.countdown{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-variant-numeric:tabular-nums;letter-spacing:.2px}
     .pill-badge.countdown.urgent{animation:pulse 1s ease-in-out infinite}
@@ -56,224 +43,73 @@
     .blink{animation:blink 1s steps(2,start) infinite}
     @keyframes blink{to{opacity:.2}}
     .fb-wrap iframe{width:100%;height:540px;border:0;overflow:hidden}
-    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
-    .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;margin:0;width:20px;height:20px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
+    .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
+    .chat-fab .fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:800;line-height:20px;display:none}
     .chat-fab.has-unread .fab-badge{display:inline-block}
-    .chat-panel{position:fixed;right:22px;bottom:86px;z-index:999;display:none;flex-direction:column;width:320px;max-height:440px;background:#0b1120;color:#e5e7eb;border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.14)}
+    .chat-panel{position:fixed;right:22px;bottom:86px;z-index:998;width:380px;max-width:calc(100vw - 32px);max-height:70vh;display:none;flex-direction:column;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.14)}
     .chat-panel.open{display:flex}
-    .chat-panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #1f2937;background:linear-gradient(120deg,#0f172a,#020617)}
-    .chat-panel-head span{font-size:13px;font-weight:600}
-    .chat-panel-body{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:12px}
-    .chat-msg{padding:6px 8px;border-radius:10px;max-width:88%}
-    .chat-msg.me{align-self:flex-end;background:#0369a1}
-    .chat-msg.other{align-self:flex-start;background:#111827}
-    .chat-meta{font-size:10px;color:#9ca3af;margin-top:2px}
-    .chat-input{display:flex;gap:6px;padding:8px 10px;border-top:1px solid #1f2937;background:#020617}
-    .chat-input textarea{flex:1;resize:none;border-radius:10px;border:1px solid #1f2937;background:#020617;color:#e5e7eb;padding:6px 8px;font-size:12px;min-height:34px;max-height:80px}
-    .chat-input button{border-radius:10px;border:none;background:#22c55e;color:#022c22;font-size:13px;font-weight:600;padding:6px 10px;display:inline-flex;align-items:center;gap:4px;cursor:pointer}
-    .chat-input button svg{width:14px;height:14px}
-    .chat-tagline{font-size:10px;color:#6b7280;margin-top:4px;text-align:right;padding:0 10px 6px}
-    .nav-top8{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#64748b}
-    .nav-top8 .pill-badge{background:#0ea5e9}
-    .nav-top8 .pill-badge.urgent{background:#b91c1c}
-    .nav-top8 .pill-badge.disabled{background:#9ca3af}
-    .nav-top8 .label{display:inline-flex;align-items:center;gap:4px}
-    .nav-top8 svg{width:13px;height:13px}
+    .chat-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
+    .chat-title{font-weight:800}
+    #chatClose{width:28px;height:28px;border-radius:8px;font-size:18px;line-height:28px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#111;border:1px solid var(--line,#e6eaf1);cursor:pointer}
+    #chatClose:hover{filter:brightness(.95)}
+    .chat-list{overflow:auto;padding:8px 10px}
+    .chat-empty{color:#64748b;font-size:13px;padding:8px 10px}
+    .msg{padding:8px 10px;border-bottom:1px solid var(--line,#e6eaf1);display:flex;gap:8px;align-items:flex-start}
+    .msg .meta{font-size:12px;color:#64748b;margin-bottom:2px}
+    .msg .text{white-space:pre-wrap;word-break:break-word}
+    .msg .del{margin-left:auto;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:2px 8px;border-radius:8px;font-size:12px;cursor:pointer;display:none}
+    .msg:hover .del{display:inline-block}
+    #chatComposer{display:flex;gap:8px;align-items:center;padding:10px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
+    #chatInput{background:#fff;color:#111;border:1px solid var(--line,#e6eaf1);height:40px;padding:8px 10px;border-radius:10px;font-size:14px;outline:none;width:100%;box-sizing:border-box}
+    #chatInput::placeholder{color:#6b7280}
+    #chatSendBtn{min-width:90px;padding:8px 12px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:0;font-weight:600;cursor:pointer}
+    .btn-accent{min-height:40px;padding:10px 14px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .btn-accent:hover{filter:brightness(.95)}
+    .btn-accent:focus{outline:2px solid color-mix(in oklab,var(--accent,#3b82f6) 30%,white);outline-offset:2px}
+    .btn-icon{width:18px;height:18px;display:inline-block}
+    .qual-green{background:color-mix(in oklab,#16a34a 12%,white)}
+    .elim-red{background:color-mix(in oklab,#ef4444 10%,white)}
 
-    /* BL kieséses ágrajz */
-    .bracket-card{margin-top:12px}
-    .bracket-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;overflow-x:auto}
-    .bracket-round{display:flex;flex-direction:column;gap:8px}
-    .bracket-round-title{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--muted,#64748b)}
-    .bracket-tie{border-radius:10px;border:1px solid var(--line,#e6eaf1);background:#ffffff;padding:6px 8px;box-shadow:0 1px 2px rgba(15,23,42,.08)}
-    .bracket-team{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:13px}
-    .bracket-team-name{display:flex;align-items:center;gap:6px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .bracket-team img{width:18px;height:18px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#fff}
-    .bracket-score{font-variant-numeric:tabular-nums;font-size:13px}
-    .bracket-meta{margin-top:4px;font-size:11px;color:var(--muted,#64748b);display:flex;justify-content:space-between;align-items:center;gap:6px}
-    .bracket-pill{border-radius:999px;padding:2px 6px;border:1px solid var(--line,#e6eaf1);background:#f9fafb;font-size:10px;white-space:nowrap}
-    .bracket-pen{font-size:10px;font-weight:600;color:#b91c1c}
+    .rules-modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000}
+    .rules-modal.open{display:flex}
+    .rules-dialog{width:min(900px,92vw);max-height:80vh;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;overflow:hidden}
+    .rules-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
+    .rules-title{font-weight:800}
+    .rules-close{width:32px;height:32px;border:1px solid var(--line,#e6eaf1);border-radius:8px;background:#eef2ff;cursor:pointer}
+    .rules-body{padding:14px;overflow:auto;line-height:1.5;color:#111;white-space:pre-wrap}
+    .rules-body p{margin:0 0 10px}
+    .rules-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line,#e6eaf1);background:#fff}
+    .rules-updated{font-size:12px;color:#64748b}
 
-    @media (max-width:960px){
-      .content-grid{grid-template-columns:1fr}
-      .hero-main{flex-direction:column;align-items:flex-start}
-      .hero-right{align-items:flex-start}
-      .nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .onb-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;display:none;align-items:center;justify-content:center}
+    .onb-backdrop.open{display:flex}
+    .onb-dialog{width:min(720px,92vw);background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.25);overflow:hidden}
+    .onb-head{padding:12px 14px;background:#f7f9fd;border-bottom:1px solid var(--line,#e6eaf1);font-weight:800}
+    .onb-body{padding:14px;display:grid;gap:12px}
+    .onb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .onb-foot{padding:12px 14px;background:#fff;border-top:1px solid var(--line,#e6eaf1);display:flex;justify-content:space-between;align-items:center}
+    .onb-note{font-size:12px;color:#64748b}
+    .onb-actions{display:flex;gap:8px}
+    .onb-btn{border:1px solid var(--line,#e6eaf1);background:#e5e7eb;color:#111;padding:8px 12px;border-radius:10px;font-weight:700;cursor:not-allowed;opacity:.6}
+    .onb-btn.ok{background:var(--accent,#3b82f6);color:#fff;border-color:#dbeafe}
+    .onb-btn.enabled{cursor:pointer;opacity:1}
+    .onb-sel{border:1px solid var(--line,#e6eaf1);border-radius:10px;padding:8px 10px;min-width:260px}
+
+    /* ➕ FIGYELEM ÁLLAPOT: villogó sárga/fehér a „Szezon végi sorrend” kártyán */
+    .nav-card.attention{
+      animation:flashCard 1.1s ease-in-out infinite;
+      border-color:rgba(245,158,11,.7);
     }
-    @media (max-width:640px){
-      .layout{padding:12px}
-      .nav-grid{grid-template-columns:1fr}
-      .hero{padding:14px 12px}
+    @keyframes flashCard{
+      0%,100%{ background:#ffffff; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+      50%{ background:#FFF5CC; box-shadow:0 8px 24px rgba(245,158,11,.25); }
     }
   </style>
-</head>
-<body>
-  <div class="layout">
-    <section class="hero">
-      <div class="hero-main">
-        <div class="hero-left">
-          <h1>BL TippLiga – dashboard</h1>
-          <p>Állás, kedvenc csapatod hírei és közös chat egy helyen.</p>
-          <div class="hero-badges">
-            <span class="hero-badge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 4h16v4H4zM4 10h16v10H4z"/>
-                <path d="M10 14h4M10 17h4"/>
-              </svg>
-              <span>Élő BL tabella</span>
-            </span>
-            <span class="hero-badge" id="top8Badge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20v-6M8 20V10M16 20V4"/>
-              </svg>
-              <span>Top8 / győztes / gólkirály tippek</span>
-            </span>
-            <span class="hero-badge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 5v14l7-4 7 4V5z"/>
-              </svg>
-              <span>Közös BL chat</span>
-            </span>
-          </div>
-        </div>
-        <div class="hero-right">
-          <div class="hero-team">
-            <div class="hero-team-logo" id="favTeamLogo">
-              <img id="favTeamLogoImg" src="" alt="" style="display:none">
-              <span id="favTeamLogoPlaceholder">?</span>
-            </div>
-            <div class="hero-team-text">
-              <span class="hero-team-name" id="favTeamName">Nincs kedvenc beállítva</span>
-              <span class="hero-team-sub">Profil / BL fül alatt tudod módosítani</span>
-            </div>
-          </div>
-          <div class="hero-pill" id="leagueSwitchMount">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 12h16M4 6h16M4 18h16"/>
-            </svg>
-            <span>NB I. / BL váltás</span>
-          </div>
-        </div>
-      </div>
-      <div class="hero-bg-ball" aria-hidden="true">
-        <svg viewBox="0 0 64 64">
-          <defs>
-            <radialGradient id="g1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(16 10) rotate(45) scale(40)">
-              <stop stop-color="#22d3ee"/>
-              <stop offset="1" stop-color="#0ea5e9" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <circle cx="32" cy="32" r="26" fill="url(#g1)" stroke="#22d3ee" stroke-width="1.4"/>
-          <path d="M32 8 24 20l8 6 8-6-8-12Zm0 48 8-12-8-6-8 6 8 12Zm-21-26 12-2 4 8-6 8-10-4 0-10Zm42 0-12-2-4 8 6 8 10-4 0-10Z" fill="none" stroke="#e5e7eb" stroke-width="1.1"/>
-        </svg>
-      </div>
-    </section>
-
-    <nav class="nav-grid">
-      <a href="matches_ucl.html" class="nav-card matches" id="matchesCard">
-        <div class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="16" rx="2"/>
-            <path d="M3 10h18M8 2v4M16 2v4M9 16h6"/>
-          </svg>
-        </div>
-        <div class="text">
-          <span class="title">Meccstippek</span>
-          <span class="desc">Hátralévő BL forduló(k) – 1X2 + duplázás</span>
-        </div>
-        <span class="pill-badge" id="tipsBadgeUcl" hidden>!</span>
-      </a>
-
-      <a href="old_matches_ucl.html" class="nav-card old">
-        <div class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 8v5l3 2"/>
-            <circle cx="12" cy="12" r="9"/>
-          </svg>
-        </div>
-        <div class="text">
-          <span class="title">Lezárt meccsek</span>
-          <span class="desc">Eredmények, szerzett pontok, statisztikák</span>
-        </div>
-      </a>
-
-      <a href="leaderboard_ucl.html" class="nav-card points">
-        <div class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M8 21V10M12 21V3M16 21v-6"/>
-            <path d="M4 21h16"/>
-          </svg>
-        </div>
-        <div class="text">
-          <span class="title">Ponttábla</span>
-          <span class="desc">Összesített TippLiga állás</span>
-        </div>
-      </a>
-
-      <a href="admin_ucl.html" class="nav-card admin">
-        <div class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.78 1.78 0 0 0 .35 1.94l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.78 1.78 0 0 0-1.94-.35 1.78 1.78 0 0 0-1.06 1.64V22a2 2 0 0 1-4 0v-.09A1.78 1.78 0 0 0 8 20.27a1.78 1.78 0 0 0-1.94.35l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.78 1.78 0 0 0 3.73 15a1.78 1.78 0 0 0-1.64-1.06H2a2 2 0 0 1 0-4h.09A1.78 1.78 0 0 0 3.73 8a1.78 1.78 0 0 0-.35-1.94l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.78 1.78 0 0 0 8 3.73 1.78 1.78 0 0 0 9.06 2.09V2a2 2 0 0 1 4 0v.09A1.78 1.78 0 0 0 15 3.73a1.78 1.78 0 0 0 1.94-.35l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.78 1.78 0 0 0 20.27 8a1.78 1.78 0 0 0 1.64 1.06H22a2 2 0 0 1 0 4h-.09A1.78 1.78 0 0 0 19.4 15Z"/>
-          </svg>
-        </div>
-        <div class="text">
-          <span class="title">Admin</span>
-          <span class="desc">Szezon-zár & beállítások</span>
-        </div>
-      </a>
-    </nav>
-
-    <section class="card bracket-card">
-      <h3>BL kieséses ágrajz</h3>
-      <div id="bracketContainer" class="bracket-grid"></div>
-    </section>
-
-    <div class="content-grid">
-      <section class="card table-wrap">
-        <h3>BL tabella</h3>
-        <div id="tableContainer"></div>
-      </section>
-      <section class="card">
-        <h3>Csapatod hírei</h3>
-        <div id="facebookFeedContainer"></div>
-      </section>
-  
-    </div>
-  </div>
-
-  <button class="chat-fab" id="chatFab" aria-label="BL chat megnyitása">
-    <span class="fab-badge" id="chatUnreadBadge">!</span>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5A8.48 8.48 0 0 1 21 11v.5z"/>
-    </svg>
-  </button>
-
-  <div class="chat-panel" id="chatPanel" aria-hidden="true">
-    <div class="chat-panel-head">
-      <span>BL TippLiga chat</span>
-      <button id="chatCloseBtn" class="btn" style="padding:4px 8px;font-size:11px;border-radius:999px;border:1px solid #374151;background:#020617;color:#e5e7eb">
-        Bezár
-      </button>
-    </div>
-    <div class="chat-panel-body" id="chatMessages"></div>
-    <div class="chat-input">
-      <textarea id="chatInput" rows="1" placeholder="Írj üzenetet a többieknek…"></textarea>
-      <button id="chatSendBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 2 11 13"/>
-          <path d="M22 2 15 22 11 13 2 9 22 2z"/>
-        </svg>
-        Küldés
-      </button>
-    </div>
-    <div class="chat-tagline">A BL TippLiga résztvevőinek közös beszélgetése</div>
-  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, query, where, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { computeLiveOrderFromMatches } from "./standings.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
@@ -294,28 +130,49 @@
     const CHAT_LAST_SEEN_FIELD = 'chatLastSeenUcl';
 
     const crestMap = {
-      "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barca.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/dortmund.png","Bologna":"ucl_crest/bologna.png","Braga":"ucl_crest/braga.png","Brest":"ucl_crest/brest.png","Celtic":"ucl_crest/celtic.png","Crvena zvezda":"ucl_crest/crvena.png","Dinamo Zagreb":"ucl_crest/dinamo.png","Feyenoord":"ucl_crest/feyenoord.png","Galatasaray":"ucl_crest/gala.png","Girona":"ucl_crest/girona.png","Inter":"ucl_crest/inter.png","Juventus":"ucl_crest/juve.png","Lazio":"ucl_crest/lazio.png","Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Lille":"ucl_crest/lille.png","Milan":"ucl_crest/milan.png","Monaco":"ucl_crest/monaco.png","Newcastle":"ucl_crest/newcastle.png","PSG":"ucl_crest/psg.png","Porto":"ucl_crest/porto.png","PSV":"ucl_crest/psv.png","Real Madrid":"ucl_crest/real.png","Real Sociedad":"ucl_crest/sociedad.png","RB Leipzig":"ucl_crest/rbleipzig.png","Roma":"ucl_crest/roma.png","Salzburg":"ucl_crest/salzburg.png","Shakhtar Donetsk":"ucl_crest/shakhtar.png","Sparta Praha":"ucl_crest/sparta.png","Sporting CP":"ucl_crest/sporting.png","Stuttgart":"ucl_crest/stuttgart.png","Tottenham Hotspur":"ucl_crest/spurs.png","Union Berlin":"ucl_crest/union.png","Villarreal":"ucl_crest/villarreal.png","Young Boys":"ucl_crest/yb.png","Dinamo Tbilisi":"ucl_crest/tbilisi.png","Bodo/Glimt":"ucl_crest/bodo.png","Ludogorec":"ucl_crest/ludogorec.png","Slovan Bratislava":"ucl_crest/slovan.png"
+      "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/borussia.png","Bodø/Glimt":"ucl_crest/bodo.png","Club Bruges":"ucl_crest/brugge.png","Chelsea":"ucl_crest/chelsea.png","FC Köbenhavn":"ucl_crest/copenhagen.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png","Galatasaray":"ucl_crest/galata.png","Internazionale":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Bayer Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png","Olympique Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png","Newcastle United":"ucl_crest/newcastle.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png","Pafosz":"ucl_crest/pafos.png","Paris Saint-Germain":"ucl_crest/psg.png","PSV":"ucl_crest/psv.png","Qarabag":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png","Slavia Praha":"ucl_crest/slavia.png","Sporting CP":"ucl_crest/sporting.png","Tottenham Hotspur":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png","Kajrat Almati":"ucl_crest/kairat.png"
     };
 
     const facebookLinks = {
-      "Barcelona":"https://www.facebook.com/fcbarcelona",
-      "Real Madrid":"https://www.facebook.com/RealMadrid",
-      "Bayern München":"https://www.facebook.com/fcbayern",
-      "Liverpool":"https://www.facebook.com/lfc",
-      "PSG":"https://www.facebook.com/PSG",
-      "Manchester City":"https://www.facebook.com/mancity",
-      "Arsenal":"https://www.facebook.com/Arsenal",
-      "Juventus":"https://www.facebook.com/Juventus",
-      "Inter":"https://www.facebook.com/Inter",
-      "Milan":"https://www.facebook.com/ACMilan"
+      "Ajax":"https://www.facebook.com/afcajax","Arsenal":"https://www.facebook.com/Arsenal","Atalanta":"https://www.facebook.com/atalantabc","Athletic Bilbao":"https://www.facebook.com/ATHLETICCLUB","Atlético Madrid":"https://www.facebook.com/AtleticodeMadrid","Bayer Leverkusen":"https://www.facebook.com/bayer04leverkusen","Borussia Dortmund":"https://www.facebook.com/BVB","Chelsea":"https://www.facebook.com/ChelseaFC","Club Brugge":"https://www.facebook.com/clubbrugge","Eintracht Frankfurt":"https://www.facebook.com/eintracht","Barcelona":"https://www.facebook.com/fcbarcelona","Bayern München":"https://www.facebook.com/FCBayern","FC Köbenhavn":"https://www.facebook.com/FCKobenhavn","Kajrat Almati":"https://www.facebook.com/fckairat","Bodø/Glimt":"https://www.facebook.com/Glimt1916","Internazionale":"https://www.facebook.com/Inter","Juventus":"https://www.facebook.com/Juventus","Liverpool":"https://www.facebook.com/LiverpoolFC","Monaco":"https://www.facebook.com/asmonaco","Manchester City":"https://www.facebook.com/mancity","Newcastle United":"https://www.facebook.com/newcastleunited","Olympiakosz Pireusz":"https://www.facebook.com/OlympiacosFC","Galatasaray":"https://www.facebook.com/Galatasaray","Slavia Praha":"https://www.facebook.com/slaviaofficial","Olympique Marseille":"https://www.facebook.com/OM","Pafosz":"https://www.facebook.com/pafosfc.official","Paris Saint-Germain":"https://www.facebook.com/PSG","Qarabag":"https://www.facebook.com/QarabagFK","Real Madrid":"https://www.facebook.com/RealMadrid","Benfica":"https://www.facebook.com/SLBenfica","Sporting CP":"https://www.facebook.com/SportingCP","Napoli":"https://www.facebook.com/SSCNapoli","Tottenham Hotspur":"https://www.facebook.com/TottenhamHotspur","Villarreal":"https://www.facebook.com/villarrealcf","Union Saint-Gilloise":"https://www.facebook.com/rusaintgilloise","PSV":"https://www.facebook.com/PSV"
     };
 
-    let currentUserEmail = null;
-    let currentUserNick = null;
-    let currentUserRole = null;
-    let favouriteTeamucl = null;
-    let chatLastSeen = null;
-    let chatUnsub = null;
+    function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}) }catch{ return "" } }
+
+    let navCdTimer=null;
+    function formatCountdown(ms){
+      const total=Math.max(0,Math.floor(ms/1000));
+      const d=Math.floor(total/86400);
+      const h=Math.floor((total%86400)/3600);
+      const m=Math.floor((total%3600)/60);
+      const s=total%60;
+      const H=String(h).padStart(2,'0');
+      const M=String(m).padStart(2,'0');
+      const S=String(s).padStart(2,'0');
+      const labelHTML=d>0?`${d}n ${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}`:`${H}<span class="blink">:</span>${M}<span class="blink">:</span>${S}`;
+      const aria=d>0?`${d} nap ${h} óra ${m} perc ${s} másodperc`:`${h} óra ${m} perc ${s} másodperc`;
+      return {labelHTML,aria};
+    }
+    function startNavTop8Countdown(until){
+      clearInterval(navCdTimer);
+      const el=document.getElementById('top8CountdownNav');
+      if(!el) return;
+      el.classList.add('countdown');
+      if(!until){ el.hidden=true; return; }
+      function tick(){
+        const ms=until-new Date();
+        if(ms<=0){ el.hidden=true; clearInterval(navCdTimer); return; }
+        const {labelHTML,aria}=formatCountdown(ms);
+        el.innerHTML=labelHTML;
+        el.setAttribute('aria-live','polite');
+        el.setAttribute('aria-label',`Visszaszámláló: ${aria}`);
+        el.title=`Határidő: ${until.toLocaleString('hu-HU')}`;
+        if(ms<=5*60*1000){ el.classList.add('urgent'); } else { el.classList.remove('urgent'); }
+      }
+      tick();
+      navCdTimer=setInterval(tick,1000);
+      el.hidden=false;
+    }
 
     function parseRes(str){
       const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
@@ -331,15 +188,13 @@
 
       snap.forEach(d=>{
         const m=d.data()||{};
+        const roundNum = parseInt((m.roundId ?? m.round ?? 0), 10);
+        if (Number.isFinite(roundNum) && roundNum >= 9) return;
         const A=m.homeTeam||m.home||"";
         const B=m.awayTeam||m.away||"";
-        const roundRaw = m.roundId ?? m.round ?? "";
-        const roundNum = parseInt(roundRaw,10);
-        const isLeaguePhase = !Number.isFinite(roundNum) || roundNum < 9;
         const r=parseRes(m.result);
-        if(isLeaguePhase && A&&B&&m.result) matchesForModule.push({homeTeam:A,awayTeam:B,result:m.result});
-        const a=S[A], b=S[B];
-        if(!a||!b||!r || !isLeaguePhase) return;
+        if(A&&B&&m.result) matchesForModule.push({homeTeam:A,awayTeam:B,result:m.result});
+        const a=S[A], b=S[B]; if(!a||!b||!r) return;
         const [hg,ag]=r;
         a.MP++; b.MP++;
         a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
@@ -361,17 +216,14 @@
         if(b.W!==a.W) return b.W-a.W;
         if(b.GD!==a.GD) return b.GD-a.GD;
         if(b.GF!==a.GF) return b.GF-a.GF;
-        const la=a.team.toLowerCase(), lb=b.team.toLowerCase();
-        const key=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
-        const h=H2H[key];
-        if(h){
-          const ha=h[a.team], hb=h[b.team];
-          if(ha && hb){
-            if(ha.Pts!==hb.Pts) return hb.Pts-ha.Pts;
-            const gdA=ha.GF-ha.GA, gdB=hb.GF-hb.GA;
-            if(gdA!==gdB) return gdB-gdA;
-            if(ha.GF!==hb.GF) return hb.GF-ha.GF;
-          }
+        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
+        const row=H2H[k];
+        if(row){
+          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0;
+          if(pb!==pa) return pb-pa;
+          const gda=(row[a.team]?.GF??0)-(row[a.team]?.GA??0);
+          const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);
+          if(gdb!==gda) return gdb-gda;
         }
         return a.team.localeCompare(b.team,'hu');
       }
@@ -387,18 +239,18 @@
     }
 
     function renderComputedTable(rows){
-      const tableContainer=document.getElementById("tableContainer");
-      if(!tableContainer) return;
-      const table=document.createElement("table");
-      table.style.width="100%";
-      table.style.borderCollapse="collapse";
-      table.innerHTML=`
+      const wrap=document.getElementById("tableContainer");
+      const tbl=document.createElement("table");
+      tbl.style.width="100%";
+      tbl.style.borderCollapse="separate";
+      tbl.style.borderSpacing="0";
+      tbl.innerHTML=`
         <thead>
-          <tr style="font-size:12px;color:#6b7280;border-bottom:1px solid var(--line,#e6eaf1);">
-            <th style="text-align:right;padding:8px 10px;width:32px">#</th>
-            <th style="text-align:left;padding:8px 10px;">Csapat</th>
+          <tr>
+            <th style="text-align:right;padding:8px 10px;">H</th>
+            <th style="padding:8px 10px;">Csapat</th>
             <th style="text-align:right;padding:8px 10px;">M</th>
-            <th style="text-align:right;padding:8px 10px;">GY</th>
+            <th style="text-align:right;padding:8px 10px;">Gy</th>
             <th style="text-align:right;padding:8px 10px;">D</th>
             <th style="text-align:right;padding:8px 10px;">V</th>
             <th style="text-align:right;padding:8px 10px;">LG</th>
@@ -414,7 +266,7 @@
               <tr class="${trClass}">
                 <td style="text-align:right;padding:8px 10px;color:#64748b;">${i+1}.</td>
                 <td style="padding:8px 10px;display:flex;align-items:center;gap:8px;">
-                  ${crestMap[r.team]?`<img src="${crestMap[r.team]}" alt="" style="width:20px;height:20px;border-radius:999px;border:1px solid var(--line,#e6eaf1);background:#fff;object-fit:contain">`:""}
+                  ${crestMap[r.team]?`<img src="${crestMap[r.team]}" alt="" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff;object-fit:contain">`:""}
                   <strong>${r.team}</strong>
                 </td>
                 <td style="text-align:right;padding:8px 10px;">${r.MP}</td>
@@ -424,325 +276,20 @@
                 <td style="text-align:right;padding:8px 10px;">${r.GF}</td>
                 <td style="text-align:right;padding:8px 10px;">${r.GA}</td>
                 <td style="text-align:right;padding:8px 10px;">${r.GD}</td>
-                <td style="text-align:right;padding:8px 10px;font-weight:600;">${r.Pts}</td>
-              </tr>
-            `;
-          }).join('')}
+                <td style="text-align:right;padding:8px 10px;font-weight:800;">${r.Pts}</td>
+              </tr>`;
+          }).join("")}
         </tbody>
       `;
-      tableContainer.innerHTML = '';
-      tableContainer.appendChild(table);
+      wrap.innerHTML="";
+      wrap.appendChild(tbl);
     }
 
-    const BRACKET_ROUNDS = [
-      {id:"PO",label:"Rájátszás a 16 közé",ties:8},
-      {id:"R16",label:"Nyolcaddöntő",ties:8},
-      {id:"QF",label:"Negyeddöntő",ties:4},
-      {id:"SF",label:"Elődöntő",ties:2},
-      {id:"F",label:"Döntő",ties:1}
-    ];
-
-    function computeTieScore(tie,matchesById){
-      const arr=Array.isArray(tie.matchIds)?tie.matchIds:(tie.matchId?[tie.matchId]:[]);
-      if(!arr.length) return null;
-      let homeGoals=0, awayGoals=0;
-      arr.forEach(id=>{
-        const m=matchesById[id];
-        if(!m||!m.result) return;
-        const res=parseRes(m.result);
-        if(!res) return;
-        const [gh,ga]=res;
-        const mh=m.homeTeam||m.home||"";
-        const ma=m.awayTeam||m.away||"";
-        const bh=tie.homeTeam||"";
-        const ba=tie.awayTeam||"";
-        let homeIsBracketHome=true;
-        if(bh&&ba){
-          if(mh===bh&&ma===ba) homeIsBracketHome=true;
-          else if(mh===ba&&ma===bh) homeIsBracketHome=false;
-        }
-        if(homeIsBracketHome){homeGoals+=gh;awayGoals+=ga}
-        else{homeGoals+=ga;awayGoals+=gh}
-      });
-      if(homeGoals===0&&awayGoals===0) return null;
-      let winner="draw";
-      if(homeGoals>awayGoals) winner="home";
-      else if(awayGoals>homeGoals) winner="away";
-      if(tie.penaltyWinner==="home"||tie.penaltyWinner==="away") winner=tie.penaltyWinner;
-      return {home:String(homeGoals),away:String(awayGoals),winner};
-    }
-
-    function renderBracketTie(tie,matchesById){
-      const div=document.createElement("div");
-      div.className="bracket-tie";
-      const homeName=tie.homeTeam||tie.homeSeedLabel||"–";
-      const awayName=tie.awayTeam||tie.awaySeedLabel||"–";
-      const homeCrest=crestMap[homeName];
-      const awayCrest=crestMap[awayName];
-
-      const top=document.createElement("div");
-      top.className="bracket-team";
-      top.innerHTML=`
-        <div class="bracket-team-name">
-          ${homeCrest?`<img src="${homeCrest}" alt="">`:""}
-          <span>${homeName}</span>
-        </div>
-        <div class="bracket-score" data-side="home"></div>
-      `;
-
-      const bottom=document.createElement("div");
-      bottom.className="bracket-team";
-      bottom.innerHTML=`
-        <div class="bracket-team-name">
-          ${awayCrest?`<img src="${awayCrest}" alt="">`:""}
-          <span>${awayName}</span>
-        </div>
-        <div class="bracket-score" data-side="away"></div>
-      `;
-
-      const meta=document.createElement("div");
-      meta.className="bracket-meta";
-
-      const left=document.createElement("span");
-      if(tie.decidedByPenalties){
-        left.className="bracket-pen";
-        left.textContent="11-esekkel";
-      }else{
-        left.textContent="";
-      }
-
-      const pill=document.createElement("span");
-      pill.className="bracket-pill";
-      pill.textContent=tie.label||(tie.index?`${tie.index}. pár`:"");
-
-      const winnerSpan=document.createElement("span");
-      winnerSpan.className="bracket-winner";
-
-      meta.appendChild(left);
-      meta.appendChild(pill);
-      meta.appendChild(winnerSpan);
-
-      div.appendChild(top);
-      div.appendChild(bottom);
-      div.appendChild(meta);
-
-      const scores=computeTieScore(tie,matchesById);
-      if(scores){
-        top.querySelector(".bracket-score").textContent=scores.home;
-        bottom.querySelector(".bracket-score").textContent=scores.away;
-        if(scores.winner==="home") winnerSpan.textContent=homeName;
-        else if(scores.winner==="away") winnerSpan.textContent=awayName;
-        else winnerSpan.textContent="";
-      }
-
-      return div;
-    }
-
-    async function loadBracket(){
-      const container=document.getElementById("bracketContainer");
-      if(!container) return;
-      container.innerHTML="";
-      const [matchesSnap,bracketSnap]=await Promise.all([
-        getDocs(collection(db,"ucl_matches")),
-        getDocs(collection(db,"ucl_bracket"))
-      ]);
-
-      const matchesById={};
-      matchesSnap.forEach(d=>{matchesById[d.id]=d.data()||{};});
-
-      const byRound={};
-      bracketSnap.forEach(d=>{
-        const data=d.data()||{};
-        const r=data.round;
-        if(!r) return;
-        if(!byRound[r]) byRound[r]=[];
-        byRound[r].push(Object.assign({id:d.id},data));
-      });
-
-      BRACKET_ROUNDS.forEach(cfg=>{
-        const col=document.createElement("div");
-        col.className="bracket-round";
-        const title=document.createElement("div");
-        title.className="bracket-round-title";
-        title.textContent=cfg.label;
-        col.appendChild(title);
-        const arr=(byRound[cfg.id]||[]).slice().sort((a,b)=>(a.index||0)-(b.index||0));
-        if(arr.length===0){
-          for(let i=1;i<=cfg.ties;i++){
-            const placeholder=renderBracketTie({index:i},matchesById);
-            col.appendChild(placeholder);
-          }
-        }else{
-          arr.forEach(tie=>{col.appendChild(renderBracketTie(tie,matchesById));});
-        }
-        container.appendChild(col);
-      });
-    }
-
-    function startNavTop8Countdown(until){
-      const badge=document.getElementById('top8Badge');
-      if(!badge) return;
-      if(!until){
-        badge.innerHTML='<span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l3 3"/></svg><span>Top8 / győztes / gólkirály szerkesztés lezárva</span></span>';
-        badge.classList.remove('countdown','urgent');
-        return;
-      }
-      function update(){
-        const now=new Date();
-        const diff=until-now;
-        if(diff<=0){
-          badge.innerHTML='<span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l3 3"/></svg><span>Top8 / győztes / gólkirály lezárva</span></span>';
-          badge.classList.remove('countdown','urgent');
-          return;
-        }
-        const totalSeconds=Math.floor(diff/1000);
-        const h=Math.floor(totalSeconds/3600);
-        const m=Math.floor((totalSeconds%3600)/60);
-        const s=totalSeconds%60;
-        const mm=String(m).padStart(2,'0');
-        const ss=String(s).padStart(2,'0');
-        badge.innerHTML='<span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l3 3"/></svg><span>Top8 / győztes / gólkirály zárásig: '+h+':'+mm+':'+ss+'</span></span>';
-        badge.classList.add('countdown');
-        if(diff<3600_000) badge.classList.add('urgent'); else badge.classList.remove('urgent');
-        requestAnimationFrame(update);
-      }
-      update();
-    }
-
-    function renderChatMessage(docData, isOwn){
-      const div=document.createElement('div');
-      div.className='chat-msg '+(isOwn?'me':'other');
-      const text=document.createElement('div');
-      text.textContent=docData.text||'';
-      const meta=document.createElement('div');
-      meta.className='chat-meta';
-      const nick=docData.nick||docData.user||'';
-      let t='';
-      try{
-        const ts=docData.createdAt?.toDate?.()||null;
-        if(ts){
-          const hh=String(ts.getHours()).padStart(2,'0');
-          const mm=String(ts.getMinutes()).padStart(2,'0');
-          t=`${hh}:${mm}`;
-        }
-      }catch(e){}
-      meta.textContent = nick + (t?' • '+t:'');
-      div.appendChild(text);
-      div.appendChild(meta);
-      return div;
-    }
-
-    function subscribeChat(){
-      const listEl=document.getElementById('chatMessages');
-      const badge=document.getElementById('chatUnreadBadge');
-      if(!listEl) return;
-      if(chatUnsub) chatUnsub();
-      const qRef=query(collection(db,CHAT_COLLECTION),orderBy('createdAt','asc'),limit(200));
-      chatUnsub=onSnapshot(qRef,snap=>{
-        listEl.innerHTML='';
-        let lastTs=null;
-        snap.forEach(docSnap=>{
-          const d=docSnap.data();
-          const node=renderChatMessage(d, d.user===currentUserEmail);
-          listEl.appendChild(node);
-          lastTs=d.createdAt?.toMillis?.()||lastTs;
-        });
-        listEl.scrollTop=listEl.scrollHeight;
-        if(chatLastSeen && lastTs && lastTs>chatLastSeen){
-          const panelOpen=document.getElementById('chatPanel')?.classList.contains('open');
-          if(!panelOpen){
-            const fab=document.getElementById('chatFab');
-            if(fab) fab.classList.add('has-unread');
-            if(badge) badge.style.display='';
-          }
-        }
-      });
-    }
-
-    async function sendChatMessage(){
-      const input=document.getElementById('chatInput');
-      if(!input) return;
-      const text=input.value.trim();
-      if(!text) return;
-      input.value='';
-      try{
-        await addDoc(collection(db,CHAT_COLLECTION),{
-          text,
-          user:currentUserEmail,
-          nick:currentUserNick||currentUserEmail,
-          createdAt:serverTimestamp()
-        });
-      }catch(e){
-        console.error("chat send failed",e);
-      }
-    }
-
-    async function markChatSeen(){
-      if(!currentUserEmail) return;
-      const now=Date.now();
-      try{
-        await setDoc(doc(db,"users",currentUserEmail),{ [CHAT_LAST_SEEN_FIELD]: now },{ merge:true });
-        chatLastSeen=now;
-      }catch(e){
-        console.warn("chat lastSeen update failed",e);
-      }
-      const fab=document.getElementById('chatFab');
-      const badge=document.getElementById('chatUnreadBadge');
-      if(fab) fab.classList.remove('has-unread');
-      if(badge) badge.style.display='none';
-    }
-
-    function setupChatUI(){
-      const fab=document.getElementById('chatFab');
-      const panel=document.getElementById('chatPanel');
-      const closeBtn=document.getElementById('chatCloseBtn');
-      const sendBtn=document.getElementById('chatSendBtn');
-      const input=document.getElementById('chatInput');
-      if(!fab||!panel||!closeBtn||!sendBtn||!input) return;
-      fab.onclick=()=>{
-        const open=panel.classList.toggle('open');
-        if(open){
-          markChatSeen();
-        }
-      };
-      closeBtn.onclick=()=>{ panel.classList.remove('open'); };
-      sendBtn.onclick=()=>sendChatMessage();
-      input.addEventListener('keydown',e=>{
-        if(e.key==="Enter"&&!e.shiftKey){
-          e.preventDefault();
-          sendChatMessage();
-        }
-      });
-    }
-
-    async function loadFavouriteTeamProfile(userDoc){
-      const fav=userDoc?.favouriteTeamucl||'';
-      favouriteTeamucl=fav;
-      const nameEl=document.getElementById('favTeamName');
-      const logoWrap=document.getElementById('favTeamLogo');
-      const img=document.getElementById('favTeamLogoImg');
-      const ph=document.getElementById('favTeamLogoPlaceholder');
-      if(!nameEl||!logoWrap||!img||!ph) return;
-      if(!fav){
-        nameEl.textContent='Nincs kedvenc beállítva';
-        ph.style.display='';
-        img.style.display='none';
-        return;
-      }
-      nameEl.textContent=fav;
-      const crest=crestMap[fav];
-      if(crest){
-        img.src=crest;
-        img.alt=fav;
-        img.style.display='';
-        ph.style.display='none';
-      }else{
-        img.style.display='none';
-        ph.style.display='';
-      }
-    }
+    let currentUserEmail=""; let currentUserNick=""; let currentUserRole="user";
+    let favouriteTeamucl=""; let chatLastSeen=null;
 
     document.addEventListener("DOMContentLoaded",()=>{
+      /* Liga-váltó mount: BAL SZÉL – cím mellett */
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
       onAuthStateChanged(auth,async(user)=>{
@@ -757,36 +304,41 @@
           currentUserRole=data.role||"user";
           favouriteTeamucl=data.favouriteTeamucl||"";
           chatLastSeen=data[CHAT_LAST_SEEN_FIELD]||null;
-          loadFavouriteTeamProfile(data);
+        }else{
+          currentUserNick=currentUserEmail; currentUserRole="user"; favouriteTeamucl=""; chatLastSeen=null;
         }
 
-        subscribeChat();
-        setupChatUI();
+        document.getElementById("welcome").textContent=`Üdv, ${currentUserNick}!`;
+        if(currentUserRole==="admin"){document.getElementById("adminLink").style.display="flex"}
 
-        try{
-          const lockDoc=await getDoc(doc(db,"settings","positionsLock_ucl"));
-          if(lockDoc.exists()){
-            const d=lockDoc.data();
-            const isLocked=!!d.isLocked;
-            const until=d.lockUntil?.toDate?.()||null;
-            const now=new Date();
-            const locked = isLocked || (until && now>=until);
-            if(locked){
-              startNavTop8Countdown(null);
-            }else{
-              startNavTop8Countdown(until);
-            }
-          }else{
-            startNavTop8Countdown(null);
+        if(favouriteTeamucl){
+          const themeClass="theme-"+favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-");
+          document.body.classList.add(themeClass);
+          const crest=crestMap[favouriteTeamucl];
+          if(crest){
+            const img=document.getElementById("favCrest");
+            img.src=crest; img.alt=favouriteTeamucl; img.hidden=false;
           }
+        }
+
+        // Onboarding (ha nincs BL kedvenc)
+        await maybeForceFavoriteSetupUcl(userRef);
+
+        // Top8 határidő visszaszámláló
+        try{
+          const snap=await getDoc(doc(db,'settings','positionsLock_ucl'));
+          let until=null; let isLocked=false;
+          if(snap.exists()){
+            const d=snap.data()||{};
+            until=d.lockUntil?.toDate?.()||null;
+            const now=new Date();
+            isLocked=!!d.isLocked||(until&&now>=until);
+          }
+          startNavTop8Countdown(isLocked?null:until);
         }catch(e){ startNavTop8Countdown(null); }
 
         await buildComputedTable();
         onSnapshot(collection(db,"ucl_matches"),()=>buildComputedTable());
-
-        await loadBracket();
-        onSnapshot(collection(db,"ucl_matches"),()=>loadBracket());
-        onSnapshot(collection(db,"ucl_bracket"),()=>loadBracket());
 
         try{
           const fbLink=facebookLinks[favouriteTeamucl];
@@ -802,6 +354,7 @@
           }
         }catch(e){console.warn(e)}
 
+        // Leadatlan tippek jelvény a Meccstippek kártyán
         function updatePendingBadgeUcl(){
           const badge = document.getElementById('tipsBadgeUcl');
           const matchesCard = document.getElementById('matchesCard');
@@ -810,14 +363,9 @@
             const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
             getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
               const tippedIds = new Set();
-              tipsSnap.forEach(t => tippedIds.add(t.data().matchId));
-              const pending = upcoming.filter(m => !tippedIds.has(m.id));
-              const hasPending = pending.length > 0;
-              badge.hidden = !hasPending;
-              if(matchesCard){
-                if(hasPending) matchesCard.classList.add('attention');
-                else matchesCard.classList.remove('attention');
-              }
+              tipsSnap.forEach(x=>{ const t=x.data(); if(t?.matchId) tippedIds.add(t.matchId); });
+              const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+              if (pending>0){ badge.textContent = pending; badge.hidden = false; matchesCard?.classList.add('attention'); } else { badge.hidden = true; matchesCard?.classList.remove('attention'); }
             });
           });
         }
@@ -825,8 +373,352 @@
         onSnapshot(collection(db,"ucl_matches"), updatePendingBadgeUcl);
         onSnapshot(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)), updatePendingBadgeUcl);
 
+        // ➕ FIGYELEM: villogó kártya – ha nincs minden tipp meg
+        async function checkPositionsCompleteness(){
+          const card = document.getElementById('positionsCard');
+          if (!card) return;
+
+          // Lock állapot
+          let locked=false;
+          try{
+            const s=await getDoc(doc(db,'settings','positionsLock_ucl'));
+            if(s.exists()){
+              const d=s.data()||{};
+              const until=d.lockUntil?.toDate?.()||null;
+              const now=new Date();
+              locked = !!d.isLocked || (until && now>=until);
+            }
+          }catch{}
+
+          if(locked){ card.classList.remove('attention'); return; }
+
+          // Saját tippek állapota
+          let top8Ok=false, champOk=false, goldenOk=false;
+          try{
+            const t=await getDoc(doc(db,"ucl_top8Tips", currentUserEmail));
+            if(t.exists()){
+              const arr=t.data()?.picks;
+              top8Ok = Array.isArray(arr) && arr.filter(Boolean).length>=8;
+            }
+          }catch{}
+          try{
+            const c=await getDoc(doc(db,"ucl_championPickTips", currentUserEmail));
+            champOk = c.exists() && !!c.data()?.team;
+          }catch{}
+          try{
+            const g=await getDoc(doc(db,"ucl_goldenBootTips", currentUserEmail));
+            goldenOk = g.exists() && !!g.data()?.player;
+          }catch{}
+
+          const incomplete = !(top8Ok && champOk && goldenOk);
+          card.classList.toggle('attention', incomplete);
+        }
+        await checkPositionsCompleteness();
+        onSnapshot(doc(db,'settings','positionsLock_ucl'), checkPositionsCompleteness);
+        onSnapshot(doc(db,'ucl_top8Tips', currentUserEmail), checkPositionsCompleteness);
+        onSnapshot(doc(db,'ucl_championPickTips', currentUserEmail), checkPositionsCompleteness);
+        onSnapshot(doc(db,'ucl_goldenBootTips', currentUserEmail), checkPositionsCompleteness);
+
+        initChat(userRef);
+        if(window.hideLoader) hideLoader();
       });
+
+      document.getElementById("logout").addEventListener("click",()=>{signOut(auth).then(()=>window.location.href="login.html")});
+
+      // Szabályzat modál
+      const rulesModal=document.getElementById('rulesModal');
+      const openRulesBtn=document.getElementById('openRules');
+      const closeRules=document.getElementById('closeRules');
+      const closeRules2=document.getElementById('closeRules2');
+      function openRulesModal(){rulesModal.classList.add('open')}
+      function closeRulesModal(){rulesModal.classList.remove('open')}
+      openRulesBtn?.addEventListener('click',openRulesModal);
+      closeRules?.addEventListener('click',closeRulesModal);
+      closeRules2?.addEventListener('click',closeRulesModal);
+      rulesModal?.addEventListener('click',(e)=>{if(e.target===rulesModal) closeRulesModal()});
     });
+
+    function initChat(userRef){
+      const fab=document.getElementById('chatToggle');
+      const fabBadge=document.getElementById('chatFabBadge');
+      const panel=document.getElementById('chatPanel');
+      const closeBtn=document.getElementById('chatClose');
+      const listEl=document.getElementById('chatMessages');
+      const inputEl=document.getElementById('chatInput');
+      const sendBtn=document.getElementById('chatSendBtn');
+
+      function open(){panel.classList.add('open');setTimeout(()=>inputEl?.focus(),50);markSeen()}
+      function close(){panel.classList.remove('open')}
+      function toggle(){panel.classList.contains('open')?close():open()}
+      fab.addEventListener('click',toggle);
+      closeBtn.addEventListener('click',close);
+
+      let lastSeenMs=chatLastSeen?.toMillis?chatLastSeen.toMillis():0;
+      const qAll=query(collection(db,CHAT_COLLECTION),orderBy('ts','asc'));
+      onSnapshot(qAll,snap=>{
+        listEl.innerHTML='';
+        if(snap.empty){
+          const empty=document.createElement('div');
+          empty.className='chat-empty';
+          empty.textContent='Még nincs üzenet. Légy te az első!';
+          listEl.appendChild(empty);
+        }else{
+          let unread=0;
+          snap.forEach(docu=>{
+            const d=docu.data();
+            const tsMs=d.ts?.toMillis?.()||0;
+            if(tsMs>lastSeenMs) unread++;
+            const row=document.createElement('div');
+            row.className='msg';
+            row.innerHTML=`
+              <div style="flex:1 1 auto">
+                <div class="meta"><strong>${d.nick||'Ismeretlen'}</strong> • ${d.ts?fmtTime(d.ts):''}</div>
+                <div class="text">${(d.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+              </div>`;
+            const canDelete=(currentUserRole==='admin')||(d.email===currentUserEmail);
+            if(canDelete){
+              const del=document.createElement('button');
+              del.className='del';
+              del.textContent='Törlés';
+              del.title='Üzenet törlése';
+              del.addEventListener('click',async()=>{try{await deleteDoc(doc(db,CHAT_COLLECTION,docu.id))}catch(e){console.warn('Del failed',e)}});
+              row.appendChild(del);
+            }
+            listEl.appendChild(row);
+          });
+          if(!panel.classList.contains('open')&&unread>0){
+            fab.classList.add('has-unread');
+            fabBadge.textContent=unread>99?'99+':String(unread);
+          }else{
+            fab.classList.remove('has-unread');
+            fabBadge.textContent='';
+          }
+          setTimeout(()=>{listEl.scrollTop=listEl.scrollHeight;},0);
+        }
+      }, err => console.warn('chat snapshot error:', err));
+
+      sendBtn.addEventListener('click',async ()=>{
+        const txt=(inputEl.value||'').trim();
+        if(!txt){inputEl.focus();return}
+        const backup=txt;
+        inputEl.value='';
+        try{
+          await addDoc(collection(db,CHAT_COLLECTION),{
+            email: currentUserEmail,
+            nick: currentUserNick || 'Ismeretlen',
+            text: backup,
+            ts: serverTimestamp()
+          });
+          if(panel.classList.contains('open')) await markSeen();
+        }catch(e){
+          console.warn('Chat send failed:', e);
+          inputEl.value=backup; inputEl.focus();
+        }
+      });
+      inputEl.addEventListener('keydown',(e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
+
+      async function markSeen(){
+        try{
+          await setDoc(userRef,{ [CHAT_LAST_SEEN_FIELD]: serverTimestamp() },{ merge:true });
+          lastSeenMs=Date.now();
+          fab.classList.remove('has-unread');
+          fabBadge.textContent='';
+        }catch(e){ console.warn('markSeen failed', e); }
+      }
+    }
+
+    async function maybeForceFavoriteSetupUcl(userRef){
+      const onbEl=document.getElementById("onbFav_ucl");
+      const onbSel=document.getElementById("onbFavSelect_ucl");
+      const onbRem=document.getElementById("onbRem_ucl");
+      const onbSave=document.getElementById("onbFavSave_ucl");
+
+      if(favouriteTeamucl) return;
+
+      if(onbSel){
+        onbSel.innerHTML = `<option value="">– Válassz BL-csapatot –</option>` + Object.keys(crestMap).map(t=>`<option value="${t}">${t}</option>`).join("");
+        onbSel.addEventListener("change",()=>{
+          const ok=!!onbSel.value;
+          if(onbSave){ onbSave.disabled=!ok; onbSave.classList.toggle("enabled",ok); }
+        });
+      }
+      if(onbSave){ onbSave.disabled=true; onbSave.classList.remove("enabled"); }
+      if(onbSel) onbSel.value="";
+      if(onbRem) onbRem.checked=true;
+      if(onbEl) onbEl.classList.add("open");
+
+      if(onbSave){
+        onbSave.onclick=async ()=>{
+          if(!onbSel?.value) return;
+          try{
+            await setDoc(userRef,{ favouriteTeamucl:onbSel.value, reminderEmailUcl: !!onbRem?.checked },{ merge:true });
+            favouriteTeamucl=onbSel.value;
+            const themeClass="theme-"+favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-');
+            document.body.classList.add(themeClass);
+            const crest=crestMap[favouriteTeamucl];
+            if(crest){
+              const img=document.getElementById("favCrest");
+              img.src=crest; img.alt=favouriteTeamucl; img.hidden=false;
+            }
+            onbEl?.classList.remove("open");
+          }catch(e){
+            alert("Hiba a beállítás mentésekor. Próbáld újra.");
+          }
+        };
+      }
+    }
   </script>
+</head>
+<body>
+  <div class="layout">
+    <div class="header">
+      <div class="header-left">
+        <img id="favCrest" class="fav-crest" alt="" hidden>
+        <div>
+          <h1>BL TippLiga</h1>
+          <p id="welcome" class="welcome"></p>
+        </div>
+        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BAL OLDALON A CÍM MELLETT -->
+        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
+      </div>
+      <div>
+        <button id="logout" class="btn-accent" aria-label="Kilépés">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
+          Kilépés
+        </button>
+        <button id="openRules" class="btn-accent" style="display:block;margin-top:10px;">Szabályzat</button>
+      </div>
+    </div>
+
+    <nav class="nav-grid">
+      <a class="nav-card" href="dashboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></div>
+        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
+      </a>
+      <a id="positionsCard" class="nav-card" href="positions_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg></div>
+        <div class="text">
+          <span class="title">Szezon végi sorrend <span id="top8CountdownNav" class="pill-badge countdown" hidden></span></span>
+          <span class="desc">Ligafázis Top 8, győztes, gólkirály</span>
+        </div>
+      </a>
+      <a id="matchesCard" class="nav-card" href="matches_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1.7 3.5 1.7-1.2 1.7 1.2-.6 2 1.6 1.2h-2L12 7.2l-1.7 1.5h-2l1.6-1.2-.6-2ZM6.2 9.3l1.9-.3.9 1.7-.8 1.8-1.8.2-1.2-1.6 1-1.8Zm11.6 0 1 1.8-1.2 1.6-1.8-.2-.8-1.8.9-1.7 1.9.3ZM8.9 17.9l-.7-1.9 1.5-1.2h1.9l.9 1.7-1.5 1.4-2.1 0Zm6.2 0-2.1 0-1.5-1.4.9-1.7h1.9l1.5 1.2-.7 1.9Z"/></svg></div>
+        <div class="text"><span class="title">Meccstippek <span id="tipsBadgeUcl" class="pill-badge" hidden></span></span><span class="desc">Közelgő meccsek & tippek</span></div>
+      </a>
+      <a class="nav-card" href="results_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm0 4h6V4H9v2Zm1 6h8v2h-8v-2Zm0 4h8v2h-8v-2ZM6 10h3v2H6v-2Z"/></svg></div>
+        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
+      </a>
+      <a class="nav-card" href="leaderboard_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2Zm-2 2H9V3h6v2ZM4 6a3 3 0 0 0 3 3h1a4 4 0 0 1-1 3h1a3 3 0 0 0 3-3V5Z"/></svg></div>
+        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
+      </a>
+      <a class="nav-card" href="profile_ucl.html">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg></div>
+        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
+      </a>
+      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
+        <div class="icon-wrap" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74 1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg></div>
+        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
+      </a>
+    </nav>
+
+    <div class="content-grid">
+      <section class="card table-wrap">
+        <h3>BL tabella</h3>
+        <div id="tableContainer"></div>
+      </section>
+      <section class="card">
+        <h3>Csapatod hírei</h3>
+        <div id="facebookFeedContainer"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Onboarding (BL) -->
+  <div id="onbFav_ucl" class="onb-backdrop" aria-modal="true" role="dialog" aria-labelledby="onbFavTitle_ucl">
+    <div class="onb-dialog">
+      <div class="onb-head" id="onbFavTitle_ucl">Üdv a BL TippLigában! 🎉</div>
+      <div class="onb-body">
+        <div>Először <strong>válaszd ki a kedvenc BL-csapatodat</strong>, és döntsd el, kérsz-e e-mailes emlékeztetőt a tippek leadására. <em>Később a Profil oldalon bármikor módosítható.</em></div>
+        <div class="onb-row">
+          <label for="onbFavSelect_ucl"><strong>Kedvenc BL-csapat</strong></label>
+          <select id="onbFavSelect_ucl" class="onb-sel"></select>
+        </div>
+        <div class="onb-row">
+          <label style="display:flex;align-items:center;gap:10px;">
+            <input id="onbRem_ucl" type="checkbox" checked>
+            <span>E-mailes emlékeztetőt kérek</span>
+          </label>
+        </div>
+      </div>
+      <div class="onb-foot">
+        <span class="onb-note">Tipp: Ezeket később a <strong>Profil</strong> oldalon is módosíthatod.</span>
+        <div class="onb-actions">
+          <button id="onbFavSave_ucl" class="onb-btn ok" disabled>Mentés és folytatás</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Szabályzat modál -->
+  <div id="rulesModal" class="rules-modal" aria-modal="true" role="dialog" aria-labelledby="rulesTitle">
+    <div class="rules-dialog">
+      <div class="rules-head">
+        <div id="rulesTitle" class="rules-title">BL TippLiga – Szabályzat</div>
+        <button id="closeRules" class="rules-close" aria-label="Bezárás">✕</button>
+      </div>
+      <div id="rulesBody" class="rules-body">
+<p><strong>1) A játék célja</strong><br>
+A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek a <strong>Bajnokok Ligája</strong> mérkőzéseinek eredményeinek és a <strong>szezon kimeneteleinek</strong> megtippelésével.</p>
+
+<p><strong>2) Tippelés</strong><br>
+– Minden mérkőzésre <strong>1×2</strong> (Hazai–Döntetlen–Vendég) tipp adható le.<br>
+– A tipp a mérkőzés <strong>kezdési időpontjáig</strong> szabadon módosítható.<br>
+– <strong>Minden játéknapon</strong> (nem fordulónként) <strong>egyetlen mérkőzésre kijelölhető „Dupla tét”</strong>, amely <strong>kétszeres pontszorzót</strong> ad.<br>
+– A duplázás módosítása csak az adott játéknap <strong>első mérkőzésének kezdéséig</strong> lehetséges, utána rögzül.</p>
+
+<p><strong>3) Bónusz tippek</strong><br>
+– <strong>Végső győztes</strong>: tippeld meg, ki nyeri a BL-t.<br>
+– <strong>Gólkirály</strong>: tippeld meg, ki szerzi a legtöbb gólt.<br>
+– Ezekre a bónusz tippekre <strong>odds alapján</strong> történik a pontozás, de egy képlettel módosítva van az érték, hogy ne legyenek nagyon magas bónusz értékek. A bónusz tippeknél a kijelzett <strong>százalékos érték (%)</strong> <em>pluszban hozzáadódik</em> a játékos <strong>végső pontszámához</strong>.</p>
+
+<p><strong>4) Pontszámítás</strong><br>
+– <strong>Meccsek</strong>: helyes tipp = <strong>odds × tét</strong> (alap tét = 1 pont, <strong>dupla</strong> esetén = 2 pont).<br>
+– <strong>Rossz tipp</strong>: 0 pont.<br>
+– <strong>Bónusz tippek</strong> (Végső győztes, Gólkirály): a kijelzett <strong>%</strong> hozzáadódik a <strong>végső összpontszámhoz</strong>,<br>amit a meccstippekkel gyűjtött a játékos.
+– Az oddsok <strong>manuálisan</strong> kerülnek rögzítésre a tipp(ek) feltöltésekor; a kezdésig az <strong>odds módosulhat</strong>, és nem feltétlenül egyezik az aktuálisan érvényes külső oddsokkal.</p>
+
+<p><strong>5) Eredmények és rangsor</strong><br>
+– Pontösszesítés <strong>játéknaponként</strong> és <strong>a teljes szezonra</strong>.<br>
+– A <strong>Toplista</strong> a játékosokat az <strong>összpontszám</strong> alapján sorolja.</p>
+
+<p><strong>6) Tipp</strong><br>
+– A <strong>Profil</strong> menüben válaszd ki a kedvenc <strong>BL-csapatodat</strong>, így a felület színei ahhoz igazodnak, és a <strong>klubcímere</strong> is megjelenik a profilodnál.</p>
+      </div>
+      <div class="rules-foot">
+        <span id="rulesUpdated" class="rules-updated">Utoljára frissítve: 2025. 09. 12.</span>
+        <button id="closeRules2" class="btn-accent">Bezárás</button>
+      </div>
+    </div>
+  </div>
+
+  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
+    <span id="chatFabBadge" class="fab-badge"></span>
+  </button>
+
+  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
+    <div class="chat-head">
+      <div class="chat-title">Közösségi chat</div>
+      <button id="chatClose" aria-label="Bezárás">✕</button>
+    </div>
+    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
+    <div id="chatComposer">
+      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
+      <button id="chatSendBtn">Küldés</button>
+    </div>
+  </section>
 </body>
 </html>
