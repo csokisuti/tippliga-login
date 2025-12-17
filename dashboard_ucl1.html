@@ -523,21 +523,20 @@
       }catch(e){}
 
       try{
-        const bs = await getDocs(collection(db,"ucl_bracket"));
-        const arr=[];
-        bs.forEach(d=>{
-          const b=d.data()||{};
-          arr.push({id:d.id,...b});
-        });
+        const bSnap = await getDoc(doc(db,"settings","ucl_bracket"));
+        const data = bSnap.exists() ? (bSnap.data()||{}) : {};
+        const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
+        const arr = Object.keys(slots).map(k=>({id:k, ...(slots[k]||{})}));
         currentBracket = arr;
       }catch(e){}
 
       renderBracket(currentBracket, matchById);
 
       try{
-        onSnapshot(collection(db,"ucl_bracket"), (snap)=>{
-          const arr=[];
-          snap.forEach(d=>arr.push({id:d.id,...(d.data()||{})}));
+        onSnapshot(doc(db,"settings","ucl_bracket"), (snap)=>{
+          const data = snap.exists() ? (snap.data()||{}) : {};
+          const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
+          const arr = Object.keys(slots).map(k=>({id:k, ...(slots[k]||{})}));
           currentBracket = arr;
           renderBracket(currentBracket, matchById);
         });
