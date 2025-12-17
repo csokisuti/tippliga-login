@@ -132,10 +132,11 @@
   }
 
   async function loadBracketDocs(){
-    const snap = await getDocs(collection(db,"ucl_bracket"));
-    const byId={};
-    snap.forEach(d=>{ byId[d.id] = (d.data()||{}); });
-    return byId;
+    const ref = doc(db,"settings","ucl_bracket");
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? (snap.data()||{}) : {};
+    const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
+    return slots;
   }
 
   function optionHtml(opts, selectedId){
@@ -230,7 +231,7 @@
     const pw = get('select[data-field="penaltyWinner"]')?.value||"";
     const matchIds = [m1,m2].filter(Boolean);
     const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, updatedAt: serverTimestamp() };
-    await setDoc(doc(db,"ucl_bracket",slotId), payload, { merge:true });
+    await setDoc(doc(db,"settings","ucl_bracket"), { slots: { [slotId]: payload } }, { merge:true });
   }
 
   async function initBracketAdmin(){
@@ -284,7 +285,7 @@
           penaltyWinner: card.querySelector('select[data-field="penaltyWinner"]')?.value||""
         };
       }catch(err){
-        if(st) st.textContent = "Hiba mentéskor.";
+        if(st) st.textContent = `Hiba mentéskor: ${err?.code||""} ${err?.message||err}`.trim();
       }
     });
 
