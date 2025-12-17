@@ -139,9 +139,26 @@
   opacity: .8;
 }
 
+
+  .ucl-bracket{overflow-x:auto}
+  .ucl-bracket-grid{display:flex;gap:14px;align-items:flex-start;min-width:900px}
+  .ucl-bracket-col{flex:0 0 220px;display:flex;flex-direction:column;gap:10px}
+  .ucl-bracket-col h4{margin:0;font-size:13px;opacity:.85;letter-spacing:.2px}
+  .ucl-slot{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);padding:10px;display:flex;flex-direction:column;gap:8px}
+  .ucl-slot .row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .ucl-slot .team{display:flex;align-items:center;gap:8px;min-width:0}
+  .ucl-slot .team img{width:18px;height:18px;object-fit:contain;flex:0 0 auto}
+  .ucl-slot .team span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ucl-slot .score{font-weight:700;font-variant-numeric:tabular-nums}
+  .ucl-slot .meta{font-size:12px;opacity:.8;display:flex;justify-content:space-between;gap:10px}
+  .ucl-slot .winner{box-shadow:0 0 0 2px rgba(34,197,94,.28) inset}
+  .ucl-slot .note{font-size:12px;opacity:.8}
+
 </style>
 
   <script type="module">
+
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -246,6 +263,8 @@
 
       snap.forEach(d=>{
         const m=d.data()||{};
+        const rid = Number(m.roundId ?? m.round ?? 0);
+        if (rid >= 9) return;
         const A=m.homeTeam||m.home||"";
         const B=m.awayTeam||m.away||"";
         const r=parseRes(m.result);
@@ -348,7 +367,195 @@
       /* Liga-váltó mount: BAL SZÉL – cím mellett */
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
-      onAuthStateChanged(auth,async(user)=>{
+      
+
+    function normalizeTeamName(t){ return (t||"").toString().trim(); }
+
+    async function loadBracketUISettings(){
+      try{
+        const sRef = doc(db,"settings","ucl_bracket_ui");
+        const sSnap = await getDoc(sRef);
+        const v = sSnap.exists() ? (sSnap.data()||{}) : {};
+        const openByDefault = !!v.openByDefault;
+        const det = document.getElementById("uclBracketDetails");
+        if(det) det.open = openByDefault;
+      }catch(e){}
+    }
+
+    function slotTitleMap(){
+      const map={};
+      for(let i=1;i<=8;i++) map["PO"+i] = "Play-off "+i;
+      for(let i=1;i<=8;i++) map["R16_"+i] = "Nyolcaddöntő "+i;
+      for(let i=1;i<=4;i++) map["QF"+i] = "Negyeddöntő "+i;
+      for(let i=1;i<=2;i++) map["SF"+i] = "Elődöntő "+i;
+      map["F1"]="Döntő";
+      return map;
+    }
+
+    function crestForTeam(team){
+      const t=normalizeTeamName(team);
+      const hit = crestMap?.[t];
+      return hit ? hit : "";
+    }
+
+    function parseResLocal(result){
+      return parseRes(result);
+    }
+
+    function computeAggregateForSlot(slot, matchById){
+      const home=normalizeTeamName(slot.homeTeam);
+      const away=normalizeTeamName(slot.awayTeam);
+      if(!home || !away) return null;
+      let hg=0, ag=0, legs=0;
+      (slot.matchIds||[]).forEach(id=>{
+        const m = matchById.get(id);
+        if(!m || !m.result) return;
+        const r = parseResLocal(m.result);
+        if(!r) return;
+        const mh=normalizeTeamName(m.homeTeam||m.home||"");
+        const ma=normalizeTeamName(m.awayTeam||m.away||"");
+        if(mh===home && ma===away){ hg+=r[0]; ag+=r[1]; legs++; }
+        else if(mh===away && ma===home){ hg+=r[1]; ag+=r[0]; legs++; }
+      });
+      if(legs===0) return null;
+      return {hg,ag};
+    }
+
+    function renderBracket(bracketDocs, matchById){
+      const mount=document.getElementById("uclBracketContainer");
+      if(!mount) return;
+      const titles=slotTitleMap();
+      const rounds=[{k:"PO",t:"Play-off"},{k:"R16",t:"Nyolcaddöntő"},{k:"QF",t:"Negyeddöntő"},{k:"SF",t:"Elődöntő"},{k:"F",t:"Döntő"}];
+      const cols = rounds.map(r=>({round:r.k,title:r.t,slots:[]}));
+      const byId={};
+      bracketDocs.forEach(b=>{ byId[b.id]=b; });
+      cols.forEach(c=>{
+        const ids=[];
+        if(c.round==="PO") for(let i=1;i<=8;i++) ids.push("PO"+i);
+        if(c.round==="R16") for(let i=1;i<=8;i++) ids.push("R16_"+i);
+        if(c.round==="QF") for(let i=1;i<=4;i++) ids.push("QF"+i);
+        if(c.round==="SF") for(let i=1;i<=2;i++) ids.push("SF"+i);
+        if(c.round==="F") ids.push("F1");
+        c.slots = ids.map(id=>({id,...(byId[id]||{id,homeTeam:"",awayTeam:"",matchIds:[],decidedByPenalties:false,penaltyWinner:""})}));
+      });
+
+      const grid=document.createElement("div");
+      grid.className="ucl-bracket-grid";
+
+      cols.forEach(c=>{
+        const col=document.createElement("div");
+        col.className="ucl-bracket-col";
+        const h=document.createElement("h4");
+        h.textContent=c.title;
+        col.appendChild(h);
+
+        c.slots.forEach(s=>{
+          const card=document.createElement("div");
+          const agg=computeAggregateForSlot(s, matchById);
+          const home=normalizeTeamName(s.homeTeam);
+          const away=normalizeTeamName(s.awayTeam);
+
+          card.className="ucl-slot";
+          const winner = (s.decidedByPenalties && (s.penaltyWinner==="home"||s.penaltyWinner==="away")) ? s.penaltyWinner : "";
+          if(winner==="home" || winner==="away"){
+            if(winner==="home") card.classList.add("winner");
+            if(winner==="away") card.classList.add("winner");
+          }
+
+          const row1=document.createElement("div"); row1.className="row";
+          const t1=document.createElement("div"); t1.className="team";
+          const img1=document.createElement("img"); const crest1=crestForTeam(home); if(crest1) img1.src=crest1; else img1.style.display="none";
+          const span1=document.createElement("span"); span1.textContent=home||"—";
+          t1.appendChild(img1); t1.appendChild(span1);
+          const sc1=document.createElement("div"); sc1.className="score"; sc1.textContent=agg?String(agg.hg):"";
+          row1.appendChild(t1); row1.appendChild(sc1);
+
+          const row2=document.createElement("div"); row2.className="row";
+          const t2=document.createElement("div"); t2.className="team";
+          const img2=document.createElement("img"); const crest2=crestForTeam(away); if(crest2) img2.src=crest2; else img2.style.display="none";
+          const span2=document.createElement("span"); span2.textContent=away||"—";
+          t2.appendChild(img2); t2.appendChild(span2);
+          const sc2=document.createElement("div"); sc2.className="score"; sc2.textContent=agg?String(agg.ag):"";
+          row2.appendChild(t2); row2.appendChild(sc2);
+
+          const meta=document.createElement("div"); meta.className="meta";
+          const left=document.createElement("div"); left.textContent=titles[s.id]||s.id;
+          const right=document.createElement("div");
+          const legCount = (s.matchIds||[]).filter(Boolean).length;
+          right.textContent = legCount ? (legCount===1 ? "1 meccs" : "2 meccs") : "";
+          meta.appendChild(left); meta.appendChild(right);
+
+          card.appendChild(meta);
+          card.appendChild(row1);
+          card.appendChild(row2);
+
+          if(s.decidedByPenalties){
+            const note=document.createElement("div");
+            note.className="note";
+            note.textContent = "Továbbjutás 11-esekkel";
+            card.appendChild(note);
+          }
+
+          col.appendChild(card);
+        });
+
+        grid.appendChild(col);
+      });
+
+      mount.innerHTML="";
+      mount.appendChild(grid);
+    }
+
+    
+    async function initBracket(){
+      await loadBracketUISettings();
+      const mount=document.getElementById("uclBracketContainer");
+      if(mount) mount.textContent="Ágrajz betöltése…";
+      const matchById=new Map();
+      let currentBracket=[];
+
+      try{
+        const ms = await getDocs(collection(db,"ucl_matches"));
+        ms.forEach(d=>{
+          const m=d.data()||{};
+          matchById.set(d.id,{id:d.id,...m});
+        });
+      }catch(e){}
+
+      try{
+        const bs = await getDocs(collection(db,"ucl_bracket"));
+        const arr=[];
+        bs.forEach(d=>{
+          const b=d.data()||{};
+          arr.push({id:d.id,...b});
+        });
+        currentBracket = arr;
+      }catch(e){}
+
+      renderBracket(currentBracket, matchById);
+
+      try{
+        onSnapshot(collection(db,"ucl_bracket"), (snap)=>{
+          const arr=[];
+          snap.forEach(d=>arr.push({id:d.id,...(d.data()||{})}));
+          currentBracket = arr;
+          renderBracket(currentBracket, matchById);
+        });
+      }catch(e){}
+
+      try{
+        onSnapshot(collection(db,"ucl_matches"), (snap)=>{
+          snap.forEach(d=>{
+            const m=d.data()||{};
+            matchById.set(d.id,{id:d.id,...m});
+          });
+          renderBracket(currentBracket, matchById);
+        });
+      }catch(e){}
+    }
+
+
+onAuthStateChanged(auth,async(user)=>{
         if(!user){window.location.href="login.html";return}
         currentUserEmail=user.email;
 
@@ -419,7 +626,9 @@
             const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
             getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
               const tippedIds = new Set();
-              tipsSnap.forEach(x=>{ const t=x.data(); if(t?.matchId) tippedIds.add(t.matchId); });
+              tipsSnap.forEach(x=>{ const t=x.data(); if(t?.matchId) tippedIds.add(t.matchId); 
+        initBracket();
+});
               const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
               if (pending>0){ badge.textContent = pending; badge.hidden = false; matchesCard?.classList.add('attention'); } else { badge.hidden = true; matchesCard?.classList.remove('attention'); }
             });
@@ -625,6 +834,8 @@
     }
   
   loadUclBracketUiSetting();
+
+
 </script>
 </head>
 <body>
