@@ -63,9 +63,25 @@
     .xscroll{overflow:auto}
     details summary{cursor:pointer;color:#334155}
     .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px}
-  </style>
+  
+  .ucl-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .ucl-tabbtn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);padding:8px 10px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
+  .ucl-tabbtn[aria-selected="true"]{box-shadow:0 0 0 2px rgba(59,130,246,.25) inset}
+  .ucl-bracket-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+  @media (max-width: 980px){.ucl-bracket-admin-grid{grid-template-columns:1fr}}
+  .ucl-slot-admin{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px;display:flex;flex-direction:column;gap:10px}
+  .ucl-slot-admin h3{margin:0;font-size:14px}
+  .ucl-row{display:flex;gap:10px;flex-wrap:wrap}
+  .ucl-row .field{flex:1 1 160px;display:flex;flex-direction:column;gap:6px}
+  .ucl-row label{font-size:12px;opacity:.8}
+  .ucl-row input,.ucl-row select{width:100%}
+  .ucl-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .ucl-mini{font-size:12px;opacity:.8}
+
+</style>
 
   <script type="module">
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -75,7 +91,207 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-  async function loadUclBracketUiSettingAdmin() {
+  
+
+  function uclBracketSlotDefs(){
+    const defs=[];
+    for(let i=1;i<=8;i++) defs.push({id:"PO"+i,round:"PO",label:"Play-off "+i,legs:2});
+    for(let i=1;i<=8;i++) defs.push({id:"R16_"+i,round:"R16",label:"Nyolcaddöntő "+i,legs:2});
+    for(let i=1;i<=4;i++) defs.push({id:"QF"+i,round:"QF",label:"Negyeddöntő "+i,legs:2});
+    for(let i=1;i<=2;i++) defs.push({id:"SF"+i,round:"SF",label:"Elődöntő "+i,legs:2});
+    defs.push({id:"F1",round:"F",label:"Döntő",legs:1});
+    return defs;
+  }
+
+  function normalizeTeam(t){ return (t||"").toString().trim(); }
+
+  function formatStart(ts){
+    try{
+      if(!ts) return "";
+      const d = ts.toDate ? ts.toDate() : (typeof ts==="number" ? new Date(ts) : new Date(ts));
+      if(String(d)==="Invalid Date") return "";
+      return d.toLocaleString("hu-HU",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+    }catch(e){ return ""; }
+  }
+
+  async function loadKnockoutMatchesOptions(){
+    const snap = await getDocs(collection(db,"ucl_matches"));
+    const arr=[];
+    snap.forEach(d=>{
+      const m=d.data()||{};
+      const rid = Number(m.roundId ?? m.round ?? 0);
+      if(rid < 9) return;
+      const home = normalizeTeam(m.homeTeam||m.home||"");
+      const away = normalizeTeam(m.awayTeam||m.away||"");
+      const st = formatStart(m.startTime||m.start||m.kickoff||m.date||"");
+      const label = `${rid}. ${home} - ${away}${st?` • ${st}`:""}`;
+      arr.push({id:d.id,label,ts:(m.startTime?.toMillis?m.startTime.toMillis():0)});
+    });
+    arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    return arr;
+  }
+
+  async function loadBracketDocs(){
+    const snap = await getDocs(collection(db,"ucl_bracket"));
+    const byId={};
+    snap.forEach(d=>{ byId[d.id] = (d.data()||{}); });
+    return byId;
+  }
+
+  function optionHtml(opts, selectedId){
+    const s = selectedId || "";
+    const rows = [`<option value="">—</option>`];
+    opts.forEach(o=>{
+      rows.push(`<option value="${o.id}" ${o.id===s?"selected":""}>${o.label}</option>`);
+    });
+    return rows.join("");
+  }
+
+  function slotCardHtml(def, docData, matchOpts){
+    const d = docData || {};
+    const home = d.homeTeam || "";
+    const away = d.awayTeam || "";
+    const matchIds = Array.isArray(d.matchIds) ? d.matchIds : [];
+    const m1 = matchIds[0] || "";
+    const m2 = matchIds[1] || "";
+    const decided = !!d.decidedByPenalties;
+    const pw = d.penaltyWinner || "";
+    const hasLeg2 = def.legs===2;
+
+    return `
+      <div class="ucl-slot-admin" data-slot="${def.id}">
+        <h3>${def.label}</h3>
+        <div class="ucl-row">
+          <div class="field">
+            <label>Hazai csapat</label>
+            <input type="text" value="${home.replaceAll('"',"&quot;")}" data-field="homeTeam" placeholder="pl. Real Madrid">
+          </div>
+          <div class="field">
+            <label>Vendég csapat</label>
+            <input type="text" value="${away.replaceAll('"',"&quot;")}" data-field="awayTeam" placeholder="pl. Manchester City">
+          </div>
+        </div>
+        <div class="ucl-row">
+          <div class="field">
+            <label>Meccs 1 (roundId ≥ 9)</label>
+            <select data-field="match1">${optionHtml(matchOpts,m1)}</select>
+          </div>
+          ${hasLeg2?`
+          <div class="field">
+            <label>Meccs 2 (visszavágó)</label>
+            <select data-field="match2">${optionHtml(matchOpts,m2)}</select>
+          </div>
+          `:""}
+        </div>
+        <div class="ucl-row">
+          <div class="field" style="flex:0 0 auto;min-width:220px;">
+            <label style="display:flex;gap:10px;align-items:center;user-select:none;">
+              <input type="checkbox" data-field="decidedByPenalties" ${decided?"checked":""}>
+              11-esekkel dőlt el
+            </label>
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label>11-es győztes</label>
+            <select data-field="penaltyWinner">
+              <option value="" ${pw===""?"selected":""}>—</option>
+              <option value="home" ${pw==="home"?"selected":""}>Hazai csapat jutott tovább</option>
+              <option value="away" ${pw==="away"?"selected":""}>Vendég csapat jutott tovább</option>
+            </select>
+          </div>
+        </div>
+        <div class="ucl-actions">
+          <span class="ucl-mini" data-status=""></span>
+          <button class="btn" data-action="save">Mentés</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBracketAdmin(roundKey, defs, docsById, matchOpts){
+    const body = document.getElementById("uclBracketAdminBody");
+    const status = document.getElementById("uclBracketAdminStatus");
+    if(!body) return;
+    const roundDefs = defs.filter(x=>x.round===roundKey);
+    const grid = document.createElement("div");
+    grid.className="ucl-bracket-admin-grid";
+    grid.innerHTML = roundDefs.map(def=>slotCardHtml(def, docsById[def.id], matchOpts)).join("");
+    body.innerHTML = "";
+    body.appendChild(grid);
+    if(status) status.textContent = `Szerkeszthető párok: ${roundDefs.length} • Meccs opciók: ${matchOpts.length}`;
+  }
+
+  async function saveSlot(slotId, el){
+    const get = (sel)=>el.querySelector(sel);
+    const home = normalizeTeam(get('input[data-field="homeTeam"]')?.value||"");
+    const away = normalizeTeam(get('input[data-field="awayTeam"]')?.value||"");
+    const m1 = get('select[data-field="match1"]')?.value||"";
+    const m2 = get('select[data-field="match2"]')?.value||"";
+    const decided = !!get('input[data-field="decidedByPenalties"]')?.checked;
+    const pw = get('select[data-field="penaltyWinner"]')?.value||"";
+    const matchIds = [m1,m2].filter(Boolean);
+    const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, updatedAt: serverTimestamp() };
+    await setDoc(doc(db,"ucl_bracket",slotId), payload, { merge:true });
+  }
+
+  async function initBracketAdmin(){
+    const defs = uclBracketSlotDefs();
+    let currentRound = "PO";
+    let matchOpts = [];
+    let docsById = {};
+    const tabs = document.getElementById("uclBracketTabs");
+    const reloadBtn = document.getElementById("uclBracketReload");
+    const status = document.getElementById("uclBracketAdminStatus");
+
+    const loadAll = async ()=>{
+      try{
+        if(status) status.textContent = "Betöltés…";
+        matchOpts = await loadKnockoutMatchesOptions();
+        docsById = await loadBracketDocs();
+        renderBracketAdmin(currentRound, defs, docsById, matchOpts);
+      }catch(e){
+        if(status) status.textContent = "Hiba a betöltésnél.";
+      }
+    };
+
+    if(tabs){
+      [...tabs.querySelectorAll(".ucl-tabbtn")].forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          currentRound = btn.dataset.round || "PO";
+          [...tabs.querySelectorAll(".ucl-tabbtn")].forEach(b=>b.setAttribute("aria-selected", b===btn ? "true" : "false"));
+          renderBracketAdmin(currentRound, defs, docsById, matchOpts);
+        });
+      });
+    }
+
+    if(reloadBtn) reloadBtn.addEventListener("click", loadAll);
+
+    document.addEventListener("click", async (e)=>{
+      const btn = e.target?.closest?.('button[data-action="save"]');
+      if(!btn) return;
+      const card = btn.closest(".ucl-slot-admin");
+      const slotId = card?.dataset?.slot;
+      const st = card?.querySelector('[data-status]');
+      if(!slotId || !card) return;
+      try{
+        if(st) st.textContent = "Mentés…";
+        await saveSlot(slotId, card);
+        if(st) st.textContent = "Mentve.";
+        docsById[slotId] = {
+          homeTeam: normalizeTeam(card.querySelector('input[data-field="homeTeam"]')?.value||""),
+          awayTeam: normalizeTeam(card.querySelector('input[data-field="awayTeam"]')?.value||""),
+          matchIds: [card.querySelector('select[data-field="match1"]')?.value||"", card.querySelector('select[data-field="match2"]')?.value||""].filter(Boolean),
+          decidedByPenalties: !!card.querySelector('input[data-field="decidedByPenalties"]')?.checked,
+          penaltyWinner: card.querySelector('select[data-field="penaltyWinner"]')?.value||""
+        };
+      }catch(err){
+        if(st) st.textContent = "Hiba mentéskor.";
+      }
+    });
+
+    await loadAll();
+  }
+
+async function loadUclBracketUiSettingAdmin() {
     const cb = document.getElementById('uclBracketOpenByDefault');
     const status = document.getElementById('uclBracketUiStatus');
     try {
@@ -140,6 +356,7 @@
       initUI();
       await loadMatches();
       await loadUsers();
+      await initBracketAdmin();
       await loadResults();
       await loadPositionsLock();
       await loadBonusMarkets();
@@ -1538,6 +1755,7 @@ verzió: ${data.version || 'n/a'}`);
   document.getElementById('saveUclBracketUi')?.addEventListener('click', saveUclBracketUiSettingAdmin);
   loadUclBracketUiSettingAdmin();
 
+
 </script>
 </head>
 <body>
@@ -1553,5 +1771,22 @@ verzió: ${data.version || 'n/a'}`);
     <span id="uclBracketUiStatus" style="opacity:.8;font-size:13px;"></span>
   </div>
 </section>
+
+<section class="card" style="margin-top:14px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <h2 style="margin:0;">BL kieséses ágrajz szerkesztése</h2>
+    <button id="uclBracketReload" class="btn">Frissítés</button>
+  </div>
+  <div id="uclBracketAdminStatus" style="margin-top:8px;font-size:13px;opacity:.8;"></div>
+  <div class="ucl-tabs" id="uclBracketTabs">
+    <button class="ucl-tabbtn" data-round="PO" aria-selected="true">Play-off</button>
+    <button class="ucl-tabbtn" data-round="R16" aria-selected="false">Nyolcaddöntő</button>
+    <button class="ucl-tabbtn" data-round="QF" aria-selected="false">Negyeddöntő</button>
+    <button class="ucl-tabbtn" data-round="SF" aria-selected="false">Elődöntő</button>
+    <button class="ucl-tabbtn" data-round="F" aria-selected="false">Döntő</button>
+  </div>
+  <div id="uclBracketAdminBody"></div>
+</section>
+
 </body>
 </html>
