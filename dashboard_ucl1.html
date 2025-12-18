@@ -415,23 +415,41 @@
       return parseRes(result);
     }
 
-    function computeAggregateForSlot(slot, matchById){
+    function computeAggregatesForSlot(slot, matchById){
       const home=normalizeTeamName(slot.homeTeam);
       const away=normalizeTeamName(slot.awayTeam);
       if(!home || !away) return null;
-      let hg=0, ag=0, legs=0;
+
+      let hg90=0, ag90=0, legs90=0;
+      let hgFT=0, agFT=0, legsFT=0;
+
       (slot.matchIds||[]).forEach(id=>{
         const m = matchById.get(id);
-        if(!m || !m.result) return;
-        const r = parseResLocal(m.result);
-        if(!r) return;
+        if(!m) return;
+
         const mh=normalizeTeamName(m.homeTeam||m.home||"");
         const ma=normalizeTeamName(m.awayTeam||m.away||"");
-        if(mh===home && ma===away){ hg+=r[0]; ag+=r[1]; legs++; }
-        else if(mh===away && ma===home){ hg+=r[1]; ag+=r[0]; legs++; }
+
+        const r90 = m.result ? parseResLocal(m.result) : null;
+        const ftRaw = (m.finalResult && (m.finalResult+"").trim()) ? (m.finalResult+"").trim() : (m.result ? (m.result+"").trim() : "");
+        const rFT = ftRaw ? parseResLocal(ftRaw) : null;
+
+        if(mh===home && ma===away){
+          if(r90){ hg90+=r90[0]; ag90+=r90[1]; legs90++; }
+          if(rFT){ hgFT+=rFT[0]; agFT+=rFT[1]; legsFT++; }
+        }else if(mh===away && ma===home){
+          if(r90){ hg90+=r90[1]; ag90+=r90[0]; legs90++; }
+          if(rFT){ hgFT+=rFT[1]; agFT+=rFT[0]; legsFT++; }
+        }
       });
-      if(legs===0) return null;
-      return {hg,ag,legs};
+
+      if(legs90===0 && legsFT===0) return null;
+
+      const out = {};
+      if(legs90>0) out.a90 = {hg:hg90, ag:ag90, legs:legs90};
+      if(legsFT>0) out.aft = {hg:hgFT, ag:agFT, legs:legsFT};
+      out.legs = Math.max(legs90, legsFT);
+      return out;
     }
 
     function escapeHTML(s){
@@ -511,7 +529,7 @@
           const away=normalizeTeamName(s.awayTeam);
 
           const adv = resolveAdvanceWinner(s);
-          const agg = computeAggregateForSlot(s, matchById);
+          const aggs = computeAggregatesForSlot(s, matchById);
 
           const meta=document.createElement("div"); meta.className="meta";
           const left=document.createElement("div"); left.textContent=titles[s.id]||s.id;
@@ -562,8 +580,14 @@
           left2.className="ucl-agg";
           right2.className="ucl-adv";
 
-          if(agg && agg.legs>0) left2.textContent = `Összesítés: ${agg.hg}–${agg.ag}`;
-          else left2.textContent = "";
+          if(aggs){
+            const lines=[];
+            if(aggs.a90) lines.push(`Összesítés (90’): ${aggs.a90.hg}–${aggs.a90.ag}`);
+            if(aggs.aft) lines.push(`Összesítés (FT): ${aggs.aft.hg}–${aggs.aft.ag}`);
+            left2.innerHTML = lines.join("<br>");
+          }else{
+            left2.textContent = "";
+          }
 
           if(adv){
             const teamName = adv==="home" ? (home||"Hazai") : (away||"Vendég");
