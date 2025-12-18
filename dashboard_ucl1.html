@@ -154,6 +154,19 @@
   .ucl-slot .winner{box-shadow:0 0 0 2px rgba(34,197,94,.28) inset}
   .ucl-slot .note{font-size:12px;opacity:.8}
 
+  .ucl-legs{display:flex;flex-direction:column;gap:4px;padding-top:2px}
+  .ucl-legline{font-size:12px;opacity:.9;line-height:1.25}
+  .ucl-legline .leg-top{display:flex;gap:8px;justify-content:space-between}
+  .ucl-legline .leg-scores{display:flex;gap:10px;flex-wrap:wrap;opacity:.95;font-variant-numeric:tabular-nums}
+  .ucl-legline .tag{font-size:11px;opacity:.85;padding:2px 8px;border:1px solid var(--line);border-radius:999px}
+  .ucl-legline .s90{font-weight:700}
+  .ucl-legline .sft{opacity:.9}
+  .ucl-legline.muted{opacity:.7}
+  .ucl-foot{margin-top:2px;font-size:12px;display:flex;justify-content:space-between;gap:10px;opacity:.9}
+  .ucl-agg{font-variant-numeric:tabular-nums}
+  .ucl-adv{font-weight:700}
+  .adv-winner .team span{font-weight:800}
+
 </style>
 
   <script type="module">
@@ -418,7 +431,48 @@
         else if(mh===away && ma===home){ hg+=r[1]; ag+=r[0]; legs++; }
       });
       if(legs===0) return null;
-      return {hg,ag};
+      return {hg,ag,legs};
+    }
+
+    function escapeHTML(s){
+      return (s??"").toString()
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+    }
+
+    function formatLegLineHTML(idx, m){
+      if(!m) return `<div class="leg-top">${idx}. meccs: —</div>`;
+      const mh=normalizeTeamName(m.homeTeam||m.home||"") || "—";
+      const ma=normalizeTeamName(m.awayTeam||m.away||"") || "—";
+
+      const r90 = (m.result||"").toString().trim();
+      const ftRaw = (m.finalResult||"").toString().trim();
+      const decided = (m.decidedBy||"regular").toString().trim();
+      const pens = (m.pensScore||"").toString().trim();
+
+      const show90 = r90 || "—";
+      const showFT = (ftRaw || r90 || "—");
+
+      let tag = "";
+      if(decided==="aet") tag = "Hossz.";
+      if(decided==="pens") tag = "11-es";
+
+      let ftSuffix = "";
+      if(decided==="pens" && pens) ftSuffix = ` (11-es: ${escapeHTML(pens)})`;
+
+      const head = `<div class="leg-top"><span>${idx}. meccs: ${escapeHTML(mh)} – ${escapeHTML(ma)}</span>${tag?`<span class="tag">${tag}</span>`:""}</div>`;
+      const scores = `<div class="leg-scores"><span class="s90">90’: ${escapeHTML(show90)}</span><span class="sft">FT: ${escapeHTML(showFT)}${ftSuffix}</span></div>`;
+      return head + scores;
+    }
+
+    function resolveAdvanceWinner(slot){
+      const aw = (slot.advanceWinner||"").toString().trim();
+      if(aw==="home" || aw==="away") return aw;
+      if(slot.decidedByPenalties && (slot.penaltyWinner==="home" || slot.penaltyWinner==="away")) return slot.penaltyWinner;
+      return "";
     }
 
     function renderBracket(bracketDocs, matchById){
@@ -436,7 +490,7 @@
         if(c.round==="QF") for(let i=1;i<=4;i++) ids.push("QF"+i);
         if(c.round==="SF") for(let i=1;i<=2;i++) ids.push("SF"+i);
         if(c.round==="F") ids.push("F1");
-        c.slots = ids.map(id=>({id,...(byId[id]||{id,homeTeam:"",awayTeam:"",matchIds:[],decidedByPenalties:false,penaltyWinner:""})}));
+        c.slots = ids.map(id=>({id,...(byId[id]||{id,homeTeam:"",awayTeam:"",matchIds:[],decidedByPenalties:false,penaltyWinner:"",advanceWinner:"",note:""})}));
       });
 
       const grid=document.createElement("div");
@@ -451,32 +505,13 @@
 
         c.slots.forEach(s=>{
           const card=document.createElement("div");
-          const agg=computeAggregateForSlot(s, matchById);
+          card.className="ucl-slot";
+
           const home=normalizeTeamName(s.homeTeam);
           const away=normalizeTeamName(s.awayTeam);
 
-          card.className="ucl-slot";
-          const winner = (s.decidedByPenalties && (s.penaltyWinner==="home"||s.penaltyWinner==="away")) ? s.penaltyWinner : "";
-          if(winner==="home" || winner==="away"){
-            if(winner==="home") card.classList.add("winner");
-            if(winner==="away") card.classList.add("winner");
-          }
-
-          const row1=document.createElement("div"); row1.className="row";
-          const t1=document.createElement("div"); t1.className="team";
-          const img1=document.createElement("img"); const crest1=crestForTeam(home); if(crest1) img1.src=crest1; else img1.style.display="none";
-          const span1=document.createElement("span"); span1.textContent=home||"—";
-          t1.appendChild(img1); t1.appendChild(span1);
-          const sc1=document.createElement("div"); sc1.className="score"; sc1.textContent=agg?String(agg.hg):"";
-          row1.appendChild(t1); row1.appendChild(sc1);
-
-          const row2=document.createElement("div"); row2.className="row";
-          const t2=document.createElement("div"); t2.className="team";
-          const img2=document.createElement("img"); const crest2=crestForTeam(away); if(crest2) img2.src=crest2; else img2.style.display="none";
-          const span2=document.createElement("span"); span2.textContent=away||"—";
-          t2.appendChild(img2); t2.appendChild(span2);
-          const sc2=document.createElement("div"); sc2.className="score"; sc2.textContent=agg?String(agg.ag):"";
-          row2.appendChild(t2); row2.appendChild(sc2);
+          const adv = resolveAdvanceWinner(s);
+          const agg = computeAggregateForSlot(s, matchById);
 
           const meta=document.createElement("div"); meta.className="meta";
           const left=document.createElement("div"); left.textContent=titles[s.id]||s.id;
@@ -485,16 +520,73 @@
           right.textContent = legCount ? (legCount===1 ? "1 meccs" : "2 meccs") : "";
           meta.appendChild(left); meta.appendChild(right);
 
+          const row1=document.createElement("div"); row1.className="row";
+          const t1=document.createElement("div"); t1.className="team";
+          const img1=document.createElement("img"); const crest1=crestForTeam(home); if(crest1) img1.src=crest1; else img1.style.display="none";
+          const span1=document.createElement("span"); span1.textContent=home||"—";
+          t1.appendChild(img1); t1.appendChild(span1);
+          row1.appendChild(t1);
+
+          const row2=document.createElement("div"); row2.className="row";
+          const t2=document.createElement("div"); t2.className="team";
+          const img2=document.createElement("img"); const crest2=crestForTeam(away); if(crest2) img2.src=crest2; else img2.style.display="none";
+          const span2=document.createElement("span"); span2.textContent=away||"—";
+          t2.appendChild(img2); t2.appendChild(span2);
+          row2.appendChild(t2);
+
+          if(adv==="home") row1.classList.add("adv-winner");
+          if(adv==="away") row2.classList.add("adv-winner");
+
+          const legsBox=document.createElement("div");
+          legsBox.className="ucl-legs";
+          const ids=(s.matchIds||[]).filter(Boolean);
+          if(ids.length===0){
+            const ph=document.createElement("div");
+            ph.className="ucl-legline muted";
+            ph.textContent="Meccsek még nincsenek hozzárendelve.";
+            legsBox.appendChild(ph);
+          }else{
+            ids.forEach((id, i)=>{
+              const m=matchById.get(id);
+              const line=document.createElement("div");
+              line.className="ucl-legline";
+              line.innerHTML=formatLegLineHTML(i+1, m);
+              legsBox.appendChild(line);
+            });
+          }
+
+          const foot=document.createElement("div");
+          foot.className="ucl-foot";
+          const left2=document.createElement("div");
+          const right2=document.createElement("div");
+          left2.className="ucl-agg";
+          right2.className="ucl-adv";
+
+          if(agg && agg.legs>0) left2.textContent = `Összesítés: ${agg.hg}–${agg.ag}`;
+          else left2.textContent = "";
+
+          if(adv){
+            const teamName = adv==="home" ? (home||"Hazai") : (away||"Vendég");
+            if(s.decidedByPenalties) right2.textContent = `Továbbjutó: ${teamName} (11-esekkel)`;
+            else right2.textContent = `Továbbjutó: ${teamName}`;
+          }else{
+            right2.textContent = "";
+          }
+
+          foot.appendChild(left2);
+          foot.appendChild(right2);
+
           card.appendChild(meta);
           card.appendChild(row1);
           card.appendChild(row2);
-
-          if(s.decidedByPenalties){
+          card.appendChild(legsBox);
+          if((s.note||"").toString().trim()){
             const note=document.createElement("div");
             note.className="note";
-            note.textContent = "Továbbjutás 11-esekkel";
+            note.textContent = (s.note||"").toString().trim();
             card.appendChild(note);
           }
+          card.appendChild(foot);
 
           col.appendChild(card);
         });
