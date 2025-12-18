@@ -167,6 +167,13 @@
   .ucl-adv{font-weight:700}
   .adv-winner .team span{font-weight:800}
 
+
+.ucl-bracket .teamline{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.ucl-bracket .teamleft{display:flex;align-items:center;gap:10px;min-width:0;}
+.ucl-bracket .teamname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ucl-bracket .agg{font-weight:600;color:#0f172a;}
+.ucl-bracket .row.adv-winner .teamname{font-weight:700;}
+.ucl-bracket .row.adv-winner .agg{font-weight:700;}
 </style>
 
   <script type="module">
@@ -541,19 +548,35 @@
           const row1=document.createElement("div"); row1.className="row";
           const t1=document.createElement("div"); t1.className="team";
           const img1=document.createElement("img"); const crest1=crestForTeam(home); if(crest1) img1.src=crest1; else img1.style.display="none";
-          const span1=document.createElement("span"); span1.textContent=home||"—";
-          t1.appendChild(img1); t1.appendChild(span1);
+          const teamLine1=document.createElement("div"); teamLine1.className="teamline";
+          const teamLeft1=document.createElement("div"); teamLeft1.className="teamleft";
+          const span1=document.createElement("span"); span1.className="teamname"; span1.textContent=home||"—";
+          teamLeft1.appendChild(img1); teamLeft1.appendChild(span1);
+          const agg1=document.createElement("span"); agg1.className="agg";
+          const aggHome = (aggs && aggs.aft) ? aggs.aft.hg : (aggs && aggs.a90 ? aggs.a90.hg : "");
+          agg1.textContent = (aggHome===0 || aggHome) ? String(aggHome) : "";
+          teamLine1.appendChild(teamLeft1); teamLine1.appendChild(agg1);
+          t1.appendChild(teamLine1);
           row1.appendChild(t1);
-
-          const row2=document.createElement("div"); row2.className="row";
+const row2=document.createElement("div"); row2.className="row";
           const t2=document.createElement("div"); t2.className="team";
           const img2=document.createElement("img"); const crest2=crestForTeam(away); if(crest2) img2.src=crest2; else img2.style.display="none";
-          const span2=document.createElement("span"); span2.textContent=away||"—";
-          t2.appendChild(img2); t2.appendChild(span2);
+          const teamLine2=document.createElement("div"); teamLine2.className="teamline";
+          const teamLeft2=document.createElement("div"); teamLeft2.className="teamleft";
+          const span2=document.createElement("span"); span2.className="teamname"; span2.textContent=away||"—";
+          teamLeft2.appendChild(img2); teamLeft2.appendChild(span2);
+          const agg2=document.createElement("span"); agg2.className="agg";
+          const aggAway = (aggs && aggs.aft) ? aggs.aft.ag : (aggs && aggs.a90 ? aggs.a90.ag : "");
+          agg2.textContent = (aggAway===0 || aggAway) ? String(aggAway) : "";
+          teamLine2.appendChild(teamLeft2); teamLine2.appendChild(agg2);
+          t2.appendChild(teamLine2);
           row2.appendChild(t2);
-
-          if(adv==="home") row1.classList.add("adv-winner");
+if(adv==="home") row1.classList.add("adv-winner");
           if(adv==="away") row2.classList.add("adv-winner");
+          if(!adv && aggs && aggs.aft && (aggs.aft.hg!==aggs.aft.ag)){
+            if(aggs.aft.hg>aggs.aft.ag) row1.classList.add("adv-winner");
+            if(aggs.aft.ag>aggs.aft.hg) row2.classList.add("adv-winner");
+          }
 
           const legsBox=document.createElement("div");
           legsBox.className="ucl-legs";
@@ -580,14 +603,7 @@
           left2.className="ucl-agg";
           right2.className="ucl-adv";
 
-          if(aggs){
-            const lines=[];
-            if(aggs.a90) lines.push(`Összesítés (90’): ${aggs.a90.hg}–${aggs.a90.ag}`);
-            if(aggs.aft) lines.push(`Összesítés (FT): ${aggs.aft.hg}–${aggs.aft.ag}`);
-            left2.innerHTML = lines.join("<br>");
-          }else{
-            left2.textContent = "";
-          }
+          left2.textContent = "";
 
           if(adv){
             const teamName = adv==="home" ? (home||"Hazai") : (away||"Vendég");
