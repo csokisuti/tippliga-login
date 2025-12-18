@@ -157,6 +157,7 @@
     const m2 = matchIds[1] || "";
     const decided = !!d.decidedByPenalties;
     const pw = d.penaltyWinner || "";
+    const aw = d.advanceWinner || "";
     const hasLeg2 = def.legs===2;
 
     return `
@@ -200,6 +201,20 @@
             </select>
           </div>
         </div>
+        <div class="ucl-row">
+          <div class="field" style="min-width:220px;">
+            <label>Továbbjutó (admin)</label>
+            <select data-field="advanceWinner">
+              <option value="" ${aw===""?"selected":""}>—</option>
+              <option value="home" ${aw==="home"?"selected":""}>Hazai csapat jut tovább</option>
+              <option value="away" ${aw==="away"?"selected":""}>Vendég csapat jut tovább</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1 1 auto;">
+            <label>Megjegyzés (opcionális)</label>
+            <input type="text" value="${(d.note||"").replaceAll('"',"&quot;")}" data-field="note" placeholder="pl. hosszabbítás, admin döntés, stb.">
+          </div>
+        </div>
         <div class="ucl-actions">
           <span class="ucl-mini" data-status=""></span>
           <button class="btn" data-action="save">Mentés</button>
@@ -229,8 +244,10 @@
     const m2 = get('select[data-field="match2"]')?.value||"";
     const decided = !!get('input[data-field="decidedByPenalties"]')?.checked;
     const pw = get('select[data-field="penaltyWinner"]')?.value||"";
+    const aw = get('select[data-field="advanceWinner"]')?.value||"";
+    const note = (get('input[data-field="note"]')?.value||"").toString().trim();
     const matchIds = [m1,m2].filter(Boolean);
-    const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, updatedAt: serverTimestamp() };
+    const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, advanceWinner:aw, note, updatedAt: serverTimestamp() };
     await setDoc(doc(db,"settings","ucl_bracket"), { slots: { [slotId]: payload } }, { merge:true });
   }
 
@@ -282,7 +299,9 @@
           awayTeam: normalizeTeam(card.querySelector('input[data-field="awayTeam"]')?.value||""),
           matchIds: [card.querySelector('select[data-field="match1"]')?.value||"", card.querySelector('select[data-field="match2"]')?.value||""].filter(Boolean),
           decidedByPenalties: !!card.querySelector('input[data-field="decidedByPenalties"]')?.checked,
-          penaltyWinner: card.querySelector('select[data-field="penaltyWinner"]')?.value||""
+          penaltyWinner: card.querySelector('select[data-field="penaltyWinner"]')?.value||"",
+          advanceWinner: card.querySelector('select[data-field="advanceWinner"]')?.value||"",
+          note: (card.querySelector('input[data-field="note"]')?.value||"").toString().trim()
         };
       }catch(err){
         if(st) st.textContent = `Hiba mentéskor: ${err?.code||""} ${err?.message||err}`.trim();
@@ -885,16 +904,44 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
           div.innerHTML = `
             <div class="card-head"><h3>${match.homeTeam} - ${match.awayTeam}</h3><div class="hint">${match.startTime?.toDate?.()?.toLocaleString('hu-HU')||''}</div></div>
             <div class="card-body">
-              <div class="row">
-                <input placeholder="pl. 2-1" value="${match.result||''}" id="res-${match.id}" style="width:80px">
+              <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:140px">
+                  <div class="hint">90’ (tipphez)</div>
+                  <input placeholder="pl. 2-1" value="${match.result||''}" id="res90-${match.id}" style="width:120px">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:160px">
+                  <div class="hint">Végleges (FT)</div>
+                  <input placeholder="pl. 2-1" value="${match.finalResult||''}" id="resft-${match.id}" style="width:140px">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:160px">
+                  <div class="hint">Döntés</div>
+                  <select id="dec-${match.id}" style="width:150px">
+                    <option value="regular" ${(match.decidedBy||'regular')==='regular'?'selected':''}>Rendes</option>
+                    <option value="aet" ${(match.decidedBy||'regular')==='aet'?'selected':''}>Hosszabbítás</option>
+                    <option value="pens" ${(match.decidedBy||'regular')==='pens'?'selected':''}>11-esek</option>
+                  </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:160px">
+                  <div class="hint">11-es (pl. 4-3)</div>
+                  <input placeholder="pl. 4-3" value="${match.pensScore||''}" id="pens-${match.id}" style="width:140px">
+                </div>
                 <button class="btn primary" id="btn-${match.id}">${hasResult? 'Módosítás':'Mentés'}</button>
               </div>
             </div>`;
           div.querySelector('.card-head').onclick = ()=> div.classList.toggle('open');
           div.querySelector(`#btn-${match.id}`).onclick = async ()=>{
-            const v=document.getElementById(`res-${match.id}`).value.trim();
-            const oc=parseOutcome(v); if(!oc){ alert('Hibás formátum. pl. 3-1 vagy 1-1'); return }
-            await updateDoc(doc(db,'ucl_matches',match.id),{ result:v, outcome:oc });
+            const v90=document.getElementById(`res90-${match.id}`).value.trim();
+            const oc=parseOutcome(v90); if(!oc){ alert('Hibás 90\' eredmény. pl. 3-1 vagy 1-1'); return }
+            let ft=document.getElementById(`resft-${match.id}`).value.trim();
+            const decided=document.getElementById(`dec-${match.id}`).value;
+            const pens=document.getElementById(`pens-${match.id}`).value.trim();
+            if(ft){ const okFt=parseOutcome(ft); if(!okFt){ alert('Hibás FT eredmény. pl. 2-1 vagy 1-1'); return } }
+            if((decided==='aet' || decided==='pens') && !ft) ft=v90;
+            if(decided==='pens'){
+              if(pens && !/^\d+\s*-\s*\d+$/.test(pens)){ alert('Hibás 11-es eredmény. pl. 4-3'); return }
+            }
+            const payload={ result:v90, outcome:oc, finalResult: (ft||''), decidedBy:(decided||'regular'), pensScore:(decided==='pens' ? (pens||'') : '') };
+            await updateDoc(doc(db,'ucl_matches',match.id),payload);
             await loadResults();
           };
           container.appendChild(div);
