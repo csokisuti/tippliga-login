@@ -141,6 +141,7 @@
 
 
   .ucl-bracket{overflow-x:auto}
+.ucl-bracket{position:relative}
 .ucl-bracket-grid{
   display:grid;
   grid-template-columns:repeat(5, minmax(220px, 1fr));
@@ -154,9 +155,17 @@
   flex-direction:column;
   gap:10px;
 }
+.ucl-bracket-colBody{
+  position:relative;
+  display:grid;
+  grid-template-rows:repeat(32, 12px);
+  gap:0;
+  min-height: 420px;
+}
 @media (max-width: 1100px){
+  .ucl-bracket{overflow-x:auto}
   .ucl-bracket-grid{
-    grid-template-columns:repeat(5, 220px);
+    grid-template-columns:repeat(5, minmax(220px, 1fr));
     min-width:1120px;
   }
 }
@@ -167,8 +176,18 @@
     min-width:0;
   }
   .ucl-bracket-col{min-width:0}
+  .ucl-bracket-colBody{min-height:0;grid-template-rows:none;display:flex;flex-direction:column;gap:10px}
 }
-  .ucl-bracket-col h4{margin:0;font-size:13px;opacity:.85;letter-spacing:.2px}
+.ucl-bracket-lines{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  overflow:visible;
+  opacity:.55;
+}
+.ucl-bracket-col h4{margin:0;font-size:13px;opacity:.85;letter-spacing:.2px}
   .ucl-slot{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);padding:10px;display:flex;flex-direction:column;gap:8px}
   .ucl-slot .row{display:flex;justify-content:space-between;gap:10px;align-items:center}
   .ucl-slot .team{display:flex;align-items:center;gap:8px;min-width:0}
@@ -546,6 +565,66 @@
       const grid=document.createElement("div");
       grid.className="ucl-bracket-grid";
 
+      const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+      svg.classList.add("ucl-bracket-lines");
+      svg.setAttribute("aria-hidden","true");
+
+      function slotRowStart(id){
+        if(/^PO\d+$/.test(id)) return 2 + (parseInt(id.slice(2),10)-1)*4;
+        if(/^R16_\d+$/.test(id)) return 2 + (parseInt(id.split("_")[1],10)-1)*4;
+        if(/^QF\d+$/.test(id)) return 4 + (parseInt(id.slice(2),10)-1)*8;
+        if(/^SF\d+$/.test(id)) return 8 + (parseInt(id.slice(2),10)-1)*16;
+        if(id==="F1") return 16;
+        return null;
+      }
+
+      function addLine(x1,y1,x2,y2,midX){
+        const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+        const mx = (typeof midX==="number") ? midX : (x1 + x2) / 2;
+        p.setAttribute("d", `M ${x1} ${y1} L ${mx} ${y1} L ${mx} ${y2} L ${x2} ${y2}`);
+        p.setAttribute("fill","none");
+        p.setAttribute("stroke","currentColor");
+        p.setAttribute("stroke-width","1.2");
+        p.setAttribute("stroke-linecap","round");
+        p.setAttribute("stroke-linejoin","round");
+        svg.appendChild(p);
+      }
+
+      function drawLines(){
+        while(svg.firstChild) svg.removeChild(svg.firstChild);
+        const rect=mount.getBoundingClientRect();
+
+        const getMid=(el,side)=>{
+          const r=el.getBoundingClientRect();
+          const x = side==="right" ? (r.right-rect.left) : (r.left-rect.left);
+          const y = (r.top-rect.top) + r.height/2;
+          return {x,y};
+        };
+
+        const connect=(fromId,toId)=>{
+          const a=document.getElementById("slot-"+fromId);
+          const b=document.getElementById("slot-"+toId);
+          if(!a || !b) return;
+          const A=getMid(a,"right");
+          const B=getMid(b,"left");
+          addLine(A.x, A.y, B.x, B.y);
+        };
+
+        for(let i=1;i<=8;i++){
+          connect("PO"+i, "R16_"+i);
+        }
+        for(let i=1;i<=4;i++){
+          connect("R16_"+(i*2-1), "QF"+i);
+          connect("R16_"+(i*2), "QF"+i);
+        }
+        for(let i=1;i<=2;i++){
+          connect("QF"+(i*2-1), "SF"+i);
+          connect("QF"+(i*2), "SF"+i);
+        }
+        connect("SF1","F1");
+        connect("SF2","F1");
+      }
+
       cols.forEach(c=>{
         const col=document.createElement("div");
         col.className="ucl-bracket-col";
@@ -553,9 +632,18 @@
         h.textContent=c.title;
         col.appendChild(h);
 
+        const body=document.createElement("div");
+        body.className="ucl-bracket-colBody";
+
         c.slots.forEach(s=>{
           const card=document.createElement("div");
           card.className="ucl-slot";
+          card.id="slot-"+s.id;
+
+          const rs = slotRowStart(s.id);
+          if(rs && window.matchMedia("(min-width: 721px)").matches){
+            card.style.gridRow = `${rs} / span 8`;
+          }
 
           const home=normalizeTeamName(s.homeTeam);
           const away=normalizeTeamName(s.awayTeam);
@@ -566,101 +654,51 @@
           const meta=document.createElement("div"); meta.className="meta";
           const left=document.createElement("div"); left.textContent=titles[s.id]||s.id;
           const right=document.createElement("div");
-          const legCount = (s.matchIds||[]).filter(Boolean).length;
-          right.textContent = legCount ? (legCount===1 ? "1 meccs" : "2 meccs") : "";
+          if(s.note) right.textContent=s.note;
           meta.appendChild(left); meta.appendChild(right);
+          card.appendChild(meta);
 
           const row1=document.createElement("div"); row1.className="row";
-          const t1=document.createElement("div"); t1.className="team";
-          const img1=document.createElement("img"); const crest1=crestForTeam(home); if(crest1) img1.src=crest1; else img1.style.display="none";
-          const teamLine1=document.createElement("div"); teamLine1.className="teamline";
-          const teamLeft1=document.createElement("div"); teamLeft1.className="teamleft";
-          const span1=document.createElement("span"); span1.className="teamname"; span1.textContent=home||"—";
-          teamLeft1.appendChild(img1); teamLeft1.appendChild(span1);
-          const agg1=document.createElement("span"); agg1.className="agg";
-          const aggHome = (aggs && aggs.aft) ? aggs.aft.hg : (aggs && aggs.a90 ? aggs.a90.hg : "");
-          agg1.textContent = (aggHome===0 || aggHome) ? String(aggHome) : "";
-          teamLine1.appendChild(teamLeft1); teamLine1.appendChild(agg1);
-          t1.appendChild(teamLine1);
-          row1.appendChild(t1);
-const row2=document.createElement("div"); row2.className="row";
-          const t2=document.createElement("div"); t2.className="team";
-          const img2=document.createElement("img"); const crest2=crestForTeam(away); if(crest2) img2.src=crest2; else img2.style.display="none";
-          const teamLine2=document.createElement("div"); teamLine2.className="teamline";
-          const teamLeft2=document.createElement("div"); teamLeft2.className="teamleft";
-          const span2=document.createElement("span"); span2.className="teamname"; span2.textContent=away||"—";
-          teamLeft2.appendChild(img2); teamLeft2.appendChild(span2);
-          const agg2=document.createElement("span"); agg2.className="agg";
-          const aggAway = (aggs && aggs.aft) ? aggs.aft.ag : (aggs && aggs.a90 ? aggs.a90.ag : "");
-          agg2.textContent = (aggAway===0 || aggAway) ? String(aggAway) : "";
-          teamLine2.appendChild(teamLeft2); teamLine2.appendChild(agg2);
-          t2.appendChild(teamLine2);
-          row2.appendChild(t2);
-if(adv==="home") row1.classList.add("adv-winner");
-          if(adv==="away") row2.classList.add("adv-winner");
-          if(!adv && aggs && aggs.aft && (aggs.aft.hg!==aggs.aft.ag)){
-            if(aggs.aft.hg>aggs.aft.ag) row1.classList.add("adv-winner");
-            if(aggs.aft.ag>aggs.aft.hg) row2.classList.add("adv-winner");
-          }
-
-          const legsBox=document.createElement("div");
-          legsBox.className="ucl-legs";
-          const ids=(s.matchIds||[]).filter(Boolean);
-          if(ids.length===0){
-            const ph=document.createElement("div");
-            ph.className="ucl-legline muted";
-            ph.textContent="Meccsek még nincsenek hozzárendelve.";
-            legsBox.appendChild(ph);
-          }else{
-            ids.forEach((id, i)=>{
-              const m=matchById.get(id);
-              const line=document.createElement("div");
-              line.className="ucl-legline";
-              line.innerHTML=formatLegLineHTML(i+1, m);
-              legsBox.appendChild(line);
-            });
-          }
-
-          const foot=document.createElement("div");
-          foot.className="ucl-foot";
-          const left2=document.createElement("div");
-          const right2=document.createElement("div");
-          left2.className="ucl-agg";
-          right2.className="ucl-adv";
-
-          left2.textContent = "";
-
-          if(adv){
-            const teamName = adv==="home" ? (home||"Hazai") : (away||"Vendég");
-            if(s.decidedByPenalties) right2.textContent = `Továbbjutó: ${teamName} (11-esekkel)`;
-            else right2.textContent = `Továbbjutó: ${teamName}`;
-          }else{
-            right2.textContent = "";
-          }
-
-          foot.appendChild(left2);
-          foot.appendChild(right2);
-
-          card.appendChild(meta);
+          row1.appendChild(renderTeamLine(home, aggs.homeAgg, adv==="home"));
           card.appendChild(row1);
-          card.appendChild(row2);
-          card.appendChild(legsBox);
-          if((s.note||"").toString().trim()){
-            const note=document.createElement("div");
-            note.className="note";
-            note.textContent = (s.note||"").toString().trim();
-            card.appendChild(note);
-          }
-          card.appendChild(foot);
 
-          col.appendChild(card);
+          const row2=document.createElement("div"); row2.className="row";
+          row2.appendChild(renderTeamLine(away, aggs.awayAgg, adv==="away"));
+          card.appendChild(row2);
+
+          const foot=document.createElement("div"); foot.className="foot";
+
+          const matchLines = buildMatchLines(s, matchById);
+          if(matchLines.length){
+            matchLines.forEach(line=>foot.appendChild(line));
+          }else{
+            const ph=document.createElement("div");
+            ph.className="ucl-bracket-placeholder";
+            ph.textContent="Még nincs hozzárendelt meccs.";
+            foot.appendChild(ph);
+          }
+
+          const badge=buildDecisionBadge(s);
+          if(badge) foot.appendChild(badge);
+
+          card.appendChild(foot);
+          body.appendChild(card);
         });
 
+        col.appendChild(body);
         grid.appendChild(col);
       });
 
       mount.innerHTML="";
+      mount.appendChild(svg);
       mount.appendChild(grid);
+
+      requestAnimationFrame(()=>requestAnimationFrame(drawLines));
+      if(!window.__uclBracketLinesBound){
+        window.__uclBracketLinesBound=true;
+        window.addEventListener("resize", ()=>requestAnimationFrame(drawLines), {passive:true});
+      }
+
     }
 
     
