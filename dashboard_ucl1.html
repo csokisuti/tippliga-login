@@ -123,16 +123,6 @@
 #uclBracketDetails .ucl-bracket-wrap{
   margin-top: 12px;
   overflow-x: auto;
-  position: relative;
-}
-#uclBracketDetails .ucl-bracket-grid{position: relative; z-index: 1;}
-#uclBracketDetails .ucl-connsvg{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-  z-index:0;
 }
 #uclBracketDetails .ucl-bracket-toolbar{
   display:flex;
@@ -151,8 +141,33 @@
 
 
   .ucl-bracket{overflow-x:auto}
-  .ucl-bracket-grid{display:flex;gap:14px;align-items:flex-start;min-width:900px}
-  .ucl-bracket-col{flex:0 0 220px;display:flex;flex-direction:column;gap:10px}
+.ucl-bracket-grid{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(220px, 1fr));
+  gap:14px;
+  align-items:start;
+  min-width:0;
+}
+.ucl-bracket-col{
+  min-width:220px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+@media (max-width: 1100px){
+  .ucl-bracket-grid{
+    grid-template-columns:repeat(5, 220px);
+    min-width:1120px;
+  }
+}
+@media (max-width: 720px){
+  .ucl-bracket{overflow-x:hidden}
+  .ucl-bracket-grid{
+    grid-template-columns:1fr;
+    min-width:0;
+  }
+  .ucl-bracket-col{min-width:0}
+}
   .ucl-bracket-col h4{margin:0;font-size:13px;opacity:.85;letter-spacing:.2px}
   .ucl-slot{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04);padding:10px;display:flex;flex-direction:column;gap:8px}
   .ucl-slot .row{display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -513,7 +528,6 @@
     function renderBracket(bracketDocs, matchById){
       const mount=document.getElementById("uclBracketContainer");
       if(!mount) return;
-      mount.innerHTML="";
       const titles=slotTitleMap();
       const rounds=[{k:"PO",t:"Play-off"},{k:"R16",t:"Nyolcaddöntő"},{k:"QF",t:"Negyeddöntő"},{k:"SF",t:"Elődöntő"},{k:"F",t:"Döntő"}];
       const cols = rounds.map(r=>({round:r.k,title:r.t,slots:[]}));
@@ -532,11 +546,6 @@
       const grid=document.createElement("div");
       grid.className="ucl-bracket-grid";
 
-      const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
-      svg.classList.add("ucl-connsvg");
-      svg.setAttribute("aria-hidden","true");
-      mount.prepend(svg);
-
       cols.forEach(c=>{
         const col=document.createElement("div");
         col.className="ucl-bracket-col";
@@ -547,7 +556,6 @@
         c.slots.forEach(s=>{
           const card=document.createElement("div");
           card.className="ucl-slot";
-          card.dataset.slot = s.id;
 
           const home=normalizeTeamName(s.homeTeam);
           const away=normalizeTeamName(s.awayTeam);
@@ -651,56 +659,8 @@ if(adv==="home") row1.classList.add("adv-winner");
         grid.appendChild(col);
       });
 
+      mount.innerHTML="";
       mount.appendChild(grid);
-      requestAnimationFrame(()=>drawBracketConnectors(mount, svg));
-      if(!mount.dataset.connBound){
-        mount.dataset.connBound="1";
-        mount.addEventListener("scroll", ()=>drawBracketConnectors(mount, svg), {passive:true});
-        window.addEventListener("resize", ()=>drawBracketConnectors(mount, svg));
-      }
-    }
-
-    function drawBracketConnectors(scrollEl, svg){
-      if(!scrollEl || !svg) return;
-      const slots = new Map(Array.from(scrollEl.querySelectorAll(".ucl-slot[data-slot]")).map(el=>[el.dataset.slot, el]));
-      const links = [];
-      for(let i=1;i<=8;i++) links.push([`PO${i}`, `R16_${i}`]);
-      links.push(["R16_1","QF1"],["R16_2","QF1"],["R16_3","QF2"],["R16_4","QF2"],["R16_5","QF3"],["R16_6","QF3"],["R16_7","QF4"],["R16_8","QF4"]);
-      links.push(["QF1","SF1"],["QF2","SF1"],["QF3","SF2"],["QF4","SF2"]);
-      links.push(["SF1","F1"],["SF2","F1"]);
-
-      const b = scrollEl.getBoundingClientRect();
-      const w = Math.max(scrollEl.scrollWidth, b.width);
-      const h = Math.max(scrollEl.scrollHeight, b.height);
-      svg.setAttribute("width", String(w));
-      svg.setAttribute("height", String(h));
-      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-      while(svg.firstChild) svg.removeChild(svg.firstChild);
-
-      const makePath=(x1,y1,x2,y2)=>{
-        const midX = x1 + Math.max(18, (x2-x1)*0.45);
-        return `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
-      };
-
-      links.forEach(([from,to])=>{
-        const a=slots.get(from);
-        const c=slots.get(to);
-        if(!a || !c) return;
-        const ra=a.getBoundingClientRect();
-        const rc=c.getBoundingClientRect();
-        const x1 = (ra.right - b.left) + scrollEl.scrollLeft;
-        const y1 = (ra.top - b.top) + scrollEl.scrollTop + ra.height/2;
-        const x2 = (rc.left - b.left) + scrollEl.scrollLeft;
-        const y2 = (rc.top - b.top) + scrollEl.scrollTop + rc.height/2;
-
-        const p=document.createElementNS("http://www.w3.org/2000/svg","path");
-        p.setAttribute("d", makePath(x1, y1, x2, y2));
-        p.setAttribute("fill","none");
-        p.setAttribute("stroke","rgba(148,163,184,.65)");
-        p.setAttribute("stroke-width","2");
-        p.setAttribute("stroke-linecap","round");
-        svg.appendChild(p);
-      });
     }
 
     
