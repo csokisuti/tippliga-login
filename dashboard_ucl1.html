@@ -544,7 +544,22 @@
       return "";
     }
 
-    function renderBracket(bracketDocs, matchById){
+    
+    function renderTeamLine(teamName, aggregate, isWinner){
+      const line=document.createElement("div");
+      line.className="team-line"+(isWinner?" winner":"");
+      const nameEl=document.createElement("span");
+      nameEl.className="team-name";
+      nameEl.textContent=teamName||"—";
+      const aggEl=document.createElement("span");
+      aggEl.className="team-agg";
+      aggEl.textContent=(aggregate!==null && aggregate!==undefined)?String(aggregate):"";
+      line.appendChild(nameEl);
+      line.appendChild(aggEl);
+      return line;
+    }
+
+function renderBracket(bracketDocs, matchById){
       const mount=document.getElementById("uclBracketContainer");
       if(!mount) return;
       const titles=slotTitleMap();
