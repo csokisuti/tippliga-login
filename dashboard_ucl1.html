@@ -717,7 +717,13 @@ function renderBracket(bracketDocs, matchById){
     }
 
     
-    async function initBracket(){
+    
+    const bracketDebugEl = document.getElementById("bracketDebug");
+    function setBracketDebug(msg){
+      if(!bracketDebugEl) return;
+      bracketDebugEl.textContent = msg || "";
+    }
+async function initBracket(){
       await loadBracketUISettings();
       const mount=document.getElementById("uclBracketContainer");
       if(mount) mount.textContent="Ágrajz betöltése…";
