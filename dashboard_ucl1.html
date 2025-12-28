@@ -127,6 +127,31 @@
     .ucl-bracket .teamleft img{width:18px;height:18px;object-fit:contain;flex:0 0 auto}
     .ucl-bracket .teamname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .ucl-bracket .agg{font-weight:800;color:#0f172a;font-variant-numeric:tabular-nums}
+
+    /* BRACKET FIX */
+    #uclBracketCard,
+    #uclBracketDetails,
+    #uclBracketDetails .ucl-bracket-wrap{
+      position:relative;
+      background:#fff;
+      isolation:isolate;
+    }
+    #uclBracketCard::before,
+    #uclBracketCard::after,
+    #uclBracketDetails::before,
+    #uclBracketDetails::after,
+    #uclBracketDetails .ucl-bracket-wrap::before,
+    #uclBracketDetails .ucl-bracket-wrap::after{
+      content:none !important;
+    }
+    #uclBracketDetails .ucl-bracket-wrap{overflow:auto}
+    #uclBracketContainer{position:relative}
+    #uclBracketContainer .ucl-bracket-lines{z-index:0}
+    #uclBracketContainer .ucl-bracket-grid{position:relative;z-index:1}
+    #uclBracketDetails .ucl-slot{background:#fff}
+    @media (max-width:720px){
+      #uclBracketContainer .ucl-bracket-lines{display:none !important}
+    }
   </style>
 
   <script type="module">
