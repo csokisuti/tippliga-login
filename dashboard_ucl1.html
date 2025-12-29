@@ -101,7 +101,6 @@
       border-radius:16px;
       background:linear-gradient(180deg, rgba(248,250,252,.95), rgba(255,255,255,1));
       border:1px solid var(--line,#e6eaf1);
-      overflow:auto;
     }
 
     #uclBracketDetails .ucl-bracket-toolbar{
@@ -115,58 +114,76 @@
     #uclBracketDetails .ucl-bracket-title{font-size:16px;font-weight:900}
     #uclBracketDetails .ucl-bracket-sub{font-size:12px;color:var(--muted,#64748b)}
 
-    .ucl-bracket{position:relative}
-    .ucl-bracket-grid{
-      display:grid;
-      grid-template-columns:repeat(5, minmax(240px, 1fr));
-      gap:16px;
-      align-items:start;
-      min-width:0;
+    .ucl-stepper{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:10px 10px 12px;
+      border:1px solid var(--line,#e6eaf1);
+      background:#fff;
+      border-radius:14px;
+      box-shadow:0 10px 26px rgba(15,23,42,.06);
+      margin-bottom:12px;
     }
 
-    @media (max-width:1100px){
-      .ucl-bracket-grid{min-width:1240px}
+    .ucl-step{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line,#e6eaf1);
+      background:#fff;
+      padding:8px 10px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:13px;
+      cursor:pointer;
+      user-select:none;
+      color:#0f172a;
+    }
+    .ucl-step .dot{
+      width:10px;height:10px;border-radius:999px;
+      background:color-mix(in oklab, var(--accent,#3b82f6) 25%, #cbd5e1);
+      border:1px solid color-mix(in oklab, var(--line,#e6eaf1) 70%, #cbd5e1);
+    }
+    .ucl-step.active{
+      background:color-mix(in oklab, var(--accent,#3b82f6) 12%, #fff);
+      border-color:color-mix(in oklab, var(--accent,#3b82f6) 30%, var(--line,#e6eaf1));
+    }
+    .ucl-step.active .dot{background:var(--accent,#3b82f6)}
+    .ucl-step.locked{
+      opacity:.55;
+      cursor:not-allowed;
+      filter:saturate(.6);
     }
 
-    @media (max-width:720px){
-      #uclBracketDetails .ucl-bracket-wrap{padding:12px}
-      .ucl-bracket-grid{grid-template-columns:1fr;min-width:0}
+    .ucl-panelHead{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+      padding:0 2px;
     }
-
-    .ucl-bracket-col{min-width:240px;display:flex;flex-direction:column;gap:10px}
-    .ucl-bracket-col h4{
-      margin:0;
+    .ucl-panelHead .h{
+      font-weight:900;
+      font-size:14px;
+      color:#0f172a;
+    }
+    .ucl-panelHead .sub{
       font-size:12px;
       color:var(--muted,#64748b);
-      letter-spacing:.6px;
-      text-transform:uppercase;
+      margin-top:2px;
     }
 
-    .ucl-bracket-colBody{
-      position:relative;
-      display:grid;
-      grid-template-rows:repeat(32, 10px);
-      gap:0;
-      min-height:380px;
-    }
-
-    @media (max-width:720px){
-      .ucl-bracket-col{min-width:0}
-      .ucl-bracket-colBody{min-height:0;grid-template-rows:none;display:flex;flex-direction:column;gap:12px}
-    }
-
-    .ucl-bracket-lines{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      pointer-events:none;
-      overflow:visible;
-      opacity:.42;
-      color:color-mix(in oklab, var(--accent,#3b82f6) 40%, #64748b);
+    .ucl-panelList{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
     }
 
     .ucl-slot{
+      position:relative;
       border:1px solid color-mix(in oklab, var(--line,#e6eaf1) 78%, #cbd5e1);
       border-radius:16px;
       background:#fff;
@@ -175,6 +192,7 @@
       flex-direction:column;
       gap:10px;
       box-shadow:0 10px 26px rgba(15,23,42,.06);
+      overflow:hidden;
     }
 
     .ucl-slot .meta{
@@ -187,7 +205,6 @@
       border-bottom:1px dashed color-mix(in oklab, var(--line,#e6eaf1) 70%, #cbd5e1);
     }
 
-    .ucl-slot .row{display:flex;justify-content:space-between;gap:10px;align-items:center}
     .ucl-bracket .teamline{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .ucl-bracket .teamleft{display:flex;align-items:center;gap:10px;min-width:0}
     .ucl-bracket .teamleft img{
@@ -195,22 +212,18 @@
       border-radius:6px;
       border:1px solid var(--line,#e6eaf1);
       background:#fff;
+      display:block;
     }
     .ucl-bracket .teamname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .ucl-bracket .agg{font-weight:900;color:#0f172a;font-variant-numeric:tabular-nums}
 
-    .adv-winner .teamname{font-weight:900}
-    .adv-winner .agg{font-weight:900}
-
     .ucl-legs{display:flex;flex-direction:column;gap:8px;padding-top:2px}
-
     .ucl-legline{
       border:1px solid color-mix(in oklab, var(--line,#e6eaf1) 65%, #cbd5e1);
       border-radius:12px;
       padding:8px 10px;
       background:rgba(248,250,252,.7);
     }
-
     .ucl-legline .leg-top{display:flex;gap:8px;justify-content:space-between}
     .ucl-legline .leg-scores{
       display:flex;gap:10px;flex-wrap:wrap;
@@ -231,7 +244,7 @@
     .ucl-legs-empty{
       font-size:12px;
       color:var(--muted,#64748b);
-      padding:8px 10px;
+      padding:10px 10px;
       border-radius:12px;
       background:rgba(2,6,23,.03);
       border:1px dashed color-mix(in oklab, var(--line,#e6eaf1) 65%, #cbd5e1);
@@ -247,26 +260,8 @@
     }
     .ucl-adv{font-weight:900}
 
-    #uclBracketCard,
-    #uclBracketDetails,
-    #uclBracketDetails .ucl-bracket-wrap{
-      position:relative;
-      background:#fff;
-      isolation:isolate;
-    }
-    #uclBracketCard::before,
-    #uclBracketCard::after,
-    #uclBracketDetails::before,
-    #uclBracketDetails::after,
-    #uclBracketDetails .ucl-bracket-wrap::before,
-    #uclBracketDetails .ucl-bracket-wrap::after{
-      content:none !important;
-    }
-    #uclBracketContainer{position:relative}
-    #uclBracketContainer .ucl-bracket-lines{z-index:0}
-    #uclBracketContainer .ucl-bracket-grid{position:relative;z-index:1}
     @media (max-width:720px){
-      #uclBracketContainer .ucl-bracket-lines{display:none !important}
+      #uclBracketDetails .ucl-bracket-wrap{padding:12px}
     }
   </style>
 
@@ -313,7 +308,7 @@
     const CHAT_LAST_SEEN_FIELD = 'chatLastSeenUcl';
 
     const crestMap = {
-      "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/borussia.png","Bodø/Glimt":"ucl_crest/bodo.png","Club Bruges":"ucl_crest/brugge.png","Chelsea":"ucl_crest/chelsea.png","FC Köbenhavn":"ucl_crest/copenhagen.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png","Galatasaray":"ucl_crest/galata.png","Internazionale":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Bayer Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png","Olympique Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png","Newcastle United":"ucl_crest/newcastle.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png","Galatasaray":"ucl_crest/galata.png","Slavia Praha":"ucl_crest/slavia.png","Olympique Marseille":"ucl_crest/om.png","Pafosz":"ucl_crest/pafos.png","Paris Saint-Germain":"ucl_crest/psg.png","Qarabag":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png","Sporting CP":"ucl_crest/sporting.png","Tottenham Hotspur":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png","Kajrat Almati":"ucl_crest/kairat.png","PSV":"ucl_crest/psv.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png"
+      "Ajax":"ucl_crest/ajax.png","Arsenal":"ucl_crest/arsenal.png","Atalanta":"ucl_crest/atalanta.png","Athletic Bilbao":"ucl_crest/athletic.png","Atlético Madrid":"ucl_crest/atletico.png","Barcelona":"ucl_crest/barcelona.png","Bayern München":"ucl_crest/bayern.png","Benfica":"ucl_crest/benfica.png","Borussia Dortmund":"ucl_crest/borussia.png","Bodø/Glimt":"ucl_crest/bodo.png","Club Bruges":"ucl_crest/brugge.png","Chelsea":"ucl_crest/chelsea.png","FC Köbenhavn":"ucl_crest/copenhagen.png","Eintracht Frankfurt":"ucl_crest/frankfurt.png","Galatasaray":"ucl_crest/galata.png","Internazionale":"ucl_crest/inter.png","Juventus":"ucl_crest/juventus.png","Bayer Leverkusen":"ucl_crest/leverkusen.png","Liverpool":"ucl_crest/liverpool.png","Manchester City":"ucl_crest/mancity.png","Olympique Marseille":"ucl_crest/marseille.png","Monaco":"ucl_crest/monaco.png","Napoli":"ucl_crest/napoli.png","Newcastle United":"ucl_crest/newcastle.png","Olympiakosz Pireusz":"ucl_crest/olympiacos.png","Slavia Praha":"ucl_crest/slavia.png","Pafosz":"ucl_crest/pafos.png","Paris Saint-Germain":"ucl_crest/psg.png","Qarabag":"ucl_crest/qarabag.png","Real Madrid":"ucl_crest/real.png","Sporting CP":"ucl_crest/sporting.png","Tottenham Hotspur":"ucl_crest/tottenham.png","Union Saint-Gilloise":"ucl_crest/usg.png","Villarreal":"ucl_crest/villareal.png","Kajrat Almati":"ucl_crest/kairat.png","PSV":"ucl_crest/psv.png"
     };
 
     const facebookLinks = {
@@ -591,8 +586,6 @@
     }
 
     function buildMatchLines(slot, matchById){
-      const wrap=document.createElement("div");
-      wrap.className="ucl-legs";
       const ids = Array.isArray(slot.matchIds) ? slot.matchIds : [];
       const out=[];
       for(let i=0;i<Math.min(2, ids.length);i++){
@@ -626,157 +619,147 @@
       return foot;
     }
 
-    function renderBracket(bracketDocs, matchById){
+    function roundConfig(){
+      return [
+        { key:"PO", label:"Play-off",  sub:"Play-off párharcok", slotIds: Array.from({length:8}, (_,i)=>"PO"+(i+1)) },
+        { key:"R16", label:"Nyolcaddöntő", sub:"Nyolcaddöntők", slotIds: Array.from({length:8}, (_,i)=>"R16_"+(i+1)) },
+        { key:"QF", label:"Negyeddöntő", sub:"Negyeddöntők", slotIds: Array.from({length:4}, (_,i)=>"QF"+(i+1)) },
+        { key:"SF", label:"Elődöntő", sub:"Elődöntők", slotIds: Array.from({length:2}, (_,i)=>"SF"+(i+1)) },
+        { key:"F",  label:"Döntő", sub:"A döntő", slotIds: ["F1"] }
+      ];
+    }
+
+    function hasAnyDataForRound(roundKey, slotsById){
+      const cfg=roundConfig().find(x=>x.key===roundKey);
+      if(!cfg) return false;
+      return cfg.slotIds.some(id=>{
+        const s = slotsById[id] || {};
+        const ht = (s.homeTeam||"").toString().trim();
+        const at = (s.awayTeam||"").toString().trim();
+        const mids = Array.isArray(s.matchIds) ? s.matchIds : [];
+        return !!ht || !!at || mids.length>0 || !!(s.note||"").toString().trim();
+      });
+    }
+
+    function inferDefaultActiveRound(slotsById){
+      const rounds=roundConfig().map(x=>x.key);
+      let lastWithData = -1;
+      rounds.forEach((rk, idx)=>{
+        if(hasAnyDataForRound(rk, slotsById)) lastWithData = idx;
+      });
+      return Math.max(0, lastWithData);
+    }
+
+    function renderRoundPanel(roundKey, slotsById, matchById){
+      const titles=slotTitleMap();
+      const cfg=roundConfig().find(x=>x.key===roundKey);
+      const wrap=document.createElement("div");
+      wrap.className="ucl-bracket";
+
+      const head=document.createElement("div");
+      head.className="ucl-panelHead";
+      const left=document.createElement("div");
+      left.innerHTML = `<div class="h">${cfg.label}</div><div class="sub">${cfg.sub}</div>`;
+      head.appendChild(left);
+      wrap.appendChild(head);
+
+      const list=document.createElement("div");
+      list.className="ucl-panelList";
+
+      cfg.slotIds.forEach(id=>{
+        const s = { id, ...(slotsById[id]||{id,homeTeam:"",awayTeam:"",matchIds:[],decidedByPenalties:false,penaltyWinner:"",advanceWinner:"",note:""}) };
+        const card=document.createElement("div");
+        card.className="ucl-slot";
+
+        const home=normalizeTeamName(s.homeTeam);
+        const away=normalizeTeamName(s.awayTeam);
+        const adv = resolveAdvanceWinner(s);
+        const aggs = computeAggregatesForSlot(s, matchById);
+
+        const meta=document.createElement("div"); meta.className="meta";
+        const mL=document.createElement("div"); mL.textContent=titles[id]||id;
+        const mR=document.createElement("div"); if(s.note) mR.textContent=s.note;
+        meta.appendChild(mL); meta.appendChild(mR);
+        card.appendChild(meta);
+
+        card.appendChild(renderTeamLine(home, aggs?aggs.homeAgg:"", adv==="home"));
+        card.appendChild(renderTeamLine(away, aggs?aggs.awayAgg:"", adv==="away"));
+
+        const legsWrap=document.createElement("div");
+        legsWrap.className="ucl-legs";
+        const matchLines = buildMatchLines(s, matchById);
+        if(matchLines.length){
+          matchLines.forEach(line=>legsWrap.appendChild(line));
+        }else{
+          const ph=document.createElement("div");
+          ph.className="ucl-legs-empty";
+          ph.textContent="Nincs hozzárendelt meccs.";
+          legsWrap.appendChild(ph);
+        }
+        card.appendChild(legsWrap);
+
+        const badge=buildDecisionBadge(s);
+        if(badge) card.appendChild(badge);
+
+        list.appendChild(card);
+      });
+
+      wrap.appendChild(list);
+      return wrap;
+    }
+
+    function renderBracketStepper(bracketSlotsArr, matchById){
       const mount=document.getElementById("uclBracketContainer");
       if(!mount) return;
 
-      const titles=slotTitleMap();
-      const rounds=[{k:"PO",t:"Play-off"},{k:"R16",t:"Nyolcaddöntő"},{k:"QF",t:"Negyeddöntő"},{k:"SF",t:"Elődöntő"},{k:"F",t:"Döntő"}];
-      const cols = rounds.map(r=>({round:r.k,title:r.t,slots:[]}));
-      const byId={};
-      (bracketDocs||[]).forEach(b=>{ byId[b.id]=b; });
+      const slotsById={};
+      (bracketSlotsArr||[]).forEach(b=>{ slotsById[b.id]=b; });
 
-      cols.forEach(c=>{
-        const ids=[];
-        if(c.round==="PO") for(let i=1;i<=8;i++) ids.push("PO"+i);
-        if(c.round==="R16") for(let i=1;i<=8;i++) ids.push("R16_"+i);
-        if(c.round==="QF") for(let i=1;i<=4;i++) ids.push("QF"+i);
-        if(c.round==="SF") for(let i=1;i<=2;i++) ids.push("SF"+i);
-        if(c.round==="F") ids.push("F1");
-        c.slots = ids.map(id=>({id,...(byId[id]||{id,homeTeam:"",awayTeam:"",matchIds:[],decidedByPenalties:false,penaltyWinner:"",advanceWinner:"",note:""})}));
-      });
+      const cfgs=roundConfig();
+      const defaultIdx=inferDefaultActiveRound(slotsById);
 
-      const grid=document.createElement("div");
-      grid.className="ucl-bracket-grid";
+      const saved = localStorage.getItem("ucl_bracket_active_round");
+      let activeIdx = saved!==null ? Math.max(0, Math.min(cfgs.length-1, parseInt(saved,10)||0)) : defaultIdx;
 
-      const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
-      svg.classList.add("ucl-bracket-lines");
-      svg.setAttribute("aria-hidden","true");
+      const maxUnlocked = defaultIdx;
 
-      function slotRowStart(id){
-        if(/^PO\d+$/.test(id)) return 2 + (parseInt(id.slice(2),10)-1)*4;
-        if(/^R16_\d+$/.test(id)) return 2 + (parseInt(id.split("_")[1],10)-1)*4;
-        if(/^QF\d+$/.test(id)) return 4 + (parseInt(id.slice(2),10)-1)*8;
-        if(/^SF\d+$/.test(id)) return 8 + (parseInt(id.slice(2),10)-1)*16;
-        if(id==="F1") return 16;
-        return null;
-      }
+      const stepper=document.createElement("div");
+      stepper.className="ucl-stepper";
 
-      function addLine(x1,y1,x2,y2,midX){
-        const p=document.createElementNS("http://www.w3.org/2000/svg","path");
-        const mx = (typeof midX==="number") ? midX : (x1 + x2) / 2;
-        p.setAttribute("d", `M ${x1} ${y1} L ${mx} ${y1} L ${mx} ${y2} L ${x2} ${y2}`);
-        p.setAttribute("fill","none");
-        p.setAttribute("stroke","currentColor");
-        p.setAttribute("stroke-width","1.2");
-        p.setAttribute("stroke-linecap","round");
-        p.setAttribute("stroke-linejoin","round");
-        svg.appendChild(p);
-      }
+      cfgs.forEach((c, idx)=>{
+        const btn=document.createElement("button");
+        btn.type="button";
+        btn.className="ucl-step";
+        if(idx===activeIdx) btn.classList.add("active");
 
-      function drawLines(){
-        while(svg.firstChild) svg.removeChild(svg.firstChild);
-        const rect=mount.getBoundingClientRect();
-        const getMid=(el,side)=>{
-          const r=el.getBoundingClientRect();
-          const x = side==="right" ? (r.right-rect.left) : (r.left-rect.left);
-          const y = (r.top-rect.top) + r.height/2;
-          return {x,y};
-        };
-        const connect=(fromId,toId)=>{
-          const a=document.getElementById("slot-"+fromId);
-          const b=document.getElementById("slot-"+toId);
-          if(!a || !b) return;
-          const A=getMid(a,"right");
-          const B=getMid(b,"left");
-          addLine(A.x, A.y, B.x, B.y);
-        };
-        for(let i=1;i<=8;i++) connect("PO"+i, "R16_"+i);
-        for(let i=1;i<=4;i++){
-          connect("R16_"+(i*2-1), "QF"+i);
-          connect("R16_"+(i*2), "QF"+i);
-        }
-        for(let i=1;i<=2;i++){
-          connect("QF"+(i*2-1), "SF"+i);
-          connect("QF"+(i*2), "SF"+i);
-        }
-        connect("SF1","F1");
-        connect("SF2","F1");
-      }
+        const unlocked = idx<=maxUnlocked;
+        if(!unlocked) btn.classList.add("locked");
 
-      cols.forEach(c=>{
-        const col=document.createElement("div");
-        col.className="ucl-bracket-col";
-        const h=document.createElement("h4");
-        h.textContent=c.title;
-        col.appendChild(h);
-
-        const body=document.createElement("div");
-        body.className="ucl-bracket-colBody";
-
-        c.slots.forEach(s=>{
-          const card=document.createElement("div");
-          card.className="ucl-slot";
-          card.id="slot-"+s.id;
-
-          const rs = slotRowStart(s.id);
-          if(rs && window.matchMedia("(min-width: 721px)").matches){
-            card.style.gridRow = `${rs} / span 8`;
-          }
-
-          const home=normalizeTeamName(s.homeTeam);
-          const away=normalizeTeamName(s.awayTeam);
-
-          const adv = resolveAdvanceWinner(s);
-          const aggs = computeAggregatesForSlot(s, matchById);
-
-          const meta=document.createElement("div"); meta.className="meta";
-          const left=document.createElement("div"); left.textContent=titles[s.id]||s.id;
-          const right=document.createElement("div");
-          if(s.note) right.textContent=s.note;
-          meta.appendChild(left); meta.appendChild(right);
-          card.appendChild(meta);
-
-          const row1=document.createElement("div"); row1.className="row"+(adv==="home"?" adv-winner":"");
-          row1.appendChild(renderTeamLine(home, aggs?aggs.homeAgg:"", adv==="home"));
-          card.appendChild(row1);
-
-          const row2=document.createElement("div"); row2.className="row"+(adv==="away"?" adv-winner":"");
-          row2.appendChild(renderTeamLine(away, aggs?aggs.awayAgg:"", adv==="away"));
-          card.appendChild(row2);
-
-          const legsWrap=document.createElement("div");
-          legsWrap.className="ucl-legs";
-          const matchLines = buildMatchLines(s, matchById);
-          if(matchLines.length){
-            matchLines.forEach(line=>legsWrap.appendChild(line));
-          }else{
-            const ph=document.createElement("div");
-            ph.className="ucl-legs-empty";
-            ph.textContent="Nincs hozzárendelt meccs.";
-            legsWrap.appendChild(ph);
-          }
-          card.appendChild(legsWrap);
-
-          const badge=buildDecisionBadge(s);
-          if(badge) card.appendChild(badge);
-
-          body.appendChild(card);
+        btn.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${c.label}</span>`;
+        btn.addEventListener("click", ()=>{
+          if(idx>maxUnlocked) return;
+          activeIdx=idx;
+          localStorage.setItem("ucl_bracket_active_round", String(activeIdx));
+          rebuild();
         });
 
-        col.appendChild(body);
-        grid.appendChild(col);
+        stepper.appendChild(btn);
       });
 
-      mount.innerHTML="";
-      mount.appendChild(svg);
-      mount.appendChild(grid);
+      const panelHost=document.createElement("div");
 
-      requestAnimationFrame(()=>requestAnimationFrame(drawLines));
-      if(!window.__uclBracketLinesBound){
-        window.__uclBracketLinesBound=true;
-        window.addEventListener("resize", ()=>requestAnimationFrame(drawLines), {passive:true});
+      function rebuild(){
+        Array.from(stepper.querySelectorAll(".ucl-step")).forEach((b,i)=>{
+          b.classList.toggle("active", i===activeIdx);
+        });
+        panelHost.innerHTML="";
+        panelHost.appendChild(renderRoundPanel(cfgs[activeIdx].key, slotsById, matchById));
       }
+
+      mount.innerHTML="";
+      mount.appendChild(stepper);
+      mount.appendChild(panelHost);
+      rebuild();
     }
 
     async function initBracket(){
@@ -784,7 +767,7 @@
       if(mount) mount.textContent="Ágrajz betöltése…";
 
       const matchById=new Map();
-      let currentBracket=[];
+      let currentSlotsArr=[];
 
       try{
         const ms = await getDocs(collection(db,"ucl_matches"));
@@ -798,19 +781,17 @@
         const bSnap = await getDoc(doc(db,"settings","ucl_bracket"));
         const data = bSnap.exists() ? (bSnap.data()||{}) : {};
         const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
-        const arr = Object.keys(slots).map(k=>({id:k, ...(slots[k]||{})}));
-        currentBracket = arr;
+        currentSlotsArr = Object.keys(slots).map(k=>({id:k, ...(slots[k]||{})}));
       }catch(e){}
 
-      renderBracket(currentBracket, matchById);
+      renderBracketStepper(currentSlotsArr, matchById);
 
       try{
         onSnapshot(doc(db,"settings","ucl_bracket"), (snap)=>{
           const data = snap.exists() ? (snap.data()||{}) : {};
           const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
-          const arr = Object.keys(slots).map(k=>({id:k, ...(slots[k]||{})}));
-          currentBracket = arr;
-          renderBracket(currentBracket, matchById);
+          currentSlotsArr = Object.keys(slots).map(k=>({id:k, ...(slots[k]||{})}));
+          renderBracketStepper(currentSlotsArr, matchById);
         });
       }catch(e){}
 
@@ -820,7 +801,7 @@
             const m=d.data()||{};
             matchById.set(d.id,{id:d.id,...m});
           });
-          renderBracket(currentBracket, matchById);
+          renderBracketStepper(currentSlotsArr, matchById);
         });
       }catch(e){}
     }
@@ -1158,15 +1139,13 @@
           <div class="ucl-bracket-toolbar">
             <div>
               <div class="ucl-bracket-title">BL kieséses ágrajz</div>
-              <div class="ucl-bracket-sub">A 9. fordulótól a meccsek már csak itt számítanak.</div>
+              <div class="ucl-bracket-sub">Mindig az aktuális kör látszik. Fent vissza tudsz lépni.</div>
             </div>
             <span class="pill" id="uclBracketTogglePill">Megnyit</span>
           </div>
         </summary>
         <div class="ucl-bracket-wrap" id="uclBracketContainer">
-          <div class="ucl-bracket-placeholder">
-            Az ágrajz adatait az admin oldalon tudod feltölteni.
-          </div>
+          Ágrajz betöltése…
         </div>
       </details>
     </section>
