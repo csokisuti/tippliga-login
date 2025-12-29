@@ -94,166 +94,68 @@
 
     #uclBracketDetails summary{cursor:pointer;list-style:none}
     #uclBracketDetails summary::-webkit-details-marker{display:none}
-
-    #uclBracketDetails .ucl-bracket-wrap{
-      margin-top:12px;
-      padding:12px;
-      border-radius:16px;
-      background:linear-gradient(180deg, rgba(248,250,252,.95), rgba(255,255,255,1));
-      border:1px solid var(--line,#e6eaf1);
-    }
-
-    #uclBracketDetails .ucl-bracket-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between}
-    #uclBracketDetails .ucl-bracket-title{font-size:16px;font-weight:800}
-    #uclBracketDetails .ucl-bracket-sub{font-size:12px;opacity:.8}
+    #uclBracketDetails .ucl-bracket-placeholder{padding:14px;text-align:center;font-size:13px;color:var(--muted,#64748b);border:1px dashed rgba(148,163,184,.6);border-radius:12px;background:rgba(248,250,252,.9)}
+    #uclBracketDetails .ucl-bracket-wrap{margin-top:10px;padding:10px 10px 12px;overflow:hidden}
 
     .ucl-stepper{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      flex-wrap:nowrap;
-      overflow:auto;
-      -webkit-overflow-scrolling:touch;
-      padding:10px 10px;
-      border:1px solid var(--line,#e6eaf1);
-      background:#fff;
-      border-radius:14px;
-      box-shadow:0 10px 26px rgba(15,23,42,.06);
-      margin-bottom:10px;
+      display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow:hidden;
+      padding:8px 10px;border:1px solid var(--line,#e6eaf1);background:#fff;border-radius:14px;
+      box-shadow:0 10px 26px rgba(15,23,42,.06);margin-bottom:10px
     }
-
     .ucl-step{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      border:1px solid var(--line,#e6eaf1);
-      background:#fff;
-      padding:8px 10px;
-      border-radius:999px;
-      font-weight:800;
-      font-size:13px;
-      cursor:pointer;
-      user-select:none;
-      color:#0f172a;
-      white-space:nowrap;
-      flex:0 0 auto;
+      display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e6eaf1);background:transparent;
+      padding:4px 8px;border-radius:999px;font-weight:900;font-size:12px;cursor:pointer;user-select:none;
+      color:#0f172a;white-space:nowrap;flex:0 0 auto
     }
     .ucl-step .dot{
-      width:10px;height:10px;border-radius:999px;
+      width:7px;height:7px;border-radius:999px;
       background:color-mix(in oklab, var(--accent,#3b82f6) 25%, #cbd5e1);
-      border:1px solid color-mix(in oklab, var(--line,#e6eaf1) 70%, #cbd5e1);
+      border:1px solid color-mix(in oklab, var(--line,#e6eaf1) 70%, #cbd5e1)
     }
-    .ucl-step.active{
-      background:color-mix(in oklab, var(--accent,#3b82f6) 12%, #fff);
-      border-color:color-mix(in oklab, var(--accent,#3b82f6) 30%, var(--line,#e6eaf1));
-    }
+    .ucl-step.active{background:color-mix(in oklab, var(--accent,#3b82f6) 12%, #fff);border-color:color-mix(in oklab, var(--accent,#3b82f6) 30%, var(--line,#e6eaf1))}
     .ucl-step.active .dot{background:var(--accent,#3b82f6)}
     .ucl-step.locked{opacity:.55;cursor:not-allowed;filter:saturate(.6)}
+    .ucl-arrow{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:18px;color:color-mix(in oklab, var(--muted,#64748b) 65%, #0f172a);opacity:.85;user-select:none}
+    .ucl-arrow svg{width:14px;height:14px}
 
-    .ucl-arrow{
-      flex:0 0 auto;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:26px;
-      color:color-mix(in oklab, var(--muted,#64748b) 65%, #0f172a);
-      opacity:.9;
-      user-select:none;
-    }
-    .ucl-arrow svg{width:18px;height:18px}
-
-    .ucl-panelHead{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:12px;
-      margin:2px 2px 10px;
-      padding:0 2px;
-    }
-    .ucl-panelHead .h{font-weight:900;font-size:14px;color:#0f172a}
-    .ucl-panelHead .sub{font-size:12px;color:var(--muted,#64748b);margin-top:2px}
-
-    .ucl-panelList{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-      gap:10px;
-    }
-    @media (max-width:820px){.ucl-panelList{grid-template-columns:1fr}}
+    .ucl-roundMount{display:block}
+    .ucl-roundTitleRow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 2px 10px}
+    .ucl-roundTitle{font-size:14px;font-weight:900;color:#0f172a}
+    .ucl-roundHint{font-size:12px;color:var(--muted,#64748b)}
+    .ucl-slotsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    @media (max-width:820px){.ucl-slotsGrid{grid-template-columns:1fr}}
 
     .ucl-slot{
-      border:1px solid color-mix(in oklab, var(--line,#e6eaf1) 78%, #cbd5e1);
+      border:1px solid var(--line,#e6eaf1);
       border-radius:14px;
       background:#fff;
       padding:10px;
       display:flex;
       flex-direction:column;
       gap:8px;
-      box-shadow:0 10px 26px rgba(15,23,42,.06);
-      overflow:hidden;
+      box-shadow:0 6px 18px rgba(15,23,42,.05)
     }
-
-    .ucl-slot .meta{
-      font-size:12px;
-      color:var(--muted,#64748b);
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      padding-bottom:6px;
-      border-bottom:1px dashed color-mix(in oklab, var(--line,#e6eaf1) 70%, #cbd5e1);
-    }
-
-    .ucl-bracket .teamline{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .ucl-bracket .teamleft{display:flex;align-items:center;gap:8px;min-width:0}
-    .ucl-bracket .teamleft img{
-      width:18px;height:18px;object-fit:contain;flex:0 0 auto;
-      border-radius:6px;border:1px solid var(--line,#e6eaf1);background:#fff;display:block;
-    }
-    .ucl-bracket .teamname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .ucl-bracket .agg{font-weight:900;color:#0f172a;font-variant-numeric:tabular-nums}
-
+    .ucl-slot .meta{font-size:12px;opacity:.9;display:flex;justify-content:space-between;gap:10px}
+    .ucl-slot .row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .ucl-slot .teamline{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .ucl-slot .teamleft{display:flex;align-items:center;gap:8px;min-width:0}
+    .ucl-slot .teamleft img{width:18px;height:18px;object-fit:contain;flex:0 0 auto}
+    .ucl-slot .teamname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+    .ucl-slot .agg{font-weight:900;color:#0f172a;font-variant-numeric:tabular-nums}
     .ucl-legs{display:flex;flex-direction:column;gap:6px;padding-top:2px}
-    .ucl-legline{
-      border:1px solid color-mix(in oklab, var(--line,#e6eaf1) 65%, #cbd5e1);
-      border-radius:12px;
-      padding:7px 9px;
-      background:rgba(248,250,252,.7);
-    }
-    .ucl-legline .leg-top{display:flex;gap:8px;justify-content:space-between}
-    .ucl-legline .leg-scores{display:flex;gap:10px;flex-wrap:wrap;opacity:.95;font-variant-numeric:tabular-nums;margin-top:3px}
-    .ucl-legline .tag{font-size:11px;padding:2px 8px;border:1px solid var(--line,#e6eaf1);border-radius:999px;background:#fff;color:#334155}
+    .ucl-legline{font-size:12px;opacity:.95;line-height:1.25;border:1px solid color-mix(in oklab,var(--line,#e6eaf1) 80%, #cbd5e1);border-radius:12px;padding:8px 10px;background:rgba(248,250,252,.8)}
+    .ucl-legline .leg-top{display:flex;gap:8px;justify-content:space-between;align-items:center}
+    .ucl-legline .leg-scores{display:flex;gap:10px;flex-wrap:wrap;opacity:.95;font-variant-numeric:tabular-nums}
+    .ucl-legline .tag{font-size:11px;opacity:.9;padding:2px 8px;border:1px solid var(--line,#e6eaf1);border-radius:999px;background:#fff}
     .ucl-legline .s90{font-weight:900}
-    .ucl-legline .sft{color:#475569}
-
-    .ucl-legs-empty{
-      font-size:12px;
-      color:var(--muted,#64748b);
-      padding:8px 9px;
-      border-radius:12px;
-      background:rgba(2,6,23,.03);
-      border:1px dashed color-mix(in oklab, var(--line,#e6eaf1) 65%, #cbd5e1);
-    }
-
-    .ucl-foot{margin-top:2px;font-size:12px;display:flex;justify-content:space-between;gap:10px;color:#0f172a}
+    .ucl-legline .sft{opacity:.9}
+    .ucl-foot{margin-top:2px;font-size:12px;display:flex;justify-content:space-between;gap:10px;opacity:.95}
     .ucl-adv{font-weight:900}
-
-    .ucl-compact-toggle{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      justify-content:flex-end;
-      margin:0 2px 10px;
-      color:var(--muted,#64748b);
-      font-size:12px;
-    }
-    .ucl-compact-toggle input{accent-color:var(--accent,#3b82f6)}
-    .ucl-compact-toggle b{color:#0f172a}
-
-    .ucl-panelList.compact .ucl-slot{padding:9px;gap:7px}
-    .ucl-panelList.compact .ucl-legs{gap:5px}
-    .ucl-panelList.compact .ucl-legline{padding:6px 8px}
+    .adv-winner .teamname{font-weight:900}
+    .adv-winner .agg{font-weight:900}
 
     #uclBracketCard,#uclBracketDetails,#uclBracketDetails .ucl-bracket-wrap{position:relative;background:#fff;isolation:isolate}
-    #uclBracketCard::before,#uclBracketCard::after,#uclBracketDetails::before,#uclBracketDetails::after,#uclBracketDetails .ucl-bracket-wrap::before,#uclBracketDetails .ucl-bracket-wrap::after{content:none!important}
+    #uclBracketCard::before,#uclBracketCard::after,#uclBracketDetails::before,#uclBracketDetails::after,#uclBracketDetails .ucl-bracket-wrap::before,#uclBracketDetails .ucl-bracket-wrap::after{content:none !important}
   </style>
 
   <script type="module">
@@ -459,16 +361,6 @@
 
     function normalizeTeamName(t){ return (t||"").toString().trim(); }
 
-    function slotTitleMap(){
-      const map={};
-      for(let i=1;i<=8;i++) map["PO"+i] = "Play-off "+i;
-      for(let i=1;i<=8;i++) map["R16_"+i] = "Nyolcaddöntő "+i;
-      for(let i=1;i<=4;i++) map["QF"+i] = "Negyeddöntő "+i;
-      for(let i=1;i<=2;i++) map["SF"+i] = "Elődöntő "+i;
-      map["F1"]="Döntő";
-      return map;
-    }
-
     function crestForTeam(team){
       const t=normalizeTeamName(team);
       const hit = crestMap?.[t];
@@ -485,9 +377,7 @@
     }
 
     function formatLegLineHTML(idx, m){
-      if(!m){
-        return `<div class="leg-top"><span>${idx}. meccs</span><span class="tag">—</span></div>`;
-      }
+      if(!m) return `<div class="leg-top">${idx}. meccs: —</div>`;
       const mh=normalizeTeamName(m.homeTeam||m.home||"") || "—";
       const ma=normalizeTeamName(m.awayTeam||m.away||"") || "—";
       const r90 = (m.result||"").toString().trim();
@@ -500,9 +390,9 @@
       if(decided==="aet") tag = "Hossz.";
       if(decided==="pens") tag = "11-es";
       let ftSuffix = "";
-      if(decided==="pens" && pens) ftSuffix = ` • 11-es: ${escapeHTML(pens)}`;
-      const head = `<div class="leg-top"><span>${idx}. meccs</span>${tag?`<span class="tag">${tag}</span>`:""}</div>`;
-      const scores = `<div class="leg-scores"><span class="s90">${escapeHTML(mh)}–${escapeHTML(ma)} • 90’: ${escapeHTML(show90)}</span><span class="sft">FT: ${escapeHTML(showFT)}${ftSuffix}</span></div>`;
+      if(decided==="pens" && pens) ftSuffix = ` (11-es: ${escapeHTML(pens)})`;
+      const head = `<div class="leg-top"><span>${idx}. meccs: ${escapeHTML(mh)} – ${escapeHTML(ma)}</span>${tag?`<span class="tag">${tag}</span>`:""}</div>`;
+      const scores = `<div class="leg-scores"><span class="s90">90’: ${escapeHTML(show90)}</span><span class="sft">FT: ${escapeHTML(showFT)}${ftSuffix}</span></div>`;
       return head + scores;
     }
 
@@ -612,89 +502,132 @@
       return foot;
     }
 
-    function roundConfig(){
-      return [
-        { key:"PO", label:"Play-off", sub:"Play-off párharcok", slotIds: Array.from({length:8}, (_,i)=>"PO"+(i+1)) },
-        { key:"R16", label:"Nyolcaddöntő", sub:"Nyolcaddöntők", slotIds: Array.from({length:8}, (_,i)=>"R16_"+(i+1)) },
-        { key:"QF", label:"Negyeddöntő", sub:"Negyeddöntők", slotIds: Array.from({length:4}, (_,i)=>"QF"+(i+1)) },
-        { key:"SF", label:"Elődöntő", sub:"Elődöntők", slotIds: Array.from({length:2}, (_,i)=>"SF"+(i+1)) },
-        { key:"F", label:"Döntő", sub:"A döntő", slotIds: ["F1"] }
-      ];
+    const ROUND_DEFS = [
+      { key:"PO", label:"Play-off", slots: Array.from({length:8},(_,i)=>"PO"+(i+1)) },
+      { key:"R16", label:"Nyolcaddöntő", slots: Array.from({length:8},(_,i)=>"R16_"+(i+1)) },
+      { key:"QF", label:"Negyeddöntő", slots: Array.from({length:4},(_,i)=>"QF"+(i+1)) },
+      { key:"SF", label:"Elődöntő", slots: Array.from({length:2},(_,i)=>"SF"+(i+1)) },
+      { key:"F", label:"Döntő", slots: ["F1"] }
+    ];
+
+    function slotTitle(id){
+      if(/^PO\d+$/.test(id)) return "Play-off " + id.slice(2);
+      if(/^R16_\d+$/.test(id)) return "Nyolcaddöntő " + id.split("_")[1];
+      if(/^QF\d+$/.test(id)) return "Negyeddöntő " + id.slice(2);
+      if(/^SF\d+$/.test(id)) return "Elődöntő " + id.slice(2);
+      if(id==="F1") return "Döntő";
+      return id;
     }
 
-    function slotHasUsefulData(s){
-      const ht=(s.homeTeam||"").toString().trim();
-      const at=(s.awayTeam||"").toString().trim();
-      const mids=Array.isArray(s.matchIds)?s.matchIds:[];
-      const note=(s.note||"").toString().trim();
-      return !!ht || !!at || mids.length>0 || !!note;
+    function slotHasAnyData(s){
+      if(!s) return false;
+      const ht = normalizeTeamName(s.homeTeam);
+      const at = normalizeTeamName(s.awayTeam);
+      const ids = Array.isArray(s.matchIds) ? s.matchIds.filter(Boolean) : [];
+      const note = (s.note||"").toString().trim();
+      const adv = (s.advanceWinner||"").toString().trim();
+      const pen = (s.penaltyWinner||"").toString().trim();
+      return !!(ht || at || ids.length || note || adv || pen || s.decidedByPenalties);
     }
 
-    function hasAnyDataForRound(roundKey, slotsById){
-      const cfg=roundConfig().find(x=>x.key===roundKey);
-      if(!cfg) return false;
-      return cfg.slotIds.some(id=>{
-        const s = slotsById[id] || {};
-        return slotHasUsefulData(s);
+    function computeAvailableRounds(slotById){
+      const avail = {};
+      ROUND_DEFS.forEach(r=>{
+        const any = r.slots.some(id => slotHasAnyData(slotById[id]));
+        avail[r.key] = any;
+      });
+      return avail;
+    }
+
+    function pickDefaultRound(avail){
+      for(let i=ROUND_DEFS.length-1;i>=0;i--){
+        const k = ROUND_DEFS[i].key;
+        if(avail[k]) return k;
+      }
+      return "PO";
+    }
+
+    function renderStepper(mount, avail, activeKey, onPick){
+      mount.innerHTML="";
+      ROUND_DEFS.forEach((r, idx)=>{
+        const btn=document.createElement("button");
+        btn.type="button";
+        btn.className="ucl-step" + (r.key===activeKey ? " active" : "") + (!avail[r.key] ? " locked" : "");
+        btn.setAttribute("aria-pressed", r.key===activeKey ? "true" : "false");
+        btn.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${r.label}</span>`;
+        btn.addEventListener("click", ()=>{
+          if(!avail[r.key] && r.key!==activeKey) return;
+          onPick(r.key);
+        });
+        mount.appendChild(btn);
+        if(idx < ROUND_DEFS.length-1){
+          const arrow=document.createElement("span");
+          arrow.className="ucl-arrow";
+          arrow.innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.2 5.2a1 1 0 0 1 1.4 0l6 6a1 1 0 0 1 0 1.4l-6 6a1 1 0 1 1-1.4-1.4l4.3-4.3H4a1 1 0 1 1 0-2h13.1l-4.3-4.3a1 1 0 0 1 0-1.4Z"/></svg>`;
+          mount.appendChild(arrow);
+        }
       });
     }
 
-    function inferDefaultActiveRound(slotsById){
-      const rounds=roundConfig().map(x=>x.key);
-      let lastWithData = -1;
-      rounds.forEach((rk, idx)=>{
-        if(hasAnyDataForRound(rk, slotsById)) lastWithData = idx;
-      });
-      return Math.max(0, lastWithData);
-    }
-
-    function renderRoundPanel(roundKey, slotsById, matchById, compactMode, hideEmptySlots){
-      const titles=slotTitleMap();
-      const cfg=roundConfig().find(x=>x.key===roundKey);
-      const wrap=document.createElement("div");
-      wrap.className="ucl-bracket";
+    function renderRound(mount, roundKey, slotById, matchById){
+      const rd = ROUND_DEFS.find(x=>x.key===roundKey) || ROUND_DEFS[0];
+      mount.innerHTML="";
 
       const head=document.createElement("div");
-      head.className="ucl-panelHead";
-      const left=document.createElement("div");
-      left.innerHTML = `<div class="h">${cfg.label}</div><div class="sub">${cfg.sub}</div>`;
-      head.appendChild(left);
-      wrap.appendChild(head);
+      head.className="ucl-roundTitleRow";
+      const t=document.createElement("div");
+      t.className="ucl-roundTitle";
+      t.textContent = rd.label;
+      const hint=document.createElement("div");
+      hint.className="ucl-roundHint";
+      hint.textContent = "Kattints a fenti sorban a fordulókra.";
+      head.appendChild(t);
+      head.appendChild(hint);
+      mount.appendChild(head);
 
-      const list=document.createElement("div");
-      list.className="ucl-panelList" + (compactMode ? " compact" : "");
+      const grid=document.createElement("div");
+      grid.className="ucl-slotsGrid";
 
-      cfg.slotIds.forEach(id=>{
-        const s = { id, ...(slotsById[id]||{id,homeTeam:"",awayTeam:"",matchIds:[],decidedByPenalties:false,penaltyWinner:"",advanceWinner:"",note:""}) };
-
-        if(hideEmptySlots && !slotHasUsefulData(s)) return;
-
+      rd.slots.forEach(id=>{
+        const s = slotById[id] || {id,homeTeam:"",awayTeam:"",matchIds:[],decidedByPenalties:false,penaltyWinner:"",advanceWinner:"",note:""};
         const card=document.createElement("div");
         card.className="ucl-slot";
+        card.id="slot-"+id;
+
+        const meta=document.createElement("div");
+        meta.className="meta";
+        const left=document.createElement("div");
+        left.textContent = slotTitle(id);
+        const right=document.createElement("div");
+        if(s.note) right.textContent = s.note;
+        meta.appendChild(left);
+        meta.appendChild(right);
+        card.appendChild(meta);
 
         const home=normalizeTeamName(s.homeTeam);
         const away=normalizeTeamName(s.awayTeam);
         const adv = resolveAdvanceWinner(s);
         const aggs = computeAggregatesForSlot(s, matchById);
 
-        const meta=document.createElement("div"); meta.className="meta";
-        const mL=document.createElement("div"); mL.textContent=titles[id]||id;
-        const mR=document.createElement("div"); if(s.note) mR.textContent=s.note;
-        meta.appendChild(mL); meta.appendChild(mR);
-        card.appendChild(meta);
+        const r1=document.createElement("div");
+        r1.className="row"+(adv==="home"?" adv-winner":"");
+        r1.appendChild(renderTeamLine(home, aggs?aggs.homeAgg:"", adv==="home"));
+        card.appendChild(r1);
 
-        card.appendChild(renderTeamLine(home, aggs?aggs.homeAgg:"", adv==="home"));
-        card.appendChild(renderTeamLine(away, aggs?aggs.awayAgg:"", adv==="away"));
+        const r2=document.createElement("div");
+        r2.className="row"+(adv==="away"?" adv-winner":"");
+        r2.appendChild(renderTeamLine(away, aggs?aggs.awayAgg:"", adv==="away"));
+        card.appendChild(r2);
 
         const legsWrap=document.createElement("div");
         legsWrap.className="ucl-legs";
         const matchLines = buildMatchLines(s, matchById);
         if(matchLines.length){
-          matchLines.forEach(line=>legsWrap.appendChild(line));
+          matchLines.forEach(x=>legsWrap.appendChild(x));
         }else{
           const ph=document.createElement("div");
-          ph.className="ucl-legs-empty";
-          ph.textContent="Nincs hozzárendelt meccs.";
+          ph.className="ucl-bracket-placeholder";
+          ph.textContent="Még nincs hozzárendelt meccs.";
           legsWrap.appendChild(ph);
         }
         card.appendChild(legsWrap);
@@ -702,116 +635,33 @@
         const badge=buildDecisionBadge(s);
         if(badge) card.appendChild(badge);
 
-        list.appendChild(card);
+        grid.appendChild(card);
       });
 
-      if(list.childElementCount===0){
-        const empty=document.createElement("div");
-        empty.className="ucl-legs-empty";
-        empty.textContent="Még nincs hozzárendelt meccs.";
-        wrap.appendChild(empty);
-      }else{
-        wrap.appendChild(list);
-      }
-
-      return wrap;
+      mount.appendChild(grid);
     }
 
-    function arrowEl(){
-      const d=document.createElement("div");
-      d.className="ucl-arrow";
-      d.innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 5 20 12l-7 7-1.4-1.4 4.6-4.6H4v-2h12.2l-4.6-4.6L13 5z"/></svg>`;
-      return d;
-    }
+    function renderBracketState(bracketArr, matchById, forcedKey){
+      const stepperMount=document.getElementById("uclBracketStepper");
+      const roundMount=document.getElementById("uclBracketRoundMount");
+      const slotById={};
+      (bracketArr||[]).forEach(b=>{ slotById[b.id]=b; });
 
-    function renderBracketStepper(bracketSlotsArr, matchById){
-      const mount=document.getElementById("uclBracketContainer");
-      if(!mount) return;
+      const avail = computeAvailableRounds(slotById);
+      const def = pickDefaultRound(avail);
+      const activeKey = (forcedKey && (avail[forcedKey] || forcedKey===def)) ? forcedKey : def;
 
-      const slotsById={};
-      (bracketSlotsArr||[]).forEach(b=>{ slotsById[b.id]=b; });
-
-      const cfgs=roundConfig();
-      const maxUnlocked=inferDefaultActiveRound(slotsById);
-
-      const saved = localStorage.getItem("ucl_bracket_active_round");
-      let activeIdx = saved!==null ? Math.max(0, Math.min(cfgs.length-1, parseInt(saved,10)||0)) : maxUnlocked;
-      if(activeIdx>maxUnlocked) activeIdx=maxUnlocked;
-
-      let compactMode = (localStorage.getItem("ucl_bracket_compact") || "1") === "1";
-      let hideEmptySlots = (localStorage.getItem("ucl_bracket_hide_empty") || "1") === "1";
-
-      const stepper=document.createElement("div");
-      stepper.className="ucl-stepper";
-
-      cfgs.forEach((c, idx)=>{
-        const btn=document.createElement("button");
-        btn.type="button";
-        btn.className="ucl-step";
-        if(idx===activeIdx) btn.classList.add("active");
-
-        const unlocked = idx<=maxUnlocked;
-        if(!unlocked) btn.classList.add("locked");
-
-        btn.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${c.label}</span>`;
-        btn.addEventListener("click", ()=>{
-          if(idx>maxUnlocked) return;
-          activeIdx=idx;
-          localStorage.setItem("ucl_bracket_active_round", String(activeIdx));
-          rebuild();
-        });
-
-        stepper.appendChild(btn);
-        if(idx<cfgs.length-1) stepper.appendChild(arrowEl());
+      renderStepper(stepperMount, avail, activeKey, (k)=>{
+        window.__uclBracketActiveRound = k;
+        renderBracketState(bracketArr, matchById, k);
       });
 
-      const toggleRow=document.createElement("div");
-      toggleRow.className="ucl-compact-toggle";
-      toggleRow.innerHTML=`
-        <label style="display:flex;align-items:center;gap:8px;">
-          <input id="uclCompactChk" type="checkbox" ${compactMode?'checked':''}>
-          <span><b>Kompakt</b> nézet</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;">
-          <input id="uclHideEmptyChk" type="checkbox" ${hideEmptySlots?'checked':''}>
-          <span>Üres párharcok elrejtése</span>
-        </label>
-      `;
-
-      const panelHost=document.createElement("div");
-
-      function rebuild(){
-        Array.from(stepper.querySelectorAll(".ucl-step")).forEach((b,i)=>{
-          b.classList.toggle("active", i===activeIdx);
-        });
-        panelHost.innerHTML="";
-        panelHost.appendChild(renderRoundPanel(cfgs[activeIdx].key, slotsById, matchById, compactMode, hideEmptySlots));
-      }
-
-      mount.innerHTML="";
-      mount.appendChild(stepper);
-      mount.appendChild(toggleRow);
-      mount.appendChild(panelHost);
-
-      const cChk=toggleRow.querySelector("#uclCompactChk");
-      const hChk=toggleRow.querySelector("#uclHideEmptyChk");
-      cChk.addEventListener("change",()=>{
-        compactMode=!!cChk.checked;
-        localStorage.setItem("ucl_bracket_compact", compactMode?"1":"0");
-        rebuild();
-      });
-      hChk.addEventListener("change",()=>{
-        hideEmptySlots=!!hChk.checked;
-        localStorage.setItem("ucl_bracket_hide_empty", hideEmptySlots?"1":"0");
-        rebuild();
-      });
-
-      rebuild();
+      renderRound(roundMount, activeKey, slotById, matchById);
     }
 
     async function initBracket(){
-      const mount=document.getElementById("uclBracketContainer");
-      if(mount) mount.textContent="Ágrajz betöltése…";
+      const roundMount=document.getElementById("uclBracketRoundMount");
+      if(roundMount) roundMount.textContent="Ágrajz betöltése…";
 
       const matchById=new Map();
       let currentBracket=[];
@@ -831,14 +681,14 @@
         currentBracket = Object.keys(slots).map(k=>({id:k, ...(slots[k]||{})}));
       }catch(e){}
 
-      renderBracketStepper(currentBracket, matchById);
+      renderBracketState(currentBracket, matchById, window.__uclBracketActiveRound || null);
 
       try{
         onSnapshot(doc(db,"settings","ucl_bracket"), (snap)=>{
           const data = snap.exists() ? (snap.data()||{}) : {};
           const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
           currentBracket = Object.keys(slots).map(k=>({id:k, ...(slots[k]||{})}));
-          renderBracketStepper(currentBracket, matchById);
+          renderBracketState(currentBracket, matchById, window.__uclBracketActiveRound || null);
         });
       }catch(e){}
 
@@ -848,7 +698,7 @@
             const m=d.data()||{};
             matchById.set(d.id,{id:d.id,...m});
           });
-          renderBracketStepper(currentBracket, matchById);
+          renderBracketState(currentBracket, matchById, window.__uclBracketActiveRound || null);
         });
       }catch(e){}
     }
@@ -856,6 +706,32 @@
     document.addEventListener("DOMContentLoaded",()=>{
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
       loadUclBracketUiSetting();
+
+      const rulesModal = document.getElementById("rulesModal");
+      const openRules = document.getElementById("openRules");
+      const closeRules = document.getElementById("closeRules");
+      const closeRules2 = document.getElementById("closeRules2");
+      const rulesBody = document.getElementById("rulesBody");
+      const showRules = ()=>{ rulesModal?.classList.add("open"); };
+      const hideRules = ()=>{ rulesModal?.classList.remove("open"); };
+      openRules?.addEventListener("click", ()=>{
+        if(rulesBody && !rulesBody.textContent.trim()){
+          rulesBody.textContent = "A szabályzat betöltése folyamatban…";
+          getDoc(doc(db,"settings","rules_ucl")).then(s=>{
+            if(s.exists()){
+              const t=(s.data()?.text||"").toString();
+              rulesBody.textContent = t || "Nincs megadva szabályzat.";
+            }else{
+              rulesBody.textContent = "Nincs megadva szabályzat.";
+            }
+          }).catch(()=>{ rulesBody.textContent="Nincs megadva szabályzat."; });
+        }
+        showRules();
+      });
+      closeRules?.addEventListener("click", hideRules);
+      closeRules2?.addEventListener("click", hideRules);
+      rulesModal?.addEventListener("click",(e)=>{ if(e.target===rulesModal) hideRules(); });
+      document.addEventListener("keydown",(e)=>{ if(e.key==="Escape" && rulesModal?.classList.contains("open")) hideRules(); });
     });
 
     let currentUserRoleLocal="user";
@@ -919,6 +795,7 @@
               src="https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbLink)}&tabs=timeline&width=560&height=540&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
               scrolling="no" frameborder="0" allowfullscreen="true"
               allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
+          document.getElementById("facebookFeedContainer").innerHTML="";
           document.getElementById("facebookFeedContainer").appendChild(fbDiv);
         }
       }catch(e){}
@@ -991,8 +868,6 @@
       onSnapshot(doc(db,'ucl_goldenBootTips', currentUserEmail), checkPositionsCompleteness);
 
       initChat(userRef);
-      initRulesModal();
-
       if(window.hideLoader) hideLoader();
     });
 
@@ -1084,34 +959,6 @@
           fabBadge.textContent='';
         }catch(e){}
       }
-    }
-
-    function initRulesModal(){
-      const openBtn=document.getElementById("openRules");
-      const modal=document.getElementById("rulesModal");
-      const close1=document.getElementById("closeRules");
-      const close2=document.getElementById("closeRules2");
-      const body=document.getElementById("rulesBody");
-      if(!openBtn||!modal||!close1||!close2||!body) return;
-
-      const rulesText = `
-1) Alapszabályok
-- Minden meccsre 1 tipp adható (1/X/2).
-- A határidő a meccs kezdése.
-
-2) Pontozás
-- ... (ide jön a saját szöveged)
-      `.trim();
-
-      body.textContent=rulesText;
-
-      function open(){modal.classList.add("open")}
-      function close(){modal.classList.remove("open")}
-      openBtn.addEventListener("click",open);
-      close1.addEventListener("click",close);
-      close2.addEventListener("click",close);
-      modal.addEventListener("click",(e)=>{ if(e.target===modal) close(); });
-      document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") close(); });
     }
 
     async function maybeForceFavoriteSetupUcl(userRef){
@@ -1213,16 +1060,21 @@
     <section class="card" id="uclBracketCard">
       <details id="uclBracketDetails">
         <summary>
-          <div class="ucl-bracket-toolbar">
+          <div class="ucl-bracket-toolbar" style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd">
             <div>
-              <div class="ucl-bracket-title">BL kieséses ágrajz</div>
-              <div class="ucl-bracket-sub">A 9. fordulótól a meccsek már csak itt számítanak.</div>
+              <div style="font-size:16px;font-weight:900">BL kieséses ágrajz</div>
+              <div style="font-size:12px;opacity:.8">A 9. fordulótól a meccsek már csak itt számítanak.</div>
             </div>
             <span class="pill" id="uclBracketTogglePill">Megnyit</span>
           </div>
         </summary>
         <div class="ucl-bracket-wrap" id="uclBracketContainer">
-          <div class="ucl-legs-empty">Az ágrajz betöltése…</div>
+          <div id="uclBracketStepper" class="ucl-stepper" aria-label="Kieséses szakasz választó"></div>
+          <div id="uclBracketRoundMount" class="ucl-roundMount">
+            <div class="ucl-bracket-placeholder">
+              Az ágrajz adatait az admin oldalon tudod feltölteni.
+            </div>
+          </div>
         </div>
       </details>
     </section>
