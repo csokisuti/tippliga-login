@@ -402,22 +402,13 @@
         H2H[k][B].GF+=ag; H2H[k][B].GA+=hg;
       });
 
-      function cmp(a,b){
-        if(b.Pts!==a.Pts) return b.Pts-a.Pts;
-        if(b.W!==a.W) return b.W-a.W;
-        if(b.GD!==a.GD) return b.GD-a.GD;
-        if(b.GF!==a.GF) return b.GF-a.GF;
-        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
-        const row=H2H[k];
-        if(row){
-          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0;
-          if(pb!==pa) return pb-pa;
-          const gda=(row[a.team]?.GF??0)-(row[a.team]?.GA??0);
-          const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);
-          if(gdb!==gda) return gdb-gda;
-        }
-        return a.team.localeCompare(b.team,'hu');
-      }
+     function cmp(a,b){
+  if (b.Pts !== a.Pts) return b.Pts - a.Pts;
+  if (b.GD  !== a.GD)  return b.GD  - a.GD;
+  if (b.GF  !== a.GF)  return b.GF  - a.GF;
+  return a.team.localeCompare(b.team,'hu');
+}
+
 
       const rows=Object.values(S).sort(cmp);
       try{
