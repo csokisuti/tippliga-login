@@ -529,8 +529,7 @@
 
           // Továbbjutó tipp – csak ha ez a párharc első meccse (kieséses)
           const slotInfo = bracketFirstLegByMatch.get(String(m.id)) || null;
-          const roundNum = parseInt(roundStr||"0",10) || 0;
-          const canShowAdvance = !!slotInfo && roundNum >= 9;
+          const canShowAdvance = !!slotInfo;
 
           if (canShowAdvance){
             const adv = document.createElement('div');
