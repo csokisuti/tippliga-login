@@ -255,9 +255,15 @@
     const decided = !!get('input[data-field="decidedByPenalties"]')?.checked;
     const pw = get('select[data-field="penaltyWinner"]')?.value||"";
     const aw = get('select[data-field="advanceWinner"]')?.value||"";
+    const aohRaw = get('input[data-field="advanceOddsHome"]')?.value ?? "";
+    const aoaRaw = get('input[data-field="advanceOddsAway"]')?.value ?? "";
+    const aoh = parseFloat(String(aohRaw).replace(",", "."));
+    const aoa = parseFloat(String(aoaRaw).replace(",", "."));
+    if(!isFinite(aoh) || aoh<=1) throw new Error("Hiányzó / hibás továbbjutó odds (hazai).");
+    if(!isFinite(aoa) || aoa<=1) throw new Error("Hiányzó / hibás továbbjutó odds (vendég).");
     const note = (get('input[data-field="note"]')?.value||"").toString().trim();
     const matchIds = [m1,m2].filter(Boolean);
-    const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, advanceWinner:aw, note, updatedAt: serverTimestamp() };
+    const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, advanceWinner:aw, advanceOddsHome:aoh, advanceOddsAway:aoa, note, updatedAt: serverTimestamp() };
     await setDoc(doc(db,"settings","ucl_bracket"), { slots: { [slotId]: payload } }, { merge:true });
   }
 
@@ -311,6 +317,8 @@
           decidedByPenalties: !!card.querySelector('input[data-field="decidedByPenalties"]')?.checked,
           penaltyWinner: card.querySelector('select[data-field="penaltyWinner"]')?.value||"",
           advanceWinner: card.querySelector('select[data-field="advanceWinner"]')?.value||"",
+          advanceOddsHome: parseFloat(String(card.querySelector('input[data-field="advanceOddsHome"]')?.value ?? "").replace(",", ".")),
+          advanceOddsAway: parseFloat(String(card.querySelector('input[data-field="advanceOddsAway"]')?.value ?? "").replace(",", ".")),
           note: (card.querySelector('input[data-field="note"]')?.value||"").toString().trim()
         };
       }catch(err){
