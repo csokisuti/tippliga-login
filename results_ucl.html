@@ -231,6 +231,15 @@
     function tipChoice(t){ return t.choice ?? t.tip ?? ""; }
     function tipDouble(t){ return !!(t.double ?? t.isDouble); }
     function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
+    function sameRound(a,b){
+      const A = String(a ?? "").trim();
+      const B = String(b ?? "").trim();
+      if (A === B) return true;
+      const ai = parseInt(A,10);
+      const bi = parseInt(B,10);
+      if (!Number.isNaN(ai) && !Number.isNaN(bi)) return ai === bi;
+      return false;
+    }
 
     const TEAM_NAMES = Object.keys(crestMap);
     const NORM = s => String(s||"").trim().toLowerCase()
@@ -686,7 +695,7 @@
       hdr.textContent = `${roundId}. forduló`;
       card.appendChild(hdr);
 
-      const list = matches.filter(m => matchRound(m) === String(roundId))
+      const list = matches.filter(m => sameRound(matchRound(m), roundId))
                           .sort((a,b)=> (a.startTime?.toDate?.()||0) - (b.startTime?.toDate?.()||0));
 
       if (!list.length){
