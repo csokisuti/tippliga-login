@@ -93,71 +93,6 @@
 
   
 
-    const rulesRef = doc(db,"settings","ucl_rules");
-    let baseStakeByRound = {};
-
-    function ensureStakeMap(m){
-      const out={};
-      for(let i=1;i<=17;i++){
-        const k=String(i);
-        const v = m && m[k]!=null ? Number(m[k]) : 1;
-        out[k] = (isFinite(v) && v>0) ? v : 1;
-      }
-      return out;
-    }
-
-    function renderBaseStakeTable(){
-      const tb = document.getElementById("uclBaseStakeRows");
-      if(!tb) return;
-      const rows=[];
-      for(let i=1;i<=17;i++){
-        const k=String(i);
-        rows.push(`
-          <tr>
-            <td style="padding:8px;border-bottom:1px solid var(--border);font-weight:800;">F${k}</td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);">
-              <input type="number" step="1" min="1" value="${baseStakeByRound[k] ?? 1}" data-round="${k}" style="width:120px;padding:8px;border:1px solid var(--border);border-radius:10px;">
-            </td>
-          </tr>
-        `);
-      }
-      tb.innerHTML = rows.join("");
-    }
-
-    async function loadUclRules(){
-      try{
-        const snap = await getDoc(rulesRef);
-        const d = snap.exists() ? (snap.data()||{}) : {};
-        baseStakeByRound = ensureStakeMap(d.baseStakeByRound || {});
-        renderBaseStakeTable();
-      }catch(e){
-        console.warn("loadUclRules err", e);
-        baseStakeByRound = ensureStakeMap({});
-        renderBaseStakeTable();
-      }
-    }
-
-    async function saveUclRules(){
-      const status = document.getElementById("uclRulesStatus");
-      try{
-        const rows = document.querySelectorAll('#uclBaseStakeRows input[data-round]');
-        const map={};
-        rows.forEach(inp=>{
-          const r = inp.getAttribute('data-round');
-          const v = Number(inp.value);
-          map[String(r)] = (isFinite(v) && v>0) ? v : 1;
-        });
-        baseStakeByRound = ensureStakeMap(map);
-        await setDoc(rulesRef, { baseStakeByRound, updatedAt: serverTimestamp() }, { merge:true });
-        if(status) status.textContent = "Mentve.";
-        setTimeout(()=>{ if(status) status.textContent=""; }, 1200);
-      }catch(e){
-        console.warn("saveUclRules err", e);
-        if(status) status.textContent = "Hiba mentés közben.";
-      }
-    }
-
-
   function uclBracketSlotDefs(){
     const defs=[];
     for(let i=1;i<=8;i++) defs.push({id:"PO"+i,round:"PO",label:"Play-off "+i,legs:2});
@@ -223,8 +158,8 @@
     const decided = !!d.decidedByPenalties;
     const pw = d.penaltyWinner || "";
     const aw = d.advanceWinner || "";
-    const aoh = d.advanceOddsHome ?? d.oddsHome ?? "";
-    const aoa = d.advanceOddsAway ?? d.oddsAway ?? "";
+    const aoh = (d.advanceOddsHome===0 || d.advanceOddsHome) ? d.advanceOddsHome : "";
+    const aoa = (d.advanceOddsAway===0 || d.advanceOddsAway) ? d.advanceOddsAway : "";
     const hasLeg2 = def.legs===2;
 
     return `
@@ -282,6 +217,16 @@
             <input type="text" value="${(d.note||"").replaceAll('"',"&quot;")}" data-field="note" placeholder="pl. hosszabbítás, admin döntés, stb.">
           </div>
         </div>
+        <div class="ucl-row">
+          <div class="field" style="min-width:220px;">
+            <label>Továbbjutó odds (hazai)</label>
+            <input type="number" step="0.01" min="1" value="${aoh}" data-field="advanceOddsHome" placeholder="pl. 1.65">
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label>Továbbjutó odds (vendég)</label>
+            <input type="number" step="0.01" min="1" value="${aoa}" data-field="advanceOddsAway" placeholder="pl. 2.30">
+          </div>
+        </div>
         <div class="ucl-actions">
           <span class="ucl-mini" data-status=""></span>
           <button class="btn" data-action="save">Mentés</button>
@@ -312,9 +257,13 @@
     const decided = !!get('input[data-field="decidedByPenalties"]')?.checked;
     const pw = get('select[data-field="penaltyWinner"]')?.value||"";
     const aw = get('select[data-field="advanceWinner"]')?.value||"";
+    const aohRaw = get('input[data-field="advanceOddsHome"]')?.value || "";
+    const aoaRaw = get('input[data-field="advanceOddsAway"]')?.value || "";
+    const aoh = aohRaw==="" ? null : Number(aohRaw);
+    const aoa = aoaRaw==="" ? null : Number(aoaRaw);
     const note = (get('input[data-field="note"]')?.value||"").toString().trim();
     const matchIds = [m1,m2].filter(Boolean);
-    const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, advanceWinner:aw, note, updatedAt: serverTimestamp() };
+    const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, advanceWinner:aw, advanceOddsHome:aoh, advanceOddsAway:aoa, note, updatedAt: serverTimestamp() };
     await setDoc(doc(db,"settings","ucl_bracket"), { slots: { [slotId]: payload } }, { merge:true });
   }
 
@@ -1870,9 +1819,6 @@ verzió: ${data.version || 'n/a'}`);
   document.getElementById('saveUclBracketUi')?.addEventListener('click', saveUclBracketUiSettingAdmin);
   loadUclBracketUiSettingAdmin();
 
-  document.getElementById('saveUclRules')?.addEventListener('click', saveUclRules);
-  loadUclRules();
-
 
 </script>
 </head>
@@ -1887,26 +1833,6 @@ verzió: ${data.version || 'n/a'}`);
     </label>
     <button id="saveUclBracketUi" class="btn">Mentés</button>
     <span id="uclBracketUiStatus" style="opacity:.8;font-size:13px;"></span>
-  </div>
-</section>
-
-<section class="card" id="uclRulesCard" style="margin-top:14px;">
-  <h2>BL szabályok – alaptét (fordulónként)</h2>
-  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-    <div style="opacity:.85">A pontszámításnál: pont = odds × alaptét (F#). Dupla csak F1–F8.</div>
-    <button id="saveUclRules" class="btn">Mentés</button>
-    <span id="uclRulesStatus" style="opacity:.8;font-size:13px;"></span>
-  </div>
-  <div class="xscroll" style="margin-top:12px;">
-    <table style="width:100%;border-collapse:collapse;min-width:740px;">
-      <thead>
-        <tr>
-          <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Forduló</th>
-          <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Alaptét</th>
-        </tr>
-      </thead>
-      <tbody id="uclBaseStakeRows"></tbody>
-    </table>
   </div>
 </section>
 
