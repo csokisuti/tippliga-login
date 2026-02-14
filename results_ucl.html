@@ -143,15 +143,7 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    /* Liga-váltó – opcionális (ne álljon meg az oldal, ha hiányzik a fájl) */
-    let initLeagueSwitcher = () => {};
-    try {
-      const mod = await import("./league-switcher.js");
-      if (mod && typeof mod.initLeagueSwitcher === "function") initLeagueSwitcher = mod.initLeagueSwitcher;
-    } catch (e) {
-      console.warn("league-switcher.js nem található / nem tölthető be:", e);
-    }
-
+    /* Liga-váltó – csak mount kell */
     /* ---------------- Firebase init ---------------- */
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -208,19 +200,6 @@
     function fmt(n){ return (Number(n)||0).toFixed(2); }
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
     function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-    function showFatal(msg){
-      const box = document.getElementById("resultsContainer") || document.body;
-      const div = document.createElement("div");
-      div.style.margin="16px";
-      div.style.padding="12px";
-      div.style.border="1px solid var(--line,#e6eaf1)";
-      div.style.borderRadius="12px";
-      div.style.background="#fff";
-      div.innerHTML = `<b>Hiba:</b> ${escapeHtml(msg)}<div style="margin-top:8px;color:#64748b;font-size:12px">Nézd meg a Console-t a részletekhez.</div>`;
-      box.prepend(div);
-    }
-
 
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
@@ -828,9 +807,9 @@ mount.appendChild(card);
     function hiddenInfo(text){ const d=document.createElement("div"); d.className="hidden-info"; d.textContent=text; return d; }
 
     /* ---------------- INIT (NB1 logikahoz igazítva) ---------------- */
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       /* Liga-váltó mount: BAL SZÉL – cím mellett */
-      initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
+      try{ const mod = await import('./league-switcher.js'); if(mod&&typeof mod.initLeagueSwitcher==='function'){ mod.initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') }); } }catch(e){}
 
       const bonusOverlayEl = document.getElementById("bonusOverlay");
       document.getElementById("bonusDetailsBtn").addEventListener("click", openBonusModal);
@@ -846,8 +825,8 @@ mount.appendChild(card);
       document.getElementById("goldenUserSearch").addEventListener("input",(e)=>renderGoldenUsers(e.target.value));
 
       onAuthStateChanged(auth, async (user) => {
-        try {
-        if (!user) { showFatal("Nincs bejelentkezve. Kérlek lépj be a login oldalon."); return; }
+      try{
+        if (!user) { window.location.href = "login.html"; return; }
         currentUserEmail = user.email;
 
         const userRef = doc(db, "users", currentUserEmail);
@@ -897,6 +876,14 @@ mount.appendChild(card);
           baseStakeByRound=out;
           const sel = document.getElementById("roundSelect");
           if (sel?.value) renderRound(sel.value);
+      }catch(e){
+        try{ console.error('results_ucl fatal', e); }catch{}
+        const box=document.getElementById('fatalBox');
+        if(box){ box.style.display='block'; box.textContent='Hiba: '+(e&&e.message?e.message:String(e)); }
+      }finally{
+        if(window.hideLoader) hideLoader();
+      }
+
         });
 
         onSnapshot(bracketRef, snap=>{
@@ -997,12 +984,7 @@ mount.appendChild(card);
 
         updatePendingBadge(currentUserEmail);
         initChat(userRef);
-                } catch (e) {
-          console.error(e);
-          showFatal(e?.message || String(e));
-        } finally {
-          if (window.hideLoader) hideLoader();
-        }
+        if (window.hideLoader) hideLoader();
       });
 
       document.getElementById("logout").addEventListener("click", () => {
@@ -1130,6 +1112,7 @@ mount.appendChild(card);
 </head>
 <body>
   <div class="layout">
+    <div id="fatalBox" style="display:none;margin:10px 0;padding:10px 12px;border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:12px;font-weight:700"></div>
     <div class="header">
       <div class="header-left">
         <img id="favCrest" class="fav-crest" alt="" hidden>
