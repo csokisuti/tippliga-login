@@ -214,6 +214,110 @@
     function tipDouble(t){ return !!(t.double ?? t.isDouble); }
     function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
 
+
+    function resolveWinnerSideFromSlot(slot){
+      const aw = (slot?.advanceWinner||"").toString().trim();
+      if(aw==="home" || aw==="away") return aw;
+      const decidedBy = (slot?.decidedBy||"").toString().trim();
+      const byPens = !!slot?.decidedByPenalties || decidedBy==="pens";
+      if(byPens){
+        const pw = (slot?.penaltyWinner||"").toString().trim();
+        if(pw==="home" || pw==="away") return pw;
+      }
+      return "";
+    }
+
+    function canonicalSlotId(id){
+      const raw=(id||"").toString().trim();
+      if(!raw) return "";
+      if(raw==="F" || raw==="FINAL") return "F1";
+      if(/^SF0?1$/.test(raw)) return "SF1";
+      if(/^SF0?2$/.test(raw)) return "SF2";
+      return raw;
+    }
+
+    function computeTieInfo(){
+      tieInfoByMatchId = new Map();
+      tieInfoBySlotId = new Map();
+
+      Object.entries(bracketSlotsById||{}).forEach(([slotKey,slot])=>{
+        const slotId = canonicalSlotId(slotKey);
+        const s = slot||{};
+        const ids = Array.isArray(s.matchIds) ? s.matchIds.filter(Boolean) : [];
+        if(!ids.length) return;
+
+        const ms = ids.map(id=>matchById.get(id)).filter(Boolean);
+        if(!ms.length) return;
+
+        const sortedByTime = ms.slice().sort((a,b)=>{
+          const ta=a.startTime?.toDate?.()?.getTime?.() ?? 0;
+          const tb=b.startTime?.toDate?.()?.getTime?.() ?? 0;
+          return ta-tb;
+        });
+
+        const firstLeg = sortedByTime[0];
+        const deciding = sortedByTime[sortedByTime.length-1];
+
+        const rounds = ms.map(x=>Number(x.roundId ?? x.round ?? 0)).filter(n=>Number.isFinite(n));
+        const decidedRound = rounds.length ? Math.max(...rounds) : 0;
+
+        const homeTeam = (s.homeTeam || firstLeg.homeTeam || firstLeg.home || "").toString();
+        const awayTeam = (s.awayTeam || firstLeg.awayTeam || firstLeg.away || "").toString();
+
+        const winnerSide = resolveWinnerSideFromSlot(s);
+
+        const info = {
+          slotId,
+          firstLegId: firstLeg.id,
+          decidingMatchId: deciding.id,
+          decidedRound,
+          homeTeam,
+          awayTeam,
+          oddsHome: s.advanceOddsHome ?? null,
+          oddsAway: s.advanceOddsAway ?? null,
+          winnerSide
+        };
+
+        tieInfoBySlotId.set(slotId, info);
+        ids.forEach(mid=> tieInfoByMatchId.set(mid, info));
+      });
+    }
+
+    async function loadBracketFirstLegsAndWinners(){
+      try{
+        const snap = await getDoc(doc(db,"settings","ucl_bracket"));
+        const data = snap.exists() ? (snap.data()||{}) : {};
+        const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
+        const mapped = {};
+        Object.keys(slots).forEach(k=>{
+          const ck = canonicalSlotId(k);
+          if(!ck) return;
+          mapped[ck] = { ...(slots[k]||{}) };
+        });
+        bracketSlotsById = mapped;
+      }catch(e){
+        bracketSlotsById = {};
+      }
+      computeTieInfo();
+    }
+
+    async function loadAllAdvanceTips(){
+      advanceTipsBySlotId = new Map();
+      try{
+        const snap = await getDocs(collection(db,"ucl_advance_tips"));
+        snap.forEach(d=>{
+          const t=d.data()||{};
+          const slotId = canonicalSlotId(t.slotId || t.tieId || "");
+          if(!slotId) return;
+          const arr = advanceTipsBySlotId.get(slotId) || [];
+          arr.push({ id:d.id, ...t, slotId });
+          advanceTipsBySlotId.set(slotId, arr);
+        });
+      }catch(e){
+        advanceTipsBySlotId = new Map();
+      }
+    }
+
     const TEAM_NAMES = Object.keys(crestMap);
     const NORM = s => String(s||"").trim().toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g,'');
@@ -327,104 +431,18 @@
     let chatLastSeen = null; // UCL-hez tartozó timestamp
 
     let matches = [];
+    let matchById = new Map();
+
     let tipsByMatch = new Map();
-    let advanceTipsByMatch = new Map();      // matchId -> [advanceTip]
-    let firstLegByMatchId = new Map();       // matchId -> { slotId, oddsHome, oddsAway }
-    let slotWinnerBySlotId = new Map();      // slotId -> "home" | "away" | ""
-    let baseStakeByRound = {};               // { "9": 2, ... } default 1
-
-    const KNOCKOUT_START_ROUND = 9;
-    const isKnockoutRound = (rid) => { const n = Number(rid); return !isNaN(n) && n >= KNOCKOUT_START_ROUND; };
-    const isDoubleAllowed = (rid) => { const n = Number(rid); return !isNaN(n) && n < KNOCKOUT_START_ROUND; };
-
-    function stakeForRound(rid){
-      const k = String(rid ?? "");
-      const v = baseStakeByRound?.[k];
-      const n = Number(v);
-      return (!isNaN(n) && n>0) ? n : 1;
-    }
-
-    function resolveSlotWinnerSide(slot){
-      const aw = (slot?.advanceWinner || "").toString().trim();
-      if (aw === "home" || aw === "away") return aw;
-      const decided = (slot?.decidedBy || "").toString().trim();
-      const byPens = !!slot?.decidedByPenalties || decided === "pens";
-      if (byPens){
-        const pw = (slot?.penaltyWinner || "").toString().trim();
-        if (pw === "home" || pw === "away") return pw;
-      }
-      return "";
-    }
-
-    async function loadBaseStakeSettings(){
-      baseStakeByRound = {};
-      const tryDocs = ["ucl_round_stakes","ucl_stakes","ucl_base_stake","ucl_basestake"];
-      for (const id of tryDocs){
-        try{
-          const s = await getDoc(doc(db,"settings",id));
-          if (!s.exists()) continue;
-          const d = s.data() || {};
-          const map = d.byRound || d.rounds || d.map || d.stakes || d.baseStakeByRound || null;
-          if (map && typeof map === "object"){
-            Object.keys(map).forEach(k=>{ baseStakeByRound[String(k)] = map[k]; });
-            return;
-          }
-        }catch(e){}
-      }
-    }
-
-    async function loadBracketFirstLegsAndWinners(){
-      firstLegByMatchId = new Map();
-      slotWinnerBySlotId = new Map();
-      try{
-        const snap = await getDoc(doc(db,"settings","ucl_bracket"));
-        if (!snap.exists()) return;
-        const data = snap.data() || {};
-        const slots = (data.slots && typeof data.slots === "object") ? data.slots : {};
-        Object.entries(slots).forEach(([slotId, s])=>{
-          const matchIds = Array.isArray(s?.matchIds) ? s.matchIds : [];
-          const firstLegId = matchIds[0];
-          if (firstLegId){
-            const oh = Number(s?.advanceOddsHome ?? s?.advanceOdds?.home);
-            const oa = Number(s?.advanceOddsAway ?? s?.advanceOdds?.away);
-            firstLegByMatchId.set(String(firstLegId), {
-              slotId: String(slotId),
-              oddsHome: (!isNaN(oh)&&oh>0)?oh:null,
-              oddsAway: (!isNaN(oa)&&oa>0)?oa:null
-            });
-          }
-          const winSide = resolveSlotWinnerSide(s);
-          if (winSide) slotWinnerBySlotId.set(String(slotId), winSide);
-        });
-      }catch(e){}
-    }
-
-    async function loadAdvanceTips(){
-      advanceTipsByMatch = new Map();
-      try{
-        const snap = await getDocs(collection(db,"ucl_advance_tips"));
-        const latest = new Map(); // user|slotId -> tip
-        snap.forEach(d=>{
-          const raw = d.data() || {};
-          const t = { id:d.id, ...raw, user: raw.user || raw.email };
-          if (!t?.user || !t?.slotId) return;
-          const k = t.user + "|" + t.slotId;
-          const cur = latest.get(k);
-          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || cur?.timestamp?.toMillis?.() || 0;
-          const ts    = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || t.timestamp?.toMillis?.() || 0;
-          if (!cur || ts >= curTs) latest.set(k, t);
-        });
-        for (const t of latest.values()){
-          const mid = String(t.matchId || "");
-          if (!mid) continue;
-          if (!advanceTipsByMatch.has(mid)) advanceTipsByMatch.set(mid, []);
-          advanceTipsByMatch.get(mid).push(t);
-        }
-      }catch(e){}
-    }
-
     let nickByEmail = {};
     let roundsAsc = [];
+
+    /* Továbbjutó tippek (kieséses) */
+    let bracketSlotsById = {};
+    let tieInfoByMatchId = new Map();         // matchId -> { slotId, firstLegId, decidedRound, decidingMatchId, homeTeam, awayTeam, oddsHome, oddsAway, winnerSide }
+    let tieInfoBySlotId = new Map();          // slotId -> same info
+    let advanceTipsBySlotId = new Map();      // slotId -> [tip,...]
+
 
     let officialTop8 = [];
     let officialChampion = "";
@@ -699,13 +717,9 @@
         return;
       }
 
-      const summary = {}; // total
-      const summaryMatch = {}; // meccspont
-      const summaryAdv = {};   // továbbjutó pont
+      const summary = {};
       const breakdown = {};
       const now = new Date();
-      const stake = stakeForRound(roundId);
-      const allowDouble = isDoubleAllowed(roundId);
 
       list.forEach(m=>{
         const mTips = tipsByMatch.get(m.id) || [];
@@ -713,30 +727,13 @@
         mTips.forEach(t=>{
           const pick = tipChoice(t);
           const correct = pick && (pick === m.outcome);
-          const mult = (allowDouble && tipDouble(t)) ? 2 : 1;
+          const mult = (Number(roundId) >= 9) ? 1 : (tipDouble(t) ? 2 : 1);
           const ov = getOdds(m, pick);
-          const pts = (correct && ov) ? Number(ov) * stake * mult : 0;
+          const pts = (correct && ov) ? Number(ov) * mult : 0;
           const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
-          summaryMatch[nick] = (summaryMatch[nick]||0) + pts;
           summary[nick] = (summary[nick]||0) + pts;
-          (breakdown[nick] ||= []).push(`MECCS • ${m.homeTeam}–${m.awayTeam}: ${pick} → ${fmt(pts)} pont`);
+          (breakdown[nick] ||= []).push(`${m.homeTeam}–${m.awayTeam}: ${pick} → ${fmt(pts)} pont`);
         });
-
-        const fl = firstLegByMatchId.get(String(m.id));
-        if (fl){
-          const advTips = advanceTipsByMatch.get(String(m.id)) || [];
-          const winSide = slotWinnerBySlotId.get(String(fl.slotId)) || "";
-          advTips.forEach(t=>{
-            const pick = (t.pick || t.advancePick || t.choice || "").toString().trim();
-            const correct = winSide && pick === winSide;
-            const odds = Number(t.odds) || (pick==="home" ? fl.oddsHome : (pick==="away" ? fl.oddsAway : null));
-            const pts = (correct && odds) ? Number(odds) * stake : 0;
-            const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
-            summaryAdv[nick] = (summaryAdv[nick]||0) + pts;
-            summary[nick] = (summary[nick]||0) + pts;
-            (breakdown[nick] ||= []).push(`TOVÁBBJUTÓ • ${m.homeTeam}–${m.awayTeam}: ${pick} → ${fmt(pts)} pont`);
-          });
-        }
       });
 
       const summaryDiv = document.createElement("div");
@@ -747,9 +744,7 @@
           const chip = document.createElement("span");
           chip.className = "sum-chip";
           chip.title = (breakdown[nick]||[]).join("\n");
-          const mp = summaryMatch[nick] || 0;
-          const ap = summaryAdv[nick] || 0;
-          chip.innerHTML = `<b>${escapeHtml(nick)}</b>: ${fmt(pts)} <span class="kicker">(M: ${fmt(mp)} • T: ${fmt(ap)})</span>`;
+          chip.innerHTML = `<b>${escapeHtml(nick)}</b>: ${fmt(pts)}`;
           summaryDiv.appendChild(chip);
         });
       } else {
@@ -794,7 +789,7 @@
           tipsWrap.appendChild(hiddenInfo("A tippek a kezdésig nem nyilvánosak."));
           mTips.filter(t => t.user === currentUserEmail).forEach(t=>{
             const row = document.createElement("div"); row.className = "tip";
-            row.innerHTML = `<b>Saját tipped</b>: ${escapeHtml(tipChoice(t))}${(allowDouble && tipDouble(t)) ? ' <span class="kicker">(dupla)</span>' : ''}`;
+            row.innerHTML = `<b>Saját tipped</b>: ${escapeHtml(tipChoice(t))}${tipDouble(t) ? ' <span class="kicker">(dupla)</span>' : ''}`;
             tipsWrap.appendChild(row);
           });
           if (currentUserRole === 'admin') {
@@ -810,9 +805,9 @@
           mTips.forEach(t=>{
             const pick = tipChoice(t);
             const correct = m.outcome && pick === m.outcome;
-            const mult = (allowDouble && tipDouble(t)) ? 2 : 1;
+            const mult = (Number(roundId) >= 9) ? 1 : (tipDouble(t) ? 2 : 1);
             const ov = getOdds(m, pick);
-            const pts = (correct && ov) ? Number(ov) * stake * mult : 0;
+            const pts = (correct && ov) ? Number(ov) * mult : 0;
 
             const row = document.createElement("div");
             row.className = "tip";
@@ -822,69 +817,64 @@
             const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
             row.innerHTML = `
               <b>${escapeHtml(nick)}</b>: ${escapeHtml(pick || "—")}
-              ${(allowDouble && tipDouble(t)) ? ' <span class="kicker">(dupla)</span>' : ''}
+              ${tipDouble(t) ? ' <span class="kicker">(dupla)</span>' : ''}
               ${m.result ? ` – Pont: <b>${fmt(pts)}</b>` : ''}
             `;
             tipsWrap.appendChild(row);
           });
         }
 
-        div.appendChild(tipsWrap);
+        const tieInfo = tieInfoByMatchId.get(m.id);
+        if (started && tieInfo && Number(tieInfo.decidedRound)===Number(roundId) && tieInfo.decidingMatchId===m.id){
+          const advWrap = document.createElement("div");
+          advWrap.className = "tips";
 
-        const fl = firstLegByMatchId.get(String(m.id));
-        if (fl){
-          const advWrap = document.createElement("div"); advWrap.className = "tips";
-          advWrap.appendChild(kicker("Továbbjutó tippek"));
+          const advTitle = document.createElement("div");
+          advTitle.className = "kicker";
+          advTitle.textContent = "Továbbjutó tippek";
+          advWrap.appendChild(advTitle);
 
-          const advTips = advanceTipsByMatch.get(String(m.id)) || [];
-          const winSide = slotWinnerBySlotId.get(String(fl.slotId)) || "";
+          const winnerSide = (tieInfo.winnerSide||"").toString().trim();
+          const winnerTeam = winnerSide==="home" ? (tieInfo.homeTeam||"") : (winnerSide==="away" ? (tieInfo.awayTeam||"") : "");
+          const winnerRow = document.createElement("div");
+          winnerRow.className = "tip";
+          winnerRow.innerHTML = `<b>Továbbjutó:</b> ${escapeHtml(winnerTeam || "—")}`;
+          advWrap.appendChild(winnerRow);
 
-          if (!advTips.length){
-            advWrap.appendChild(kicker("Ehhez a párharc továbbjutójára még nincs leadott tipp."));
-          } else if (!hasStarted){
-            advWrap.appendChild(hiddenInfo("A továbbjutó tippek az első meccs kezdetéig nem nyilvánosak."));
-            advTips.filter(t => t.user === currentUserEmail).forEach(t=>{
-              const pick = (t.pick || t.advancePick || t.choice || "").toString().trim();
-              const team = pick==="home" ? (m.homeTeam||"") : (pick==="away" ? (m.awayTeam||"") : "");
-              const row = document.createElement("div"); row.className = "tip";
-              row.innerHTML = `<b>Saját tipped</b>: ${escapeHtml(team || "—")}`;
-              advWrap.appendChild(row);
-            });
-            if (currentUserRole === 'admin') {
-              const uNames = [...new Set(advTips.map(t => t.user).filter(Boolean))]
-                .map(e => escapeHtml(nickByEmail[e] || e));
-              const adminRow = document.createElement('div');
-              adminRow.className = 'kicker';
-              adminRow.innerHTML = `<b>Leadott továbbjutó tippek (admin):</b> ${uNames.length ? uNames.join(', ') : '—'} (${uNames.length} fő)`;
-              advWrap.appendChild(adminRow);
-            }
-          } else {
-            advTips.forEach(t=>{
-              const pick = (t.pick || t.advancePick || t.choice || "").toString().trim();
-              const team = pick==="home" ? (m.homeTeam||"") : (pick==="away" ? (m.awayTeam||"") : "");
-              const correct = winSide && pick === winSide;
-              const odds = Number(t.odds) || (pick==="home" ? fl.oddsHome : (pick==="away" ? fl.oddsAway : null));
-              const pts = (correct && odds) ? Number(odds) * stake : 0;
+          const tips = (advanceTipsBySlotId.get(tieInfo.slotId) || []).slice()
+            .sort((a,b)=> (nickByEmail[a.user]||a.user||"").localeCompare((nickByEmail[b.user]||b.user||""), 'hu'));
 
+          if(!tips.length){
+            const row = document.createElement("div");
+            row.className = "tip";
+            row.innerHTML = `<span class="kicker">Még nincs leadott továbbjutó tipp.</span>`;
+            advWrap.appendChild(row);
+          }else{
+            tips.forEach(t=>{
               const row = document.createElement("div");
               row.className = "tip";
-              if (correct) row.classList.add("correct");
-              else if (winSide) row.classList.add("wrong");
 
               const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
+              const pickTeam = (t.pick==="home") ? (tieInfo.homeTeam||"") : (t.pick==="away" ? (tieInfo.awayTeam||"") : "");
+              const correct = !!winnerSide && (t.pick===winnerSide);
+
+              if(correct) row.classList.add("correct");
+              else if(winnerSide) row.classList.add("wrong");
+
+              const pts = correct ? (Number(t.odds ?? 0) || 0) : 0;
+
               row.innerHTML = `
-                <b>${escapeHtml(nick)}</b>: ${escapeHtml(team || "—")}
-                ${winSide ? ` – Továbbjutó pont: <b>${fmt(pts)}</b>` : ''}
+                <b>${escapeHtml(nick)}</b>: ${escapeHtml(pickTeam || "—")}
+                ${winnerSide ? ` – Pont: <b>${fmt(pts)}</b>` : ''}
               `;
               advWrap.appendChild(row);
             });
-            if(!winSide){
-              advWrap.appendChild(kicker("A továbbjutó még nincs rögzítve (admin)."));
-            }
           }
 
           div.appendChild(advWrap);
         }
+
+        div.appendChild(tipsWrap);
 
         card.appendChild(div);
       });
@@ -947,10 +937,11 @@
 
         const matchesSnap = await getDocs(collection(db, "ucl_matches"));
         matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+        matchById = new Map(matches.map(m=>[m.id,m]));
 
-        await loadBaseStakeSettings();
         await loadBracketFirstLegsAndWinners();
-        await loadAdvanceTips();
+        await loadAllAdvanceTips();
+
 
         const roundSet = new Set();
         matches.forEach(m => { const r = matchRound(m); if (r) roundSet.add(r); });
@@ -963,36 +954,13 @@
         onSnapshot(collection(db,"ucl_matches"), snap=>{
           const ms = snap.docs.map(d=>({id:d.id, ...d.data()}));
           matches = ms;
+          matchById = new Map(matches.map(m=>[m.id,m]));
+          computeTieInfo();
           officialTop8 = deriveTop8FromMatches(ms);
           refreshBonusCard();
           const sel = document.getElementById("roundSelect");
           if (sel?.value) renderRound(sel.value);
           if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
-        });
-
-
-        try{
-          onSnapshot(doc(db,"settings","ucl_bracket"), async()=>{ 
-            await loadBracketFirstLegsAndWinners();
-            const sel=document.getElementById("roundSelect");
-            if (sel?.value) renderRound(sel.value);
-          });
-        }catch(e){}
-        try{
-          onSnapshot(collection(db,"ucl_advance_tips"), async()=>{ 
-            await loadAdvanceTips();
-            const sel=document.getElementById("roundSelect");
-            if (sel?.value) renderRound(sel.value);
-          });
-        }catch(e){}
-        ["ucl_round_stakes","ucl_stakes","ucl_base_stake","ucl_basestake"].forEach(id=>{
-          try{
-            onSnapshot(doc(db,"settings",id), async()=>{ 
-              await loadBaseStakeSettings();
-              const sel=document.getElementById("roundSelect");
-              if (sel?.value) renderRound(sel.value);
-            });
-          }catch(e){}
         });
 
         /* ---- TIPPBEOLVASÁS: NB1-elvek (legfrissebb per user-meccs) + user/email normalizáció ---- */
@@ -1036,6 +1004,34 @@
           refreshChampionCard();
           refreshGoldenCard();
         });
+
+        onSnapshot(doc(db,"settings","ucl_bracket"), async snap=>{
+          const data = snap.exists() ? (snap.data()||{}) : {};
+          const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
+          const mapped = {};
+          Object.keys(slots).forEach(k=>{
+            const ck = canonicalSlotId(k);
+            if(!ck) return;
+            mapped[ck] = { ...(slots[k]||{}) };
+          });
+          bracketSlotsById = mapped;
+          computeTieInfo();
+          refreshGoldenCard();
+        });
+
+        onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
+          advanceTipsBySlotId = new Map();
+          snap.forEach(d=>{
+            const t=d.data()||{};
+            const slotId = canonicalSlotId(t.slotId || t.tieId || "");
+            if(!slotId) return;
+            const arr = advanceTipsBySlotId.get(slotId) || [];
+            arr.push({ id:d.id, ...t, slotId });
+            advanceTipsBySlotId.set(slotId, arr);
+          });
+          refreshGoldenCard();
+        });
+
 
         onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
           top8Tips = snap.docs.map(d=>{
@@ -1428,3 +1424,4 @@
   </section>
 </body>
 </html>
+
