@@ -614,9 +614,11 @@
         mTips.forEach(t=>{
           const pick = tipChoice(t);
           const correct = pick && (pick === m.outcome);
-          const mult = tipDouble(t) ? 2 : 1;
+          const rnum = parseInt(matchRound(m))||0;
+          const stake = stakeForRound(matchRound(m));
+          const mult = (rnum<=8 && tipDouble(t)) ? 2 : 1;
           const ov = getOdds(m, pick);
-          const pts = (correct && ov) ? Number(ov) * mult : 0;
+          const pts = (correct && ov) ? Number(ov) * stake * mult : 0;
           const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
           summary[nick] = (summary[nick]||0) + pts;
           (breakdown[nick] ||= []).push(`${m.homeTeam}–${m.awayTeam}: ${pick} → ${fmt(pts)} pont`);
@@ -715,7 +717,91 @@
         card.appendChild(div);
       });
 
-      mount.appendChild(card);
+      
+      const awardRounds = ["10","12","14","16","17"];
+      if (awardRounds.includes(String(roundId))){
+        const sec = document.createElement("div");
+        sec.className = "tip-box";
+        const h = document.createElement("h4");
+        h.textContent = "Továbbjutó pontok (külön)";
+        sec.appendChild(h);
+
+        const rows = [];
+        const slots = bracketSlots && typeof bracketSlots==="object" ? bracketSlots : {};
+        Object.entries(slots).forEach(([slotId, s])=>{
+          if (awardRoundForSlot(slotId) !== String(roundId)) return;
+          const home = s?.homeTeam || "";
+          const away = s?.awayTeam || "";
+          const winner = s?.advanceWinner || "";
+          const label = (home && away) ? `${home} – ${away}` : slotId;
+
+          const tips = advanceTips.filter(t=>String(t.slotId||t.slot||"")===String(slotId) && (t.user||t.email));
+          if (!tips.length) return;
+
+          tips.sort((a,b)=>{
+            const na = (nickByEmail[a.user]||a.nick||a.user||"");
+            const nb = (nickByEmail[b.user]||b.nick||b.user||"");
+            return na.localeCompare(nb,"hu");
+          });
+
+          tips.forEach(t=>{
+            const email = t.user || t.email;
+            const nick = nickByEmail[email] || t.nick || email;
+            const pick = String(t.pick||t.choice||"");
+            const odds = Number(t.odds);
+            const correct = winner && pick ? (pick===winner) : false;
+            const stake = stakeForRound(String(roundId));
+            const pts = (winner && correct && isFinite(odds) && odds>0) ? (odds*stake) : 0;
+
+            const pickText = pick==="home" ? "Hazai jut tovább" : (pick==="away" ? "Vendég jut tovább" : pick);
+            rows.push({label,nick,pickText,odds: (isFinite(odds)?odds:0), winner, correct, pts});
+          });
+        });
+
+        if(!rows.length){
+          const p=document.createElement("div");
+          p.className="muted";
+          p.textContent="Ehhez a fordulóhoz még nincs megjeleníthető továbbjutó tipp / döntés.";
+          sec.appendChild(p);
+        } else {
+          const table = document.createElement("table");
+          table.className = "tbl";
+          table.innerHTML = `
+            <thead>
+              <tr>
+                <th>Párharc</th>
+                <th>Játékos</th>
+                <th>Tipp</th>
+                <th class="num">Odds</th>
+                <th class="num">Továbbjutó pont</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          `;
+          const tb = table.querySelector("tbody");
+          rows.forEach(r=>{
+            const tr=document.createElement("tr");
+            tr.innerHTML = `
+              <td>${r.label}</td>
+              <td>${r.nick}</td>
+              <td>${r.pickText}${r.winner? (r.correct? " ✅":" ❌"):""}</td>
+              <td class="num">${r.odds? fmt(r.odds):""}</td>
+              <td class="num">${r.pts? fmt(r.pts):""}</td>
+            `;
+            tb.appendChild(tr);
+          });
+          sec.appendChild(table);
+
+          const note = document.createElement("div");
+          note.className="muted";
+          note.style.marginTop="8px";
+          note.textContent = "A meccspontok ettől függetlenül a meccsek alatt számolódnak; ez csak a továbbjutó pont.";
+          sec.appendChild(note);
+        }
+
+        card.appendChild(sec);
+      }
+mount.appendChild(card);
     }
 
     function divEmpty(text){ const d=document.createElement("div"); d.className="empty"; d.textContent=text; return d; }
@@ -778,6 +864,35 @@
         matches.forEach(m => { const r = matchRound(m); if (r) roundSet.add(r); });
         roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
         buildRoundsUI();
+
+        onSnapshot(rulesRef, snap=>{
+          const d=snap.exists()?snap.data():{};
+          const m=d.baseStakeByRound||{};
+          const out={};
+          for(let i=1;i<=17;i++){
+            const k=String(i);
+            const v=Number(m[k]);
+            out[k]=(isFinite(v)&&v>0)?v:1;
+          }
+          baseStakeByRound=out;
+          const sel = document.getElementById("roundSelect");
+          if (sel?.value) renderRound(sel.value);
+        });
+
+        onSnapshot(bracketRef, snap=>{
+          const d=snap.exists()?snap.data():{};
+          bracketSlots = (d.slots && typeof d.slots==="object") ? d.slots : {};
+          const sel = document.getElementById("roundSelect");
+          if (sel?.value) renderRound(sel.value);
+        });
+
+        const advSnap = await getDocs(collection(db,"ucl_advance_tips"));
+        advanceTips = advSnap.docs.map(d=>({ id:d.id, ...d.data(), user:(d.data()?.user||d.data()?.email) }));
+        onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
+          advanceTips = snap.docs.map(d=>({ id:d.id, ...d.data(), user:(d.data()?.user||d.data()?.email) }));
+          const sel = document.getElementById("roundSelect");
+          if (sel?.value) renderRound(sel.value);
+        });
 
         officialTop8 = deriveTop8FromMatches(matches);
         refreshBonusCard();
