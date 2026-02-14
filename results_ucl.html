@@ -209,6 +209,19 @@
     function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
     function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
+    function showFatal(msg){
+      const box = document.getElementById("resultsContainer") || document.body;
+      const div = document.createElement("div");
+      div.style.margin="16px";
+      div.style.padding="12px";
+      div.style.border="1px solid var(--line,#e6eaf1)";
+      div.style.borderRadius="12px";
+      div.style.background="#fff";
+      div.innerHTML = `<b>Hiba:</b> ${escapeHtml(msg)}<div style="margin-top:8px;color:#64748b;font-size:12px">Nézd meg a Console-t a részletekhez.</div>`;
+      box.prepend(div);
+    }
+
+
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -833,7 +846,8 @@ mount.appendChild(card);
       document.getElementById("goldenUserSearch").addEventListener("input",(e)=>renderGoldenUsers(e.target.value));
 
       onAuthStateChanged(auth, async (user) => {
-        if (!user) { window.location.href = "login.html"; return; }
+        try {
+        if (!user) { showFatal("Nincs bejelentkezve. Kérlek lépj be a login oldalon."); return; }
         currentUserEmail = user.email;
 
         const userRef = doc(db, "users", currentUserEmail);
@@ -983,7 +997,12 @@ mount.appendChild(card);
 
         updatePendingBadge(currentUserEmail);
         initChat(userRef);
-        if (window.hideLoader) hideLoader();
+                } catch (e) {
+          console.error(e);
+          showFatal(e?.message || String(e));
+        } finally {
+          if (window.hideLoader) hideLoader();
+        }
       });
 
       document.getElementById("logout").addEventListener("click", () => {
