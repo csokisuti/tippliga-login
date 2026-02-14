@@ -2,137 +2,54 @@
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
-  <title>UCL TippLiga – Eredmények</title>
-
+  <title>BL TippLiga – Eredmények</title>
   <link rel="stylesheet" href="style-themed.css" />
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="fav2.png" sizes="16x16">
   <link rel="icon" type="image/png" href="fav2.png" sizes="32x32">
   <link rel="icon" type="image/png" href="fav2.png">
   <script src="loader.js" defer></script>
 
   <style>
-    .layout{ display:flex; flex-direction:column; gap:16px; max-width:1200px; margin:0 auto; padding:20px; }
+    .layout{max-width:1200px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .header-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .fav-crest{width:44px;height:44px;object-fit:contain;border-radius:10px;border:1px solid var(--line,#e6eaf1);background:#fff}
+    .welcome{color:var(--muted,#64748b);margin:4px 0 0}
+    .btn-accent{min-height:40px;padding:10px 14px;border-radius:10px;background:var(--accent,#3b82f6);color:#fff;border:1px solid var(--line,#e6eaf1);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .btn-accent:hover{filter:brightness(.95)}
+    .btn-accent:focus{outline:2px solid color-mix(in oklab,var(--accent,#3b82f6) 30%,white);outline-offset:2px}
+    .btn-icon{width:18px;height:18px;display:inline-block}
 
-    /* Fejléc/nav – egységes */
-    .header{ display:flex; align-items:center; justify-content:space-between; }
-    .header-left{ display:flex; align-items:center; gap:12px; }
-    .fav-crest{ width:46px; height:46px; object-fit:contain; border-radius:8px; border:1px solid var(--line,#e6eaf1); background:#fff; }
-    .welcome{ color:var(--muted,#64748b); margin:4px 0 0; }
+    .card{background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 8px 24px rgba(15,23,42,.06);overflow:hidden}
+    .card h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--line,#e6eaf1);background:#f7f9fd}
+    .card .body{padding:14px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
-    /* liga-váltó balra, a cím mellé */
-    .league-switch-left{ margin-left:8px; }
-    @media (max-width:700px){ .league-switch-left{ width:100%; margin-left:0; } }
+    .select{border:1px solid var(--line,#e6eaf1);border-radius:10px;padding:10px 12px;background:#fff;min-width:220px}
+    .muted{color:var(--muted,#64748b)}
+    .kicker{font-size:12px;color:var(--muted,#64748b)}
+    .divider{height:1px;background:var(--line,#e6eaf1);margin:12px 0}
 
-    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
-    @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
-    @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
-    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
-    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
-    .nav-card .title{ font-weight:800; }
-    .nav-card .desc{ color:#64748b; font-size:12px; }
-    .pill-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 6px; margin-left:6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:700; line-height:1; vertical-align:middle; }
-    .pill-badge[hidden]{ display:none !important; }
-
-    .btn-accent{ min-height:40px; padding:10px 14px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:1px solid var(--line,#e6eaf1); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(0,0,0,.08); }
-    .btn-accent:hover{ filter:brightness(.95); }
-    .btn-accent:focus{ outline:2px solid color-mix(in oklab, var(--accent,#3b82f6) 30%, white); outline-offset:2px; }
-    .btn-icon{ width:18px; height:18px; display:inline-block; }
-
-    /* Oldaltartalom */
-    .card{ background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,.06); overflow:hidden; }
-    .card h3{ margin:0; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
-
-    /* Bónusz kártyák + modál */
-    .bonus-wrap{ display:flex; align-items:center; gap:16px; padding:12px; }
-    .bonus-muted{ color:#64748b; font-size:12px }
-    .bonus-title{ font-size:20px; font-weight:800 }
-    .bonus-bar{ height:8px; background:#eef2ff; border-radius:999px; overflow:hidden; width:280px; }
-    .bonus-bar>div{ height:100%; background:#16a34a }
-
-    /* 🔧 Részletek gomb: kicsi és jobb szélen */
-    .bonus-wrap > .right{
-      margin-left:auto;
-      display:flex; align-items:center; gap:12px;
-      flex-wrap:nowrap; min-width:0; flex:1 1 auto;
-    }
-    .bonus-wrap .right .btn-accent{
-      flex:0 0 auto; width:auto !important;
-      min-height:32px; padding:6px 10px; font-size:14px; border-radius:8px;
-      margin-left:auto;
-    }
-
-    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; padding:20px; z-index:1000 }
-    .modal{ background:#fff; border-radius:16px; width:min(1000px,100%); overflow:hidden; display:flex; }
-    .aside{ width:320px; background:#fafafa; border-right:1px solid var(--line,#e6eaf1); display:flex; flex-direction:column }
-    .aside h4{ margin:12px; margin-bottom:8px }
-    .aside .search{ padding:0 12px 12px }
-    .aside input{ width:100%; padding:10px 12px; border:1px solid var(--line,#e6eaf1); border-radius:10px }
-
-    .list{ overflow:auto; max-height:70vh; padding:0 8px 12px }
-    .userrow{
-      width:100%; display:flex; align-items:center; justify-content:space-between;
-      appearance:none; color:#111; background:#fff;
-      border:1px solid var(--line,#e6eaf1); border-radius:10px; padding:8px 10px; margin:0 8px 8px; cursor:pointer;
-      text-align:left;
-    }
-    .userrow:hover{ background:#f1f5f9; }
-    .userrow .name{ font-weight:600; }
-    .badge{ background:#ecfdf5; color:#065f46; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:700 }
-
-    .main{ flex:1; display:flex; flex-direction:column }
-    .main .head{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--line,#e6eaf1) }
-    .main .body{ padding:12px 16px }
-    table{ width:100%; border-collapse:separate; border-spacing:0 }
-    thead{ background:#f6f7fb }
-    th, td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--line,#e6eaf1) }
-
-    /* Forduló eredmények */
-    .controls{ padding:10px 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .select{ height:36px; padding:6px 10px; border-radius:10px; border:1px solid var(--line,#e6eaf1); background:#fff; }
-    .summary{ padding:10px 12px; border-top:1px solid var(--line,#e6eaf1); border-bottom:1px solid var(--line,#e6eaf1); display:flex; flex-wrap:wrap; gap:8px; }
-    .sum-chip{ background:#eef2ff; border:1px solid var(--line,#e6eaf1); border-radius:999px; padding:6px 10px; font-size:13px }
-    .sum-chip b{ font-weight:800 }
-
-    .match{ padding:12px 14px; border-bottom:1px solid var(--line,#e6eaf1); background:#fff; }
-    .match:nth-child(even){ background:#fcfdff; }
-    .team-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:15px }
-    .crest{ width:22px; height:22px; object-fit:contain }
-    .meta{ color:#64748b; font-size:12px; margin-top:4px }
-    .odds{ font-size:12px; background:#eef2ff; border-radius:999px; padding:3px 8px; }
-
-    .tips{ margin-top:8px; display:flex; flex-direction:column; gap:6px }
-    .tip{ padding:8px 10px; border-radius:8px; background:#eef; }
-    .tip.correct{ background:#ecfdf5 }
-    .tip.wrong{ background:#fdecec }
-    .tip b{ font-weight:700 }
-    .kicker{ color:#64748b; font-size:12px }
-    .hidden-info{ color:#b45309; font-size:13px; margin-top:6px }
-    .empty{ padding:12px 14px; color:#64748b }
-
-    /* Chat – UCL külön szoba */
-    .chat-fab{ position:fixed; right:22px; bottom:22px; z-index:999; width:52px; height:52px; border-radius:999px; border:0; background:var(--accent,#3b82f6); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.15); }
-    .chat-fab .fab-badge{ position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:12px; font-weight:800; line-height:20px; display:none; }
-    .chat-fab.has-unread .fab-badge{ display:inline-block; }
-    .chat-panel{ position:fixed; right:22px; bottom:86px; z-index:998; width:380px; max-width:calc(100vw - 32px); max-height:70vh; display:none; flex-direction:column; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 10px 32px rgba(0,0,0,.14); }
-    .chat-panel.open{ display:flex; }
-    .chat-head{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line,#e6eaf1); background:#f7f9fd; }
-    .chat-title{ font-weight:800; }
-    #chatClose{ width:28px; height:28px; border-radius:8px; font-size:18px; line-height:28px; display:inline-flex; align-items:center; justify-content:center; background:#eef2ff; color:#111; border:1px solid var(--line,#e6eaf1); cursor:pointer; }
-    #chatClose:hover{ filter:brightness(0.95); }
-    .chat-list{ overflow:auto; padding:8px 10px; }
-    .chat-empty{ color:#64748b; font-size:13px; padding:8px 10px; }
-    .msg{ padding:8px 10px; border-bottom:1px solid var(--line,#e6eaf1); display:flex; gap:8px; align-items:flex-start; }
-    .msg .meta{ font-size:12px; color:#64748b; margin-bottom:2px; }
-    .msg .text{ white-space:pre-wrap; word-break:break-word; }
-    .msg .del{ margin-left:auto; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:2px 8px; border-radius:8px; font-size:12px; cursor:pointer; display:none; }
-    .msg:hover .del{ display:inline-block; }
-
-    #chatComposer{ display:flex; gap:8px; align-items:center; padding:10px; border-top:1px solid var(--line,#e6eaf1); background:#fff; }
-    #chatInput{ background:#fff; color:#111; border:1px solid var(--line,#e6eaf1); height:40px; padding:8px 10px; border-radius:10px; font-size:14px; outline:none; width:100%; box-sizing:border-box; }
-    #chatInput::placeholder{ color:#6b7280; }
-    #chatSendBtn{ min-width:90px; padding:8px 12px; border-radius:10px; background:var(--accent,#3b82f6); color:#fff; border:0; font-weight:600; cursor:pointer; }
+    .round{display:grid;gap:12px}
+    .match{border:1px solid var(--line,#e6eaf1);border-radius:14px;padding:12px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.04)}
+    .match-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .teams{font-weight:900}
+    .meta{font-size:12px;color:var(--muted,#64748b)}
+    .score{font-weight:900}
+    .subgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    @media (max-width:900px){.subgrid{grid-template-columns:1fr}}
+    .tips{border:1px dashed rgba(148,163,184,.65);border-radius:12px;padding:10px;background:rgba(248,250,252,.85)}
+    .tip{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(226,232,240,.9)}
+    .tip:last-child{border-bottom:0}
+    .tip.correct b{color:#16a34a}
+    .tip.wrong b{color:#ef4444}
+    .badge{font-size:11px;font-weight:900;border-radius:999px;padding:3px 8px;border:1px solid var(--line,#e6eaf1);background:#fff}
+    .hiddenbox{padding:10px;border-radius:12px;background:#0f172a;color:#fff;font-size:13px}
+    .sum{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .sum strong{font-size:16px}
+    .sum small{color:var(--muted,#64748b)}
+    .pill{display:inline-flex;align-items:center;gap:8px}
   </style>
 
   <script type="module">
@@ -143,8 +60,8 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    /* Liga-váltó – csak mount kell */
-    /* ---------------- Firebase init ---------------- */
+    import { initLeagueSwitcher } from "./league-switcher.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
       authDomain: "tippliga-4b3af.firebaseapp.com",
@@ -153,1194 +70,637 @@
       messagingSenderId: "720359845241",
       appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
     };
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    /* ---------------- Helpers / adat ---------------- */
     const crestMap = {
-      "Ajax": "ucl_crest/ajax.png",
-      "Arsenal": "ucl_crest/arsenal.png",
-      "Atalanta": "ucl_crest/atalanta.png",
-      "Athletic Bilbao": "ucl_crest/athletic.png",
-      "Atlético Madrid": "ucl_crest/atletico.png",
-      "Barcelona": "ucl_crest/barcelona.png",
-      "Bayern München": "ucl_crest/bayern.png",
-      "Benfica": "ucl_crest/benfica.png",
-      "Borussia Dortmund": "ucl_crest/borussia.png",
-      "Bodø/Glimt": "ucl_crest/bodo.png",
-      "Club Bruges": "ucl_crest/brugge.png",
-      "Chelsea": "ucl_crest/chelsea.png",
-      "FC Köbenhavn": "ucl_crest/copenhagen.png",
-      "Eintracht Frankfurt": "ucl_crest/frankfurt.png",
-      "Galatasaray": "ucl_crest/galata.png",
-      "Internazionale": "ucl_crest/inter.png",
-      "Juventus": "ucl_crest/juventus.png",
-      "Bayer Leverkusen": "ucl_crest/leverkusen.png",
-      "Liverpool": "ucl_crest/liverpool.png",
-      "Manchester City": "ucl_crest/mancity.png",
-      "Olympique Marseille": "ucl_crest/marseille.png",
-      "Monaco": "ucl_crest/monaco.png",
-      "Napoli": "ucl_crest/napoli.png",
-      "Newcastle United": "ucl_crest/newcastle.png",
-      "Olympiakosz Pireusz": "ucl_crest/olympiacos.png",
-      "Pafosz": "ucl_crest/pafos.png",
-      "Paris Saint-Germain": "ucl_crest/psg.png",
-      "PSV": "ucl_crest/psv.png",
-      "Qarabag": "ucl_crest/qarabag.png",
-      "Real Madrid": "ucl_crest/real.png",
-      "Slavia Praha": "ucl_crest/slavia.png",
-      "Sporting CP": "ucl_crest/sporting.png",
-      "Tottenham Hotspur": "ucl_crest/tottenham.png",
-      "Union Saint-Gilloise": "ucl_crest/usg.png",
-      "Villarreal": "ucl_crest/villareal.png",
-      "Kajrat Almati": "ucl_crest/kairat.png"
+      "Ajax":"ucl_crest/ajax.png",
+      "Arsenal":"ucl_crest/arsenal.png",
+      "Atalanta":"ucl_crest/atalanta.png",
+      "Athletic Bilbao":"ucl_crest/athletic.png",
+      "Atlético Madrid":"ucl_crest/atletico.png",
+      "Barcelona":"ucl_crest/barcelona.png",
+      "Bayern München":"ucl_crest/bayern.png",
+      "Benfica":"ucl_crest/benfica.png",
+      "Borussia Dortmund":"ucl_crest/borussia.png",
+      "Bodø/Glimt":"ucl_crest/bodo.png",
+      "Club Bruges":"ucl_crest/brugge.png",
+      "Chelsea":"ucl_crest/chelsea.png",
+      "FC Köbenhavn":"ucl_crest/copenhagen.png",
+      "Eintracht Frankfurt":"ucl_crest/frankfurt.png",
+      "Galatasaray":"ucl_crest/galata.png",
+      "Internazionale":"ucl_crest/inter.png",
+      "Juventus":"ucl_crest/juventus.png",
+      "Bayer Leverkusen":"ucl_crest/leverkusen.png",
+      "Liverpool":"ucl_crest/liverpool.png",
+      "Manchester City":"ucl_crest/mancity.png",
+      "Olympique Marseille":"ucl_crest/marseille.png",
+      "Monaco":"ucl_crest/monaco.png",
+      "Napoli":"ucl_crest/napoli.png",
+      "Newcastle United":"ucl_crest/newcastle.png",
+      "Olympiakosz Pireusz":"ucl_crest/olympiacos.png",
+      "Slavia Praha":"ucl_crest/slavia.png",
+      "Pafosz":"ucl_crest/pafos.png",
+      "Paris Saint-Germain":"ucl_crest/psg.png",
+      "Qarabag":"ucl_crest/qarabag.png",
+      "Real Madrid":"ucl_crest/real.png",
+      "Sporting CP":"ucl_crest/sporting.png",
+      "Tottenham Hotspur":"ucl_crest/tottenham.png",
+      "Union Saint-Gilloise":"ucl_crest/usg.png",
+      "Villarreal":"ucl_crest/villareal.png",
+      "Kajrat Almati":"ucl_crest/kairat.png",
+      "PSV":"ucl_crest/psv.png"
     };
-    function crestFor(team){ return crestMap[team] || ""; }
-    function fmt(n){ return (Number(n)||0).toFixed(2); }
-    function fmtTime(ts){ try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } }
-    function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-    function getOdds(m, key){
-      if (m?.odds && (key in m.odds)) return m.odds[key];
-      if (key==="1") return m.odds1 ?? m["odds1"];
-      if (key==="X") return m.oddsX ?? m["oddsX"];
-      if (key==="2") return m.odds2 ?? m["odds2"];
-      return undefined;
-    }
-    function tipChoice(t){ return t.choice ?? t.tip ?? ""; }
-    function tipDouble(t){ return !!(t.double ?? t.isDouble); }
-    function matchRound(m){ return String(m.round ?? m.roundId ?? ""); }
-
-    const TEAM_NAMES = Object.keys(crestMap);
-    const NORM = s => String(s||"").trim().toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g,'');
-    const CANON = TEAM_NAMES.reduce((acc, n) => (acc[NORM(n)] = n, acc), {});
-    const canonTeam = s => CANON[NORM(s)] || String(s||"").trim();
-    const eqTeam = (a,b) => !!a && !!b && NORM(a) === NORM(b);
-    const eqName = (a,b) => !!a && !!b && NORM(a) === NORM(b);
-
-    function parseRes(str){
-      const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
-      return m ? [parseInt(m[1]), parseInt(m[2])] : null;
-    }
-
-    function deriveTop8FromMatches(allMatches){
-      const teams = Object.keys(crestMap);
-      const S={}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
-      const H2H={};
-
-      (allMatches||[]).forEach(m=>{
-        const A=m.homeTeam||m.home||"";
-        const B=m.awayTeam||m.away||"";
-        const r=parseRes(m.result);
-        const a=S[A], b=S[B];
-        if(!a || !b || !r) return;
-
-        const [hg,ag]=r;
-        a.MP++; b.MP++;
-        a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
-        b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
-
-        if(hg>ag){a.W++;b.L++;a.Pts+=3}
-        else if(hg<ag){b.W++;a.L++;b.Pts+=3}
-        else{a.D++;b.D++;a.Pts+=1;b.Pts+=1}
-
-        const k=[A,B].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
-        H2H[k] ||= {[A]:{Pts:0,GF:0,GA:0},[B]:{Pts:0,GF:0,GA:0}};
-        if(hg>ag){H2H[k][A].Pts+=3}
-        else if(hg<ag){H2H[k][B].Pts+=3}
-        else{H2H[k][A].Pts+=1;H2H[k][B].Pts+=1}
-        H2H[k][A].GF+=hg; H2H[k][A].GA+=ag;
-        H2H[k][B].GF+=ag; H2H[k][B].GA+=hg;
-      });
-
-      function cmp(a,b){
-        if(b.Pts!==a.Pts) return b.Pts-a.Pts;
-        if(b.W!==a.W) return b.W-a.W;
-        if(b.GD!==a.GD) return b.GD-a.GD;
-        if(b.GF!==a.GF) return b.GF-a.GF;
-
-        const k=[a.team,b.team].slice().sort((x,y)=>x.localeCompare(y,'hu')).join('|');
-        const row=H2H[k];
-        if(row){
-          const pa=row[a.team]?.Pts??0, pb=row[b.team]?.Pts??0;
-          if(pb!==pa) return pb-pa;
-          const gda=(row[a.team]?.GF??0)-(row[a.team]?.GA??0);
-          const gdb=(row[b.team]?.GF??0)-(row[b.team]?.GA??0);
-          if(gdb!==gda) return gdb-gda;
-        }
-        return a.team.localeCompare(b.team,'hu');
-      }
-
-      const rows=Object.values(S).sort(cmp);
-      return rows.slice(0,8).map(r=>r.team);
-    }
-
-    /* ====== Pontszámítás (positions-szel egyezően) ====== */
-    const toNum = v => {
-      if (v === null || v === undefined || v === '') return null;
-      if (typeof v === 'string') v = v.replace(',', '.');
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    };
-    const fromCandidateOdds = c => {
-      const direct = toNum(c?.odds);
-      if (direct != null) return direct;
-      const dec = toNum(c?.oddsDecimal);
-      if (dec != null) return dec;
-      const pct = toNum(c?.oddsPercent);
-      if (pct != null && pct > 0) return 100 / pct;
-      return null;
-    };
-    const fromDisplayedPoints = c => toNum(c?.displayPoints);
-    function computePoints(odds, BASE=10, O0=65, A=0.33, LO=0.5, HI=2.5){
-      const o = toNum(odds);
-      if(!o || o<=0) return null;
-      const ratio   = Math.pow(o/Math.max(O0,1e-9), A);
-      const clamped = Math.min(Math.max(ratio, LO), HI);
-      return BASE * clamped;
-    }
-    function candidatePoints(c, scope){
-      const dp = fromDisplayedPoints(c);
-      if (dp != null) return dp;
-      const odds = fromCandidateOdds(c);
-      const cfg  = (c._calc && c._calc.scope === scope) ? c._calc : {};
-      return computePoints(
-        odds,
-        cfg.BASE ?? 10,
-        cfg.O0   ?? 65,
-        cfg.A    ?? 0.33,
-        cfg.LO   ?? 0.5,
-        cfg.HI   ?? 2.5
-      );
-    }
-    const fmtPts = v => (v==null ? "—" : `+${toNum(v).toFixed(2)}%`);
-
-    /* ---------------- Állapot ---------------- */
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
     let favouriteTeamucl = "";
-    let chatLastSeen = null; // UCL-hez tartozó timestamp
+    let chatLastSeen = null;
 
+    const nickByEmail = {};
     let matches = [];
-    let tipsByMatch = new Map();
-    let nickByEmail = {};
     let roundsAsc = [];
+    let firstLegByMatchId = new Map(); // matchId -> {slotId, oddsHome, oddsAway, homeTeam, awayTeam, winner}
+    let advanceTipsBySlot = new Map(); // slotId -> [tips]
+    let baseStakeByRound = {}; // {"9":2, ...} (A opció)
 
-    let officialTop8 = [];
-    let officialChampion = "";
-    let officialGolden = { player:"", team:"" };
+    const tipsByMatch = new Map();
 
-    let top8Tips = [];
-    let championTips = [];
-    let goldenTips = [];
+    function escapeHtml(s){
+      return (s ?? "").toString()
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+    }
+    function fmtTime(ts){
+      try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; }
+    }
+    function parseRes(str){
+      const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
+      return m?[parseInt(m[1]),parseInt(m[2])]:null;
+    }
+    function canonTeam(t){ return (t||"").toString().trim(); }
+    function fmt(n){ return (Number(n)||0).toFixed(2).replace(/\.00$/,""); }
 
-    let championCandidates = [];
-    let goldenCandidates   = [];
-
-    let bonusOverlayOpen = false;
-
-    function calcTop8(picks, official){
-      const set = new Set((picks||[]).map(canonTeam));
-      let correct = 0;
-      (official||[]).forEach(t => { if (set.has(canonTeam(t))) correct++; });
-      return { correct, total: (official||[]).length || 8, pct: correct };
+    function tipChoice(t){
+      return (t.choice ?? t.pick ?? t.tip ?? t.selection ?? "").toString().trim();
+    }
+    function tipDouble(t){
+      return !!(t.double ?? t.isDouble ?? t.dupla ?? false);
     }
 
-    /* ---------------- Top 8 bónusz UI ---------------- */
-    function refreshBonusCard(){
-      const bonusCount = document.getElementById("bonusCount");
-      const bonusPct = document.getElementById("bonusPct");
-      const bonusBarFill = document.getElementById("bonusBarFill");
-
-      if (!officialTop8.length){
-        bonusCount.textContent = "—/8";
-        bonusPct.textContent = "+0%";
-        bonusBarFill.style.width = "0%";
-        return;
-      }
-      const me = top8Tips.find(t => t.email === currentUserEmail);
-      if (!me){
-        bonusCount.textContent = "Nincs tipped";
-        bonusPct.textContent = "+0%";
-        bonusBarFill.style.width = "0%";
-        return;
-      }
-      const {correct,total,pct} = calcTop8(me.picks, officialTop8);
-      bonusCount.textContent = `${correct}/${total}`;
-      bonusPct.textContent = `+${pct}%`;
-      bonusBarFill.style.width = `${(correct/total)*100}%`;
+    function getOdds(m, pick){
+      if (!m) return null;
+      if (pick === "1") return m.oddsHome ?? m.odds1 ?? null;
+      if (pick === "X") return m.oddsDraw ?? m.oddsX ?? null;
+      if (pick === "2") return m.oddsAway ?? m.odds2 ?? null;
+      return null;
     }
 
-    function openBonusModal(){
-      const ov = document.getElementById("bonusOverlay");
-      ov.style.display = "flex"; bonusOverlayOpen = true;
-      renderUsersList(document.getElementById("userSearch")?.value || "");
-    }
-    function closeBonusModal(){
-      const ov = document.getElementById("bonusOverlay");
-      ov.style.display = "none"; bonusOverlayOpen = false;
+    function getBaseStake(roundId){
+      const r = String(roundId ?? "");
+      const v = baseStakeByRound && Object.prototype.hasOwnProperty.call(baseStakeByRound, r) ? Number(baseStakeByRound[r]) : 1;
+      return (v && v > 0) ? v : 1;
     }
 
-    function renderUsersList(filter=""){
-      const usersList = document.getElementById("usersList");
-      const term = (filter||"").toLowerCase().trim();
-      usersList.innerHTML = "";
-
-      if (!officialTop8.length){
-        usersList.innerHTML = `<div style="padding:8px 12px; color:#64748b;">A tabella Top 8 jelenleg nem elérhető.</div>`;
-        return;
-      }
-
-      const rows = top8Tips.map(u=>{
-        const {correct,total,pct} = calcTop8(u.picks, officialTop8);
-        const display = nickByEmail[u.email] || u.nick || u.email;
-        return { ...u, correct, pct, total, display };
-      }).filter(u => !term || (u.display||"").toLowerCase().includes(term) || (u.email||"").toLowerCase().includes(term))
-        .sort((a,b)=> b.correct - a.correct || (a.display||"").localeCompare(b.display||""));
-
-      rows.forEach(u=>{
-        const row = document.createElement("button");
-        row.className = "userrow";
-        row.onclick = ()=> renderDetail(u);
-        row.innerHTML = `<span class="name">${escapeHtml(u.display)}</span>
-                         <span class="badge">${u.correct}/${u.total}</span>`;
-        usersList.appendChild(row);
-      });
-
-      const me = rows.find(x => x.email === currentUserEmail) || rows[0];
-      if (me) renderDetail(me);
+    function effectiveMatchMultiplier(roundId, tipObj){
+      const r = Number(roundId ?? 0);
+      const stake = getBaseStake(r);
+      if (r >= 9) return 1 * stake;
+      return (tipDouble(tipObj) ? 2 : 1) * stake;
     }
 
-    function renderDetail(u){
-      const tableBody = document.getElementById("bonusTableBody");
-      const display = u.display || u.nick || u.email;
-      document.getElementById("detailTitle").textContent = `Top 8 – ${display}`;
-      document.querySelector('#bonusOverlay .bonus-muted').textContent = 'Egyezések a tabella Top 8-cal';
-      document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
-      document.getElementById("detailPct").textContent   = `+${u.pct}%`;
+    function resolveAdvanceWinnerFromSlot(slot){
+      const aw = (slot.advanceWinner || "").toString().trim();
+      if (aw === "home" || aw === "away") return aw;
+      const decided = (slot.decidedBy || "").toString().trim();
+      const byPens = !!slot.decidedByPenalties || decided === "pens";
+      const pw = (slot.penaltyWinner || "").toString().trim();
+      if (byPens && (pw === "home" || pw === "away")) return pw;
+      return "";
+    }
 
-      const off = (officialTop8 || []).map(canonTeam);
-      const off8 = Array.from({length: 8}, (_, i) => off[i] || "—");
-
-      const picks = (u.picks || []).map(canonTeam);
-      const used  = new Set();
-
-      const unmatched = picks
-        .filter(p => !off.includes(p))
-        .sort((a,b) => a.localeCompare(b, "hu"));
-
-      tableBody.innerHTML = "";
-
-      for (let i = 0; i < 8; i++){
-        const left = off8[i];
-        let right = "—";
-        let hit   = false;
-
-        if (left !== "—" && picks.includes(left) && !used.has(left)){
-          right = left;
-          hit   = true;
-          used.add(left);
-        } else if (unmatched.length){
-          right = unmatched.shift();
+    async function loadBaseStakes(){
+      baseStakeByRound = {};
+      try{
+        const snap = await getDoc(doc(db,"settings","ucl_round_stakes"));
+        if(snap.exists()){
+          const d = snap.data() || {};
+          const m = (d.baseStakeA && typeof d.baseStakeA === "object") ? d.baseStakeA : (d.baseStakes && typeof d.baseStakes === "object" ? d.baseStakes : {});
+          for(const k of Object.keys(m||{})){
+            const n = Number(m[k]);
+            if(n && n > 0) baseStakeByRound[String(k)] = n;
+          }
         }
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td><strong>${escapeHtml(left)}</strong></td>
-          <td>${escapeHtml(right)}</td>
-          <td>${hit ? "✅" : "✖"}</td>
-        `;
-        tableBody.appendChild(tr);
+      }catch(e){
+        baseStakeByRound = {};
       }
     }
 
-    /* ---------------- Győztes kártya + modál ---------------- */
-    function refreshChampionCard(){
-      const offEl = document.getElementById("champOfficial");
-      const mineEl = document.getElementById("champMine");
-      const minePctEl = document.getElementById("champMinePct");
+    async function loadBracketFirstLegs(){
+      firstLegByMatchId.clear();
+      try{
+        const snap = await getDoc(doc(db,"settings","ucl_bracket"));
+        const data = snap.exists() ? (snap.data()||{}) : {};
+        const slots = (data.slots && typeof data.slots === "object") ? data.slots : {};
+        Object.keys(slots).forEach(slotId=>{
+          const s = slots[slotId] || {};
+          const matchIds = Array.isArray(s.matchIds) ? s.matchIds : [];
+          const firstLegId = matchIds[0] ? String(matchIds[0]) : "";
+          if(!firstLegId) return;
 
-      if (offEl) offEl.textContent = officialChampion || "—";
+          const oh = Number((s.advanceOddsHome===0 || s.advanceOddsHome) ? s.advanceOddsHome : NaN);
+          const oa = Number((s.advanceOddsAway===0 || s.advanceOddsAway) ? s.advanceOddsAway : NaN);
+          const oddsHome = (oh && oh > 1) ? oh : null;
+          const oddsAway = (oa && oa > 1) ? oa : null;
 
-      const me = championTips.find(t => t.email === currentUserEmail);
-      if (mineEl){
-        mineEl.textContent = me?.team || "—";
-        minePctEl.textContent = me?.team ? getChampionPct(me.team) : "";
-      }
+          const homeTeam = s.homeTeam || "";
+          const awayTeam = s.awayTeam || "";
+          const winner = resolveAdvanceWinnerFromSlot(s);
+
+          firstLegByMatchId.set(firstLegId, {
+            slotId: String(slotId),
+            oddsHome,
+            oddsAway,
+            homeTeam,
+            awayTeam,
+            winner
+          });
+        });
+      }catch(e){}
     }
-    function getChampionPct(team){
-      const c = championCandidates.find(x => eqTeam(x.team, team));
-      return c ? fmtPts(candidatePoints(c,'champion')) : "—";
+
+    async function loadAdvanceTipsAll(){
+      advanceTipsBySlot.clear();
+      try{
+        const snap = await getDocs(collection(db,"ucl_advance_tips"));
+        const latest = new Map(); // user|slot -> tip
+        snap.forEach(d=>{
+          const raw = d.data() || {};
+          const t = { id:d.id, ...raw, user: raw.user || raw.email };
+          const slotId = (t.slotId || t.slot || "").toString();
+          if(!t.user || !slotId) return;
+          const k = t.user + "|" + slotId;
+          const cur = latest.get(k);
+          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || cur?.timestamp?.toMillis?.() || 0;
+          const ts = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || t.timestamp?.toMillis?.() || 0;
+          if(!cur || ts >= curTs) latest.set(k, t);
+        });
+
+        for(const tip of latest.values()){
+          const slotId = (tip.slotId || tip.slot || "").toString();
+          if(!advanceTipsBySlot.has(slotId)) advanceTipsBySlot.set(slotId, []);
+          advanceTipsBySlot.get(slotId).push(tip);
+        }
+      }catch(e){}
     }
-    function openChampModal(){ document.getElementById("champOverlay").style.display = "flex"; renderChampUsers(); }
-    function closeChampModal(){ document.getElementById("champOverlay").style.display = "none"; }
 
-    function renderChampUsers(filter=""){
-      const list = document.getElementById("champUsers");
-      list.innerHTML = "";
-      const term = (filter||"").toLowerCase().trim();
+    function hiddenInfo(text){
+      const box = document.createElement("div");
+      box.className = "hiddenbox";
+      box.textContent = text;
+      return box;
+    }
+    function kicker(text){
+      const d = document.createElement("div");
+      d.className = "kicker";
+      d.textContent = text;
+      return d;
+    }
 
-      const rows = championTips
-        .map(t => ({...t, display: nickByEmail[t.email] || t.nick || t.email, pct: getChampionPct(t.team)}))
-        .filter(r => !term || r.display.toLowerCase().includes(term) || (r.team||"").toLowerCase().includes(term))
-        .sort((a,b)=> (b.pct||"").localeCompare(a.pct||"") || a.display.localeCompare(b.display));
-
-      rows.forEach(u=>{
-        const row=document.createElement('button');
-        row.className='userrow';
-        row.onclick=()=> renderChampDetail(u);
-        row.innerHTML = `<span class="name">${escapeHtml(u.display)} — ${escapeHtml(u.team||"—")}</span><span class="badge">${escapeHtml(u.pct||"—")}</span>`;
-        list.appendChild(row);
+    function deriveRounds(ms){
+      const s = new Set();
+      ms.forEach(m=>{
+        const r = Number(m.roundId ?? m.round ?? 0);
+        if (r) s.add(r);
       });
-
-      if (rows[0]) renderChampDetail(rows[0]);
-    }
-    function renderChampDetail(u){
-      document.getElementById("champDetailTitle").textContent = `Végső győztes – ${u.display}`;
-      document.getElementById("champPct").textContent = u.pct || "—";
-      const body = document.getElementById("champTableBody");
-      body.innerHTML = "";
-      const tr = document.createElement("tr");
-      const isHit = officialChampion && eqTeam(officialChampion, u.team);
-      tr.innerHTML = `<td>1</td><td><strong>${escapeHtml(officialChampion||"—")}</strong></td><td>${escapeHtml(u.team||"—")}</td><td>${isHit ? "✅" : "✖"}</td>`;
-      body.appendChild(tr);
+      return [...s].sort((a,b)=>a-b);
     }
 
-    /* ---------------- Gólkirály kártya + modál ---------------- */
-    function refreshGoldenCard(){
-      const offEl = document.getElementById("goldenOfficial");
-      const mineEl = document.getElementById("goldenMine");
-      const minePctEl = document.getElementById("goldenMinePct");
+    function renderRound(roundId){
+      const now = new Date();
+      const list = matches.filter(m => String(Number(m.roundId ?? m.round ?? 0)) === String(roundId))
+        .sort((a,b)=>{
+          const ta=a.startTime?.toDate?.()?.getTime?.()||0;
+          const tb=b.startTime?.toDate?.()?.getTime?.()||0;
+          return ta-tb;
+        });
 
-      const offStr = officialGolden.player ? `${officialGolden.player}${officialGolden.team?` (${officialGolden.team})`:''}` : "—";
-      if (offEl) offEl.textContent = offStr;
-
-      const me = goldenTips.find(t => eqName(t.email, currentUserEmail));
-      if (mineEl){
-        mineEl.textContent = me ? `${me.player}${me.team?` (${me.team})`:''}` : "—";
-        minePctEl.textContent = me ? getGoldenPct(me.player) : "";
-      }
-    }
-    function getGoldenPct(player){
-      const c = goldenCandidates.find(x => eqName(x.player, player));
-      return c ? fmtPts(candidatePoints(c,'golden')) : "—";
-    }
-    function openGoldenModal(){ document.getElementById("goldenOverlay").style.display = "flex"; renderGoldenUsers(); }
-    function closeGoldenModal(){ document.getElementById("goldenOverlay").style.display = "none"; }
-
-    function renderGoldenUsers(filter=""){
-      const list = document.getElementById("goldenUsers");
-      list.innerHTML = "";
-      const term = (filter||"").toLowerCase().trim();
-
-      const rows = goldenTips
-        .map(t => ({...t, display: nickByEmail[t.email] || t.nick || t.email, pct: getGoldenPct(t.player)}))
-        .filter(r => !term || r.display.toLowerCase().includes(term) || (r.player||"").toLowerCase().includes(term))
-        .sort((a,b)=> (b.pct||"").localeCompare(a.pct||"") || a.display.localeCompare(b.display));
-
-      rows.forEach(u=>{
-        const row=document.createElement('button');
-        row.className='userrow';
-        row.onclick=()=> renderGoldenDetail(u);
-        const pick = u.player ? `${u.player}${u.team?` (${u.team})`:''}` : "—";
-        row.innerHTML = `<span class="name">${escapeHtml(u.display)} — ${escapeHtml(pick)}</span><span class="badge">${escapeHtml(u.pct||"—")}</span>`;
-        list.appendChild(row);
-      });
-
-      if (rows[0]) renderGoldenDetail(rows[0]);
-    }
-    function renderGoldenDetail(u){
-      document.getElementById("goldenDetailTitle").textContent = `Gólkirály – ${u.display}`;
-      document.getElementById("goldenPct").textContent = u.pct || "—";
-      const body = document.getElementById("goldenTableBody");
-      body.innerHTML = "";
-      const offStr = officialGolden.player ? `${officialGolden.player}${officialGolden.team?` (${officialGolden.team})`:''}` : "—";
-      const pickStr = u.player ? `${u.player}${u.team?` (${u.team})`:''}` : "—";
-      const isHit = officialGolden.player && eqName(officialGolden.player, u.player);
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>1</td><td><strong>${escapeHtml(offStr)}</strong></td><td>${escapeHtml(pickStr)}</td><td>${isHit ? "✅" : "✖"}</td>`;
-      body.appendChild(tr);
-    }
-
-    /* ---------------- Forduló eredmények (NB1 elvek) ---------------- */
-    function buildRoundsUI(){
-      const sel = document.getElementById("roundSelect");
-      sel.innerHTML = "";
-      roundsAsc.forEach(r=>{
-        const o = document.createElement("option");
-        o.value = r; o.textContent = `${r}. forduló`;
-        sel.appendChild(o);
-      });
-      const url = new URL(location.href);
-      const qRound = url.searchParams.get("round");
-      sel.value = qRound && roundsAsc.includes(qRound) ? qRound : (roundsAsc[roundsAsc.length-1] || "");
-      sel.addEventListener("change", ()=> renderRound(sel.value));
-      if (sel.value) renderRound(sel.value);
-    }
-
-    async function renderRound(roundId){
-      const mount = document.getElementById("resultsContainer");
-      mount.innerHTML = "";
-
-      const card = document.createElement("div");
-      card.className = "card";
-
-      const hdr = document.createElement("h3");
-      hdr.textContent = `${roundId}. forduló`;
-      card.appendChild(hdr);
-
-      const list = matches.filter(m => matchRound(m) === String(roundId))
-                          .sort((a,b)=> (a.startTime?.toDate?.()||0) - (b.startTime?.toDate?.()||0));
-
-      if (!list.length){
-        card.appendChild(divEmpty("Ehhez a fordulóhoz még nincs meccs."));
-        mount.appendChild(card);
-        return;
-      }
+      const wrap = document.getElementById("roundWrap");
+      wrap.innerHTML = "";
 
       const summary = {};
       const breakdown = {};
-      const now = new Date();
 
       list.forEach(m=>{
         const mTips = tipsByMatch.get(m.id) || [];
-        if (!m.outcome) return;
+        const out = (m.outcome || "").toString().trim();
+        if(!out) return;
+
         mTips.forEach(t=>{
           const pick = tipChoice(t);
-          const correct = pick && (pick === m.outcome);
-          const rnum = parseInt(matchRound(m))||0;
-          const stake = stakeForRound(matchRound(m));
-          const mult = (rnum<=8 && tipDouble(t)) ? 2 : 1;
+          if(!pick) return;
+
+          const correct = pick === out;
+          const mult = effectiveMatchMultiplier(roundId, t);
           const ov = getOdds(m, pick);
-          const pts = (correct && ov) ? Number(ov) * stake * mult : 0;
+          const pts = (correct && ov) ? Number(ov) * mult : 0;
+
           const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
           summary[nick] = (summary[nick]||0) + pts;
-          (breakdown[nick] ||= []).push(`${m.homeTeam}–${m.awayTeam}: ${pick} → ${fmt(pts)} pont`);
+          (breakdown[nick] ||= []).push(`Meccs: ${m.homeTeam}–${m.awayTeam}: ${pick} → ${fmt(pts)} pont`);
         });
+      });
+
+      // + Továbbjutó tippek pontozása (kieséses szakasz első meccseinél)
+      list.forEach(m=>{
+        const ko = m.startTime?.toDate?.();
+        const hasStarted = ko && ko <= now;
+        if(!hasStarted) return;
+
+        const advInfo = firstLegByMatchId.get(String(m.id));
+        if(!advInfo) return;
+
+        const winner = (advInfo.winner || "").toString().trim();
+        if(winner !== "home" && winner !== "away") return;
+
+        const slotId = String(advInfo.slotId || "");
+        if(!slotId) return;
+
+        const slotTips = advanceTipsBySlot.get(slotId) || [];
+        const stake = getBaseStake(roundId);
+
+        slotTips.forEach(t=>{
+          const pick = (t.pick || t.choice || t.selection || "").toString().trim();
+          const correct = pick && (pick === winner);
+          const ov = pick === "home" ? advInfo.oddsHome : (pick === "away" ? advInfo.oddsAway : null);
+          const pts = (correct && ov) ? Number(ov) * stake : 0;
+
+          const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
+          summary[nick] = (summary[nick]||0) + pts;
+
+          const homeName = canonTeam(advInfo.homeTeam || m.homeTeam);
+          const awayName = canonTeam(advInfo.awayTeam || m.awayTeam);
+          const pickedTeam = pick === "home" ? homeName : (pick === "away" ? awayName : "—");
+          const winnerTeam = winner === "home" ? homeName : awayName;
+
+          (breakdown[nick] ||= []).push(`Továbbjutó: ${homeName}–${awayName}: ${pickedTeam} (nyert: ${winnerTeam}) → ${fmt(pts)} pont`);
+        });
+      });
 
       const summaryDiv = document.createElement("div");
-      summaryDiv.className = "summary";
-      if (Object.keys(summary).length){
-        const ordered = Object.entries(summary).sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
-        ordered.forEach(([nick, pts])=>{
-          const chip = document.createElement("span");
-          chip.className = "sum-chip";
-          chip.title = (breakdown[nick]||[]).join("\n");
-          chip.innerHTML = `<b>${escapeHtml(nick)}</b>: ${fmt(pts)}`;
-          summaryDiv.appendChild(chip);
-        });
-      } else {
-        const none = document.createElement("span");
-        none.className = "kicker";
-        none.textContent = "Még nincs lezárt meccs ebben a fordulóban.";
-        summaryDiv.appendChild(none);
-      }
-      card.appendChild(summaryDiv);
+      summaryDiv.className = "match";
+
+      const sumRows = Object.keys(summary)
+        .map(nick => ({nick, pts: summary[nick]}))
+        .sort((a,b)=>b.pts-a.pts);
+
+      summaryDiv.innerHTML = `
+        <div class="sum">
+          <div class="pill">
+            <strong>Forduló összesítés</strong>
+            <span class="badge">kör: ${escapeHtml(String(roundId))}</span>
+          </div>
+          <small class="muted">Meccspont + továbbjutó pont együtt</small>
+        </div>
+        <div class="divider"></div>
+        ${sumRows.length ? sumRows.map(r=>`<div class="tip"><b>${escapeHtml(r.nick)}</b><span><b>${fmt(r.pts)}</b> pont</span></div>`).join("") : `<div class="kicker">Még nincs pontszám (nincs outcome / továbbjutó rögzítve).</div>`}
+      `;
+      wrap.appendChild(summaryDiv);
 
       list.forEach(m=>{
         const div = document.createElement("div");
         div.className = "match";
-
         const ko = m.startTime?.toDate?.();
-        const koStr = ko ? ko.toLocaleString("hu-HU") : "";
-        const odds1 = getOdds(m,"1") ?? "-";
-        const oddsX = getOdds(m,"X") ?? "-";
-        const odds2 = getOdds(m,"2") ?? "-";
+        const hasStarted = ko && ko <= now;
 
-        div.innerHTML = `
-          <div class="team-row">
-            <img src="${crestFor(m.homeTeam)}" class="crest" alt="">
-            <strong>${escapeHtml(canonTeam(m.homeTeam))}</strong> vs
-            <strong>${escapeHtml(canonTeam(m.awayTeam))}</strong>
-            <img src="${crestFor(m.awayTeam)}" class="crest" alt="">
-            <span class="odds">1: ${odds1} • X: ${oddsX} • 2: ${odds2}</span>
+        const head = document.createElement("div");
+        head.className = "match-head";
+        const result = (m.result || "").toString().trim();
+        const outcome = (m.outcome || "").toString().trim();
+
+        head.innerHTML = `
+          <div>
+            <div class="teams">${escapeHtml(m.homeTeam)} – ${escapeHtml(m.awayTeam)}</div>
+            <div class="meta">${ko ? ko.toLocaleString("hu-HU",{hour12:false}) : ""} • kör: ${escapeHtml(String(roundId))}</div>
           </div>
-          <div class="meta">
-            Kezdés: ${koStr || "-"} • Eredmény: ${escapeHtml(m.result || "-")} • Kimenetel: <b>${escapeHtml(m.outcome || "-")}</b>
+          <div style="text-align:right">
+            <div class="score">${result ? escapeHtml(result) : "—"}</div>
+            <div class="meta">Outcome: ${outcome ? `<b>${escapeHtml(outcome)}</b>` : "—"}</div>
           </div>
         `;
+        div.appendChild(head);
 
-        const tipsWrap = document.createElement("div"); tipsWrap.className = "tips";
+        const grid = document.createElement("div");
+        grid.className = "subgrid";
+
+        const tipsWrap = document.createElement("div");
+        tipsWrap.className = "tips";
+        tipsWrap.appendChild(kicker("Meccstippek"));
+
         const mTips = tipsByMatch.get(m.id) || [];
-        const hasStarted = ko && ko <= now;
 
         if (!mTips.length){
           tipsWrap.appendChild(kicker("Ehhez a meccshez még nincs leadott tipp."));
         } else if (!hasStarted){
-          // NB1-elv: kezdésig nem nyilvános; saját tipp előnézet; adminnak lista a leadókról
           tipsWrap.appendChild(hiddenInfo("A tippek a kezdésig nem nyilvánosak."));
           mTips.filter(t => t.user === currentUserEmail).forEach(t=>{
-            const row = document.createElement("div"); row.className = "tip";
-            row.innerHTML = `<b>Saját tipped</b>: ${escapeHtml(tipChoice(t))}${tipDouble(t) ? ' <span class="kicker">(dupla)</span>' : ''}`;
+            const row = document.createElement("div");
+            row.className = "tip";
+            row.innerHTML = `<b>Saját tipped</b>: ${escapeHtml(tipChoice(t))}${(Number(roundId)<9 && tipDouble(t)) ? ' <span class="kicker">(dupla)</span>' : ''}`;
             tipsWrap.appendChild(row);
           });
-          if (currentUserRole === 'admin') {
+
+          if (currentUserRole === "admin"){
             const uNames = [...new Set(mTips.map(t => t.user).filter(Boolean))]
               .map(e => escapeHtml(nickByEmail[e] || e));
-            const adminRow = document.createElement('div');
-            adminRow.className = 'kicker';
-            adminRow.innerHTML = `<b>Leadott tippek (admin):</b> ${uNames.length ? uNames.join(', ') : '—'} (${uNames.length} fő)`;
+            const adminRow = document.createElement("div");
+            adminRow.className = "kicker";
+            adminRow.innerHTML = `<b>Leadott tippek (admin):</b> ${uNames.length ? uNames.join(", ") : "—"} (${uNames.length} fő)`;
             tipsWrap.appendChild(adminRow);
           }
         } else {
-          // kezdés után: mindenkié látható, pontszámmal
           mTips.forEach(t=>{
             const pick = tipChoice(t);
-            const correct = m.outcome && pick === m.outcome;
-            const mult = tipDouble(t) ? 2 : 1;
+            const correct = outcome ? pick === outcome : false;
+            const mult = effectiveMatchMultiplier(roundId, t);
             const ov = getOdds(m, pick);
             const pts = (correct && ov) ? Number(ov) * mult : 0;
 
+            const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
+
             const row = document.createElement("div");
             row.className = "tip";
-            if (correct) row.classList.add("correct");
-            else if (m.result) row.classList.add("wrong");
-
-            const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
+            if (outcome){
+              if (correct) row.classList.add("correct");
+              else row.classList.add("wrong");
+            }
             row.innerHTML = `
-              <b>${escapeHtml(nick)}</b>: ${escapeHtml(pick || "—")}
-              ${tipDouble(t) ? ' <span class="kicker">(dupla)</span>' : ''}
-              ${m.result ? ` – Pont: <b>${fmt(pts)}</b>` : ''}
+              <b>${escapeHtml(nick)}</b>: ${escapeHtml(pick)}
+              ${(Number(roundId)<9 && tipDouble(t)) ? ' <span class="kicker">(dupla)</span>' : ''}
+              ${outcome ? ` – Pont: <b>${fmt(pts)}</b>` : ""}
             `;
             tipsWrap.appendChild(row);
           });
         }
 
-        div.appendChild(tipsWrap);
-        card.appendChild(div);
-      });
+        // Továbbjutó tipp szekció (csak az adott párharc első meccsénél)
+        const advInfo = firstLegByMatchId.get(String(m.id));
+        if (advInfo){
+          const advBox = document.createElement("div");
+          advBox.className = "tips";
+          advBox.style.marginTop = "10px";
 
-      
-      const awardRounds = ["10","12","14","16","17"];
-      if (awardRounds.includes(String(roundId))){
-        const sec = document.createElement("div");
-        sec.className = "tip-box";
-        const h = document.createElement("h4");
-        h.textContent = "Továbbjutó pontok (külön)";
-        sec.appendChild(h);
+          const homeName = canonTeam(advInfo.homeTeam || m.homeTeam);
+          const awayName = canonTeam(advInfo.awayTeam || m.awayTeam);
+          const oh = advInfo.oddsHome ? String(advInfo.oddsHome) : "-";
+          const oa = advInfo.oddsAway ? String(advInfo.oddsAway) : "-";
 
-        const rows = [];
-        const slots = bracketSlots && typeof bracketSlots==="object" ? bracketSlots : {};
-        Object.entries(slots).forEach(([slotId, s])=>{
-          if (awardRoundForSlot(slotId) !== String(roundId)) return;
-          const home = s?.homeTeam || "";
-          const away = s?.awayTeam || "";
-          const winner = s?.advanceWinner || "";
-          const label = (home && away) ? `${home} – ${away}` : slotId;
+          const head = document.createElement("div");
+          head.className = "kicker";
+          head.innerHTML = `<b>Továbbjutó tipp</b> (${escapeHtml(homeName)} / ${escapeHtml(awayName)}) • odds: H ${escapeHtml(oh)} / V ${escapeHtml(oa)} • alaptét: ${escapeHtml(String(getBaseStake(roundId)))}`;
+          advBox.appendChild(head);
 
-          const tips = advanceTips.filter(t=>String(t.slotId||t.slot||"")===String(slotId) && (t.user||t.email));
-          if (!tips.length) return;
+          const slotId = String(advInfo.slotId || "");
+          const slotTips = advanceTipsBySlot.get(slotId) || [];
 
-          tips.sort((a,b)=>{
-            const na = (nickByEmail[a.user]||a.nick||a.user||"");
-            const nb = (nickByEmail[b.user]||b.nick||b.user||"");
-            return na.localeCompare(nb,"hu");
-          });
+          if (!slotTips.length){
+            advBox.appendChild(kicker("Ehhez a párharc-továbbjutóhoz még nincs leadott tipp."));
+          } else if (!hasStarted){
+            advBox.appendChild(hiddenInfo("A továbbjutó tippek a kezdésig nem nyilvánosak."));
+            slotTips.filter(t => t.user === currentUserEmail).forEach(t=>{
+              const pick = (t.pick || "").toString().trim();
+              const pickedTeam = pick === "home" ? homeName : (pick === "away" ? awayName : "—");
+              const row = document.createElement("div");
+              row.className = "tip";
+              row.innerHTML = `<b>Saját továbbjutó tipped</b>: ${escapeHtml(pickedTeam)}`;
+              advBox.appendChild(row);
+            });
 
-          tips.forEach(t=>{
-            const email = t.user || t.email;
-            const nick = nickByEmail[email] || t.nick || email;
-            const pick = String(t.pick||t.choice||"");
-            const odds = Number(t.odds);
-            const correct = winner && pick ? (pick===winner) : false;
-            const stake = stakeForRound(String(roundId));
-            const pts = (winner && correct && isFinite(odds) && odds>0) ? (odds*stake) : 0;
+            if (currentUserRole === "admin"){
+              const uNames = [...new Set(slotTips.map(t => t.user).filter(Boolean))]
+                .map(e => escapeHtml(nickByEmail[e] || e));
+              const adminRow = document.createElement("div");
+              adminRow.className = "kicker";
+              adminRow.innerHTML = `<b>Leadott továbbjutó tippek (admin):</b> ${uNames.length ? uNames.join(", ") : "—"} (${uNames.length} fő)`;
+              advBox.appendChild(adminRow);
+            }
+          } else {
+            const winner = (advInfo.winner || "").toString().trim();
+            const winnerTeam = winner === "home" ? homeName : (winner === "away" ? awayName : "");
+            const stake = getBaseStake(roundId);
 
-            const pickText = pick==="home" ? "Hazai jut tovább" : (pick==="away" ? "Vendég jut tovább" : pick);
-            rows.push({label,nick,pickText,odds: (isFinite(odds)?odds:0), winner, correct, pts});
-          });
+            slotTips.forEach(t=>{
+              const pick = (t.pick || "").toString().trim();
+              const correct = (winner === "home" || winner === "away") ? (pick === winner) : false;
+              const ov = pick === "home" ? advInfo.oddsHome : (pick === "away" ? advInfo.oddsAway : null);
+              const pts = (correct && ov) ? Number(ov) * stake : 0;
 
-        if(!rows.length){
-          const p=document.createElement("div");
-          p.className="muted";
-          p.textContent="Ehhez a fordulóhoz még nincs megjeleníthető továbbjutó tipp / döntés.";
-          sec.appendChild(p);
-        } else {
-          const table = document.createElement("table");
-          table.className = "tbl";
-          table.innerHTML = `
-            <thead>
-              <tr>
-                <th>Párharc</th>
-                <th>Játékos</th>
-                <th>Tipp</th>
-                <th class="num">Odds</th>
-                <th class="num">Továbbjutó pont</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          `;
-          const tb = table.querySelector("tbody");
-          rows.forEach(r=>{
-            const tr=document.createElement("tr");
-            tr.innerHTML = `
-              <td>${r.label}</td>
-              <td>${r.nick}</td>
-              <td>${r.pickText}${r.winner? (r.correct? " ✅":" ❌"):""}</td>
-              <td class="num">${r.odds? fmt(r.odds):""}</td>
-              <td class="num">${r.pts? fmt(r.pts):""}</td>
-            `;
-            tb.appendChild(tr);
-          });
-          sec.appendChild(table);
+              const nick = nickByEmail[t.user] || t.user || "Ismeretlen";
+              const pickedTeam = pick === "home" ? homeName : (pick === "away" ? awayName : "—");
 
-          const note = document.createElement("div");
-          note.className="muted";
-          note.style.marginTop="8px";
-          note.textContent = "A meccspontok ettől függetlenül a meccsek alatt számolódnak; ez csak a továbbjutó pont.";
-          sec.appendChild(note);
+              const row = document.createElement("div");
+              row.className = "tip";
+              if (correct) row.classList.add("correct");
+              else if (winner) row.classList.add("wrong");
+
+              row.innerHTML = `
+                <b>${escapeHtml(nick)}</b>: ${escapeHtml(pickedTeam)}
+                ${winner ? ` – Továbbjutó: <b>${escapeHtml(winnerTeam || "—")}</b>` : ""}
+                ${winner ? ` – Pont: <b>${fmt(pts)}</b>` : ""}
+              `;
+              advBox.appendChild(row);
+            });
+          }
+
+          div.appendChild(advBox);
         }
 
-        card.appendChild(sec);
-      }
-mount.appendChild(card);
+        div.appendChild(tipsWrap);
+
+        const expl = document.createElement("div");
+        expl.className = "tips";
+        expl.appendChild(kicker("Részletek / breakdown"));
+        const any = Object.keys(breakdown).length > 0;
+        if(!any){
+          expl.appendChild(kicker("Nincs még breakdown (nincs outcome / továbbjutó)."));
+        }else{
+          Object.keys(breakdown).forEach(n=>{
+            const rows = breakdown[n] || [];
+            if(!rows.length) return;
+            const box = document.createElement("div");
+            box.style.marginTop = "10px";
+            box.innerHTML = `<div class="kicker"><b>${escapeHtml(n)}</b></div>` + rows.map(x=>`<div class="kicker">• ${escapeHtml(x)}</div>`).join("");
+            expl.appendChild(box);
+          });
+        }
+
+        grid.appendChild(expl);
+        div.appendChild(grid);
+
+        wrap.appendChild(div);
+      });
     }
 
-    function divEmpty(text){ const d=document.createElement("div"); d.className="empty"; d.textContent=text; return d; }
-    function kicker(text){ const d=document.createElement("div"); d.className="kicker"; d.textContent=text; return d; }
-    function hiddenInfo(text){ const d=document.createElement("div"); d.className="hidden-info"; d.textContent=text; return d; }
-
-    /* ---------------- INIT (NB1 logikahoz igazítva) ---------------- */
-    document.addEventListener("DOMContentLoaded", async () => {
-      /* Liga-váltó mount: BAL SZÉL – cím mellett */
-      try{ const mod = await import('./league-switcher.js'); if(mod&&typeof mod.initLeagueSwitcher==='function'){ mod.initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') }); } }catch(e){}
-
-      const bonusOverlayEl = document.getElementById("bonusOverlay");
-      document.getElementById("bonusDetailsBtn").addEventListener("click", openBonusModal);
-      document.getElementById("bonusClose").addEventListener("click", closeBonusModal);
-      bonusOverlayEl.addEventListener("click", (e)=> { if (e.target === bonusOverlayEl) closeBonusModal(); });
-      document.getElementById("userSearch").addEventListener("input", (e)=> renderUsersList(e.target.value));
-
-      document.getElementById("champDetailsBtn").addEventListener("click", openChampModal);
-      document.getElementById("champClose").addEventListener("click", closeChampModal);
-      document.getElementById("goldenDetailsBtn").addEventListener("click", openGoldenModal);
-      document.getElementById("goldenClose").addEventListener("click", closeGoldenModal);
-      document.getElementById("champUserSearch").addEventListener("input",(e)=>renderChampUsers(e.target.value));
-      document.getElementById("goldenUserSearch").addEventListener("input",(e)=>renderGoldenUsers(e.target.value));
-
-      onAuthStateChanged(auth, async (user) => {
+    async function loadUsers(){
+      Object.keys(nickByEmail).forEach(k=>delete nickByEmail[k]);
       try{
-        if (!user) { window.location.href = "login.html"; return; }
-        currentUserEmail = user.email;
-
-        const userRef = doc(db, "users", currentUserEmail);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const d = userSnap.data();
-          currentUserNick = d.nickname || currentUserEmail;
-          currentUserRole = d.role || "user";
-          favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeen = d.chatLastSeenUcl || null;
-        } else {
-          currentUserNick = currentUserEmail;
-          currentUserRole = "user";
-          favouriteTeamucl = "";
-          chatLastSeen = null;
-        }
-        document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
-        if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
-
-        if (favouriteTeamucl) {
-          const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
-          document.body.classList.add(themeClass);
-          const crest = crestMap[favouriteTeamucl];
-          if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
-        }
-
-        const usersSnap = await getDocs(collection(db, "users"));
-        usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
-
-        const matchesSnap = await getDocs(collection(db, "ucl_matches"));
-        matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-
-        const roundSet = new Set();
-        matches.forEach(m => { const r = matchRound(m); if (r) roundSet.add(r); });
-        roundsAsc = Array.from(roundSet).sort((a,b)=> parseInt(a)-parseInt(b));
-        buildRoundsUI();
-
-        onSnapshot(rulesRef, snap=>{
-          const d=snap.exists()?snap.data():{};
-          const m=d.baseStakeByRound||{};
-          const out={};
-          for(let i=1;i<=17;i++){
-            const k=String(i);
-            const v=Number(m[k]);
-            out[k]=(isFinite(v)&&v>0)?v:1;
-          }
-          baseStakeByRound=out;
-          const sel = document.getElementById("roundSelect");
-          if (sel?.value) renderRound(sel.value);
+        const snap = await getDocs(collection(db,"users"));
+        snap.forEach(d=>{
+          const u = d.data() || {};
+          const email = d.id;
+          nickByEmail[email] = u.nickname || email;
         });
+      }catch(e){}
+    }
 
-        onSnapshot(bracketRef, snap=>{
-          const d=snap.exists()?snap.data():{};
-          bracketSlots = (d.slots && typeof d.slots==="object") ? d.slots : {};
-          const sel = document.getElementById("roundSelect");
-          if (sel?.value) renderRound(sel.value);
-        });
+    function populateRoundSelect(){
+      const sel = document.getElementById("roundSelect");
+      sel.innerHTML = roundsAsc.map(r=>`<option value="${r}">${r}. forduló</option>`).join("");
+      if (roundsAsc.length) sel.value = String(roundsAsc[roundsAsc.length-1]);
+    }
 
-        const advSnap = await getDocs(collection(db,"ucl_advance_tips"));
-        advanceTips = advSnap.docs.map(d=>({ id:d.id, ...d.data(), user:(d.data()?.user||d.data()?.email) }));
-        onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
-          advanceTips = snap.docs.map(d=>({ id:d.id, ...d.data(), user:(d.data()?.user||d.data()?.email) }));
-          const sel = document.getElementById("roundSelect");
-          if (sel?.value) renderRound(sel.value);
-        });
-
-        officialTop8 = deriveTop8FromMatches(matches);
-        refreshBonusCard();
-
-        onSnapshot(collection(db,"ucl_matches"), snap=>{
-          const ms = snap.docs.map(d=>({id:d.id, ...d.data()}));
-          matches = ms;
-          officialTop8 = deriveTop8FromMatches(ms);
-          refreshBonusCard();
-          const sel = document.getElementById("roundSelect");
-          if (sel?.value) renderRound(sel.value);
-          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
-        });
-
-        /* ---- TIPPBEOLVASÁS: NB1-elvek (legfrissebb per user-meccs) + user/email normalizáció ---- */
-        tipsByMatch.clear();
-        const tipsSnapAll = await getDocs(collection(db, "ucl_tips"));
-        const latest = new Map();
-        tipsSnapAll.forEach(d => {
-          const raw = d.data() || {};
-          const t = { id: d.id, ...raw, user: raw.user || raw.email }; // normalizálás
-          if (!t?.matchId || !t?.user) return;
-          const k = t.user + "|" + t.matchId;
-          const cur = latest.get(k);
-          const curTs = cur?.updatedAt?.toMillis?.() || cur?.createdAt?.toMillis?.() || cur?.timestamp?.toMillis?.() || 0;
-          const ts    = t.updatedAt?.toMillis?.() || t.createdAt?.toMillis?.() || t.timestamp?.toMillis?.() || 0;
-          if (!cur || ts >= curTs) latest.set(k, t);
-        });
-        for (const tip of latest.values()){
-          if (!tipsByMatch.has(tip.matchId)) tipsByMatch.set(tip.matchId, []);
-          tipsByMatch.get(tip.matchId).push(tip);
-        }
-
-        /* ➜ Tipp-map kész: azonnali újrarender, hogy rögtön látszódjanak a tippek */
-        {
-          const sel = document.getElementById("roundSelect");
-          if (sel?.value) renderRound(sel.value);
-        }
-
-        try{
-          const cSnap = await getDocs(collection(db,"ucl_championCandidates"));
-          championCandidates = cSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.team);
-        }catch{ championCandidates=[]; }
-        try{
-          const gSnap = await getDocs(collection(db,"ucl_goldenBootCandidates"));
-          goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
-        }catch{ goldenCandidates=[]; }
-
-        onSnapshot(doc(db,"ucl_official","current"), snap=>{
-          const d = snap.exists() ? snap.data() : {};
-          officialChampion = d.champion || "";
-          officialGolden = d.goldenBoot && d.goldenBoot.player ? { player:d.goldenBoot.player, team:d.goldenBoot.team||"" } : {player:"",team:""};
-          refreshChampionCard();
-          refreshGoldenCard();
-        });
-
-        onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
-          top8Tips = snap.docs.map(d=>{
-            const t=d.data()||{};
-            const email = t.email || d.id;
-            return { email, nick: nickByEmail[email] || t.nick || email, picks: Array.isArray(t.picks)? t.picks.slice(0,8):[] };
-          });
-          refreshBonusCard();
-          if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
-        });
-
-        onSnapshot(collection(db,"ucl_championPickTips"), snap=>{
-          championTips = snap.docs.map(d=>{
-            const t=d.data()||{}; const email=t.email || d.id;
-            return { email, nick: nickByEmail[email] || t.nick || email, team: t.team || "" };
-          });
-          refreshChampionCard();
-        });
-
-        onSnapshot(collection(db,"ucl_goldenBootTips"), snap=>{
-          goldenTips = snap.docs.map(d=>{
-            const t=d.data()||{}; const email=t.email || d.id;
-            return { email, nick: nickByEmail[email] || t.nick || email, player: t.player || "", team: t.team || "" };
-          });
-          refreshGoldenCard();
-        });
-
-        updatePendingBadge(currentUserEmail);
-        initChat(userRef);
-      }catch(e){
-        try{ console.error('results_ucl fatal', e); }catch{}
-        const box=document.getElementById('fatalBox');
-        if(box){ box.style.display='block'; box.textContent='Hiba: '+(e&&e.message?e.message:String(e)); }
-      }finally{
-        if(window.hideLoader) hideLoader();
-      }
-      });
-
-      document.getElementById("logout").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.href = "login.html");
-      });
+    document.addEventListener("DOMContentLoaded", ()=>{
+      initLeagueSwitcher({ mountTarget: document.getElementById("leagueSwitchMount") });
     });
 
-    /* ---------------- Nav „függő tippek” badge (user/email OR) ---------------- */
-    async function updatePendingBadge(email){
-      try{
-        const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date())));
-        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      currentUserEmail = user.email;
 
-        const tipsUserSnap  = await getDocs(query(collection(db,"ucl_tips"), where("user","==",  currentUserEmail)));
-        const tipsEmailSnap = await getDocs(query(collection(db,"ucl_tips"), where("email","==", currentUserEmail)));
-
-        const latestByMatch = new Map();
-        [...tipsUserSnap.docs, ...tipsEmailSnap.docs].forEach(x=>{
-          const t=x.data()||{}; const mid=t.matchId; if(!mid) return;
-          const ts =(t.updatedAt?.toMillis?.()||t.createdAt?.toMillis?.()||t.timestamp?.toMillis?.()||0);
-          const cur=latestByMatch.get(mid);
-          const cts=(cur?.updatedAt?.toMillis?.()||cur?.createdAt?.toMillis?.()||cur?.timestamp?.toMillis?.()||0);
-          if(!cur || ts>=cts) latestByMatch.set(mid,t);
-        });
-
-        const tippedIds = new Set(Array.from(latestByMatch.keys()));
-        const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-        const badge = document.getElementById("tipsBadge");
-        if (badge){ if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; } }
-      }catch{}
-    }
-
-    /* ---------------- Chat (UCL) ---------------- */
-    function initChat(userRef){
-      const fab = document.getElementById('chatToggle');
-      const fabBadge = document.getElementById('chatFabBadge');
-      const panel = document.getElementById('chatPanel');
-      const closeBtn = document.getElementById('chatClose');
-      const listEl = document.getElementById('chatMessages');
-      const inputEl = document.getElementById('chatInput');
-      const sendBtn = document.getElementById('chatSendBtn');
-
-      function open(){ panel.classList.add('open'); setTimeout(()=>inputEl?.focus(), 50); markSeen(); }
-      function close(){ panel.classList.remove('open'); }
-      function toggle(){ panel.classList.contains('open') ? close() : open(); }
-      fab.addEventListener('click', toggle);
-      closeBtn.addEventListener('click', close);
-
-      let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
-
-      // UCL chat kollekció
-      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
-        listEl.innerHTML = '';
-        if (snap.empty){
-          const empty = document.createElement('div');
-          empty.className = 'chat-empty';
-          empty.textContent = 'Még nincs üzenet. Légy te az első!';
-          listEl.appendChild(empty);
-        } else {
-          let unread = 0;
-          snap.forEach(docu=>{
-            const d = docu.data();
-            const tsMs = d.ts?.toMillis?.() || 0;
-            if (tsMs > lastSeenMs) unread++;
-
-            const row = document.createElement('div');
-            row.className = 'msg';
-            row.innerHTML = `
-              <div style="flex:1 1 auto">
-                <div class="meta"><strong>${d.nick || 'Ismeretlen'}</strong> • ${d.ts ? fmtTime(d.ts) : ''}</div>
-                <div class="text">${(d.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-              </div>
-            `;
-            const canDelete = (currentUserRole === 'admin') || (d.email === currentUserEmail);
-            if (canDelete){
-              const del = document.createElement('button');
-              del.className = 'del';
-              del.textContent = 'Törlés';
-              del.title = 'Üzenet törlése';
-              del.addEventListener('click', async ()=>{ try{ await deleteDoc(doc(db, 'chatMessages_ucl', docu.id)); }catch(e){} });
-              row.appendChild(del);
-            }
-            listEl.appendChild(row);
-          });
-
-          if (!panel.classList.contains('open') && unread > 0){
-            fab.classList.add('has-unread');
-            fabBadge.textContent = unread > 99 ? '99+' : String(unread);
-          } else {
-            fab.classList.remove('has-unread');
-            fabBadge.textContent = '';
-          }
-
-          setTimeout(()=>{ listEl.scrollTop = listEl.scrollHeight; }, 0);
-        }
-      });
-
-      sendBtn.addEventListener('click', async ()=>{
-        const txt = (inputEl.value || '').trim();
-        if (!txt){ inputEl.focus(); return; }
-        const backup = txt;
-        inputEl.value = '';
-        try{
-          await addDoc(collection(db,'chatMessages_ucl'), { email: currentUserEmail, nick: currentUserNick || 'Ismeretlen', text: backup, ts: serverTimestamp() });
-          if (panel.classList.contains('open')) await markSeen();
-        }catch(e){
-          inputEl.value = backup; inputEl.focus();
-        }
-      });
-      inputEl.addEventListener('keydown', (e)=>{
-        if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
-      });
-
-      async function markSeen(){
-        try{
-          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true });
-          lastSeenMs = Date.now();
-          fab.classList.remove('has-unread');
-          fabBadge.textContent = '';
-        }catch(e){}
+      const userRef = doc(db, "users", currentUserEmail);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const d = userSnap.data();
+        currentUserNick = d.nickname || currentUserEmail;
+        currentUserRole = d.role || "user";
+        favouriteTeamucl = d.favouriteTeamucl || "";
+        chatLastSeen = d.chatLastSeenUcl || null;
+      } else {
+        currentUserNick = currentUserEmail;
+        currentUserRole = "user";
+        favouriteTeamucl = "";
+        chatLastSeen = null;
       }
-    }
+      document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
+      if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "inline-flex";
+
+      if (favouriteTeamucl) {
+        const themeClass = "theme-" + favouriteTeamucl.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-");
+        document.body.classList.add(themeClass);
+        const crest = crestMap[favouriteTeamucl];
+        if (crest) {
+          const img = document.getElementById("favCrest");
+          img.src = crest;
+          img.hidden = false;
+          img.alt = favouriteTeamucl;
+        }
+      }
+
+      await loadUsers();
+
+      const msSnap = await getDocs(collection(db,"ucl_matches"));
+      matches = msSnap.docs.map(d=>({id:d.id, ...d.data()}));
+      roundsAsc = deriveRounds(matches);
+      populateRoundSelect();
+
+      onSnapshot(collection(db,"ucl_matches"), snap=>{
+        matches = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        roundsAsc = deriveRounds(matches);
+        populateRoundSelect();
+        const sel = document.getElementById("roundSelect");
+        if (sel?.value) renderRound(sel.value);
+      });
+
+      tipsByMatch.clear();
+      const tipsSnapAll = await getDocs(collection(db,'ucl_tips'));
+      const latest = new Map();
+      tipsSnapAll.forEach(docu=>{
+        const t = docu.data() || {};
+        const user = t.user || t.email || t.uid || "";
+        const matchId = t.matchId || "";
+        if (!user || !matchId) return;
+        const k = user + "|" + matchId;
+        const cur = latest.get(k);
+        const curTs = cur?.updatedAt?.toMillis?.() || cur?.timestamp?.toMillis?.() || 0;
+        const ts = t.updatedAt?.toMillis?.() || t.timestamp?.toMillis?.() || 0;
+        if (!cur || ts >= curTs) latest.set(k, { ...t, user, matchId });
+      });
+      for (const tip of latest.values()){
+        if (!tipsByMatch.has(tip.matchId)) tipsByMatch.set(tip.matchId, []);
+        tipsByMatch.get(tip.matchId).push(tip);
+      }
+
+      await loadBaseStakes();
+      await loadBracketFirstLegs();
+      await loadAdvanceTipsAll();
+
+      try{
+        onSnapshot(doc(db,"settings","ucl_round_stakes"), async ()=>{ await loadBaseStakes(); const sel=document.getElementById("roundSelect"); if(sel?.value) renderRound(sel.value); });
+      }catch(e){}
+      try{
+        onSnapshot(doc(db,"settings","ucl_bracket"), async ()=>{ await loadBracketFirstLegs(); const sel=document.getElementById("roundSelect"); if(sel?.value) renderRound(sel.value); });
+      }catch(e){}
+      try{
+        onSnapshot(collection(db,"ucl_advance_tips"), async ()=>{ await loadAdvanceTipsAll(); const sel=document.getElementById("roundSelect"); if(sel?.value) renderRound(sel.value); });
+      }catch(e){}
+
+      const sel = document.getElementById("roundSelect");
+      if (sel?.value) renderRound(sel.value);
+
+      sel.addEventListener("change", ()=> renderRound(sel.value));
+
+      document.getElementById("logout").addEventListener("click", ()=>{
+        signOut(auth).then(()=>window.location.href="login.html");
+      });
+
+      if(window.hideLoader) hideLoader();
+    });
   </script>
 </head>
+
 <body>
   <div class="layout">
-    <div id="fatalBox" style="display:none;margin:10px 0;padding:10px 12px;border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:12px;font-weight:700"></div>
     <div class="header">
       <div class="header-left">
-        <img id="favCrest" class="fav-crest" alt="" hidden>
+        <img id="favCrest" class="fav-crest" alt="" hidden />
         <div>
-          <h1>BL TippLiga</h1>
+          <h1>BL TippLiga – Eredmények</h1>
           <p id="welcome" class="welcome"></p>
         </div>
-        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BAL OLDALON A CÍM MELLETT -->
-        <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
+        <div id="leagueSwitchMount" aria-label="Tippjáték választó"></div>
       </div>
-      <div>
+      <div class="row">
         <button id="logout" class="btn-accent" aria-label="Kilépés">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/>
-          </svg>
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 13v-2H7V7l-5 5 5 5v-4h9zm3-10H11a2 2 0 0 0-2 2v3h2V5h8v14h-8v-3H9v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/></svg>
           Kilépés
         </button>
+        <a href="dashboard_ucl.html" class="btn-accent" style="text-decoration:none">Vissza a főoldalra</a>
+        <a id="adminLink" href="admin_ucl.html" class="btn-accent" style="text-decoration:none;display:none">Admin</a>
       </div>
     </div>
 
-    <!-- NAV -->
-    <nav class="nav-grid">
-      <a class="nav-card" href="dashboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg>
-        </div>
-        <div class="text"><span class="title">Főoldal</span><span class="desc">Tabella, hírek, kedvencek</span></div>
-      </a>
-      <a class="nav-card" href="positions_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6v16H9zM3 10h4v10H3zm14 6h4v4h-4z"/></svg>
-        </div>
-        <div class="text"><span class="title">Szezon végi sorrend <span id="tipsBadge" class="pill-badge" hidden></span></span><span class="desc">Ligafázis Top 8, győztes, gólkirály</span></div>
-      </a>
-      <a class="nav-card" href="matches_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Meccstippek</span><span class="desc">Közelgő meccsek & tippek</span></div>
-      </a>
-      <a class="nav-card" href="results_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6a2 2 0 0 1 2 2h2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4h2a2 2 0 0 1 2-2Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Eredmények</span><span class="desc">Fordulónkénti bontás</span></div>
-      </a>
-      <a class="nav-card" href="leaderboard_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1a6 6 0 0 1-4 3.9V17h3v2H9v-2h3v-2.1A6 6 0 0 1 8 11H7A5 5 0 0 1 2 6V5a2 2 0 0 1 2-2z"/></svg>
-        </div>
-        <div class="text"><span class="title">Összpontszám</span><span class="desc">Toplista & bónusz</span></div>
-      </a>
-      <a class="nav-card" href="profile_ucl.html">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Profil</span><span class="desc">Beállítások & kedvenc csapat</span></div>
-      </a>
-      <a class="nav-card" id="adminLink" href="admin_ucl.html" style="display:none;">
-        <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Z"/></svg>
-        </div>
-        <div class="text"><span class="title">Admin</span><span class="desc">Szezon-zár & beállítások</span></div>
-      </a>
-    </nav>
-
-    <!-- Bónuszok összegzés -->
     <section class="card">
-      <h3>Bónuszok – összegzés</h3>
-
-      <div class="bonus-wrap">
-        <div>
-          <div class="bonus-title">Top 8 egyezés</div>
-          <div class="bonus-muted">A kiválasztott Top 8-ból mennyi egyezik a tabella (Top 8) csapataival.</div>
-        </div>
-        <div class="right">
-          <span id="bonusCount" class="badge">—/8</span>
-          <span id="bonusPct" class="badge">+0%</span>
-          <div class="bonus-bar" style="width:220px"><div id="bonusBarFill" style="width:0%"></div></div>
-          <button id="bonusDetailsBtn" class="btn-accent">Részletek</button>
-        </div>
-      </div>
-
-      <hr style="border:none;border-top:1px solid var(--line,#e6eaf1);margin:0 12px">
-
-      <div class="bonus-wrap">
-        <div>
-          <div class="bonus-title">Végső győztes</div>
-          <div class="bonus-muted">Hivatalos győztes és kik találták el.</div>
-        </div>
-        <div class="right">
-          <div>Hivatalos: <b id="champOfficial">—</b></div>
-          <div>Saját tipp: <b id="champMine">—</b> <span id="champMinePct" class="badge" style="margin-left:6px"></span></div>
-          <button id="champDetailsBtn" class="btn-accent">Részletek</button>
-        </div>
-      </div>
-
-      <hr style="border:none;border-top:1px solid var(--line,#e6eaf1);margin:0 12px">
-
-      <div class="bonus-wrap">
-        <div>
-          <div class="bonus-title">Gólkirály</div>
-          <div class="bonus-muted">Hivatalos gólkirály és kik találták el.</div>
-        </div>
-        <div class="right">
-          <div>Hivatalos: <b id="goldenOfficial">—</b></div>
-          <div>Saját tipp: <b id="goldenMine">—</b> <span id="goldenMinePct" class="badge" style="margin-left:6px"></span></div>
-          <button id="goldenDetailsBtn" class="btn-accent">Részletek</button>
+      <h3>Forduló kiválasztása</h3>
+      <div class="body">
+        <div class="row">
+          <select id="roundSelect" class="select" aria-label="Forduló"></select>
+          <span class="muted">Kezdés után látszanak a tippek. Továbbjutó tippek a párharc első meccsénél jelennek meg.</span>
         </div>
       </div>
     </section>
 
-    <!-- Forduló eredmények -->
     <section class="card">
-      <h3>Forduló eredmények</h3>
-      <div class="controls">
-        <select id="roundSelect" class="select" aria-label="Forduló választása"></select>
+      <h3>Eredmények</h3>
+      <div class="body">
+        <div id="roundWrap" class="round"></div>
       </div>
-      <div id="resultsContainer"></div>
     </section>
   </div>
-
-  <!-- Top 8 részletek modál -->
-  <div id="bonusOverlay" class="overlay" role="dialog" aria-modal="true" aria-label="Top 8 részletek">
-    <div class="modal">
-      <aside class="aside">
-        <h4>Játékosok</h4>
-        <div class="search"><input id="userSearch" type="search" placeholder="Keresés névre/emailre…"></div>
-        <div id="usersList" class="list"></div>
-      </aside>
-      <main class="main">
-        <div class="head">
-          <div style="display:flex;flex-direction:column">
-            <div id="detailTitle" style="font-weight:800">Top 8 – </div>
-            <div class="bonus-muted">Egyezések a tabella Top 8-cal</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span id="detailCount" class="badge">—/8</span>
-            <span id="detailPct" class="badge">+0%</span>
-            <button id="bonusClose" class="btn-accent">Bezár</button>
-          </div>
-        </div>
-        <div class="body">
-          <table>
-            <thead>
-              <tr><th>#</th><th>Tabella (Top 8)</th><th>Játékos listájában</th><th>Találat</th></tr>
-            </thead>
-            <tbody id="bonusTableBody"></tbody>
-          </table>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <!-- Győztes modál -->
-  <div id="champOverlay" class="overlay" role="dialog" aria-modal="true" aria-label="Győztes – találatok">
-    <div class="modal">
-      <aside class="aside">
-        <h4>Játékosok</h4>
-        <div class="search"><input id="champUserSearch" type="search" placeholder="Keresés névre/tippre…"></div>
-        <div id="champUsers" class="list"></div>
-      </aside>
-      <main class="main">
-        <div class="head">
-          <div style="display:flex;flex-direction:column">
-            <div id="champDetailTitle" style="font-weight:800">Végső győztes – </div>
-            <div class="bonus-muted">Találat esetén a positions oldalon látható +%-kal</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span id="champPct" class="badge">—</span>
-            <button id="champClose" class="btn-accent">Bezár</button>
-          </div>
-        </div>
-        <div class="body">
-          <table>
-            <thead>
-              <tr><th>#</th><th>Hivatalos</th><th>Játékos listájában</th><th>Találat</th></tr>
-            </thead>
-            <tbody id="champTableBody"></tbody>
-          </table>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <!-- Gólkirály modál -->
-  <div id="goldenOverlay" class="overlay" role="dialog" aria-modal="true" aria-label="Gólkirály – találatok">
-    <div class="modal">
-      <aside class="aside">
-        <h4>Játékosok</h4>
-        <div class="search"><input id="goldenUserSearch" type="search" placeholder="Keresés névre/tippre…"></div>
-        <div id="goldenUsers" class="list"></div>
-      </aside>
-      <main class="main">
-        <div class="head">
-          <div style="display:flex;flex-direction:column">
-            <div id="goldenDetailTitle" style="font-weight:800">Gólkirály – </div>
-            <div class="bonus-muted">Találat esetén a positions oldalon látható +%-kal</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span id="goldenPct" class="badge">—</span>
-            <button id="goldenClose" class="btn-accent">Bezár</button>
-          </div>
-        </div>
-        <div class="body">
-          <table>
-            <thead>
-              <tr><th>#</th><th>Hivatalos</th><th>Játékos listájában</th><th>Találat</th></tr>
-            </thead>
-            <tbody id="goldenTableBody"></tbody>
-          </table>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <!-- Chat -->
-  <button id="chatToggle" class="chat-fab" title="Közösségi chat">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/></svg>
-    <span id="chatFabBadge" class="fab-badge"></span>
-  </button>
-
-  <section id="chatPanel" class="chat-panel" aria-label="Közösségi chat">
-    <div class="chat-head">
-      <div class="chat-title">Közösségi chat</div>
-      <button id="chatClose" aria-label="Bezárás">✕</button>
-    </div>
-    <div id="chatMessages" class="chat-list" role="log" aria-live="polite"></div>
-    <div id="chatComposer">
-      <input id="chatInput" type="text" placeholder="Írj valamit…" autocomplete="off">
-      <button id="chatSendBtn">Küldés</button>
-    </div>
-  </section>
 </body>
 </html>
