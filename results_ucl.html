@@ -143,8 +143,14 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    /* Liga-váltó – csak mount kell */
-    import { initLeagueSwitcher } from "./league-switcher.js";
+    /* Liga-váltó – opcionális (ne álljon meg az oldal, ha hiányzik a fájl) */
+    let initLeagueSwitcher = () => {};
+    try {
+      const mod = await import("./league-switcher.js");
+      if (mod && typeof mod.initLeagueSwitcher === "function") initLeagueSwitcher = mod.initLeagueSwitcher;
+    } catch (e) {
+      console.warn("league-switcher.js nem található / nem tölthető be:", e);
+    }
 
     /* ---------------- Firebase init ---------------- */
     const firebaseConfig = {
