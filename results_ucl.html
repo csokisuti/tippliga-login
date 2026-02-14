@@ -621,7 +621,6 @@
           summary[nick] = (summary[nick]||0) + pts;
           (breakdown[nick] ||= []).push(`${m.homeTeam}–${m.awayTeam}: ${pick} → ${fmt(pts)} pont`);
         });
-      });
 
       const summaryDiv = document.createElement("div");
       summaryDiv.className = "summary";
@@ -754,7 +753,6 @@
             const pickText = pick==="home" ? "Hazai jut tovább" : (pick==="away" ? "Vendég jut tovább" : pick);
             rows.push({label,nick,pickText,odds: (isFinite(odds)?odds:0), winner, correct, pts});
           });
-        });
 
         if(!rows.length){
           const p=document.createElement("div");
@@ -876,14 +874,6 @@ mount.appendChild(card);
           baseStakeByRound=out;
           const sel = document.getElementById("roundSelect");
           if (sel?.value) renderRound(sel.value);
-      }catch(e){
-        try{ console.error('results_ucl fatal', e); }catch{}
-        const box=document.getElementById('fatalBox');
-        if(box){ box.style.display='block'; box.textContent='Hiba: '+(e&&e.message?e.message:String(e)); }
-      }finally{
-        if(window.hideLoader) hideLoader();
-      }
-
         });
 
         onSnapshot(bracketRef, snap=>{
@@ -984,7 +974,13 @@ mount.appendChild(card);
 
         updatePendingBadge(currentUserEmail);
         initChat(userRef);
-        if (window.hideLoader) hideLoader();
+      }catch(e){
+        try{ console.error('results_ucl fatal', e); }catch{}
+        const box=document.getElementById('fatalBox');
+        if(box){ box.style.display='block'; box.textContent='Hiba: '+(e&&e.message?e.message:String(e)); }
+      }finally{
+        if(window.hideLoader) hideLoader();
+      }
       });
 
       document.getElementById("logout").addEventListener("click", () => {
@@ -1348,4 +1344,3 @@ mount.appendChild(card);
   </section>
 </body>
 </html>
-
