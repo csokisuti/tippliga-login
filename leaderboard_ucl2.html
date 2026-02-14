@@ -65,13 +65,6 @@
     .grid{display:grid}
     .hdr,.row{display:contents}
     .cell{padding:8px 12px;border-bottom:1px solid var(--line,#e6eaf1);background:#fff;display:flex;align-items:center;gap:8px;box-sizing:border-box;height:48px;overflow:hidden}
-    /* ---- Összesen bontás (meccs + továbbjutó) ---- */
-    .cell.total{flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;overflow:visible;height:auto;min-height:48px;line-height:1.15}
-    .cell.total .total-sub{font-size:12px;color:#64748b;opacity:.9;white-space:nowrap}
-    @media (max-width:700px){
-      .cell.total .total-sub{white-space:normal}
-    }
-
     .hdr .cell{font-weight:800;background:#f7f8fc;height:44px}
     .row-bg:nth-child(even) .cell{background:#fcfdff}
 
@@ -121,6 +114,8 @@
     /* Aktív rendezésnél a cella kap halvány háttért – a gomb külseje változatlan */
     .grid.rounds .cell.sorted{background:#f0f7ff}
     .grid.rounds .cell.sorted.top{background:#e7f1ff}
+
+    .subline{font-size:11px;opacity:.85;margin-top:3px;line-height:1.1;white-space:nowrap}
 
     /* Chat – dashboard-look */
     .chat-fab{position:fixed;right:22px;bottom:22px;z-index:999;width:52px;height:52px;border-radius:999px;border:0;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,.15)}
@@ -196,8 +191,6 @@
     .nav-card .title{font-weight:800}
     .nav-card .desc{color:var(--muted,#64748b);font-size:12px}
 /* === /OVERRIDE === */
-
-    .total-sub{margin-top:3px;font-size:11px;line-height:1.15;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 
   <script type="module">
@@ -273,8 +266,28 @@
     let officialTop8=[], officialChampion="", officialGoldenPlayer="";
     let top8TipsByEmail={}, championPickByEmail={}, goldenPickByEmail={};
     let latestTipsByUserMatch=new Map();
-    let advanceTipsByUserSlot=new Map();
-    let bracketSlots={};
+    let baseStakeByRound = {};
+    let latestAdvanceTipsByUserSlot = new Map();
+    let bracketSlots = {};
+
+    const rulesRef = doc(db,"settings","ucl_rules");
+    const bracketRef = doc(db,"settings","ucl_bracket");
+
+    function stakeForRound(r){
+      const k = String(r||"");
+      const v = baseStakeByRound[k];
+      return (v!=null && isFinite(v) && Number(v)>0) ? Number(v) : 1;
+    }
+
+    function awardRoundForSlot(slotId){
+      const s = String(slotId||"");
+      if (s.startsWith("PO")) return "10";
+      if (s.startsWith("R16_")) return "12";
+      if (s.startsWith("QF")) return "14";
+      if (s.startsWith("SF")) return "16";
+      if (s.startsWith("F")) return "17";
+      return "";
+    }
     let rows=[];
     let showBots=false;
     let botPickStore={};
@@ -407,16 +420,32 @@
           recomputeRows(); renderTable();
         });
 
-        /* UCL továbbjutó tippek */
-        onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
-          advanceTipsByUserSlot = collectAdvanceTips(snap);
+        /* RULES (alaptét fordulónként) */
+        onSnapshot(rulesRef, snap=>{
+          const d=snap.exists()?snap.data():{};
+          const m=d.baseStakeByRound||{};
+          const out={};
+          for(let i=1;i<=17;i++){
+            const k=String(i);
+            const v=Number(m[k]);
+            out[k]=(isFinite(v)&&v>0)?v:1;
+          }
+          baseStakeByRound=out;
           recomputeRows(); renderTable();
         });
 
-        /* UCL bracket (továbbjutó official + odds) */
-        onSnapshot(doc(db,"settings","ucl_bracket"), snap=>{
-          const d = snap.exists()? (snap.data()||{}) : {};
+        /* BRACKET (továbbjutó admin) */
+        onSnapshot(bracketRef, snap=>{
+          const d=snap.exists()?snap.data():{};
           bracketSlots = (d.slots && typeof d.slots==="object") ? d.slots : {};
+          recomputeRows(); renderTable();
+        });
+
+        /* ADVANCE TIPS */
+        const advAll=await getDocs(collection(db,"ucl_advance_tips"));
+        latestAdvanceTipsByUserSlot = collectLatestAdvanceTips(advAll);
+        onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
+          latestAdvanceTipsByUserSlot = collectLatestAdvanceTips(snap);
           recomputeRows(); renderTable();
         });
 
@@ -504,17 +533,25 @@
       return latest;
     }
 
-    function collectAdvanceTips(snap){
-      const map=new Map();
+    function collectLatestAdvanceTips(snap){
+      const latest=new Map();
       snap.forEach(docu=>{
-        const t=docu.data()||{};
-        const user=t.user||"";
-        const slot=String(t.slotId||t.slot||"");
-        if(!user||!slot) return;
-        map.set(user+"|"+slot,{id:docu.id,...t,slotId:slot});
+        const t=docu.data?docu.data():docu;
+        const id=docu.id || t?.id || "";
+        const user=t?.user||t?.email||"";
+        const slotId=String(t?.slotId||t?.slot||"");
+        if(!user||!slotId) return;
+        const key=user+"__"+slotId;
+        const prev=latest.get(key);
+        const ts=tipTsMs(t);
+        const prevTs=prev?tipTsMs(prev):0;
+        if(!prev || ts>=prevTs){
+          latest.set(key,{ id, ...t });
+        }
       });
-      return map;
+      return latest;
     }
+
 
     function calcTop8Pct(email){
       const userPicks=(top8TipsByEmail[email]||[]).slice(0,8).filter(Boolean);
@@ -567,9 +604,11 @@
           const list=[];
           tips.forEach((t,i)=>{
             if(!t.pick||!t.odds||!isFinite(t.odds)) return;
+            const rnum=parseInt(r)||0;
+            const stake=stakeForRound(r);
             const doubled=i===bestIdx; const oc=outcomeOfMatch(t.m);
-            const correct=oc===t.pick; const mult=doubled?2:1;
-            if(correct){ base+=t.odds*mult; perRound[r]=(perRound[r]||0)+t.odds*mult; }
+            const correct=oc===t.pick; const mult=(rnum<=8 && doubled)?2:1;
+            if(correct){ base+=t.odds*stake*mult; perRound[r]=(perRound[r]||0)+t.odds*stake*mult; }
             else { perRound[r]=(perRound[r]||0)+0; }
             list.push({matchId:t.m.id,homeTeam:t.m.homeTeam||t.m.home||"",awayTeam:t.m.awayTeam||t.m.away||"",pick:t.pick,odds:t.odds||0,doubled,correct,outcome:oc});
           });
@@ -588,63 +627,63 @@
     function recomputeRows(){
       const latest = latestTipsByUserMatch;
       const player={}; const rounds=new Set();
-
-      // 1) Alap meccs tippek pontjai
       latest.forEach(tip=>{
         const m=matchesById[tip.matchId]; if(!m) return;
         const r=matchRound(m); if(!r) return;
         rounds.add(r);
         const pick=tipChoice(tip); if(!pick) return;
         const oc=outcomeOfMatch(m); if(!oc) return; /* csak lezárt meccs */
-        const correct=pick===oc; const ov=getOdds(m,pick); const mult=tipDouble(tip)?2:1;
-        const pts=(correct && ov)? Number(ov)*mult : 0;
+        const rnum=parseInt(r)||0;
+        const stake=stakeForRound(r);
+        const correct=pick===oc; const ov=getOdds(m,pick);
+        const mult=(rnum<=8 && tipDouble(tip))?2:1;
+        const pts=(correct && ov)? Number(ov)*stake*mult : 0;
         const email=tip.user; const nick=usersMap[email]||email;
-        if(!player[email]) player[email]={nick,email,matchBase:0,advanceBase:0,perRound:{}};
-        player[email].matchBase+=pts;
+        if(!player[email]) player[email]={nick,email,base:0,perRound:{},perRoundMatch:{},perRoundAdvance:{},advanceBase:0};
+        player[email].base+=pts;
+        player[email].perRoundMatch[r]=(player[email].perRoundMatch[r]||0)+pts;
         player[email].perRound[r]=(player[email].perRound[r]||0)+pts;
       });
+      roundsAsc=Array.from(rounds).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
-      // 2) Továbbjutó tippek pontjai (első meccs fordulójába írjuk)
-      if(advanceTipsByUserSlot && bracketSlots){
-        advanceTipsByUserSlot.forEach(tip=>{
-          const email=tip.user; if(!email) return;
-          const slotId=String(tip.slotId||"");
-          const slot = bracketSlots[slotId] || {};
-          const winner = slot.advanceWinner || "";
-          if(!(winner==="home" || winner==="away")) return; // még nincs official továbbjutó
-          const pick = tip.pick || tip.advancePick || tip.choice || "";
-          const odds = Number(tip.odds||0);
+      // Továbbjutó pontok hozzáadása (PO->F10, R16->F12, QF->F14, SF->F16, F->F17)
+      try{
+        latestAdvanceTipsByUserSlot.forEach(t=>{
+          const email=t.user||t.email; if(!email) return;
+          const slotId=String(t.slotId||t.slot||""); if(!slotId) return;
+          const awardRound=awardRoundForSlot(slotId); if(!awardRound) return;
+          const slot=bracketSlots ? bracketSlots[slotId] : null;
+          const winner=slot ? (slot.advanceWinner||"") : "";
+          if(!winner) return;
+          const pick=String(t.pick||t.choice||t.advancePick||"");
+          if(!pick) return;
           const correct = pick===winner;
-          const pts = (correct && odds) ? odds : 0;
-
-          // forduló: a slot első meccse alapján
-          let mid = String(tip.matchId || (Array.isArray(slot.matchIds)?slot.matchIds[0]:"") || "");
-          const mm = matchesById[mid];
-          const r = mm ? matchRound(mm) : "";
-          if(r) rounds.add(r);
-
+          const odds = Number(t.odds);
+          if(!correct || !isFinite(odds) || odds<=0) return;
+          const stake=stakeForRound(awardRound);
+          const pts = odds*stake;
           const nick=usersMap[email]||email;
-          if(!player[email]) player[email]={nick,email,matchBase:0,advanceBase:0,perRound:{}};
+          if(!player[email]) player[email]={nick,email,base:0,perRound:{},perRoundMatch:{},perRoundAdvance:{},advanceBase:0};
+          player[email].base += pts;
           player[email].advanceBase += pts;
-          if(r) player[email].perRound[r]=(player[email].perRound[r]||0)+pts;
+          player[email].perRoundAdvance[awardRound]=(player[email].perRoundAdvance[awardRound]||0)+pts;
+          player[email].perRound[awardRound]=(player[email].perRound[awardRound]||0)+pts;
+          rounds.add(String(awardRound));
         });
-      }
+      }catch(e){}
 
       roundsAsc=Array.from(rounds).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
       rows = Object.values(player).map(obj=>{
-        const base = Number((obj.matchBase + obj.advanceBase).toFixed(2));
         const {pct:top8Pct,hits:top8Hits}=calcTop8Pct(obj.email);
         const email=obj.email; const champPick=championPickByEmail[email]||""; const goldenPick=goldenPickByEmail[email]||"";
         const champPct=(officialChampion && eqTeam(champPick, officialChampion)) ? BONUS_CFG.winnerPct : 0;
         const goldenPct=(officialGoldenPlayer && eqText(goldenPick, officialGoldenPlayer)) ? BONUS_CFG.topScorerPct : 0;
         const bonusPct=top8Pct+champPct+goldenPct;
-        const bonusPts=Number((base*(bonusPct/100)).toFixed(2));
-        const total=Number((base+bonusPts).toFixed(2));
+        const bonusPts=Number((obj.base*(bonusPct/100)).toFixed(2));
+        const total=Number((obj.base+bonusPts).toFixed(2));
         const fav=usersFavUcl[email]||"";
-        return{ nick:obj.nick, email, base, total, perRound:obj.perRound, fav,
-          baseMatch:Number((obj.matchBase||0).toFixed(2)),
-          baseAdvance:Number((obj.advanceBase||0).toFixed(2)),
+        return{ nick:obj.nick, email, base:obj.base, total, perRound:obj.perRound, fav,
           bonusPct, bonusPts,
           parts:{
             top8:{pct:top8Pct,hits:top8Hits},
@@ -717,11 +756,13 @@
           <div class="hdr">${rightHeader}</div>
           ${rows.map(r=>{
             const cells = toShow.map((rid, idx)=>{
-              const val = r.perRound[rid]||0;
+              const valM = r.perRoundMatch?.[rid]||0;
+              const valA = r.perRoundAdvance?.[rid]||0;
+              const val = (r.perRound?.[rid]||0);
               const isTop = val === maxPerRound[idx] && val !== 0;
               const active = (sortBy.type==='round' && String(sortBy.round)===String(rid));
               return `<div class="cell round-cell num ${isTop?'top':''} ${idx===0?'first-col':''} ${active?'sorted':''}">
-                        <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}</a>
+                        <a class="round-link" href="results_ucl.html?round=${encodeURIComponent(rid)}">${fmt(val)}${isTop?' ⭐':''}${(valA||valM)?`<div class=\"subline\">M: ${fmt(valM)} • TJ: ${fmt(valA)}</div>`:''}</a>
                       </div>`;
             }).join('');
             return `<div class="row row-bg">${cells}</div>`;
@@ -804,7 +845,7 @@
         <div class="row row-bg">
           <div class="cell left rank">${i+1}.</div>
           <div class="cell left player-cell">${playerHtml}</div>
-          <div class="cell left num total">${fmt(r.total)}${(!r.isBot?`<div class="total-sub">meccs: ${fmt(r.baseMatch)} + továbbjutó: ${fmt(r.baseAdvance)}</div>`:"")}</div>
+          <div class="cell left num total">${fmt(r.total)}</div>
           <div class="cell left num bonus-cell">${bonusCell}</div>
           <div class="cell left num">${fmt(r.base)}</div>
         </div>
