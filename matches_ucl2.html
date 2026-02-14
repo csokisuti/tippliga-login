@@ -643,7 +643,8 @@ let myTipsByMatch = new Map();
           saved.textContent = 'Mentve';
 
           right.appendChild(select);
-          right.appendChild(dblWrap);
+          const rnum = parseInt(matchRound(m))||0;
+          if (rnum<=8) right.appendChild(dblWrap);
           right.appendChild(saved);
 
           const slotInfo = firstLegByMatchId.get(String(m.id));
@@ -810,6 +811,8 @@ let myTipsByMatch = new Map();
     async function saveTipWithAudit(matchObj, choice, isDouble, dayKey, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
+      const roundNum = parseInt(roundStr)||0;
+      const fixedDouble = (roundNum<=8) ? !!isDouble : false;
 
       // előző állapot
       let existingId = null, prevChoice = null, prevDouble = null;
