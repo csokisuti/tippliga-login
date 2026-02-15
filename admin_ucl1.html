@@ -300,7 +300,110 @@
 
     if(reloadBtn) reloadBtn.addEventListener("click", loadAll);
 
-    document.addEventListener("click", async (e)=>{
+    
+    async function initRoundStakeEditor(){
+      const mount = document.getElementById('roundStakeMount');
+      const btn = document.getElementById('saveRoundStakesBtn');
+      const status = document.getElementById('roundStakeStatus');
+      if(!mount || !btn) return;
+
+      btn.disabled = true;
+      if(status) status.textContent = '';
+
+      let rounds = [];
+      try{
+        const ms = await getDocs(collection(db,'ucl_matches'));
+        const set = new Set();
+        ms.forEach(d=>{
+          const m = d.data() || {};
+          const r = (m.roundId ?? m.round ?? m.roundNumber ?? '').toString().trim();
+          if(r) set.add(r);
+        });
+        rounds = Array.from(set).sort((a,b)=> parseInt(a)-parseInt(b));
+      }catch(e){
+        rounds = [];
+      }
+
+      let saved = {};
+      try{
+        const snap = await getDoc(doc(db,'settings','ucl_roundStakes'));
+        const d = snap.exists() ? (snap.data()||{}) : {};
+        saved = (d.stakes && typeof d.stakes === 'object') ? d.stakes : {};
+      }catch(e){
+        saved = {};
+      }
+
+      const draft = {};
+      rounds.forEach(r=>{
+        const v = saved[r];
+        const n = (typeof v === 'string') ? Number(v.replace(',','.')) : Number(v);
+        draft[r] = Number.isFinite(n) ? n : 1;
+      });
+
+      mount.innerHTML = '';
+      if(!rounds.length){
+        mount.innerHTML = '<div style="padding:10px 0;color:#64748b">Nincs betöltött forduló a meccsekből.</div>';
+        btn.disabled = true;
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(180px, 1fr))';
+      grid.style.gap = '12px';
+
+      rounds.forEach(r=>{
+        const wrap = document.createElement('div');
+        wrap.style.border = '1px solid var(--line,#e6eaf1)';
+        wrap.style.borderRadius = '12px';
+        wrap.style.padding = '10px 12px';
+        wrap.style.background = '#fff';
+
+        const lab = document.createElement('div');
+        lab.style.fontWeight = '800';
+        lab.style.marginBottom = '6px';
+        lab.textContent = `${r}. forduló`;
+        wrap.appendChild(lab);
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.step = '0.01';
+        input.min = '0';
+        input.value = String(draft[r] ?? 1);
+        input.style.width = '100%';
+        input.style.height = '40px';
+        input.style.padding = '8px 10px';
+        input.style.border = '1px solid var(--line,#e6eaf1)';
+        input.style.borderRadius = '10px';
+
+        input.addEventListener('input', ()=>{
+          const raw = input.value;
+          const n = Number(String(raw).replace(',','.'));
+          draft[r] = Number.isFinite(n) && n > 0 ? n : 1;
+          btn.disabled = false;
+        });
+
+        wrap.appendChild(input);
+        grid.appendChild(wrap);
+      });
+
+      mount.appendChild(grid);
+
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true;
+        if(status) status.textContent = 'Mentés…';
+        try{
+          const payload = {};
+          rounds.forEach(r=> payload[r] = draft[r] ?? 1);
+          await setDoc(doc(db,'settings','ucl_roundStakes'), { stakes: payload, updatedAt: serverTimestamp() }, { merge:true });
+          if(status) status.textContent = 'Mentve.';
+        }catch(e){
+          if(status) status.textContent = 'Hiba a mentésnél.';
+        }
+      }, { once:false });
+    }
+
+document.addEventListener("click", async (e)=>{
       const btn = e.target?.closest?.('button[data-action="save"]');
       if(!btn) return;
       const card = btn.closest(".ucl-slot-admin");
