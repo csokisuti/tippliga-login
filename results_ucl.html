@@ -716,8 +716,7 @@
       const correct = my.pick === winnerSide;
       if (!correct) return 0;
       const o = Number(my.odds ?? 0) || 0;
-  const s = stakeForRound(tieInfo.decidedRound ?? tieInfo.deciderRound ?? 1);
-  return o * s;
+      return o;
     }
 
     async function renderRound(roundId){
@@ -854,7 +853,7 @@
             let advPts = 0;
             if (isDecider) {
               const advOdds = advPointsForUserInTie(t.user, tieInfo);
-              advPts = advOdds ? Number(advOdds) * stakeForRound(roundId) : 0;
+              advPts = advOdds ? Number(advOdds) : 0;
             }
 
             const totalPts = matchPts + advPts;
