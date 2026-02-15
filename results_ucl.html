@@ -237,6 +237,14 @@
     let nickByEmail = {};
     let roundsAsc = [];
 
+    let roundStakes = {};
+    function stakeForRound(r){
+      const v = roundStakes?.[String(r)];
+      const n = Number(String(v).replace(',','.'));
+      return Number.isFinite(n) && n>0 ? n : 1;
+    }
+
+
     let currentUserEmail = "";
     let currentUserNick = "";
     let currentUserRole = "user";
@@ -450,6 +458,17 @@
         advanceTipsBySlotId = new Map();
       }
     }
+    async function loadRoundStakes(){
+      try{
+        const snap = await getDoc(doc(db,"settings","ucl_roundStakes"));
+        const d = snap.exists() ? (snap.data()||{}) : {};
+        const stakes = (d.stakes && typeof d.stakes==="object") ? d.stakes : {};
+        roundStakes = { ...stakes };
+      }catch(e){
+        roundStakes = {};
+      }
+    }
+
 
     function calcTop8(picks, official){
       const set = new Set((picks||[]).map(canonTeam));
@@ -734,7 +753,7 @@
         mTips.forEach(t=>{
           const pick = tipChoice(t);
           const correct = pick && (pick === m.outcome);
-          const mult = (Number(roundId) >= 9) ? 1 : (tipDouble(t) ? 2 : 1);
+          const mult = stakeForRound(roundId) * (tipDouble(t) ? 2 : 1);
           const ov = getOdds(m, pick);
           const matchPts = (correct && ov) ? Number(ov) * mult : 0;
 
@@ -827,7 +846,7 @@
           mTips.forEach(t=>{
             const pick = tipChoice(t);
             const correct = m.outcome && pick === m.outcome;
-            const mult = (Number(roundId) >= 9) ? 1 : (tipDouble(t) ? 2 : 1);
+            const mult = stakeForRound(roundId) * (tipDouble(t) ? 2 : 1);
             const ov = getOdds(m, pick);
             const matchPts = (correct && ov) ? Number(ov) * mult : 0;
 
@@ -890,7 +909,7 @@
               if(correct) row.classList.add("correct");
               else if(winnerSide) row.classList.add("wrong");
 
-              const pts = correct ? (Number(t.odds ?? 0) || 0) : 0;
+              const pts = correct ? ((Number(t.odds ?? 0) || 0) * stakeForRound(roundId)) : 0;
 
               row.innerHTML = `
                 <b>${escapeHtml(nick)}</b>: ${escapeHtml(pickTeam || "—")}
@@ -965,6 +984,8 @@
         matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
         matchById = new Map(matches.map(m=>[m.id,m]));
 
+        await loadRoundStakes();
+
         await loadBracketFirstLegsAndWinners();
         await loadAllAdvanceTips();
 
@@ -986,6 +1007,15 @@
           const sel = document.getElementById("roundSelect");
           if (sel?.value) renderRound(sel.value);
           if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
+        });
+
+
+        onSnapshot(doc(db,"settings","ucl_roundStakes"), snap=>{
+          const d = snap.exists() ? (snap.data()||{}) : {};
+          const stakes = (d.stakes && typeof d.stakes==="object") ? d.stakes : {};
+          roundStakes = { ...stakes };
+          const sel = document.getElementById("roundSelect");
+          if (sel?.value) renderRound(sel.value);
         });
 
         tipsByMatch.clear();
