@@ -825,7 +825,7 @@
         }
 
         const tieInfo = tieInfoByMatchId.get(m.id);
-        if (started && tieInfo && Number(tieInfo.decidedRound)===Number(roundId) && tieInfo.decidingMatchId===m.id){
+        if (hasStarted && tieInfo && Number(tieInfo.decidedRound)===Number(roundId) && tieInfo.decidingMatchId===m.id){
           const advWrap = document.createElement("div");
           advWrap.className = "tips";
 
@@ -1424,4 +1424,5 @@
   </section>
 </body>
 </html>
+
 
