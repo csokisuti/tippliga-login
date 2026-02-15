@@ -280,6 +280,7 @@
       try{
         if(status) status.textContent = "Betöltés…";
         matchOpts = await loadKnockoutMatchesOptions();
+      await initRoundStakeEditor();
         docsById = await loadBracketDocs();
         renderBracketAdmin(currentRound, defs, docsById, matchOpts);
       }catch(e){
@@ -1850,6 +1851,17 @@ verzió: ${data.version || 'n/a'}`);
     <button class="ucl-tabbtn" data-round="F" aria-selected="false">Döntő</button>
   </div>
   <div id="uclBracketAdminBody"></div>
+</section>
+
+
+<section class="card" id="roundStakeEditor">
+  <h2>Fordulónkénti stake (tét szorzó)</h2>
+  <p class="muted">Az itt beállított stake szorzó érvényes a meccstippek pontjára és a továbbjutó tippekre is, abban a fordulóban, amelyben a párharc eldől (a visszavágó fordulója).</p>
+  <div id="roundStakeMount" class="table-wrap"></div>
+  <div class="row" style="margin-top:12px; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button id="saveRoundStakesBtn" class="btn primary">Stake mentése</button>
+    <span id="roundStakeStatus" class="muted"></span>
+  </div>
 </section>
 
 </body>
