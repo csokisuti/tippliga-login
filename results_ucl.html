@@ -851,7 +851,10 @@
             const matchPts = (correct && ov) ? Number(ov) * mult : 0;
 
             let advPts = 0;
-            if (isDecider) advPts = advPointsForUserInTie(t.user, tieInfo);
+            if (isDecider) {
+              const advOdds = advPointsForUserInTie(t.user, tieInfo);
+              advPts = advOdds ? Number(advOdds) * stakeForRound(roundId) : 0;
+            }
 
             const totalPts = matchPts + advPts;
 
