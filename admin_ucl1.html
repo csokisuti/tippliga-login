@@ -22,8 +22,8 @@
     .card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;background:linear-gradient(180deg,#fff, #fafafa)}
     .card-head h3{margin:0;font-size:16px}
     .card-head .hint{color:var(--muted);font-size:12px}
-    .card-body{display:none;padding:16px;border-top:1px solid var(--border)}
-    .card.open .card-body{display:block}
+    .card-body{display:block;padding:16px;border-top:1px solid var(--border)}
+    details.card:not([open]) .card-body{display:none}
 
     .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
     select,input,textarea{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff}
@@ -523,8 +523,8 @@ async function loadUclBracketUiSettingAdmin() {
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=''}) {
-      const s=document.createElement('section'); s.className='card'; if(id) s.id=id; if(open) s.classList.add('open');
-      const h=document.createElement('div'); h.className='card-head'; h.innerHTML = `<h3>${title}</h3><div class="hint">${hint||''}</div>`; h.onclick=()=>s.classList.toggle('open');
+      const s=document.createElement('details'); s.className='card'; if(id) s.id=id; if(open) s.open=true;
+      const h=document.createElement('summary'); h.className='card-head'; h.innerHTML = `<h3>${title}</h3><div class="hint">${hint||''}</div>`;
       const b=document.createElement('div'); b.className='card-body'; b.innerHTML=bodyHTML;
       s.append(h,b); return {section:s, body:b}
     }
@@ -534,8 +534,8 @@ async function loadUclBracketUiSettingAdmin() {
       const left=document.createElement('div'); left.className='left';
       const right=document.createElement('div'); right.className='right';
       const back=document.createElement('button'); back.className='btn'; back.textContent='⬅️ Vissza a dashboardra'; back.onclick=()=>location.href='dashboard_ucl.html';
-      const expand=document.createElement('button'); expand.className='btn'; expand.textContent='Mindet nyisd le'; expand.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.add('open'));
-      const collapse=document.createElement('button'); collapse.className='btn'; collapse.textContent='Mindet csukd össze'; collapse.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.remove('open'));
+      const expand=document.createElement('button'); expand.className='btn'; expand.textContent='Mindet nyisd le'; expand.onclick=()=>document.querySelectorAll('details.card').forEach(c=>c.open=true);
+      const collapse=document.createElement('button'); collapse.className='btn'; collapse.textContent='Mindet csukd össze'; collapse.onclick=()=>document.querySelectorAll('details.card').forEach(c=>c.open=false);
       const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadBonusMarkets(); loadOfficialBonus(); renderChampionOddsPreview(); renderGoldenOddsPreview(); loadTemplates(); loadMailLog(); loadTipStatus(); };
 
       left.appendChild(back);
@@ -544,21 +544,24 @@ async function loadUclBracketUiSettingAdmin() {
       document.body.prepend(top);
 
       const wrap=document.createElement('div'); wrap.className='cards';
+      // A régi (body-ban lévő) blokkokat tegyük be kártyába és legyenek csukva alapból
+      const legacy = [];
+      const uiSec = document.getElementById('uclBracketUiCard');
+      if(uiSec){ legacy.push({title:'BL ágrajz megjelenítés beállításai', el: uiSec}); }
+      const bracketSec = document.getElementById('uclBracketAdminLegacy');
+      if(bracketSec){ legacy.push({title:'BL kieséses ágrajz szerkesztése', el: bracketSec}); }
+      const stakeSec = document.getElementById('roundStakeEditor');
+      if(stakeSec){ legacy.push({title:'Fordulónkénti stake (tét szorzó)', el: stakeSec}); }
 
-      // A body-ban lévő (régi) BL ágrajz / stake blokkokat tegyük be a kártyalistába, és legyenek csukva alapból
-      const preCards = [
-        document.getElementById('uclBracketUiCard'),
-        document.getElementById('uclBracketAdminCard'),
-        document.getElementById('roundStakeEditor')
-      ].filter(Boolean);
-      preCards.forEach(sec=>{
-        const head = sec.querySelector(':scope > .card-head');
-        if(head && !head.__bound){ head.__bound=true; head.onclick=()=>sec.classList.toggle('open'); }
-        wrap.appendChild(sec);
+      legacy.forEach(({title, el})=>{
+        const bodyHTML = el.innerHTML;
+        const id = el.id || '';
+        el.remove();
+        const card = makeCard({title, hint:'', id, open:false, bodyHTML});
+        wrap.appendChild(card.section);
       });
 
-
-      const teamOpts = teams.map(t=>`<option value="${t}">${t}</option>`).join('');
+const teamOpts = teams.map(t=>`<option value="${t}">${t}</option>`).join('');
       const cAdd = makeCard({title:'Új UCL meccs hozzáadása', hint:'Gyors űrlap', id:'card-add', bodyHTML:`
         <form id="matchForm">
           <div class="row">
