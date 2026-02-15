@@ -716,7 +716,8 @@
       const correct = my.pick === winnerSide;
       if (!correct) return 0;
       const o = Number(my.odds ?? 0) || 0;
-      return o;
+  const s = stakeForRound(tieInfo.decidedRound ?? tieInfo.deciderRound ?? 1);
+  return o * s;
     }
 
     async function renderRound(roundId){
