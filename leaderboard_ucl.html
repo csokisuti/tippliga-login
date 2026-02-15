@@ -267,6 +267,16 @@
     let rows=[];
     let showBots=false;
     let botPickStore={};
+    let roundStakes = {};
+    const stakeForRound = (roundId)=>{
+      const k = (roundId==null? "" : String(roundId)).trim();
+      const raw = (roundStakes && Object.prototype.hasOwnProperty.call(roundStakes,k)) ? roundStakes[k] : null;
+      let n = raw;
+      if(typeof n === "string") n = n.replace(",",".");
+      n = Number(n);
+      return (Number.isFinite(n) && n>0) ? n : 1;
+    };
+
 
     /* RENDEZÉS ÁLLAPOT */
     let sortBy = { type:'total', round:null, dir:'desc' }; // 'total' | 'round' ; 'desc'
@@ -403,6 +413,13 @@
           officialGoldenPlayer=(d.goldenBoot&&d.goldenBoot.player)?d.goldenBoot.player:"";
           recomputeRows(); renderTable();
         });
+        /* ROUND STAKES (tét szorzó) */
+        onSnapshot(doc(db,"settings","ucl_roundStakes"), snap=>{
+          const d = snap.exists()? (snap.data()||{}) : {};
+          roundStakes = (d.stakes && typeof d.stakes==="object") ? d.stakes : {};
+          recomputeRows(); renderTable();
+        });
+
 
         /* TOP8/CHAMP/GOLDEN tippek */
         onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
@@ -533,7 +550,8 @@
             if(!t.pick||!t.odds||!isFinite(t.odds)) return;
             const doubled=i===bestIdx; const oc=outcomeOfMatch(t.m);
             const correct=oc===t.pick; const mult=doubled?2:1;
-            if(correct){ base+=t.odds*mult; perRound[r]=(perRound[r]||0)+t.odds*mult; }
+            if(correct){ const stake = stakeForRound(r);
+        base+=t.odds*mult*stake; perRound[r]=(perRound[r]||0)+t.odds*mult*stake; }
             else { perRound[r]=(perRound[r]||0)+0; }
             list.push({matchId:t.m.id,homeTeam:t.m.homeTeam||t.m.home||"",awayTeam:t.m.awayTeam||t.m.away||"",pick:t.pick,odds:t.odds||0,doubled,correct,outcome:oc});
           });
@@ -559,7 +577,8 @@
         const pick=tipChoice(tip); if(!pick) return;
         const oc=outcomeOfMatch(m); if(!oc) return; /* csak lezárt meccs */
         const correct=pick===oc; const ov=getOdds(m,pick); const mult=tipDouble(tip)?2:1;
-        const pts=(correct && ov)? Number(ov)*mult : 0;
+        const stake = stakeForRound(r);
+        const pts = (correct && ov)? Number(ov)*mult*stake : 0;
         const email=tip.user; const nick=usersMap[email]||email;
         if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
         player[email].base+=pts; player[email].perRound[r]=(player[email].perRound[r]||0)+pts;
