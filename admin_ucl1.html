@@ -140,21 +140,22 @@
   }
 
   function optionHtml(opts, selectedId){
-    const s = selectedId || "";
+    const s = (selectedId || "").toString();
     const rows = [`<option value="">—</option>`];
-    opts.forEach(o=>{
-      rows.push(`<option value="${o.id}
+    (opts||[]).forEach(o=>{
+      const id = (o?.id ?? "").toString().replaceAll('"','&quot;');
+      const label = (o?.label ?? "").toString().replaceAll('"','&quot;');
+      rows.push(`<option value="${id}" ${id===s?"selected":""}>${label}</option>`);
+    });
+    return rows.join("");
+  }
 
   function teamOptionHtml(selectedTeam){
-    const s = (selectedTeam || \"\").toString();
-    const rows = [`<option value=\"\">—</option>`];
-    teams.forEach(t=>{
-      const tv = (t||\"\").toString().replaceAll('\"','&quot;');
-      rows.push(`<option value=\"${tv}\" ${t===s?\"selected\":\"\"}>${t}</option>`);
-    });
-    return rows.join(\"\");
-  }
-" ${o.id===s?"selected":""}>${o.label}</option>`);
+    const s = (selectedTeam || "").toString();
+    const rows = [`<option value="">—</option>`];
+    (teams||[]).forEach(t=>{
+      const tv = (t||"").toString().replaceAll('"','&quot;');
+      rows.push(`<option value="${tv}" ${tv===s?"selected":""}>${t}</option>`);
     });
     return rows.join("");
   }
