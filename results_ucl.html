@@ -716,10 +716,7 @@
       const correct = my.pick === winnerSide;
       if (!correct) return 0;
       const o = Number(my.odds ?? 0) || 0;
-      const decidedRound = (tieInfo.decidedRound ?? tieInfo.roundId ?? tieInfo.round ?? "").toString().trim();
-      const stake = stakeForRound(decidedRound);
-      const mult = my.doubleStake ? 2 : 1;
-      return o * stake * mult;
+      return o;
     }
 
     async function renderRound(roundId){
@@ -915,7 +912,15 @@
               if(correct) row.classList.add("correct");
               else if(winnerSide) row.classList.add("wrong");
 
-              const pts = correct ? ((Number(t.odds ?? 0) || 0) * stakeForRound(roundId)) : 0;
+              const stake = stakeForRound(roundId);
+              let rawOdds = null;
+              if(t.pick==="home") rawOdds = Number(tieInfo.advanceOddsHome ?? tieInfo.advanceOddsH ?? null);
+              if(t.pick==="away") rawOdds = Number(tieInfo.advanceOddsAway ?? tieInfo.advanceOddsA ?? null);
+              if(!(rawOdds>0)){
+                rawOdds = Number(t.odds ?? 0) || 0;
+                if(stake>1 && rawOdds>20) rawOdds = rawOdds / stake;
+              }
+              const pts = correct ? (rawOdds * stake) : 0;
 
               row.innerHTML = `
                 <b>${escapeHtml(nick)}</b>: ${escapeHtml(pickTeam || "—")}
