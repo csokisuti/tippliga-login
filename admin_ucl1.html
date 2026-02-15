@@ -143,7 +143,18 @@
     const s = selectedId || "";
     const rows = [`<option value="">—</option>`];
     opts.forEach(o=>{
-      rows.push(`<option value="${o.id}" ${o.id===s?"selected":""}>${o.label}</option>`);
+      rows.push(`<option value="${o.id}
+
+  function teamOptionHtml(selectedTeam){
+    const s = (selectedTeam || \"\").toString();
+    const rows = [`<option value=\"\">—</option>`];
+    teams.forEach(t=>{
+      const tv = (t||\"\").toString().replaceAll('\"','&quot;');
+      rows.push(`<option value=\"${tv}\" ${t===s?\"selected\":\"\"}>${t}</option>`);
+    });
+    return rows.join(\"\");
+  }
+" ${o.id===s?"selected":""}>${o.label}</option>`);
     });
     return rows.join("");
   }
@@ -168,11 +179,11 @@
         <div class="ucl-row">
           <div class="field">
             <label>Hazai csapat</label>
-            <input type="text" value="${home.replaceAll('"',"&quot;")}" data-field="homeTeam" placeholder="pl. Real Madrid">
+            <select data-field="homeTeam">${teamOptionHtml(home)}</select>
           </div>
           <div class="field">
             <label>Vendég csapat</label>
-            <input type="text" value="${away.replaceAll('"',"&quot;")}" data-field="awayTeam" placeholder="pl. Manchester City">
+            <select data-field="awayTeam">${teamOptionHtml(away)}</select>
           </div>
         </div>
         <div class="ucl-row">
@@ -250,8 +261,8 @@
 
   async function saveSlot(slotId, el){
     const get = (sel)=>el.querySelector(sel);
-    const home = normalizeTeam(get('input[data-field="homeTeam"]')?.value||"");
-    const away = normalizeTeam(get('input[data-field="awayTeam"]')?.value||"");
+    const home = normalizeTeam((get('select[data-field="homeTeam"]') || get('input[data-field="homeTeam"]'))?.value || "");
+    const away = normalizeTeam((get('select[data-field="awayTeam"]') || get('input[data-field="awayTeam"]'))?.value || "");
     const m1 = get('select[data-field="match1"]')?.value||"";
     const m2 = get('select[data-field="match2"]')?.value||"";
     const decided = !!get('input[data-field="decidedByPenalties"]')?.checked;
@@ -415,8 +426,8 @@ document.addEventListener("click", async (e)=>{
         await saveSlot(slotId, card);
         if(st) st.textContent = "Mentve.";
         docsById[slotId] = {
-          homeTeam: normalizeTeam(card.querySelector('input[data-field="homeTeam"]')?.value||""),
-          awayTeam: normalizeTeam(card.querySelector('input[data-field="awayTeam"]')?.value||""),
+          homeTeam: normalizeTeam((card.querySelector('select[data-field="homeTeam"]') || card.querySelector('input[data-field="homeTeam"]'))?.value || ""),
+          awayTeam: normalizeTeam((card.querySelector('select[data-field="awayTeam"]') || card.querySelector('input[data-field="awayTeam"]'))?.value || ""),
           matchIds: [card.querySelector('select[data-field="match1"]')?.value||"", card.querySelector('select[data-field="match2"]')?.value||""].filter(Boolean),
           decidedByPenalties: !!card.querySelector('input[data-field="decidedByPenalties"]')?.checked,
           penaltyWinner: card.querySelector('select[data-field="penaltyWinner"]')?.value||"",
@@ -530,9 +541,22 @@ async function loadUclBracketUiSettingAdmin() {
       left.appendChild(back);
       right.append(expand, collapse, refresh);
       top.append(left, right);
-      document.body.append(top);
+      document.body.prepend(top);
 
       const wrap=document.createElement('div'); wrap.className='cards';
+
+      // A body-ban lévő (régi) BL ágrajz / stake blokkokat tegyük be a kártyalistába, és legyenek csukva alapból
+      const preCards = [
+        document.getElementById('uclBracketUiCard'),
+        document.getElementById('uclBracketAdminCard'),
+        document.getElementById('roundStakeEditor')
+      ].filter(Boolean);
+      preCards.forEach(sec=>{
+        const head = sec.querySelector(':scope > .card-head');
+        if(head && !head.__bound){ head.__bound=true; head.onclick=()=>sec.classList.toggle('open'); }
+        wrap.appendChild(sec);
+      });
+
 
       const teamOpts = teams.map(t=>`<option value="${t}">${t}</option>`).join('');
       const cAdd = makeCard({title:'Új UCL meccs hozzáadása', hint:'Gyors űrlap', id:'card-add', bodyHTML:`
@@ -1929,7 +1953,8 @@ verzió: ${data.version || 'n/a'}`);
 <body>
 
 <section class="card" id="uclBracketUiCard">
-  <h2>BL ágrajz megjelenítés</h2>
+  <div class="card-head"><h3>BL ágrajz megjelenítés</h3><div class="hint">Dashboard megjelenítés</div></div>
+  <div class="card-body">
   <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
     <label style="display:flex;gap:10px;align-items:center;">
       <input type="checkbox" id="uclBracketOpenByDefault" />
@@ -1938,11 +1963,15 @@ verzió: ${data.version || 'n/a'}`);
     <button id="saveUclBracketUi" class="btn">Mentés</button>
     <span id="uclBracketUiStatus" style="opacity:.8;font-size:13px;"></span>
   </div>
+
+  </div>
 </section>
 
-<section class="card" style="margin-top:14px;">
+<section class="card" id="uclBracketAdminCard">
+  <div class="card-head"><h3>BL kieséses ágrajz szerkesztése</h3><div class="hint">Párok, meccsek, továbbjutó</div></div>
+  <div class="card-body">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-    <h2 style="margin:0;">BL kieséses ágrajz szerkesztése</h2>
+    <div class="muted" style="font-weight:700">Szerkesztő</div>
     <button id="uclBracketReload" class="btn">Frissítés</button>
   </div>
   <div id="uclBracketAdminStatus" style="margin-top:8px;font-size:13px;opacity:.8;"></div>
@@ -1954,16 +1983,22 @@ verzió: ${data.version || 'n/a'}`);
     <button class="ucl-tabbtn" data-round="F" aria-selected="false">Döntő</button>
   </div>
   <div id="uclBracketAdminBody"></div>
+
+  </div>
 </section>
 
 
 <section class="card" id="roundStakeEditor">
-  <h2>Fordulónkénti stake (tét szorzó)</h2>
+  <div class="card-head"><h3>Fordulónkénti stake (tét szorzó)</h3><div class="hint">Meccs + továbbjutó</div></div>
+  <div class="card-body">
+  <h2 style="margin:0 0 8px 0;">Fordulónkénti stake (tét szorzó)</h2>
   <p class="muted">Az itt beállított stake szorzó érvényes a meccstippek pontjára és a továbbjutó tippekre is, abban a fordulóban, amelyben a párharc eldől (a visszavágó fordulója).</p>
   <div id="roundStakeMount" class="table-wrap"></div>
   <div class="row" style="margin-top:12px; gap:10px; align-items:center; flex-wrap:wrap;">
     <button id="saveRoundStakesBtn" class="btn primary">Stake mentése</button>
     <span id="roundStakeStatus" class="muted"></span>
+  </div>
+
   </div>
 </section>
 
