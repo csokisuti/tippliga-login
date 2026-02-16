@@ -541,12 +541,24 @@ const stakeForRound = (roundId)=>{
         });
         onSnapshot(doc(db, "settings", "ucl_bracket"), (d) => {
           const data = d.exists() ? (d.data() || {}) : {};
-          const slotsArr = Array.isArray(data.slots) ? data.slots : (Array.isArray(data.bracketSlots) ? data.bracketSlots : []);
           bracketSlotsById = new Map();
-          slotsArr.forEach(s => {
-            const id = canonicalSlotId(s?.slotId ?? s?.id ?? s?.key ?? "");
-            if(id) bracketSlotsById.set(id, s);
-          });
+
+          const slotsObj = (data.slots && typeof data.slots === "object" && !Array.isArray(data.slots)) ? data.slots : null;
+          if(slotsObj){
+            Object.entries(slotsObj).forEach(([k,v])=>{
+              const id = canonicalSlotId(k);
+              if(!id) return;
+              const slot = (v && typeof v === "object") ? v : {};
+              bracketSlotsById.set(id, { ...slot, slotId: id });
+            });
+          } else {
+            const slotsArr = Array.isArray(data.slots) ? data.slots : (Array.isArray(data.bracketSlots) ? data.bracketSlots : []);
+            slotsArr.forEach(s => {
+              const id = canonicalSlotId(s?.slotId ?? s?.id ?? s?.key ?? "");
+              if(id) bracketSlotsById.set(id, s);
+            });
+          }
+
           rebuildTieMaps();
           recomputeRows(); renderTable();
         });
