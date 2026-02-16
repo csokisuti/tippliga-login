@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hu">
 <head>
@@ -108,7 +109,14 @@
 
     /* NB1-hez igazított odds méret – minimális override, mást nem piszkálunk */
     .match .odds{ font-size:16px !important; }
-  </style>
+  
+    .advance-box{margin-top:10px;padding:10px;border:1px dashed rgba(148,163,184,.55);border-radius:12px;background:#fff}
+    .advance-title{font-weight:800;font-size:12px;margin:0 0 8px;color:#0f172a}
+    .advance-options{display:flex;flex-direction:column;gap:6px}
+    .adv-opt{display:flex;align-items:center;gap:8px;font-size:13px}
+    .adv-odds{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a}
+    .adv-lock{opacity:.6}
+</style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -294,14 +302,141 @@
       latestByDay.forEach((v, dk)=> doublesByDay.set(dk, v.matchId));
     }
 
-    /* Állapot */
+    
+    /* ===== ÚJ: Bracket first-leg map + továbbjutó tippek ===== */
+    function numOrNull(v){
+      const n = parseFloat(String(v ?? "").replace(",", "."));
+      return (isFinite(n) ? n : null);
+    }
+
+    async function loadBracketFirstLegs(){
+      firstLegByMatchId.clear();
+      try{
+        const snap = await getDoc(doc(db,"settings","ucl_bracket"));
+        if (!snap.exists()) return;
+        const data = snap.data() || {};
+        const slots = (data.slots && typeof data.slots === "object") ? data.slots : {};
+        Object.entries(slots).forEach(([slotId, s])=>{
+          const matchIds = Array.isArray(s?.matchIds) ? s.matchIds : [];
+          const firstLegId = matchIds[0];
+          if (!firstLegId) return;
+
+          const oh = numOrNull(s.advanceOddsHome ?? s.advanceOdds?.home);
+          const oa = numOrNull(s.advanceOddsAway ?? s.advanceOdds?.away);
+          if (!oh || !oa || oh <= 1 || oa <= 1) return;
+
+          firstLegByMatchId.set(String(firstLegId), {
+            slotId,
+            oddsHome: oh,
+            oddsAway: oa
+          });
+        });
+      }catch(e){
+        console.warn("loadBracketFirstLegs err:", e);
+      }
+    }
+
+    async function loadMyAdvanceTips(){
+      myAdvanceTipsBySlot.clear();
+      try{
+        const snap = await getDocs(query(collection(db,"ucl_advance_tips"),
+          where("user","==", currentUserEmail)
+        ));
+        snap.forEach(d=>{
+          const v = d.data() || {};
+          const slotId = v.slotId || v.slot || "";
+          if (!slotId) return;
+          myAdvanceTipsBySlot.set(String(slotId), { id:d.id, ...v });
+        });
+      }catch(e){
+        console.warn("loadMyAdvanceTips err:", e);
+      }
+    }
+
+    async function saveAdvanceTipWithAudit(matchObj, slotInfo, pick, savedEl){
+      const slotId = slotInfo.slotId;
+      const matchId = matchObj.id;
+      const pickVal = pick || "";
+      const odds = pickVal === "home" ? slotInfo.oddsHome : (pickVal === "away" ? slotInfo.oddsAway : null);
+
+      if (!pickVal){
+        alert("Válaszd ki a továbbjutót!");
+        return;
+      }
+      if (!odds){
+        alert("Hiányzó továbbjutó odds (admin).");
+        return;
+      }
+
+      const kickoff = asDate(matchObj.startTime);
+      if (!isNaN(+kickoff) && new Date() >= kickoff){
+        alert("A továbbjutó tipp az első meccs kezdetéig adható le.");
+        return;
+      }
+
+      const fixedId = `${sanitizeEmail(currentUserEmail)}_${slotId}`;
+      const prev = myAdvanceTipsBySlot.get(String(slotId));
+      const prevPick = prev?.pick ?? prev?.advancePick ?? prev?.choice ?? null;
+
+      if (prevPick === pickVal){
+        savedEl.classList.add("show");
+        setTimeout(()=>savedEl.classList.remove("show"), 900);
+        return;
+      }
+
+      try{
+        await setDoc(doc(db,"ucl_advance_tips", fixedId), {
+          user: currentUserEmail,
+          nick: currentUserNick || currentUserEmail,
+          slotId,
+          matchId: String(matchId),
+          pick: pickVal,
+          odds: odds,
+          updatedAt: serverTimestamp(),
+          timestamp: serverTimestamp(),
+          createdAt: prev ? (prev.createdAt || serverTimestamp()) : serverTimestamp()
+        }, { merge:true });
+
+        await addDoc(collection(db, TIP_HISTORY), {
+          user: currentUserEmail,
+          slotId,
+          matchId,
+          kind: "advance",
+          prevPick,
+          newPick: pickVal,
+          odds,
+          page: "matches_ucl.html",
+          ts: serverTimestamp()
+        });
+
+        myAdvanceTipsBySlot.set(String(slotId), {
+          id: fixedId,
+          user: currentUserEmail,
+          slotId,
+          matchId,
+          pick: pickVal,
+          odds
+        });
+
+        savedEl.classList.add("show");
+        setTimeout(()=>savedEl.classList.remove("show"), 900);
+      }catch(e){
+        console.warn("saveAdvanceTipWithAudit err:", e);
+        alert("Mentési hiba (továbbjutó): " + (e?.message || String(e)));
+      }
+    }
+
+/* Állapot */
     let currentUserEmail = "";
     let currentUserNick  = "";
     let currentUserRole  = "user";
     let favouriteTeamucl = "";
     let chatLastSeenUcl  = null;   // <-- külön BL chat mező
 
-    let myTipsByMatch = new Map();
+    let myAdvanceTipsBySlot = new Map();
+    let firstLegByMatchId = new Map(); // matchId -> {slotId, oddsHome, oddsAway}
+
+let myTipsByMatch = new Map();
     let doublesByDay  = new Map();            // YYYY-MM-DD -> matchId
     let earliestStartByDay = new Map();       // YYYY-MM-DD -> Date
     let matchesByDay = new Map();             // YYYY-MM-DD -> [{match}]
@@ -377,6 +512,10 @@
             if (!prev || tipTsMs(t) >= tipTsMs(prev)) latestByMatch.set(k, t);
           }
           myTipsByMatch = latestByMatch;
+
+          await loadBracketFirstLegs();
+          await loadMyAdvanceTips();
+
 
           // ÚJ: duplák felépítése a tippekből
           await rebuildDoublesFromTips(tips);
@@ -505,8 +644,67 @@
           saved.textContent = 'Mentve';
 
           right.appendChild(select);
-          right.appendChild(dblWrap);
+          const rnum = parseInt(matchRound(m))||0;
+          if (rnum<=8) right.appendChild(dblWrap);
           right.appendChild(saved);
+
+          const slotInfo = firstLegByMatchId.get(String(m.id));
+          if (slotInfo){
+            const box = document.createElement('div');
+            box.className = 'advance-box';
+
+            const title = document.createElement('div');
+            title.className = 'advance-title';
+            title.textContent = 'Továbbjutó tipp (csak az 1. meccs előtt)';
+            box.appendChild(title);
+
+            const opts = document.createElement('div');
+            opts.className = 'advance-options';
+
+            const saved2 = document.createElement('span');
+            saved2.className = 'save-state';
+            saved2.textContent = 'Mentve';
+
+            const kickoff = asDate(m.startTime);
+            const locked = (!isNaN(+kickoff) && new Date() >= kickoff);
+
+            const curAdv = myAdvanceTipsBySlot.get(String(slotInfo.slotId));
+            const curPick = (curAdv?.pick ?? curAdv?.advancePick ?? curAdv?.choice ?? "");
+
+            const mkOpt = (val, label, odds)=>{
+              const lab = document.createElement('label');
+              lab.className = 'adv-opt' + (locked ? ' adv-lock' : '');
+              const r = document.createElement('input');
+              r.type = 'radio';
+              r.name = `adv_${m.id}`;
+              r.value = val;
+              r.checked = (curPick === val);
+              r.disabled = locked;
+              const sp = document.createElement('span');
+              sp.textContent = label;
+              const od = document.createElement('span');
+              od.className = 'adv-odds';
+              od.textContent = odds ? String(odds).replace('.', ',') : '-';
+              lab.appendChild(r); lab.appendChild(sp); lab.appendChild(od);
+              r.addEventListener('change', async ()=>{
+                await saveAdvanceTipWithAudit(m, slotInfo, val, saved2);
+              });
+              return lab;
+            };
+
+            opts.appendChild(mkOpt('home', m.homeTeam || 'Hazai', slotInfo.oddsHome));
+            opts.appendChild(mkOpt('away', m.awayTeam || 'Vendég', slotInfo.oddsAway));
+            box.appendChild(opts);
+
+            const foot = document.createElement('div');
+            foot.style.display = 'flex';
+            foot.style.justifyContent = 'flex-end';
+            foot.style.marginTop = '8px';
+            foot.appendChild(saved2);
+            box.appendChild(foot);
+
+            right.appendChild(box);
+          }
 
           row.appendChild(left);
           row.appendChild(right);
@@ -614,6 +812,8 @@
     async function saveTipWithAudit(matchObj, choice, isDouble, dayKey, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
+      const roundNum = parseInt(roundStr)||0;
+      const fixedDouble = (roundNum<=8) ? !!isDouble : false;
 
       // előző állapot
       let existingId = null, prevChoice = null, prevDouble = null;
@@ -930,4 +1130,3 @@
   </section>
 </body>
 </html>
-
