@@ -1,4 +1,30 @@
-<!DOCTYPE html>
+<!
+function canonicalSlotId(v){
+  const s = String(v || "").trim();
+  if(!s) return "";
+  return s.replace(/\s+/g,"").toUpperCase();
+}
+
+function normalizeWinner(w){
+  const s = String(w || "").trim().toLowerCase();
+  if (s === "home" || s === "h" || s === "hazai" || s === "1") return "home";
+  if (s === "away" || s === "a" || s === "vendeg" || s === "2") return "away";
+  return "";
+}
+
+function normalizePick(pick, slot){
+  const raw = String(pick || "").trim();
+  if(!raw) return "";
+  const s = raw.toLowerCase();
+  if (s === "home" || s === "h" || s === "hazai" || s === "1") return "home";
+  if (s === "away" || s === "a" || s === "vendeg" || s === "2") return "away";
+  const homeTeam = String(slot?.homeTeam || "").trim().toLowerCase();
+  const awayTeam = String(slot?.awayTeam || "").trim().toLowerCase();
+  if (homeTeam && s === homeTeam) return "home";
+  if (awayTeam && s === awayTeam) return "away";
+  return "";
+}
+DOCTYPE html>
 <html lang="hu">
 <head>
   <meta charset="UTF-8" />
@@ -436,10 +462,10 @@
           const m = {};
           snap.forEach(docu=>{
             const d = docu.data()||{};
-            const email = (d.email||"").toLowerCase().trim();
-            const slotId = String(d.slotId||"").trim();
-            const pick = String(d.pick||"").trim();
-            if(!email || !slotId || !pick) return;
+            const email=String(d.email||d.user||"").trim().toLowerCase();
+            const slotId=canonicalSlotId(d.slotId||d.tieId||"");
+            const pick=(d.pick ?? d.selection ?? d.outcome ?? d.result ?? "");
+            if(!email||!slotId||pick===undefined||pick===null||String(pick).trim()==="") return;
             if(!m[email]) m[email] = {};
             m[email][slotId] = pick;
           });
@@ -605,48 +631,51 @@
         const correct=pick===oc; const ov=getOdds(m,pick); const mult=tipDouble(tip)?2:1;
         const stake = stakeForRound(r);
         const pts = (correct && ov)? Number(ov)*mult*stake : 0;
-        const email=tip.user; const nick=usersMap[email]||email;
+        const email=String(tip.user||"").trim().toLowerCase(); const nick=(usersMap[email]?.nickname||usersMap[email]?.name||usersMap[email]||email.split("@")[0]||email);
         if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
         player[email].base+=pts; player[email].perRound[r]=(player[email].perRound[r]||0)+pts;
       });
-      /* továbbjutó pontok hozzáadása (ugyanúgy, mint results.html) */
-      Object.entries(advanceTipsBySlotId||{}).forEach(([email, tipsBySlot])=>{
-        if(!tipsBySlot || typeof tipsBySlot!=="object") return;
-        Object.entries(tipsBySlot).forEach(([slotId, pick])=>{
-          const slot = slotsById ? slotsById[slotId] : null;
-          if(!slot) return;
-          const winner = String(slot.advanceWinner||"").trim();
-          if(!winner) return;
-          if(String(pick).trim()!==winner) return;
+      /* továbbjutó pontok hozzáadása (ugyanúgy, mint a results oldalon) */
+      if (isUclMode && uclBracketSlots.length) {
+        for (const slot of uclBracketSlots) {
+          const slotId = canonicalSlotId(slot.slotId || slot.id || "");
+          if (!slotId) continue;
 
-          const matchIds = Array.isArray(slot.matchIds) ? slot.matchIds : [];
-          const refMatchId = matchIds[0];
-          const refMatch = refMatchId ? matchesById[refMatchId] : null;
-          const r = refMatch ? matchRound(refMatch) : null;
-          if(!r) return;
+          const winnerSide = normalizeWinner(slot.advanceWinner);
+          if (!winnerSide) continue;
 
-          const odds = (winner==="home") ? Number(slot.advanceOddsHome) : Number(slot.advanceOddsAway);
-          if(!isFinite(odds) || odds<=0) return;
+          const roundId = Number(slot.round ?? slot.roundId ?? slot.r ?? 0) || 0;
+          const stake = stakeForRound(roundId);
 
-          const stake = stakeForRound(r);
-          const pts = odds * stake;
+          const oddsHome = Number(slot.advanceOddsHome ?? slot.advance_odds_home ?? 0) || 0;
+          const oddsAway = Number(slot.advanceOddsAway ?? slot.advance_odds_away ?? 0) || 0;
 
-          const em = String(email||"").toLowerCase().trim();
-          if(!em) return;
-          if(!player[em]) player[em] = {name: usersMap[em]||em, perRound:{}, base:0, details:{}};
-          if(!player[em].perRound[r]) player[em].perRound[r]=0;
-          player[em].perRound[r] += pts;
-          player[em].base += pts;
+          for (const [emailRaw, bySlot] of Object.entries(advanceTipsBySlotId)) {
+            const email = String(emailRaw || "").trim().toLowerCase();
+            if (!email) continue;
 
-          if(!player[em].details[r]) player[em].details[r]=[];
-          const labelTeam = (winner==="home") ? (slot.homeTeam||"") : (slot.awayTeam||"");
-          player[em].details[r].push(`Továbbjutó (${slot.homeTeam||""}–${slot.awayTeam||""}: ${labelTeam||winner}) → ${fmt(pts)} pont`);
-          rounds.add(r);
-        });
-      });
+            const pickRaw = bySlot ? bySlot[slotId] : null;
+            if (pickRaw === undefined || pickRaw === null || String(pickRaw).trim() === "") continue;
 
+            const pickSide = normalizePick(pickRaw, slot);
+            if (!pickSide) continue;
 
-      roundsAsc=Array.from(rounds).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+            if (pickSide !== winnerSide) continue;
+
+            const advOdds = (winnerSide === "home") ? oddsHome : oddsAway;
+            if (!advOdds) continue;
+
+            const advPoints = advOdds * stake;
+
+            if (!player[email]) player[email] = { nick: usersMap[email]?.nickname || usersMap[email]?.name || email.split("@")[0], email, base: 0, perRound: {} };
+
+            player[email].base += advPoints;
+            player[email].perRound[roundId] = (player[email].perRound[roundId] || 0) + advPoints;
+          }
+        }
+      }
+
+roundsAsc=Array.from(rounds).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
       rows = Object.values(player).map(obj=>{
         const {pct:top8Pct,hits:top8Hits}=calcTop8Pct(obj.email);
