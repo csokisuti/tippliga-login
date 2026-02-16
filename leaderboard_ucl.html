@@ -280,6 +280,62 @@
     };
 
 
+function canonicalSlotId(raw){
+  const s = (raw||"").toString().trim();
+  if(!s) return "";
+  const m = s.match(/^(PO|R16|QF|SF|F)[_\- ]?(\d+)$/i);
+  if(m){
+    const r = m[1].toUpperCase();
+    const n = String(parseInt(m[2],10));
+    if(r==="F") return "F1";
+    if(r==="R16") return `R16_${n}`;
+    return `${r}${n}`;
+  }
+  return s.replace(/\s+/g,"");
+}
+
+const matchRoundNum = (matchId, matchesById) => {
+  const mm = matchesById.get(matchId);
+  const r = mm ? (mm.roundId ?? mm.round ?? mm.roundNumber ?? "") : "";
+  const n = parseInt(String(r),10);
+  return Number.isFinite(n) ? n : null;
+};
+
+const resolveWinnerSideFromSlot = (slot) => {
+  if(!slot) return null;
+  const aw = (slot.advanceWinner||slot.winner||slot.winnerSide||"").toString().toLowerCase();
+  if(aw==="home" || aw==="away") return aw;
+  if(aw==="1") return "home";
+  if(aw==="2") return "away";
+  if(slot.decidedByPenalties && (slot.penaltyWinner==="home" || slot.penaltyWinner==="away")) return slot.penaltyWinner;
+  return null;
+};
+
+const computeTieInfos = (bracketSlotsById, matchesById) => {
+  const infos = [];
+  Object.keys(bracketSlotsById||{}).forEach(k=>{
+    const slot = bracketSlotsById[k] || {};
+    const slotId = canonicalSlotId(slot.id || k);
+    const matchIds = Array.isArray(slot.matchIds) ? slot.matchIds.filter(Boolean) : [];
+    const leg1 = matchIds[0] || "";
+    const leg2 = matchIds[1] || "";
+    const winnerSide = resolveWinnerSideFromSlot(slot);
+    if(!winnerSide) return;
+
+    const odds = (winnerSide==="home") ? slot.advanceOddsHome : slot.advanceOddsAway;
+    const winnerOdds = (typeof odds==="number" && Number.isFinite(odds)) ? odds : null;
+
+    let decidedRound = null;
+    if(leg2) decidedRound = matchRoundNum(leg2, matchesById);
+    else if(leg1) decidedRound = matchRoundNum(leg1, matchesById);
+    if(!decidedRound) return;
+
+    infos.push({ slotId, winnerSide, winnerOdds, decidedRound });
+  });
+  return infos;
+};
+
+
     /* RENDEZÉS ÁLLAPOT */
     let sortBy = { type:'total', round:null, dir:'desc' }; // 'total' | 'round' ; 'desc'
 
@@ -428,8 +484,15 @@ onSnapshot(doc(db,"settings","ucl_bracket"), snap=>{
   bracketSlotsById = {};
   if(snap.exists()){
     const d = snap.data()||{};
-    const slots = Array.isArray(d.slots) ? d.slots : [];
-    slots.forEach(s=>{ if(s && s.id) bracketSlotsById[s.id]=s; });
+    const raw = (d && d.slots) ? d.slots : {};
+    if(Array.isArray(raw)){
+      raw.forEach(s=>{ if(s && s.id) bracketSlotsById[canonicalSlotId(s.id)] = s; });
+    }else if(raw && typeof raw === "object"){
+      Object.keys(raw).forEach(k=>{
+        const v = raw[k] || {};
+        bracketSlotsById[canonicalSlotId(k)] = { id: canonicalSlotId(k), ...v };
+      });
+    }
   }
   recomputeRows(); renderTable();
 });
@@ -438,7 +501,7 @@ onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
   advanceTipsBySlotId = new Map();
   snap.forEach(docu=>{
     const t = docu.data()||{};
-    const slotId = t.slotId || t.tieId || t.slot || t.bracketSlotId || "";
+    const slotId = canonicalSlotId(t.slotId || t.tieId || t.slot || t.bracketSlotId || "");
     const user = t.user || t.email || t.player || t.uid || "";
     if(!slotId || !user) return;
     const arr = advanceTipsBySlotId.get(slotId) || [];
@@ -610,6 +673,37 @@ onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
         if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
         player[email].base+=pts; player[email].perRound[r]=(player[email].perRound[r]||0)+pts;
       });
+      
+
+// továbbjutó (advance) tippek pontjai – ugyanaz a logika, mint a results oldalon
+const matchesByIdMap = new Map(matchList.map(m=>[m.id,m]));
+const tieInfos = computeTieInfos(bracketSlotsById, matchesByIdMap);
+
+tieInfos.forEach(info=>{
+  if(!info || !info.slotId || !info.winnerSide || !info.winnerOdds) return;
+  const tipArr = advanceTipsBySlotId.get(info.slotId) || [];
+  if(!tipArr.length) return;
+
+  const stake = stakeForRound(info.decidedRound);
+
+  tipArr.forEach(t=>{
+    const email = t.user || t.email || t.userEmail || "";
+    if(!email) return;
+
+    let pick = (t.pick || t.selection || t.choice || t.side || "").toString().toLowerCase().trim();
+    if(pick==="1") pick="home";
+    if(pick==="2") pick="away";
+    if(pick!=="home" && pick!=="away") return;
+    if(pick !== info.winnerSide) return;
+
+    const pts = info.winnerOdds * stake;
+    if(!player[email]) player[email]={nick:usersMap[email]||email,email,base:0,perRound:{}};
+    player[email].base += pts;
+    const rKey = String(info.decidedRound);
+    player[email].perRound[rKey] = (player[email].perRound[rKey]||0) + pts;
+    rounds.add(rKey);
+  });
+});
       roundsAsc=Array.from(rounds).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
       rows = Object.values(player).map(obj=>{
