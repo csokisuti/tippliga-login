@@ -269,7 +269,7 @@
     let botPickStore={};
     let roundStakes = {};
     
-  let bracketSlotsById = new Map();
+  let bracketSlotsById = {};
   let tieInfoByMatchId = new Map();
   let tieInfoBySlotId = new Map();
   let advanceTipsBySlotId = new Map();
@@ -317,23 +317,65 @@ const stakeForRound = (roundId)=>{
     }
 
     function rebuildTieMaps(){
-      const matchesById = new Map();
-      (Object.values(matchesById||{})||[]).forEach(m=>{
-        const id = m.id || m.matchId;
-        if(id) matchesById.set(id, m);
-      });
-
-      tieInfoByMatchId = new Map();
+      tieKeyBySlotId = new Map();
+      tieKeyToSlotId = new Map();
+      tieWinnerBySlotId = new Map();
       tieInfoBySlotId = new Map();
 
-      for(const [slotIdRaw, slot] of bracketSlotsById.entries()){
-        const slotId = canonicalSlotId(slotIdRaw);
-        const info = computeTieInfo(slotId, slot, matchesById);
-        tieInfoBySlotId.set(slotId, info);
-        if(info.leg1MatchId) tieInfoByMatchId.set(info.leg1MatchId, info);
-        if(info.leg2MatchId) tieInfoByMatchId.set(info.leg2MatchId, info);
-      }
+      const entries = (bracketSlotsById && typeof bracketSlotsById === "object") ? Object.entries(bracketSlotsById) : [];
+      entries.forEach(([slotId, slot])=>{
+        if(!slotId) return;
+
+        const homeTeam = normalizeTeam(slot?.homeTeam || "");
+        const awayTeam = normalizeTeam(slot?.awayTeam || "");
+        if(!homeTeam || !awayTeam) return;
+
+        const key = tieKeyFromTeams(homeTeam, awayTeam);
+        tieKeyBySlotId.set(slotId, key);
+        tieKeyToSlotId.set(key, slotId);
+
+        const matchIds = Array.isArray(slot?.matchIds) ? slot.matchIds.filter(Boolean) : [];
+        const decidedLegId = matchIds.length >= 2 ? matchIds[1] : matchIds[0];
+        let decidedRound = null;
+        if(decidedLegId && matchesById && matchesById[decidedLegId]){
+          const mm = matchesById[decidedLegId];
+          const r = (mm?.roundId ?? mm?.round ?? mm?.roundNumber ?? null);
+          const rn = Number(r);
+          decidedRound = Number.isFinite(rn) ? rn : null;
+        }
+
+        let winnerSide = (slot?.advanceWinner || "").toString().trim().toLowerCase();
+        if(winnerSide !== "home" && winnerSide !== "away") winnerSide = "";
+        if(winnerSide) tieWinnerBySlotId.set(slotId, winnerSide);
+
+        const ohRaw = slot?.advanceOddsHome;
+        const oaRaw = slot?.advanceOddsAway;
+        const oddsHome = (ohRaw===0 || ohRaw) ? Number(ohRaw) : null;
+        const oddsAway = (oaRaw===0 || oaRaw) ? Number(oaRaw) : null;
+
+        const winnerTeam = winnerSide === "home" ? homeTeam : (winnerSide === "away" ? awayTeam : "");
+
+        let oddsWinner = null;
+        if(winnerSide==="home") oddsWinner = oddsHome;
+        if(winnerSide==="away") oddsWinner = oddsAway;
+
+        tieInfoBySlotId.set(slotId, {
+          slotId,
+          key,
+          homeTeam,
+          awayTeam,
+          matchIds,
+          decidedRound,
+          deciderRoundId: decidedRound,
+          winnerSide,
+          winnerTeam,
+          oddsHome,
+          oddsAway,
+          oddsWinner
+        });
+      });
     }
+
 
     function pickedTeamFromAdvanceTip(tip){
       const picked = (tip?.team ?? tip?.pickedTeam ?? tip?.advanceTeam ?? tip?.pick ?? tip?.selection ?? tip?.chosenTeam ?? "").toString().trim();
