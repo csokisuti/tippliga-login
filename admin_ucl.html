@@ -22,8 +22,8 @@
     .card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;background:linear-gradient(180deg,#fff, #fafafa)}
     .card-head h3{margin:0;font-size:16px}
     .card-head .hint{color:var(--muted);font-size:12px}
-    .card-body{display:none;padding:16px;border-top:1px solid var(--border)}
-    .card.open .card-body{display:block}
+    .card-body{display:block;padding:16px;border-top:1px solid var(--border)}
+    details.card:not([open]) .card-body{display:none}
 
     .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
     select,input,textarea{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff}
@@ -63,17 +63,412 @@
     .xscroll{overflow:auto}
     details summary{cursor:pointer;color:#334155}
     .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px}
-  </style>
+  
+  .ucl-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .ucl-tabbtn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);padding:8px 10px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
+  .ucl-tabbtn[aria-selected="true"]{box-shadow:0 0 0 2px rgba(59,130,246,.25) inset}
+  .ucl-bracket-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+  @media (max-width: 980px){.ucl-bracket-admin-grid{grid-template-columns:1fr}}
+  .ucl-slot-admin{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);padding:12px;display:flex;flex-direction:column;gap:10px}
+  .ucl-slot-admin h3{margin:0;font-size:14px}
+  .ucl-row{display:flex;gap:10px;flex-wrap:wrap}
+  .ucl-row .field{flex:1 1 160px;display:flex;flex-direction:column;gap:6px}
+  .ucl-row label{font-size:12px;opacity:.8}
+  .ucl-row input,.ucl-row select{width:100%}
+  .ucl-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .ucl-mini{font-size:12px;opacity:.8}
+
+</style>
 
   <script type="module">
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc, getDoc, setDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = { apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc", authDomain:"tippliga-4b3af.firebaseapp.com", projectId:"tippliga-4b3af", storageBucket:"tippliga-4b3af.appspot.com", messagingSenderId:"720359845241", appId:"1:720359845241:web:d3d6edcac6b43ebff053a8" };
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
+
+  
+
+  function uclBracketSlotDefs(){
+    const defs=[];
+    for(let i=1;i<=8;i++) defs.push({id:"PO"+i,round:"PO",label:"Play-off "+i,legs:2});
+    for(let i=1;i<=8;i++) defs.push({id:"R16_"+i,round:"R16",label:"Nyolcaddöntő "+i,legs:2});
+    for(let i=1;i<=4;i++) defs.push({id:"QF"+i,round:"QF",label:"Negyeddöntő "+i,legs:2});
+    for(let i=1;i<=2;i++) defs.push({id:"SF"+i,round:"SF",label:"Elődöntő "+i,legs:2});
+    defs.push({id:"F1",round:"F",label:"Döntő",legs:1});
+    return defs;
+  }
+
+  function normalizeTeam(t){ return (t||"").toString().trim(); }
+
+  function formatStart(ts){
+    try{
+      if(!ts) return "";
+      const d = ts.toDate ? ts.toDate() : (typeof ts==="number" ? new Date(ts) : new Date(ts));
+      if(String(d)==="Invalid Date") return "";
+      return d.toLocaleString("hu-HU",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+    }catch(e){ return ""; }
+  }
+
+  async function loadKnockoutMatchesOptions(){
+    const snap = await getDocs(collection(db,"ucl_matches"));
+    const arr=[];
+    snap.forEach(d=>{
+      const m=d.data()||{};
+      const rid = Number(m.roundId ?? m.round ?? 0);
+      if(rid < 9) return;
+      const home = normalizeTeam(m.homeTeam||m.home||"");
+      const away = normalizeTeam(m.awayTeam||m.away||"");
+      const st = formatStart(m.startTime||m.start||m.kickoff||m.date||"");
+      const label = `${rid}. ${home} - ${away}${st?` • ${st}`:""}`;
+      arr.push({id:d.id,label,ts:(m.startTime?.toMillis?m.startTime.toMillis():0)});
+    });
+    arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    return arr;
+  }
+
+  async function loadBracketDocs(){
+    const ref = doc(db,"settings","ucl_bracket");
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? (snap.data()||{}) : {};
+    const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
+    return slots;
+  }
+
+  function optionHtml(opts, selectedId){
+    const s = (selectedId || "").toString();
+    const rows = [`<option value="">—</option>`];
+    (opts||[]).forEach(o=>{
+      const id = (o?.id ?? "").toString().replaceAll('"','&quot;');
+      const label = (o?.label ?? "").toString().replaceAll('"','&quot;');
+      rows.push(`<option value="${id}" ${id===s?"selected":""}>${label}</option>`);
+    });
+    return rows.join("");
+  }
+
+  function teamOptionHtml(selectedTeam){
+    const s = (selectedTeam || "").toString();
+    const rows = [`<option value="">—</option>`];
+    (teams||[]).forEach(t=>{
+      const tv = (t||"").toString().replaceAll('"','&quot;');
+      rows.push(`<option value="${tv}" ${tv===s?"selected":""}>${t}</option>`);
+    });
+    return rows.join("");
+  }
+
+  function slotCardHtml(def, docData, matchOpts){
+    const d = docData || {};
+    const home = d.homeTeam || "";
+    const away = d.awayTeam || "";
+    const matchIds = Array.isArray(d.matchIds) ? d.matchIds : [];
+    const m1 = matchIds[0] || "";
+    const m2 = matchIds[1] || "";
+    const decided = !!d.decidedByPenalties;
+    const pw = d.penaltyWinner || "";
+    const aw = d.advanceWinner || "";
+    const aoh = (d.advanceOddsHome===0 || d.advanceOddsHome) ? d.advanceOddsHome : "";
+    const aoa = (d.advanceOddsAway===0 || d.advanceOddsAway) ? d.advanceOddsAway : "";
+    const hasLeg2 = def.legs===2;
+
+    return `
+      <div class="ucl-slot-admin" data-slot="${def.id}">
+        <h3>${def.label}</h3>
+        <div class="ucl-row">
+          <div class="field">
+            <label>Hazai csapat</label>
+            <select data-field="homeTeam">${teamOptionHtml(home)}</select>
+          </div>
+          <div class="field">
+            <label>Vendég csapat</label>
+            <select data-field="awayTeam">${teamOptionHtml(away)}</select>
+          </div>
+        </div>
+        <div class="ucl-row">
+          <div class="field">
+            <label>Meccs 1 (roundId ≥ 9)</label>
+            <select data-field="match1">${optionHtml(matchOpts,m1)}</select>
+          </div>
+          ${hasLeg2?`
+          <div class="field">
+            <label>Meccs 2 (visszavágó)</label>
+            <select data-field="match2">${optionHtml(matchOpts,m2)}</select>
+          </div>
+          `:""}
+        </div>
+        <div class="ucl-row">
+          <div class="field" style="flex:0 0 auto;min-width:220px;">
+            <label style="display:flex;gap:10px;align-items:center;user-select:none;">
+              <input type="checkbox" data-field="decidedByPenalties" ${decided?"checked":""}>
+              11-esekkel dőlt el
+            </label>
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label>11-es győztes</label>
+            <select data-field="penaltyWinner">
+              <option value="" ${pw===""?"selected":""}>—</option>
+              <option value="home" ${pw==="home"?"selected":""}>Hazai csapat jutott tovább</option>
+              <option value="away" ${pw==="away"?"selected":""}>Vendég csapat jutott tovább</option>
+            </select>
+          </div>
+        </div>
+        <div class="ucl-row">
+          <div class="field" style="min-width:220px;">
+            <label>Továbbjutó (admin)</label>
+            <select data-field="advanceWinner">
+              <option value="" ${aw===""?"selected":""}>—</option>
+              <option value="home" ${aw==="home"?"selected":""}>Hazai csapat jut tovább</option>
+              <option value="away" ${aw==="away"?"selected":""}>Vendég csapat jut tovább</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1 1 auto;">
+            <label>Megjegyzés (opcionális)</label>
+            <input type="text" value="${(d.note||"").replaceAll('"',"&quot;")}" data-field="note" placeholder="pl. hosszabbítás, admin döntés, stb.">
+          </div>
+        </div>
+        <div class="ucl-row">
+          <div class="field" style="min-width:220px;">
+            <label>Továbbjutó odds (hazai)</label>
+            <input type="number" step="0.01" min="1" value="${aoh}" data-field="advanceOddsHome" placeholder="pl. 1.65">
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label>Továbbjutó odds (vendég)</label>
+            <input type="number" step="0.01" min="1" value="${aoa}" data-field="advanceOddsAway" placeholder="pl. 2.30">
+          </div>
+        </div>
+        <div class="ucl-actions">
+          <span class="ucl-mini" data-status=""></span>
+          <button class="btn" data-action="save">Mentés</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBracketAdmin(roundKey, defs, docsById, matchOpts){
+    const body = document.getElementById("uclBracketAdminBody");
+    const status = document.getElementById("uclBracketAdminStatus");
+    if(!body) return;
+    const roundDefs = defs.filter(x=>x.round===roundKey);
+    const grid = document.createElement("div");
+    grid.className="ucl-bracket-admin-grid";
+    grid.innerHTML = roundDefs.map(def=>slotCardHtml(def, docsById[def.id], matchOpts)).join("");
+    body.innerHTML = "";
+    body.appendChild(grid);
+    if(status) status.textContent = `Szerkeszthető párok: ${roundDefs.length} • Meccs opciók: ${matchOpts.length}`;
+  }
+
+  async function saveSlot(slotId, el){
+    const get = (sel)=>el.querySelector(sel);
+    const home = normalizeTeam((get('select[data-field="homeTeam"]') || get('input[data-field="homeTeam"]'))?.value || "");
+    const away = normalizeTeam((get('select[data-field="awayTeam"]') || get('input[data-field="awayTeam"]'))?.value || "");
+    const m1 = get('select[data-field="match1"]')?.value||"";
+    const m2 = get('select[data-field="match2"]')?.value||"";
+    const decided = !!get('input[data-field="decidedByPenalties"]')?.checked;
+    const pw = get('select[data-field="penaltyWinner"]')?.value||"";
+    const aw = get('select[data-field="advanceWinner"]')?.value||"";
+    const aohRaw = get('input[data-field="advanceOddsHome"]')?.value || "";
+    const aoaRaw = get('input[data-field="advanceOddsAway"]')?.value || "";
+    const aoh = aohRaw==="" ? null : Number(aohRaw);
+    const aoa = aoaRaw==="" ? null : Number(aoaRaw);
+    const note = (get('input[data-field="note"]')?.value||"").toString().trim();
+    const matchIds = [m1,m2].filter(Boolean);
+    const payload = { homeTeam:home, awayTeam:away, matchIds, decidedByPenalties:decided, penaltyWinner:pw, advanceWinner:aw, advanceOddsHome:aoh, advanceOddsAway:aoa, note, updatedAt: serverTimestamp() };
+    await setDoc(doc(db,"settings","ucl_bracket"), { slots: { [slotId]: payload } }, { merge:true });
+  }
+
+  async function initBracketAdmin(){
+    const defs = uclBracketSlotDefs();
+    let currentRound = "PO";
+    let matchOpts = [];
+    let docsById = {};
+    const tabs = document.getElementById("uclBracketTabs");
+    const reloadBtn = document.getElementById("uclBracketReload");
+    const status = document.getElementById("uclBracketAdminStatus");
+
+    const loadAll = async ()=>{
+      try{
+        if(status) status.textContent = "Betöltés…";
+        matchOpts = await loadKnockoutMatchesOptions();
+      await initRoundStakeEditor();
+        docsById = await loadBracketDocs();
+        renderBracketAdmin(currentRound, defs, docsById, matchOpts);
+      }catch(e){
+        if(status) status.textContent = "Hiba a betöltésnél.";
+      }
+    };
+
+    if(tabs){
+      [...tabs.querySelectorAll(".ucl-tabbtn")].forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          currentRound = btn.dataset.round || "PO";
+          [...tabs.querySelectorAll(".ucl-tabbtn")].forEach(b=>b.setAttribute("aria-selected", b===btn ? "true" : "false"));
+          renderBracketAdmin(currentRound, defs, docsById, matchOpts);
+        });
+      });
+    }
+
+    if(reloadBtn) reloadBtn.addEventListener("click", loadAll);
+
+    
+    async function initRoundStakeEditor(){
+      const mount = document.getElementById('roundStakeMount');
+      const btn = document.getElementById('saveRoundStakesBtn');
+      const status = document.getElementById('roundStakeStatus');
+      if(!mount || !btn) return;
+
+      btn.disabled = true;
+      if(status) status.textContent = '';
+
+      let rounds = [];
+      try{
+        const ms = await getDocs(collection(db,'ucl_matches'));
+        const set = new Set();
+        ms.forEach(d=>{
+          const m = d.data() || {};
+          const r = (m.roundId ?? m.round ?? m.roundNumber ?? '').toString().trim();
+          if(r) set.add(r);
+        });
+        rounds = Array.from(set).sort((a,b)=> parseInt(a)-parseInt(b));
+      }catch(e){
+        rounds = [];
+      }
+
+      let saved = {};
+      try{
+        const snap = await getDoc(doc(db,'settings','ucl_roundStakes'));
+        const d = snap.exists() ? (snap.data()||{}) : {};
+        saved = (d.stakes && typeof d.stakes === 'object') ? d.stakes : {};
+      }catch(e){
+        saved = {};
+      }
+
+      const draft = {};
+      rounds.forEach(r=>{
+        const v = saved[r];
+        const n = (typeof v === 'string') ? Number(v.replace(',','.')) : Number(v);
+        draft[r] = Number.isFinite(n) ? n : 1;
+      });
+
+      mount.innerHTML = '';
+      if(!rounds.length){
+        mount.innerHTML = '<div style="padding:10px 0;color:#64748b">Nincs betöltött forduló a meccsekből.</div>';
+        btn.disabled = true;
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(180px, 1fr))';
+      grid.style.gap = '12px';
+
+      rounds.forEach(r=>{
+        const wrap = document.createElement('div');
+        wrap.style.border = '1px solid var(--line,#e6eaf1)';
+        wrap.style.borderRadius = '12px';
+        wrap.style.padding = '10px 12px';
+        wrap.style.background = '#fff';
+
+        const lab = document.createElement('div');
+        lab.style.fontWeight = '800';
+        lab.style.marginBottom = '6px';
+        lab.textContent = `${r}. forduló`;
+        wrap.appendChild(lab);
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.step = '0.01';
+        input.min = '0';
+        input.value = String(draft[r] ?? 1);
+        input.style.width = '100%';
+        input.style.height = '40px';
+        input.style.padding = '8px 10px';
+        input.style.border = '1px solid var(--line,#e6eaf1)';
+        input.style.borderRadius = '10px';
+
+        input.addEventListener('input', ()=>{
+          const raw = input.value;
+          const n = Number(String(raw).replace(',','.'));
+          draft[r] = Number.isFinite(n) && n > 0 ? n : 1;
+          btn.disabled = false;
+        });
+
+        wrap.appendChild(input);
+        grid.appendChild(wrap);
+      });
+
+      mount.appendChild(grid);
+
+      btn.addEventListener('click', async ()=>{
+        btn.disabled = true;
+        if(status) status.textContent = 'Mentés…';
+        try{
+          const payload = {};
+          rounds.forEach(r=> payload[r] = draft[r] ?? 1);
+          await setDoc(doc(db,'settings','ucl_roundStakes'), { stakes: payload, updatedAt: serverTimestamp() }, { merge:true });
+          if(status) status.textContent = 'Mentve.';
+        }catch(e){
+          if(status) status.textContent = 'Hiba a mentésnél.';
+        }
+      }, { once:false });
+    }
+
+document.addEventListener("click", async (e)=>{
+      const btn = e.target?.closest?.('button[data-action="save"]');
+      if(!btn) return;
+      const card = btn.closest(".ucl-slot-admin");
+      const slotId = card?.dataset?.slot;
+      const st = card?.querySelector('[data-status]');
+      if(!slotId || !card) return;
+      try{
+        if(st) st.textContent = "Mentés…";
+        await saveSlot(slotId, card);
+        if(st) st.textContent = "Mentve.";
+        docsById[slotId] = {
+          homeTeam: normalizeTeam((card.querySelector('select[data-field="homeTeam"]') || card.querySelector('input[data-field="homeTeam"]'))?.value || ""),
+          awayTeam: normalizeTeam((card.querySelector('select[data-field="awayTeam"]') || card.querySelector('input[data-field="awayTeam"]'))?.value || ""),
+          matchIds: [card.querySelector('select[data-field="match1"]')?.value||"", card.querySelector('select[data-field="match2"]')?.value||""].filter(Boolean),
+          decidedByPenalties: !!card.querySelector('input[data-field="decidedByPenalties"]')?.checked,
+          penaltyWinner: card.querySelector('select[data-field="penaltyWinner"]')?.value||"",
+          advanceWinner: card.querySelector('select[data-field="advanceWinner"]')?.value||"",
+          note: (card.querySelector('input[data-field="note"]')?.value||"").toString().trim()
+        };
+      }catch(err){
+        if(st) st.textContent = `Hiba mentéskor: ${err?.code||""} ${err?.message||err}`.trim();
+      }
+    });
+
+    await loadAll();
+  }
+
+async function loadUclBracketUiSettingAdmin() {
+    const cb = document.getElementById('uclBracketOpenByDefault');
+    const status = document.getElementById('uclBracketUiStatus');
+    try {
+      const uiRef = doc(db, "settings", "ucl_bracket_ui");
+      const snap = await getDoc(uiRef);
+      cb.checked = snap.exists() ? !!snap.data().openByDefault : false;
+      if (status) status.textContent = "";
+    } catch (e) {
+      if (status) status.textContent = "Nem sikerült betölteni a beállítást.";
+    }
+  }
+
+  async function saveUclBracketUiSettingAdmin() {
+    const cb = document.getElementById('uclBracketOpenByDefault');
+    const status = document.getElementById('uclBracketUiStatus');
+    try {
+      const uiRef = doc(db, "settings", "ucl_bracket_ui");
+      await setDoc(uiRef, { openByDefault: !!cb.checked, updatedAt: serverTimestamp() }, { merge: true });
+      if (status) status.textContent = "Mentve.";
+      setTimeout(()=>{ if(status) status.textContent=""; }, 2000);
+    } catch (e) {
+      if (status) status.textContent = "Mentés sikertelen.";
+    }
+  }
+
 
     /* >>> BULK MAIL – GAS Web App URL (a te linked) <<< */
     const GS_BULKMAIL_URL = "https://script.google.com/macros/s/AKfycbzSmmexY18InfsYTHNdkVnbO1mzJ7Mol9PDNnk0x91KOTbLfPpwcZwsP7A94owxS5FovQ/exec";
@@ -113,6 +508,7 @@
       initUI();
       await loadMatches();
       await loadUsers();
+      await initBracketAdmin();
       await loadResults();
       await loadPositionsLock();
       await loadBonusMarkets();
@@ -128,8 +524,8 @@
     });
 
     function makeCard({title, hint, id, open=false, bodyHTML=''}) {
-      const s=document.createElement('section'); s.className='card'; if(id) s.id=id; if(open) s.classList.add('open');
-      const h=document.createElement('div'); h.className='card-head'; h.innerHTML = `<h3>${title}</h3><div class="hint">${hint||''}</div>`; h.onclick=()=>s.classList.toggle('open');
+      const s=document.createElement('details'); s.className='card'; if(id) s.id=id; if(open) s.open=true;
+      const h=document.createElement('summary'); h.className='card-head'; h.innerHTML = `<h3>${title}</h3><div class="hint">${hint||''}</div>`;
       const b=document.createElement('div'); b.className='card-body'; b.innerHTML=bodyHTML;
       s.append(h,b); return {section:s, body:b}
     }
@@ -139,18 +535,34 @@
       const left=document.createElement('div'); left.className='left';
       const right=document.createElement('div'); right.className='right';
       const back=document.createElement('button'); back.className='btn'; back.textContent='⬅️ Vissza a dashboardra'; back.onclick=()=>location.href='dashboard_ucl.html';
-      const expand=document.createElement('button'); expand.className='btn'; expand.textContent='Mindet nyisd le'; expand.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.add('open'));
-      const collapse=document.createElement('button'); collapse.className='btn'; collapse.textContent='Mindet csukd össze'; collapse.onclick=()=>document.querySelectorAll('.card').forEach(c=>c.classList.remove('open'));
+      const expand=document.createElement('button'); expand.className='btn'; expand.textContent='Mindet nyisd le'; expand.onclick=()=>document.querySelectorAll('details.card').forEach(c=>c.open=true);
+      const collapse=document.createElement('button'); collapse.className='btn'; collapse.textContent='Mindet csukd össze'; collapse.onclick=()=>document.querySelectorAll('details.card').forEach(c=>c.open=false);
       const refresh=document.createElement('button'); refresh.className='btn'; refresh.textContent='Frissítés'; refresh.onclick=()=>{ loadMatches(); loadUsers(); loadResults(); loadPositionsLock(); loadBonusMarkets(); loadOfficialBonus(); renderChampionOddsPreview(); renderGoldenOddsPreview(); loadTemplates(); loadMailLog(); loadTipStatus(); };
 
       left.appendChild(back);
       right.append(expand, collapse, refresh);
       top.append(left, right);
-      document.body.append(top);
+      document.body.prepend(top);
 
       const wrap=document.createElement('div'); wrap.className='cards';
+      // A régi (body-ban lévő) blokkokat tegyük be kártyába és legyenek csukva alapból
+      const legacy = [];
+      const uiSec = document.getElementById('uclBracketUiCard');
+      if(uiSec){ legacy.push({title:'BL ágrajz megjelenítés beállításai', el: uiSec}); }
+      const bracketSec = document.getElementById('uclBracketAdminLegacy');
+      if(bracketSec){ legacy.push({title:'BL kieséses ágrajz szerkesztése', el: bracketSec}); }
+      const stakeSec = document.getElementById('roundStakeEditor');
+      if(stakeSec){ legacy.push({title:'Fordulónkénti stake (tét szorzó)', el: stakeSec}); }
 
-      const teamOpts = teams.map(t=>`<option value="${t}">${t}</option>`).join('');
+      legacy.forEach(({title, el})=>{
+        const bodyHTML = el.innerHTML;
+        const id = el.id || '';
+        el.remove();
+        const card = makeCard({title, hint:'', id, open:false, bodyHTML});
+        wrap.appendChild(card.section);
+      });
+
+const teamOpts = teams.map(t=>`<option value="${t}">${t}</option>`).join('');
       const cAdd = makeCard({title:'Új UCL meccs hozzáadása', hint:'Gyors űrlap', id:'card-add', bodyHTML:`
         <form id="matchForm">
           <div class="row">
@@ -640,16 +1052,44 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
           div.innerHTML = `
             <div class="card-head"><h3>${match.homeTeam} - ${match.awayTeam}</h3><div class="hint">${match.startTime?.toDate?.()?.toLocaleString('hu-HU')||''}</div></div>
             <div class="card-body">
-              <div class="row">
-                <input placeholder="pl. 2-1" value="${match.result||''}" id="res-${match.id}" style="width:80px">
+              <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:140px">
+                  <div class="hint">90’ (tipphez)</div>
+                  <input placeholder="pl. 2-1" value="${match.result||''}" id="res90-${match.id}" style="width:120px">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:160px">
+                  <div class="hint">Végleges (FT)</div>
+                  <input placeholder="pl. 2-1" value="${match.finalResult||''}" id="resft-${match.id}" style="width:140px">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:160px">
+                  <div class="hint">Döntés</div>
+                  <select id="dec-${match.id}" style="width:150px">
+                    <option value="regular" ${(match.decidedBy||'regular')==='regular'?'selected':''}>Rendes</option>
+                    <option value="aet" ${(match.decidedBy||'regular')==='aet'?'selected':''}>Hosszabbítás</option>
+                    <option value="pens" ${(match.decidedBy||'regular')==='pens'?'selected':''}>11-esek</option>
+                  </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:160px">
+                  <div class="hint">11-es (pl. 4-3)</div>
+                  <input placeholder="pl. 4-3" value="${match.pensScore||''}" id="pens-${match.id}" style="width:140px">
+                </div>
                 <button class="btn primary" id="btn-${match.id}">${hasResult? 'Módosítás':'Mentés'}</button>
               </div>
             </div>`;
           div.querySelector('.card-head').onclick = ()=> div.classList.toggle('open');
           div.querySelector(`#btn-${match.id}`).onclick = async ()=>{
-            const v=document.getElementById(`res-${match.id}`).value.trim();
-            const oc=parseOutcome(v); if(!oc){ alert('Hibás formátum. pl. 3-1 vagy 1-1'); return }
-            await updateDoc(doc(db,'ucl_matches',match.id),{ result:v, outcome:oc });
+            const v90=document.getElementById(`res90-${match.id}`).value.trim();
+            const oc=parseOutcome(v90); if(!oc){ alert('Hibás 90\' eredmény. pl. 3-1 vagy 1-1'); return }
+            let ft=document.getElementById(`resft-${match.id}`).value.trim();
+            const decided=document.getElementById(`dec-${match.id}`).value;
+            const pens=document.getElementById(`pens-${match.id}`).value.trim();
+            if(ft){ const okFt=parseOutcome(ft); if(!okFt){ alert('Hibás FT eredmény. pl. 2-1 vagy 1-1'); return } }
+            if((decided==='aet' || decided==='pens') && !ft) ft=v90;
+            if(decided==='pens'){
+              if(pens && !/^\d+\s*-\s*\d+$/.test(pens)){ alert('Hibás 11-es eredmény. pl. 4-3'); return }
+            }
+            const payload={ result:v90, outcome:oc, finalResult: (ft||''), decidedBy:(decided||'regular'), pensScore:(decided==='pens' ? (pens||'') : '') };
+            await updateDoc(doc(db,'ucl_matches',match.id),payload);
             await loadResults();
           };
           container.appendChild(div);
@@ -1507,7 +1947,64 @@ verzió: ${data.version || 'n/a'}`);
     if(info) info.textContent = `Aktív meccsek: ${activeCount} db • Felhasználók: ${users.length} fő`;
   }
 
+
+  document.getElementById('saveUclBracketUi')?.addEventListener('click', saveUclBracketUiSettingAdmin);
+  loadUclBracketUiSettingAdmin();
+
+
 </script>
 </head>
-<body></body>
+<body>
+
+<details class="card" id="uclBracketUiCard">
+  <summary class="card-head"><h3>BL ágrajz megjelenítés</h3><div class="hint">Dashboard megjelenítés</div></summary>
+  <div class="card-body">
+  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+    <label style="display:flex;gap:10px;align-items:center;">
+      <input type="checkbox" id="uclBracketOpenByDefault" />
+      <span>Alapértelmezetten legyen lenyitva a dashboardon</span>
+    </label>
+    <button id="saveUclBracketUi" class="btn">Mentés</button>
+    <span id="uclBracketUiStatus" style="opacity:.8;font-size:13px;"></span>
+  </div>
+
+  </div>
+</details>
+
+<details class="card" id="uclBracketAdminCard">
+  <summary class="card-head"><h3>BL kieséses ágrajz szerkesztése</h3><div class="hint">Párok, meccsek, továbbjutó</div></summary>
+  <div class="card-body">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div class="muted" style="font-weight:700">Szerkesztő</div>
+    <button id="uclBracketReload" class="btn">Frissítés</button>
+  </div>
+  <div id="uclBracketAdminStatus" style="margin-top:8px;font-size:13px;opacity:.8;"></div>
+  <div class="ucl-tabs" id="uclBracketTabs">
+    <button class="ucl-tabbtn" data-round="PO" aria-selected="true">Play-off</button>
+    <button class="ucl-tabbtn" data-round="R16" aria-selected="false">Nyolcaddöntő</button>
+    <button class="ucl-tabbtn" data-round="QF" aria-selected="false">Negyeddöntő</button>
+    <button class="ucl-tabbtn" data-round="SF" aria-selected="false">Elődöntő</button>
+    <button class="ucl-tabbtn" data-round="F" aria-selected="false">Döntő</button>
+  </div>
+  <div id="uclBracketAdminBody"></div>
+
+  </div>
+</details>
+
+
+<details class="card" id="roundStakeEditor">
+  <summary class="card-head"><h3>Fordulónkénti stake (tét szorzó)</h3><div class="hint">Meccs + továbbjutó</div></summary>
+  <div class="card-body">
+  <h2 style="margin:0 0 8px 0;">Fordulónkénti stake (tét szorzó)</h2>
+  <p class="muted">Az itt beállított stake szorzó érvényes a meccstippek pontjára és a továbbjutó tippekre is, abban a fordulóban, amelyben a párharc eldől (a visszavágó fordulója).</p>
+  <div id="roundStakeMount" class="table-wrap"></div>
+  <div class="row" style="margin-top:12px; gap:10px; align-items:center; flex-wrap:wrap;">
+    <button id="saveRoundStakesBtn" class="btn primary">Stake mentése</button>
+    <span id="roundStakeStatus" class="muted"></span>
+  </div>
+
+  </div>
+</details>
+
+</body>
 </html>
