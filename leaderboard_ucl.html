@@ -226,25 +226,6 @@
     const tipDouble=t=>!!(t?.double??t?.isDouble);
     const tipTsMs=t=>t?.updatedAt?.toMillis?.()||t?.createdAt?.toMillis?.()||t?.timestamp?.toMillis?.()||0;
     const matchRound=m=>String(m?.round??m?.roundId??"");
-    function canonicalSlotId(id){
-      if(!id) return "";
-      return String(id).trim().toUpperCase().replace(/\s+/g,"");
-    }
-    function resolveWinnerSideFromSlot(slot){
-      if(!slot) return null;
-      if(slot.advanceWinner==="home"||slot.advanceWinner==="away") return slot.advanceWinner;
-      if(slot.penaltyWinner==="home"||slot.penaltyWinner==="away") return slot.penaltyWinner;
-      return null;
-    }
-    function tieDecidingRoundFromSlot(slot){
-      if(!slot) return null;
-      const ids = Array.isArray(slot.matchIds) ? slot.matchIds : [];
-      const pickId = ids.length>=2 ? ids[1] : ids[0];
-      const m = pickId ? matchesById[pickId] : null;
-      const rid = matchRound(m);
-      return rid || null;
-    }
-
 
     function parseRes(str){const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);return m?[parseInt(m[1]),parseInt(m[2])]:null}
     function outcomeOfMatch(m){
@@ -280,12 +261,11 @@
     let currentUserEmail="",currentUserNick="",currentUserRole="user",favouriteTeamucl="",chatLastSeenUcl=null;
     let usersMap={}, usersFavUcl={};
     let matchesById={}, roundsAsc=[];
+    let slotsById={};
+    let advanceTipsBySlotId={};
     let officialTop8=[], officialChampion="", officialGoldenPlayer="";
     let top8TipsByEmail={}, championPickByEmail={}, goldenPickByEmail={};
     let latestTipsByUserMatch=new Map();
-    let bracketSlotsById={};
-    let advanceTipsDocs=[];
-
     let rows=[];
     let showBots=false;
     let botPickStore={};
@@ -413,33 +393,7 @@
             matchesById[m.id]=m;
             const r=matchRound(m); if(r) roundSet.add(r);
           });
-
-      /* TOVÁBBJUTÓ pontok (bracket) */
-      if(Array.isArray(advanceTipsDocs) && advanceTipsDocs.length){
-        for(const t of advanceTipsDocs){
-          const email = t.user || t.email || t.userEmail;
-          if(!email) continue;
-          const sid = canonicalSlotId(t.slotId || t.slot || t.tieId);
-          if(!sid) continue;
-          const slot = bracketSlotsById ? bracketSlotsById[sid] : null;
-          const winnerSide = resolveWinnerSideFromSlot(slot);
-          if(!winnerSide) continue; /* még nincs döntés */
-          const pick = String(t.pick||"").toLowerCase();
-          const correct = (pick===winnerSide);
-          const pts = correct ? Number(t.odds||0) : 0;
-          if(!pts) continue;
-          const rid = tieDecidingRoundFromSlot(slot);
-          const nick=usersMap[email]||email;
-          if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
-          player[email].base+=pts;
-          if(rid){
-            rounds.add(rid);
-            player[email].perRound[rid]=(player[email].perRound[rid]||0)+pts;
-          }
-        }
-      }
-
-      roundsAsc=Array.from(roundSet).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+          roundsAsc=Array.from(roundSet).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
           officialTop8 = deriveTop8FromMatches(Object.values(matchesById));
 
@@ -469,23 +423,27 @@
         });
 
 
-
-
-        /* BRACKET (továbbjutó) */
+        /* UCL BRACKET (továbbjutó odds + admin döntés) */
         onSnapshot(doc(db,"settings","ucl_bracket"), snap=>{
           const d = snap.exists()? (snap.data()||{}) : {};
-          const raw = (d.slotsById && typeof d.slotsById==="object") ? d.slotsById : {};
-          const norm = {};
-          Object.keys(raw||{}).forEach(k=>{
-            norm[canonicalSlotId(k)] = raw[k];
-          });
-          bracketSlotsById = norm;
+          const slots = (d.slots && typeof d.slots==="object") ? d.slots : {};
+          slotsById = slots;
           recomputeRows(); renderTable();
         });
 
+        /* UCL ADVANCE TIPS (játékos továbbjutó tippjei) */
         onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
-          advanceTipsDocs=[];
-          snap.forEach(docu=>{ advanceTipsDocs.push({id:docu.id, ...(docu.data()||{})}); });
+          const m = {};
+          snap.forEach(docu=>{
+            const d = docu.data()||{};
+            const email = (d.email||"").toLowerCase().trim();
+            const slotId = String(d.slotId||"").trim();
+            const pick = String(d.pick||"").trim();
+            if(!email || !slotId || !pick) return;
+            if(!m[email]) m[email] = {};
+            m[email][slotId] = pick;
+          });
+          advanceTipsBySlotId = m;
           recomputeRows(); renderTable();
         });
 
@@ -651,6 +609,43 @@
         if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
         player[email].base+=pts; player[email].perRound[r]=(player[email].perRound[r]||0)+pts;
       });
+      /* továbbjutó pontok hozzáadása (ugyanúgy, mint results.html) */
+      Object.entries(advanceTipsBySlotId||{}).forEach(([email, tipsBySlot])=>{
+        if(!tipsBySlot || typeof tipsBySlot!=="object") return;
+        Object.entries(tipsBySlot).forEach(([slotId, pick])=>{
+          const slot = slotsById ? slotsById[slotId] : null;
+          if(!slot) return;
+          const winner = String(slot.advanceWinner||"").trim();
+          if(!winner) return;
+          if(String(pick).trim()!==winner) return;
+
+          const matchIds = Array.isArray(slot.matchIds) ? slot.matchIds : [];
+          const refMatchId = matchIds[0];
+          const refMatch = refMatchId ? matchesById[refMatchId] : null;
+          const r = refMatch ? matchRound(refMatch) : null;
+          if(!r) return;
+
+          const odds = (winner==="home") ? Number(slot.advanceOddsHome) : Number(slot.advanceOddsAway);
+          if(!isFinite(odds) || odds<=0) return;
+
+          const stake = stakeForRound(r);
+          const pts = odds * stake;
+
+          const em = String(email||"").toLowerCase().trim();
+          if(!em) return;
+          if(!player[em]) player[em] = {name: usersMap[em]||em, perRound:{}, base:0, details:{}};
+          if(!player[em].perRound[r]) player[em].perRound[r]=0;
+          player[em].perRound[r] += pts;
+          player[em].base += pts;
+
+          if(!player[em].details[r]) player[em].details[r]=[];
+          const labelTeam = (winner==="home") ? (slot.homeTeam||"") : (slot.awayTeam||"");
+          player[em].details[r].push(`Továbbjutó (${slot.homeTeam||""}–${slot.awayTeam||""}: ${labelTeam||winner}) → ${fmt(pts)} pont`);
+          rounds.add(r);
+        });
+      });
+
+
       roundsAsc=Array.from(rounds).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
       rows = Object.values(player).map(obj=>{
