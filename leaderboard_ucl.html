@@ -226,6 +226,25 @@
     const tipDouble=t=>!!(t?.double??t?.isDouble);
     const tipTsMs=t=>t?.updatedAt?.toMillis?.()||t?.createdAt?.toMillis?.()||t?.timestamp?.toMillis?.()||0;
     const matchRound=m=>String(m?.round??m?.roundId??"");
+    function canonicalSlotId(id){
+      if(!id) return "";
+      return String(id).trim().toUpperCase().replace(/\s+/g,"");
+    }
+    function resolveWinnerSideFromSlot(slot){
+      if(!slot) return null;
+      if(slot.advanceWinner==="home"||slot.advanceWinner==="away") return slot.advanceWinner;
+      if(slot.penaltyWinner==="home"||slot.penaltyWinner==="away") return slot.penaltyWinner;
+      return null;
+    }
+    function tieDecidingRoundFromSlot(slot){
+      if(!slot) return null;
+      const ids = Array.isArray(slot.matchIds) ? slot.matchIds : [];
+      const pickId = ids.length>=2 ? ids[1] : ids[0];
+      const m = pickId ? matchesById[pickId] : null;
+      const rid = matchRound(m);
+      return rid || null;
+    }
+
 
     function parseRes(str){const m=String(str||"").match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);return m?[parseInt(m[1]),parseInt(m[2])]:null}
     function outcomeOfMatch(m){
@@ -264,12 +283,13 @@
     let officialTop8=[], officialChampion="", officialGoldenPlayer="";
     let top8TipsByEmail={}, championPickByEmail={}, goldenPickByEmail={};
     let latestTipsByUserMatch=new Map();
+    let bracketSlotsById={};
+    let advanceTipsDocs=[];
+
     let rows=[];
     let showBots=false;
     let botPickStore={};
     let roundStakes = {};
-        let bracketSlotsById = {};
-        let advanceTipsBySlotId = new Map();
     const stakeForRound = (roundId)=>{
       const k = (roundId==null? "" : String(roundId)).trim();
       const raw = (roundStakes && Object.prototype.hasOwnProperty.call(roundStakes,k)) ? roundStakes[k] : null;
@@ -278,62 +298,6 @@
       n = Number(n);
       return (Number.isFinite(n) && n>0) ? n : 1;
     };
-
-
-function canonicalSlotId(raw){
-  const s = (raw||"").toString().trim();
-  if(!s) return "";
-  const m = s.match(/^(PO|R16|QF|SF|F)[_\- ]?(\d+)$/i);
-  if(m){
-    const r = m[1].toUpperCase();
-    const n = String(parseInt(m[2],10));
-    if(r==="F") return "F1";
-    if(r==="R16") return `R16_${n}`;
-    return `${r}${n}`;
-  }
-  return s.replace(/\s+/g,"");
-}
-
-const matchRoundNum = (matchId, matchesById) => {
-  const mm = matchesById.get(matchId);
-  const r = mm ? (mm.roundId ?? mm.round ?? mm.roundNumber ?? "") : "";
-  const n = parseInt(String(r),10);
-  return Number.isFinite(n) ? n : null;
-};
-
-const resolveWinnerSideFromSlot = (slot) => {
-  if(!slot) return null;
-  const aw = (slot.advanceWinner||slot.winner||slot.winnerSide||"").toString().toLowerCase();
-  if(aw==="home" || aw==="away") return aw;
-  if(aw==="1") return "home";
-  if(aw==="2") return "away";
-  if(slot.decidedByPenalties && (slot.penaltyWinner==="home" || slot.penaltyWinner==="away")) return slot.penaltyWinner;
-  return null;
-};
-
-const computeTieInfos = (bracketSlotsById, matchesById) => {
-  const infos = [];
-  Object.keys(bracketSlotsById||{}).forEach(k=>{
-    const slot = bracketSlotsById[k] || {};
-    const slotId = canonicalSlotId(slot.id || k);
-    const matchIds = Array.isArray(slot.matchIds) ? slot.matchIds.filter(Boolean) : [];
-    const leg1 = matchIds[0] || "";
-    const leg2 = matchIds[1] || "";
-    const winnerSide = resolveWinnerSideFromSlot(slot);
-    if(!winnerSide) return;
-
-    const odds = (winnerSide==="home") ? slot.advanceOddsHome : slot.advanceOddsAway;
-    const winnerOdds = (typeof odds==="number" && Number.isFinite(odds)) ? odds : null;
-
-    let decidedRound = null;
-    if(leg2) decidedRound = matchRoundNum(leg2, matchesById);
-    else if(leg1) decidedRound = matchRoundNum(leg1, matchesById);
-    if(!decidedRound) return;
-
-    infos.push({ slotId, winnerSide, winnerOdds, decidedRound });
-  });
-  return infos;
-};
 
 
     /* RENDEZÉS ÁLLAPOT */
@@ -449,7 +413,33 @@ const computeTieInfos = (bracketSlotsById, matchesById) => {
             matchesById[m.id]=m;
             const r=matchRound(m); if(r) roundSet.add(r);
           });
-          roundsAsc=Array.from(roundSet).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+
+      /* TOVÁBBJUTÓ pontok (bracket) */
+      if(Array.isArray(advanceTipsDocs) && advanceTipsDocs.length){
+        for(const t of advanceTipsDocs){
+          const email = t.user || t.email || t.userEmail;
+          if(!email) continue;
+          const sid = canonicalSlotId(t.slotId || t.slot || t.tieId);
+          if(!sid) continue;
+          const slot = bracketSlotsById ? bracketSlotsById[sid] : null;
+          const winnerSide = resolveWinnerSideFromSlot(slot);
+          if(!winnerSide) continue; /* még nincs döntés */
+          const pick = String(t.pick||"").toLowerCase();
+          const correct = (pick===winnerSide);
+          const pts = correct ? Number(t.odds||0) : 0;
+          if(!pts) continue;
+          const rid = tieDecidingRoundFromSlot(slot);
+          const nick=usersMap[email]||email;
+          if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
+          player[email].base+=pts;
+          if(rid){
+            rounds.add(rid);
+            player[email].perRound[rid]=(player[email].perRound[rid]||0)+pts;
+          }
+        }
+      }
+
+      roundsAsc=Array.from(roundSet).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
           officialTop8 = deriveTop8FromMatches(Object.values(matchesById));
 
@@ -480,36 +470,24 @@ const computeTieInfos = (bracketSlotsById, matchesById) => {
 
 
 
-onSnapshot(doc(db,"settings","ucl_bracket"), snap=>{
-  bracketSlotsById = {};
-  if(snap.exists()){
-    const d = snap.data()||{};
-    const raw = (d && d.slots) ? d.slots : {};
-    if(Array.isArray(raw)){
-      raw.forEach(s=>{ if(s && s.id) bracketSlotsById[canonicalSlotId(s.id)] = s; });
-    }else if(raw && typeof raw === "object"){
-      Object.keys(raw).forEach(k=>{
-        const v = raw[k] || {};
-        bracketSlotsById[canonicalSlotId(k)] = { id: canonicalSlotId(k), ...v };
-      });
-    }
-  }
-  recomputeRows(); renderTable();
-});
 
-onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
-  advanceTipsBySlotId = new Map();
-  snap.forEach(docu=>{
-    const t = docu.data()||{};
-    const slotId = canonicalSlotId(t.slotId || t.tieId || t.slot || t.bracketSlotId || "");
-    const user = t.user || t.email || t.player || t.uid || "";
-    if(!slotId || !user) return;
-    const arr = advanceTipsBySlotId.get(slotId) || [];
-    arr.push({ ...t, slotId, user, _id: docu.id });
-    advanceTipsBySlotId.set(slotId, arr);
-  });
-  recomputeRows(); renderTable();
-});
+        /* BRACKET (továbbjutó) */
+        onSnapshot(doc(db,"settings","ucl_bracket"), snap=>{
+          const d = snap.exists()? (snap.data()||{}) : {};
+          const raw = (d.slotsById && typeof d.slotsById==="object") ? d.slotsById : {};
+          const norm = {};
+          Object.keys(raw||{}).forEach(k=>{
+            norm[canonicalSlotId(k)] = raw[k];
+          });
+          bracketSlotsById = norm;
+          recomputeRows(); renderTable();
+        });
+
+        onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
+          advanceTipsDocs=[];
+          snap.forEach(docu=>{ advanceTipsDocs.push({id:docu.id, ...(docu.data()||{})}); });
+          recomputeRows(); renderTable();
+        });
 
         /* TOP8/CHAMP/GOLDEN tippek */
         onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
@@ -673,37 +651,6 @@ onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
         if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
         player[email].base+=pts; player[email].perRound[r]=(player[email].perRound[r]||0)+pts;
       });
-      
-
-// továbbjutó (advance) tippek pontjai – ugyanaz a logika, mint a results oldalon
-const matchesByIdMap = new Map(matchList.map(m=>[m.id,m]));
-const tieInfos = computeTieInfos(bracketSlotsById, matchesByIdMap);
-
-tieInfos.forEach(info=>{
-  if(!info || !info.slotId || !info.winnerSide || !info.winnerOdds) return;
-  const tipArr = advanceTipsBySlotId.get(info.slotId) || [];
-  if(!tipArr.length) return;
-
-  const stake = stakeForRound(info.decidedRound);
-
-  tipArr.forEach(t=>{
-    const email = t.user || t.email || t.userEmail || "";
-    if(!email) return;
-
-    let pick = (t.pick || t.selection || t.choice || t.side || "").toString().toLowerCase().trim();
-    if(pick==="1") pick="home";
-    if(pick==="2") pick="away";
-    if(pick!=="home" && pick!=="away") return;
-    if(pick !== info.winnerSide) return;
-
-    const pts = info.winnerOdds * stake;
-    if(!player[email]) player[email]={nick:usersMap[email]||email,email,base:0,perRound:{}};
-    player[email].base += pts;
-    const rKey = String(info.decidedRound);
-    player[email].perRound[rKey] = (player[email].perRound[rKey]||0) + pts;
-    rounds.add(rKey);
-  });
-});
       roundsAsc=Array.from(rounds).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
       rows = Object.values(player).map(obj=>{
