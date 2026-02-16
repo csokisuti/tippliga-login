@@ -758,7 +758,10 @@
           const matchPts = (correct && ov) ? Number(ov) * mult : 0;
 
           let advPts = 0;
-          if (isDecider) advPts = advPointsForUserInTie(t.user, tieInfo);
+          if (isDecider){
+            const advOdds = advPointsForUserInTie(t.user, tieInfo);
+            advPts = advOdds ? (Number(advOdds) * stakeForRound(roundId)) : 0;
+          }
 
           const pts = matchPts + advPts;
 
@@ -912,15 +915,7 @@
               if(correct) row.classList.add("correct");
               else if(winnerSide) row.classList.add("wrong");
 
-              const stake = stakeForRound(roundId);
-              let rawOdds = null;
-              if(t.pick==="home") rawOdds = Number(tieInfo.advanceOddsHome ?? tieInfo.advanceOddsH ?? null);
-              if(t.pick==="away") rawOdds = Number(tieInfo.advanceOddsAway ?? tieInfo.advanceOddsA ?? null);
-              if(!(rawOdds>0)){
-                rawOdds = Number(t.odds ?? 0) || 0;
-                if(stake>1 && rawOdds>20) rawOdds = rawOdds / stake;
-              }
-              const pts = correct ? (rawOdds * stake) : 0;
+              const pts = correct ? ((Number(t.odds ?? 0) || 0) * stakeForRound(roundId)) : 0;
 
               row.innerHTML = `
                 <b>${escapeHtml(nick)}</b>: ${escapeHtml(pickTeam || "—")}
