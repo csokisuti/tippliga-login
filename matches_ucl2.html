@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hu">
 <head>
@@ -115,6 +116,19 @@
     .adv-opt{display:flex;align-items:center;gap:8px;font-size:13px}
     .adv-odds{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a}
     .adv-lock{opacity:.6}
+
+      .stake-bar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:10px 0 14px 0}
+      .stake-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid #e6e9f0;background:#f7f8fb;font-weight:800}
+      .stake-chip strong{font-weight:900}
+      .stake-how{border:1px solid #e6e9f0;background:#fff;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer}
+      .stake-how:hover{background:#fafbff}
+      .stake-panel{display:none;margin:0 0 14px 0;border:1px solid #e6e9f0;background:#fff;border-radius:14px;padding:12px 14px}
+      .stake-panel h4{margin:0 0 8px 0;font-size:14px}
+      .stake-panel ul{margin:0;padding-left:18px;color:#556070}
+      .stake-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #e6e9f0;background:#f7f8fb;font-weight:800;font-size:12px}
+      .stake-help{margin-top:10px;border:1px solid #e6e9f0;background:#f7f8fb;border-radius:12px;padding:10px 12px;color:#2f3844;font-weight:700}
+      .stake-help .muted{font-weight:600;color:#566171}
+
 </style>
 
   <script type="module">
@@ -438,7 +452,45 @@
 let myTipsByMatch = new Map();
     let doublesByDay  = new Map();            // YYYY-MM-DD -> matchId
     let earliestStartByDay = new Map();       // YYYY-MM-DD -> Date
-    let matchesByDay = new Map();             // YYYY-MM-DD -> [{match}]
+    
+      let roundStakes = {}; 
+      function stakeForRound(roundStr){
+        const n = parseInt(String(roundStr||"").trim(), 10);
+        const v = roundStakes && !Number.isNaN(n) ? roundStakes[n] : null;
+        return (typeof v === "number" && isFinite(v) && v>0) ? v : 1;
+      }
+      async function loadRoundStakes(){
+        try{
+          const snap = await getDoc(doc(db, "settings", "ucl_roundStakes"));
+          const data = snap.exists() ? (snap.data()||{}) : {};
+          const stakes = data.stakes || {};
+          const out = {};
+          for (const [k,val] of Object.entries(stakes)){
+            const n = parseInt(String(k),10);
+            const num = typeof val === "number" ? val : parseFloat(val);
+            if (!Number.isNaN(n) && !Number.isNaN(num)) out[n]=num;
+          }
+          roundStakes = out;
+        }catch(e){
+          roundStakes = {};
+        }
+        updateCurrentStakeChip();
+      }
+      function updateCurrentStakeChip(){
+        const elV = document.getElementById("currentStakeValue");
+        if (!elV) return;
+        let minRound = null;
+        for (const arr of matchesByDay.values()){
+          for (const m of arr){
+            const n = parseInt(String(m.round||"").trim(),10);
+            if (!Number.isNaN(n)) minRound = (minRound===null)? n : Math.min(minRound,n);
+          }
+        }
+        const stake = minRound===null ? 1 : stakeForRound(minRound);
+        elV.textContent = String(stake);
+      }
+
+      let matchesByDay = new Map();             // YYYY-MM-DD -> [{match}]
 
     const isDayLocked = dayKey => {
       const first = earliestStartByDay.get(dayKey);
@@ -548,11 +600,21 @@ let myTipsByMatch = new Map();
             if (!prev || dt < prev) earliestStartByDay.set(dk, dt);
           });
 
+          await loadRoundStakes();
           buildMatchesList();
           updatePendingBadge(upcoming);
         }catch(e){ console.warn(e); }
 
         initChat(userRef);
+
+        
+        const howBtn = document.getElementById("stakeHowBtn");
+        const howPanel = document.getElementById("stakeHowPanel");
+        if (howBtn && howPanel){
+          howBtn.addEventListener("click", ()=>{
+            howPanel.style.display = (howPanel.style.display === "none" || !howPanel.style.display) ? "block" : "none";
+          });
+        }
 
         document.getElementById("logout").addEventListener("click", () => {
           signOut(auth).then(() => window.location.href = "login_ucl.html");
@@ -601,6 +663,7 @@ let myTipsByMatch = new Map();
           const curChoice = tipChoice(tip);
           const isDouble  = tipDouble(tip);
           const roundStr  = matchRound(m);
+          const stake = stakeForRound(roundStr);
 
           const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
           const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
@@ -621,12 +684,33 @@ let myTipsByMatch = new Map();
             <div class="odds">${oddsLine}</div>
           `;
 
+          const stakeHelp = document.createElement('div');
+          stakeHelp.className = 'stake-help';
+          stakeHelp.innerHTML = `<span class="muted">Tét ezen a fordulóban:</span> <b>${stake}</b> pont · <span class="muted">Ha nyer a tipped:</span> <b id="calc-${m.id}">—</b>`;
+          left.appendChild(stakeHelp);
+
           const right = document.createElement('div');
           right.className = 'ctl';
+          const stakeBadge = document.createElement('div');
+          stakeBadge.className = 'stake-badge';
+          stakeBadge.textContent = `Stake: ${stake}`;
+          right.appendChild(stakeBadge);
           const select = document.createElement('select');
           select.className = 'select';
           select.innerHTML = `<option value="">Válassz tippet</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>`;
           select.value = curChoice;
+
+          const calcElInit = document.getElementById(`calc-${m.id}`);
+          if (calcElInit){
+            const chosen0 = select.value;
+            const odds0 = chosen0 === '1' ? m.oddsHome : (chosen0 === 'X' ? m.oddsDraw : (chosen0 === '2' ? m.oddsAway : null));
+            if (chosen0 && odds0){
+              const pts0 = (Number(odds0)||0) * stake;
+              calcElInit.textContent = `${Number(odds0).toFixed(2)} × ${stake} = ${pts0.toFixed(2)} pont`;
+            }else{
+              calcElInit.textContent = '—';
+            }
+          }
 
           const dblWrap = document.createElement('label');
           dblWrap.className = 'double-wrap';
@@ -670,6 +754,17 @@ let myTipsByMatch = new Map();
             const curAdv = myAdvanceTipsBySlot.get(String(slotInfo.slotId));
             const curPick = (curAdv?.pick ?? curAdv?.advancePick ?? curAdv?.choice ?? "");
 
+            const advInitEl = document.getElementById(`advcalc-${slotId}`);
+            if (advInitEl){
+              const pick0 = existing ? existing.pick : "";
+              const odds0 = pick0 === "home" ? Number(slotInfo.oddsHome) : (pick0 === "away" ? Number(slotInfo.oddsAway) : null);
+              if (odds0){
+                advInitEl.textContent = `${odds0.toFixed(2)} × ${stake} = ${(odds0*stake).toFixed(2)} pont`;
+              }else{
+                advInitEl.textContent = "—";
+              }
+            }
+
             const mkOpt = (val, label, odds)=>{
               const lab = document.createElement('label');
               lab.className = 'adv-opt' + (locked ? ' adv-lock' : '');
@@ -686,6 +781,12 @@ let myTipsByMatch = new Map();
               od.textContent = odds ? String(odds).replace('.', ',') : '-';
               lab.appendChild(r); lab.appendChild(sp); lab.appendChild(od);
               r.addEventListener('change', async ()=>{
+                const el = document.getElementById(`advcalc-${slotId}`);
+                if (el){
+                  const o = Number(od)||0;
+                  const pts = o * stake;
+                  el.textContent = `${o.toFixed(2)} × ${stake} = ${pts.toFixed(2)} pont`;
+                }
                 await saveAdvanceTipWithAudit(m, slotInfo, val, saved2);
               });
               return lab;
@@ -694,6 +795,12 @@ let myTipsByMatch = new Map();
             opts.appendChild(mkOpt('home', m.homeTeam || 'Hazai', slotInfo.oddsHome));
             opts.appendChild(mkOpt('away', m.awayTeam || 'Vendég', slotInfo.oddsAway));
             box.appendChild(opts);
+
+            const advHelp = document.createElement('div');
+            advHelp.className = 'stake-help';
+            advHelp.style.marginTop = '10px';
+            advHelp.innerHTML = `<span class="muted">Tét ezen a fordulóban:</span> <b>${stake}</b> pont · <span class="muted">Ha nyer a továbbjutó tipped:</span> <b id="advcalc-${slotId}">—</b>`;
+            box.appendChild(advHelp);
 
             const foot = document.createElement('div');
             foot.style.display = 'flex';
@@ -714,7 +821,20 @@ let myTipsByMatch = new Map();
             dbl.title = "Ezen a napon a duplázás már lezárt (az első meccs elkezdődött).";
           }
 
-          select.addEventListener('change', async ()=>{ await saveTipWithAudit(m, select.value, dbl.checked, dk, saved); });
+          select.addEventListener('change', async ()=>{
+            const chosen = select.value;
+            const oddsVal = chosen === '1' ? m.oddsHome : (chosen === 'X' ? m.oddsDraw : (chosen === '2' ? m.oddsAway : null));
+            const calcEl = document.getElementById(`calc-${m.id}`);
+            if (calcEl){
+              if (chosen && oddsVal){
+                const pts = (Number(oddsVal)||0) * stake;
+                calcEl.textContent = `${Number(oddsVal).toFixed(2)} × ${stake} = ${pts.toFixed(2)} pont`;
+              }else{
+                calcEl.textContent = '—';
+              }
+            }
+            await saveTipWithAudit(m, select.value, dbl.checked, dk, saved);
+          });
 
           dbl.addEventListener('change', async ()=>{
             if (isDayLocked(dk)){
@@ -990,7 +1110,17 @@ let myTipsByMatch = new Map();
           inputEl.value = backup; inputEl.focus();
         }
       });
-      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
+      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } 
+
+        let minRound = null;
+        for (const m of matches){
+          const n = parseInt(String(m.round||"").trim(),10);
+          if (!Number.isNaN(n)) minRound = (minRound===null)? n : Math.min(minRound,n);
+        }
+        const stakeNow = minRound===null ? 1 : stakeForRound(minRound);
+        const elV = document.getElementById("currentStakeValue");
+        if (elV) elV.textContent = String(stakeNow);
+});
 
       async function markSeen(){
         try{
@@ -1104,7 +1234,21 @@ let myTipsByMatch = new Map();
 
     <section class="card">
       <h3>Közelgő meccsnapok</h3>
-      <div id="matchList"></div>
+      
+        <div class="stake-bar">
+          <div class="stake-chip" id="currentStakeChip">Stake (aktuális forduló): <strong id="currentStakeValue">—</strong> pont</div>
+          <button class="stake-how" id="stakeHowBtn" type="button">Hogyan számolunk?</button>
+        </div>
+        <div class="stake-panel" id="stakeHowPanel">
+          <h4>Számolási logika (stake alapú)</h4>
+          <ul>
+            <li><b>Meccstipp pont:</b> ha eltalálod a kimenetelt, akkor <b>odds × stake</b> pont jár (stake = az adott forduló tétje).</li>
+            <li><b>Továbbjutó pont:</b> ha eltalálod a továbbjutót, akkor <b>továbbjutó-odds × stake</b> pont jár (ugyanannak a fordulónak a stake-je).</li>
+            <li>A stake-et az admin állítja (settings/ucl_roundStakes).</li>
+          </ul>
+        </div>
+
+        <div id="matchList"></div>
     </section>
   </div>
 
@@ -1129,4 +1273,3 @@ let myTipsByMatch = new Map();
   </section>
 </body>
 </html>
-
