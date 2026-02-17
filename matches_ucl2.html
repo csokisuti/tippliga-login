@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="hu">
 <head>
@@ -109,7 +108,7 @@
 
     /* NB1-hez igazított odds méret – minimális override, mást nem piszkálunk */
     .match .odds{ font-size:16px !important; }
-  
+
     .advance-box{margin-top:10px;padding:10px;border:1px dashed rgba(148,163,184,.55);border-radius:12px;background:#fff}
     .advance-title{font-weight:800;font-size:12px;margin:0 0 8px;color:#0f172a}
     .advance-options{display:flex;flex-direction:column;gap:6px}
@@ -117,19 +116,17 @@
     .adv-odds{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a}
     .adv-lock{opacity:.6}
 
-      .stake-bar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:10px 0 14px 0}
-      .stake-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid #e6e9f0;background:#f7f8fb;font-weight:800}
-      .stake-chip strong{font-weight:900}
-      .stake-how{border:1px solid #e6e9f0;background:#fff;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer}
-      .stake-how:hover{background:#fafbff}
-      .stake-panel{display:none;margin:0 0 14px 0;border:1px solid #e6e9f0;background:#fff;border-radius:14px;padding:12px 14px}
-      .stake-panel h4{margin:0 0 8px 0;font-size:14px}
-      .stake-panel ul{margin:0;padding-left:18px;color:#556070}
-      .stake-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #e6e9f0;background:#f7f8fb;font-weight:800;font-size:12px}
-      .stake-help{margin-top:10px;border:1px solid #e6e9f0;background:#f7f8fb;border-radius:12px;padding:10px 12px;color:#2f3844;font-weight:700}
-      .stake-help .muted{font-weight:600;color:#566171}
-
-</style>
+    /* Mobil: továbbjutó blokk ne lógjon ki */
+    @media (max-width: 600px){
+      .advance-box{ padding:8px; }
+      .adv-opt{ font-size:12px; }
+      .adv-odds{ font-size:12px; }
+    }
+    @media (max-width: 420px){
+      .adv-opt{ flex-wrap:wrap; }
+      .adv-odds{ width:100%; text-align:right; margin-top:2px; }
+    }
+  </style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -155,9 +152,8 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    const TIP_HISTORY = "tipHistory"; // AUDIT kollekció (NB1-hez azonos)
+    const TIP_HISTORY = "tipHistory";
 
-    /* Címerek – BL mezőny */
     const crestMap = {
       "Ajax": "ucl_crest/ajax.png",
       "Arsenal": "ucl_crest/arsenal.png",
@@ -199,7 +195,6 @@
     const crestFor = t => crestMap[t] || "";
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
-    /* Odds helper – többféle sémát támogat */
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -208,13 +203,11 @@
       return undefined;
     }
 
-    /* Forduló továbbra is megy (kompat mentéshez), de duplázás már nap szerint */
     const matchRound = m => String(m.round ?? m.roundId ?? "");
     const tipChoice = t => (t?.choice ?? t?.tip ?? "");
     const tipDouble = t => !!(t?.double ?? t?.isDouble);
     const tipTsMs   = t => t?.updatedAt?.toMillis?.() || t?.createdAt?.toMillis?.() || t?.timestamp?.toMillis?.() || 0;
 
-    /* Helper az audit sorhoz */
     const sanitizeEmail = (e)=> String(e).replace(/[^a-zA-Z0-9._-]/g,'_');
     const oddsSnapshotFromMatch = (m)=> m ? ({
       "1": m?.odds?.["1"] ?? m?.odds1 ?? null,
@@ -222,7 +215,6 @@
       "2": m?.odds?.["2"] ?? m?.odds2 ?? null
     }) : null;
 
-    /* === Meccsnap kulcsok === */
     const pad2 = n => String(n).padStart(2,'0');
     function asDate(v){ return v?.toDate?.() ? v.toDate() : new Date(v); }
     function dayKeyFromDate(dt){ return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`; }
@@ -232,7 +224,6 @@
       return dt.toLocaleDateString('hu-HU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     }
 
-    /* ===== NAV Top8 visszaszámláló ===== */
     let navCdTimer = null;
     function formatCountdown(ms){
       const total = Math.max(0, Math.floor(ms/1000));
@@ -280,7 +271,6 @@
       el.hidden = false;
     }
 
-    /* ===== ÚJ: Duplák stabil felépítése tippekből ===== */
     async function dayKeyForMatchId(matchId){
       try{
         const s = await getDoc(doc(db, "ucl_matches", matchId));
@@ -293,7 +283,7 @@
 
     async function rebuildDoublesFromTips(tipsArr){
       doublesByDay.clear();
-      const latestByDay = new Map(); // dayKey -> {matchId, ts}
+      const latestByDay = new Map();
 
       const pending = [];
       for (const t of tipsArr){
@@ -315,8 +305,6 @@
       latestByDay.forEach((v, dk)=> doublesByDay.set(dk, v.matchId));
     }
 
-    
-    /* ===== ÚJ: Bracket first-leg map + továbbjutó tippek ===== */
     function numOrNull(v){
       const n = parseFloat(String(v ?? "").replace(",", "."));
       return (isFinite(n) ? n : null);
@@ -439,66 +427,43 @@
       }
     }
 
-/* Állapot */
     let currentUserEmail = "";
     let currentUserNick  = "";
     let currentUserRole  = "user";
     let favouriteTeamucl = "";
-    let chatLastSeenUcl  = null;   // <-- külön BL chat mező
+    let chatLastSeenUcl  = null;
 
     let myAdvanceTipsBySlot = new Map();
-    let firstLegByMatchId = new Map(); // matchId -> {slotId, oddsHome, oddsAway}
+    let firstLegByMatchId = new Map();
 
-let myTipsByMatch = new Map();
-    let doublesByDay  = new Map();            // YYYY-MM-DD -> matchId
-    let earliestStartByDay = new Map();       // YYYY-MM-DD -> Date
-    
-      let roundStakes = {}; 
-      function stakeForRound(roundStr){
-        const n = parseInt(String(roundStr||"").trim(), 10);
-        const v = roundStakes && !Number.isNaN(n) ? roundStakes[n] : null;
-        return (typeof v === "number" && isFinite(v) && v>0) ? v : 1;
-      }
-      async function loadRoundStakes(){
-        try{
-          const snap = await getDoc(doc(db, "settings", "ucl_roundStakes"));
-          const data = snap.exists() ? (snap.data()||{}) : {};
-          const stakes = data.stakes || {};
-          const out = {};
-          for (const [k,val] of Object.entries(stakes)){
-            const n = parseInt(String(k),10);
-            const num = typeof val === "number" ? val : parseFloat(val);
-            if (!Number.isNaN(n) && !Number.isNaN(num)) out[n]=num;
-          }
-          roundStakes = out;
-        }catch(e){
-          roundStakes = {};
-        }
-        updateCurrentStakeChip();
-      }
-      function updateCurrentStakeChip(){
-        const elV = document.getElementById("currentStakeValue");
-        if (!elV) return;
-        let minRound = null;
-        for (const arr of matchesByDay.values()){
-          for (const m of arr){
-            const n = parseInt(String(m.round||"").trim(),10);
-            if (!Number.isNaN(n)) minRound = (minRound===null)? n : Math.min(minRound,n);
-          }
-        }
-        const stake = minRound===null ? 1 : stakeForRound(minRound);
-        elV.textContent = String(stake);
-      }
-
-      let matchesByDay = new Map();             // YYYY-MM-DD -> [{match}]
+    let myTipsByMatch = new Map();
+    let doublesByDay  = new Map();
+    let earliestStartByDay = new Map();
+    let matchesByDay = new Map();
 
     const isDayLocked = dayKey => {
       const first = earliestStartByDay.get(dayKey);
       return first ? (new Date() >= first) : false;
     };
 
+    function getStakeValue(m){
+      const s = m?.stake ?? m?.stakeUcl ?? m?.stakeMultiplier ?? m?.roundStake ?? null;
+      const n = parseFloat(String(s ?? "").replace(",", "."));
+      if (isFinite(n)) return n;
+      if (s === null || s === undefined || s === "") return null;
+      return s;
+    }
+    function fmtStake(st){
+      if (st === null || st === undefined) return "-";
+      if (typeof st === "number") return String(st).replace(".", ",");
+      return String(st);
+    }
+    function isDoubleRound(m){
+      const rnum = parseInt(matchRound(m)) || 0;
+      return rnum > 0 && rnum <= 8;
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
-      /* Liga-váltó mount: BAL SZÉL – cím mellett */
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
       onAuthStateChanged(auth, async (user) => {
@@ -512,7 +477,7 @@ let myTipsByMatch = new Map();
           currentUserNick  = d.nickname || currentUserEmail;
           currentUserRole  = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeenUcl  = d.chatLastSeenUcl || null;   // <-- itt is BL mező
+          chatLastSeenUcl  = d.chatLastSeenUcl || null;
         } else {
           currentUserNick = currentUserEmail;
         }
@@ -520,7 +485,6 @@ let myTipsByMatch = new Map();
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
         if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
 
-        /* THEME */
         if (favouriteTeamucl) {
           const themeClass = "theme-" + favouriteTeamucl.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
@@ -530,7 +494,6 @@ let myTipsByMatch = new Map();
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
-        /* === Top8 határidő beolvasása + számláló indítása === */
         try{
           const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
           let until = null, isLocked = false;
@@ -548,11 +511,9 @@ let myTipsByMatch = new Map();
         try{
           const now = new Date();
 
-          // 1) Közelgő meccsek (idő szerint)
           const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
           const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
 
-          // 2) Saját tippek (legfrissebb per match)
           const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
           const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
           const latestByMatch = new Map();
@@ -567,11 +528,8 @@ let myTipsByMatch = new Map();
           await loadBracketFirstLegs();
           await loadMyAdvanceTips();
 
-
-          // ÚJ: duplák felépítése a tippekből
           await rebuildDoublesFromTips(tips);
 
-          // 3) Napok előállítása + meglévő dupla per nap
           matchesByDay.clear();
           for (const m of upcoming){
             const st = asDate(m.startTime);
@@ -588,7 +546,6 @@ let myTipsByMatch = new Map();
             arr.sort((a,b)=> asDate(a.startTime) - asDate(b.startTime));
           }
 
-          // 4) Napi zár idők: a nap első meccse
           earliestStartByDay.clear();
           const allSnap = await getDocs(query(collection(db,"ucl_matches"), orderBy("startTime","asc")));
           allSnap.forEach(docu=>{
@@ -600,21 +557,11 @@ let myTipsByMatch = new Map();
             if (!prev || dt < prev) earliestStartByDay.set(dk, dt);
           });
 
-          await loadRoundStakes();
           buildMatchesList();
           updatePendingBadge(upcoming);
         }catch(e){ console.warn(e); }
 
         initChat(userRef);
-
-        
-        const howBtn = document.getElementById("stakeHowBtn");
-        const howPanel = document.getElementById("stakeHowPanel");
-        if (howBtn && howPanel){
-          howBtn.addEventListener("click", ()=>{
-            howPanel.style.display = (howPanel.style.display === "none" || !howPanel.style.display) ? "block" : "none";
-          });
-        }
 
         document.getElementById("logout").addEventListener("click", () => {
           signOut(auth).then(() => window.location.href = "login_ucl.html");
@@ -637,18 +584,24 @@ let myTipsByMatch = new Map();
 
       const dayKeys = Array.from(matchesByDay.keys()).sort();
       for (const dk of dayKeys){
+        const matches = matchesByDay.get(dk) || [];
+        const dayHasDouble = matches.some(m => isDoubleRound(m));
+
         const dayBlock = document.createElement('div');
         dayBlock.className = 'day-block';
         dayBlock.dataset.day = dk;
 
         const head = document.createElement('div');
         head.className = 'day-head';
+
         head.innerHTML = `
           <div class="day-title">${dayLabel(dk)}</div>
+          ${dayHasDouble ? `
           <div class="dbl-flag" id="flag-${dk}">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.39 4.84L20 7.27l-4 3.9.94 5.49L12 14.77 7.06 16.66 8 11.94l-4-3.9 5.61-.43L12 2z"/></svg>
             <span class="txt">Ne felejtsd el a mai duplázót ;)</span>
-          </div>`;
+          </div>` : ``}
+        `;
         dayBlock.appendChild(head);
 
         const list = document.createElement('div');
@@ -657,16 +610,17 @@ let myTipsByMatch = new Map();
 
         wrap.appendChild(dayBlock);
 
-        const matches = matchesByDay.get(dk) || [];
         for (const m of matches){
           const tip = myTipsByMatch.get(m.id) || {};
           const curChoice = tipChoice(tip);
           const isDouble  = tipDouble(tip);
           const roundStr  = matchRound(m);
-          const stake = stakeForRound(roundStr);
 
           const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
           const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
+
+          const stakeVal = getStakeValue(m);
+          const stakeLine = `Stake: ${fmtStake(stakeVal)}`;
 
           const row = document.createElement('div');
           row.className = 'match';
@@ -682,35 +636,15 @@ let myTipsByMatch = new Map();
             </div>
             <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
             <div class="odds">${oddsLine}</div>
+            <div class="meta">${stakeLine}</div>
           `;
-
-          const stakeHelp = document.createElement('div');
-          stakeHelp.className = 'stake-help';
-          stakeHelp.innerHTML = `<span class="muted">Tét ezen a fordulóban:</span> <b>${stake}</b> pont · <span class="muted">Ha nyer a tipped:</span> <b id="calc-${m.id}">—</b>`;
-          left.appendChild(stakeHelp);
 
           const right = document.createElement('div');
           right.className = 'ctl';
-          const stakeBadge = document.createElement('div');
-          stakeBadge.className = 'stake-badge';
-          stakeBadge.textContent = `Stake: ${stake}`;
-          right.appendChild(stakeBadge);
           const select = document.createElement('select');
           select.className = 'select';
           select.innerHTML = `<option value="">Válassz tippet</option><option value="1">1</option><option value="X">X</option><option value="2">2</option>`;
           select.value = curChoice;
-
-          const calcElInit = document.getElementById(`calc-${m.id}`);
-          if (calcElInit){
-            const chosen0 = select.value;
-            const odds0 = chosen0 === '1' ? m.oddsHome : (chosen0 === 'X' ? m.oddsDraw : (chosen0 === '2' ? m.oddsAway : null));
-            if (chosen0 && odds0){
-              const pts0 = (Number(odds0)||0) * stake;
-              calcElInit.textContent = `${Number(odds0).toFixed(2)} × ${stake} = ${pts0.toFixed(2)} pont`;
-            }else{
-              calcElInit.textContent = '—';
-            }
-          }
 
           const dblWrap = document.createElement('label');
           dblWrap.className = 'double-wrap';
@@ -754,17 +688,6 @@ let myTipsByMatch = new Map();
             const curAdv = myAdvanceTipsBySlot.get(String(slotInfo.slotId));
             const curPick = (curAdv?.pick ?? curAdv?.advancePick ?? curAdv?.choice ?? "");
 
-            const advInitEl = document.getElementById(`advcalc-${slotId}`);
-            if (advInitEl){
-              const pick0 = existing ? existing.pick : "";
-              const odds0 = pick0 === "home" ? Number(slotInfo.oddsHome) : (pick0 === "away" ? Number(slotInfo.oddsAway) : null);
-              if (odds0){
-                advInitEl.textContent = `${odds0.toFixed(2)} × ${stake} = ${(odds0*stake).toFixed(2)} pont`;
-              }else{
-                advInitEl.textContent = "—";
-              }
-            }
-
             const mkOpt = (val, label, odds)=>{
               const lab = document.createElement('label');
               lab.className = 'adv-opt' + (locked ? ' adv-lock' : '');
@@ -781,12 +704,6 @@ let myTipsByMatch = new Map();
               od.textContent = odds ? String(odds).replace('.', ',') : '-';
               lab.appendChild(r); lab.appendChild(sp); lab.appendChild(od);
               r.addEventListener('change', async ()=>{
-                const el = document.getElementById(`advcalc-${slotId}`);
-                if (el){
-                  const o = Number(od)||0;
-                  const pts = o * stake;
-                  el.textContent = `${o.toFixed(2)} × ${stake} = ${pts.toFixed(2)} pont`;
-                }
                 await saveAdvanceTipWithAudit(m, slotInfo, val, saved2);
               });
               return lab;
@@ -795,12 +712,6 @@ let myTipsByMatch = new Map();
             opts.appendChild(mkOpt('home', m.homeTeam || 'Hazai', slotInfo.oddsHome));
             opts.appendChild(mkOpt('away', m.awayTeam || 'Vendég', slotInfo.oddsAway));
             box.appendChild(opts);
-
-            const advHelp = document.createElement('div');
-            advHelp.className = 'stake-help';
-            advHelp.style.marginTop = '10px';
-            advHelp.innerHTML = `<span class="muted">Tét ezen a fordulóban:</span> <b>${stake}</b> pont · <span class="muted">Ha nyer a továbbjutó tipped:</span> <b id="advcalc-${slotId}">—</b>`;
-            box.appendChild(advHelp);
 
             const foot = document.createElement('div');
             foot.style.display = 'flex';
@@ -821,20 +732,7 @@ let myTipsByMatch = new Map();
             dbl.title = "Ezen a napon a duplázás már lezárt (az első meccs elkezdődött).";
           }
 
-          select.addEventListener('change', async ()=>{
-            const chosen = select.value;
-            const oddsVal = chosen === '1' ? m.oddsHome : (chosen === 'X' ? m.oddsDraw : (chosen === '2' ? m.oddsAway : null));
-            const calcEl = document.getElementById(`calc-${m.id}`);
-            if (calcEl){
-              if (chosen && oddsVal){
-                const pts = (Number(oddsVal)||0) * stake;
-                calcEl.textContent = `${Number(oddsVal).toFixed(2)} × ${stake} = ${pts.toFixed(2)} pont`;
-              }else{
-                calcEl.textContent = '—';
-              }
-            }
-            await saveTipWithAudit(m, select.value, dbl.checked, dk, saved);
-          });
+          select.addEventListener('change', async ()=>{ await saveTipWithAudit(m, select.value, dbl.checked, dk, saved); });
 
           dbl.addEventListener('change', async ()=>{
             if (isDayLocked(dk)){
@@ -845,7 +743,7 @@ let myTipsByMatch = new Map();
             }
             if (dbl.checked){
               reflectDoubleStateForDay(dk, m.id);
-              await enforceSingleDoubleForDay(dk, m.id); // auditál
+              await enforceSingleDoubleForDay(dk, m.id);
               doublesByDay.set(dk, m.id);
               updateDayFlag(dk);
             }else{
@@ -859,7 +757,7 @@ let myTipsByMatch = new Map();
           if (lockedId && lockedId !== m.id){ dbl.checked = false; }
         }
 
-        updateDayFlag(dk);
+        if (dayHasDouble) updateDayFlag(dk);
       }
     }
 
@@ -893,7 +791,6 @@ let myTipsByMatch = new Map();
       });
     }
 
-    // --- rendszer által kényszerített dupla-levétel + AUDIT ---
     async function enforceSingleDoubleForDay(dayKey, keepMatchId){
       const idsForDay = new Set((matchesByDay.get(dayKey) || []).map(m=>m.id));
       const qTips = query(collection(db,"ucl_tips"), where("user","==", currentUserEmail));
@@ -927,14 +824,10 @@ let myTipsByMatch = new Map();
       }
     }
 
-    // --- mentés + AUDIT ---
     async function saveTipWithAudit(matchObj, choice, isDouble, dayKey, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
-      const roundNum = parseInt(roundStr)||0;
-      const fixedDouble = (roundNum<=8) ? !!isDouble : false;
 
-      // előző állapot
       let existingId = null, prevChoice = null, prevDouble = null;
       try{
         const snap = await getDocs(query(collection(db,"ucl_tips"),
@@ -953,7 +846,6 @@ let myTipsByMatch = new Map();
       const newChoice = choice || "";
       const newDouble = !!isDouble;
 
-      // nincs tényleges változás
       if (existingId && prevChoice === newChoice && prevDouble === newDouble){
         savedEl.classList.add("show");
         setTimeout(()=>savedEl.classList.remove("show"), 900);
@@ -964,12 +856,12 @@ let myTipsByMatch = new Map();
         if (existingId){
           await updateDoc(doc(db,"ucl_tips", existingId), {
             choice: newChoice,
-            tip: newChoice,                // kompat
+            tip: newChoice,
             double: newDouble,
-            isDouble: newDouble,           // kompat
+            isDouble: newDouble,
             day: dayKey,
             round: String(roundStr),
-            roundId: String(roundStr),     // kompat
+            roundId: String(roundStr),
             updatedAt: serverTimestamp(),
             timestamp: serverTimestamp()
           });
@@ -993,7 +885,6 @@ let myTipsByMatch = new Map();
           existingId = fixedId;
         }
 
-        // AUDIT sor
         await addDoc(collection(db, TIP_HISTORY), {
           user: currentUserEmail,
           matchId,
@@ -1010,7 +901,6 @@ let myTipsByMatch = new Map();
           ts: serverTimestamp()
         });
 
-        // lokális cache
         myTipsByMatch.set(matchId, {
           user: currentUserEmail,
           matchId,
@@ -1028,7 +918,6 @@ let myTipsByMatch = new Map();
       }
     }
 
-    /* ===== Chat – BL külön: chatMessages_ucl + chatLastSeenUcl ===== */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -1046,7 +935,7 @@ let myTipsByMatch = new Map();
 
       let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
 
-      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc')); // <-- UCL gyűjtemény
+      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc'));
       onSnapshot(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
@@ -1099,7 +988,7 @@ let myTipsByMatch = new Map();
         const backup = txt;
         inputEl.value = '';
         try{
-          await addDoc(collection(db,'chatMessages_ucl'), {  // <-- UCL gyűjtemény
+          await addDoc(collection(db,'chatMessages_ucl'), {
             email: currentUserEmail,
             nick: currentUserNick || 'Ismeretlen',
             text: backup,
@@ -1110,21 +999,11 @@ let myTipsByMatch = new Map();
           inputEl.value = backup; inputEl.focus();
         }
       });
-      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } 
-
-        let minRound = null;
-        for (const m of matches){
-          const n = parseInt(String(m.round||"").trim(),10);
-          if (!Number.isNaN(n)) minRound = (minRound===null)? n : Math.min(minRound,n);
-        }
-        const stakeNow = minRound===null ? 1 : stakeForRound(minRound);
-        const elV = document.getElementById("currentStakeValue");
-        if (elV) elV.textContent = String(stakeNow);
-});
+      inputEl.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
 
       async function markSeen(){
         try{
-          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true }); // <-- külön mező
+          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true });
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
         }catch(e){}
@@ -1141,7 +1020,6 @@ let myTipsByMatch = new Map();
           <h1>BL TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
-        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BAL OLDALON A CÍM MELLETT -->
         <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
@@ -1154,7 +1032,6 @@ let myTipsByMatch = new Map();
       </div>
     </div>
 
-    <!-- UCL nav linkek -->
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -1234,25 +1111,10 @@ let myTipsByMatch = new Map();
 
     <section class="card">
       <h3>Közelgő meccsnapok</h3>
-      
-        <div class="stake-bar">
-          <div class="stake-chip" id="currentStakeChip">Stake (aktuális forduló): <strong id="currentStakeValue">—</strong> pont</div>
-          <button class="stake-how" id="stakeHowBtn" type="button">Hogyan számolunk?</button>
-        </div>
-        <div class="stake-panel" id="stakeHowPanel">
-          <h4>Számolási logika (stake alapú)</h4>
-          <ul>
-            <li><b>Meccstipp pont:</b> ha eltalálod a kimenetelt, akkor <b>odds × stake</b> pont jár (stake = az adott forduló tétje).</li>
-            <li><b>Továbbjutó pont:</b> ha eltalálod a továbbjutót, akkor <b>továbbjutó-odds × stake</b> pont jár (ugyanannak a fordulónak a stake-je).</li>
-            <li>A stake-et az admin állítja (settings/ucl_roundStakes).</li>
-          </ul>
-        </div>
-
-        <div id="matchList"></div>
+      <div id="matchList"></div>
     </section>
   </div>
 
-  <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
