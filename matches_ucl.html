@@ -116,14 +116,6 @@
     .adv-opt{display:flex;align-items:center;gap:8px;font-size:13px}
     .adv-odds{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a}
     .adv-lock{opacity:.6}
-
-    .stake-pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); font-size:12px; color:#e8e8e8; }
-    .stake-pill b{ font-weight:800; }
-    .stake-note{ font-size:12px; color:rgba(255,255,255,.72); line-height:1.35; margin-top:6px; }
-    .points-help{ margin:14px 0 10px; padding:14px 16px; border-radius:14px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); }
-    .points-help h3{ margin:0 0 8px; font-size:14px; }
-    .points-help code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; padding:2px 6px; border-radius:8px; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.10); }
-
 </style>
 
   <script type="module">
@@ -523,7 +515,6 @@ let myTipsByMatch = new Map();
 
           await loadBracketFirstLegs();
           await loadMyAdvanceTips();
-      await loadRoundStakes();
 
 
           // ÚJ: duplák felépítése a tippekből
@@ -629,7 +620,6 @@ let myTipsByMatch = new Map();
             </div>
             <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
             <div class="odds">${oddsLine}</div>
-            <div class="stake-pill" title="Pont = odds × stake × (dupla? 2 : 1)"><span>Stake:</span> <b>x${stake}</b></div>
           `;
 
           const right = document.createElement('div');
@@ -1115,16 +1105,7 @@ let myTipsByMatch = new Map();
 
     <section class="card">
       <h3>Közelgő meccsnapok</h3>
-      
-  <div class="points-help" id="pointsHelp">
-    <h3>Pontszámítás (gyors magyarázat)</h3>
-    <div class="stake-note">
-      Meccstipp pont: <code>odds × stake × (dupla? 2 : 1)</code><br>
-      Továbbjutó tipp pont: <code>odds × stake</code> (a párharc döntő meccsének / visszavágójának forduló stake-je)
-    </div>
-  </div>
-
-<div id="matchList"></div>
+      <div id="matchList"></div>
     </section>
   </div>
 
