@@ -108,7 +108,7 @@
 
     /* NB1-hez igazított odds méret – minimális override, mást nem piszkálunk */
     .match .odds{ font-size:16px !important; }
-
+  
     .advance-box{margin-top:10px;padding:10px;border:1px dashed rgba(148,163,184,.55);border-radius:12px;background:#fff}
     .advance-title{font-weight:800;font-size:12px;margin:0 0 8px;color:#0f172a}
     .advance-options{display:flex;flex-direction:column;gap:6px}
@@ -116,17 +116,18 @@
     .adv-odds{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a}
     .adv-lock{opacity:.6}
 
-    /* Mobil: továbbjutó blokk ne lógjon ki */
-    @media (max-width: 600px){
-      .advance-box{ padding:8px; }
-      .adv-opt{ font-size:12px; }
-      .adv-odds{ font-size:12px; }
+    /* ✅ MOBIL FIX: a jobb oldali blokk (select + továbbjutó) full szélességen kifér */
+    @media (max-width:700px){
+      .ctl{ width:100%; display:flex; flex-direction:column; align-items:stretch; gap:10px; }
+      .select{ width:100%; }
+      .advance-box{ width:100%; }
+      .adv-opt{ width:100%; }
     }
-    @media (max-width: 420px){
+    @media (max-width:420px){
       .adv-opt{ flex-wrap:wrap; }
-      .adv-odds{ width:100%; text-align:right; margin-top:2px; }
+      .adv-odds{ width:100%; text-align:right; margin-left:0; }
     }
-  </style>
+</style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -152,8 +153,9 @@
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    const TIP_HISTORY = "tipHistory";
+    const TIP_HISTORY = "tipHistory"; // AUDIT kollekció (NB1-hez azonos)
 
+    /* Címerek – BL mezőny */
     const crestMap = {
       "Ajax": "ucl_crest/ajax.png",
       "Arsenal": "ucl_crest/arsenal.png",
@@ -195,6 +197,7 @@
     const crestFor = t => crestMap[t] || "";
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
 
+    /* Odds helper – többféle sémát támogat */
     function getOdds(m, key){
       if (m?.odds && (key in m.odds)) return m.odds[key];
       if (key==="1") return m.odds1 ?? m["odds1"];
@@ -203,11 +206,13 @@
       return undefined;
     }
 
+    /* Forduló továbbra is megy (kompat mentéshez), de duplázás már nap szerint */
     const matchRound = m => String(m.round ?? m.roundId ?? "");
     const tipChoice = t => (t?.choice ?? t?.tip ?? "");
     const tipDouble = t => !!(t?.double ?? t?.isDouble);
     const tipTsMs   = t => t?.updatedAt?.toMillis?.() || t?.createdAt?.toMillis?.() || t?.timestamp?.toMillis?.() || 0;
 
+    /* Helper az audit sorhoz */
     const sanitizeEmail = (e)=> String(e).replace(/[^a-zA-Z0-9._-]/g,'_');
     const oddsSnapshotFromMatch = (m)=> m ? ({
       "1": m?.odds?.["1"] ?? m?.odds1 ?? null,
@@ -215,6 +220,7 @@
       "2": m?.odds?.["2"] ?? m?.odds2 ?? null
     }) : null;
 
+    /* === Meccsnap kulcsok === */
     const pad2 = n => String(n).padStart(2,'0');
     function asDate(v){ return v?.toDate?.() ? v.toDate() : new Date(v); }
     function dayKeyFromDate(dt){ return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`; }
@@ -224,6 +230,32 @@
       return dt.toLocaleDateString('hu-HU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     }
 
+    /* ✅ STAKE: adminból (settings/ucl_roundStakes -> stakes map) */
+    let roundStakes = {};
+    async function loadRoundStakes(){
+      try{
+        const snap = await getDoc(doc(db,"settings","ucl_roundStakes"));
+        if (!snap.exists()){ roundStakes = {}; return; }
+        const d = snap.data() || {};
+        roundStakes = (d.stakes && typeof d.stakes === "object") ? d.stakes : {};
+      }catch(e){
+        roundStakes = {};
+      }
+    }
+    function stakeForRound(roundStr){
+      const key = String(roundStr ?? "").trim();
+      const raw = roundStakes?.[key];
+      const n = parseFloat(String(raw ?? "").replace(",", "."));
+      return (isFinite(n) && n > 0) ? n : 1;
+    }
+    function formatStake(n){
+      const v = Number(n);
+      if (!isFinite(v)) return "1";
+      const s = (Math.round(v*100)/100).toFixed(2);
+      return s.replace(".", ",");
+    }
+
+    /* ===== NAV Top8 visszaszámláló ===== */
     let navCdTimer = null;
     function formatCountdown(ms){
       const total = Math.max(0, Math.floor(ms/1000));
@@ -271,6 +303,7 @@
       el.hidden = false;
     }
 
+    /* ===== ÚJ: Duplák stabil felépítése tippekből ===== */
     async function dayKeyForMatchId(matchId){
       try{
         const s = await getDoc(doc(db, "ucl_matches", matchId));
@@ -283,7 +316,7 @@
 
     async function rebuildDoublesFromTips(tipsArr){
       doublesByDay.clear();
-      const latestByDay = new Map();
+      const latestByDay = new Map(); // dayKey -> {matchId, ts}
 
       const pending = [];
       for (const t of tipsArr){
@@ -305,6 +338,8 @@
       latestByDay.forEach((v, dk)=> doublesByDay.set(dk, v.matchId));
     }
 
+    
+    /* ===== ÚJ: Bracket first-leg map + továbbjutó tippek ===== */
     function numOrNull(v){
       const n = parseFloat(String(v ?? "").replace(",", "."));
       return (isFinite(n) ? n : null);
@@ -427,43 +462,28 @@
       }
     }
 
+    /* Állapot */
     let currentUserEmail = "";
     let currentUserNick  = "";
     let currentUserRole  = "user";
     let favouriteTeamucl = "";
-    let chatLastSeenUcl  = null;
+    let chatLastSeenUcl  = null;   // <-- külön BL chat mező
 
     let myAdvanceTipsBySlot = new Map();
-    let firstLegByMatchId = new Map();
+    let firstLegByMatchId = new Map(); // matchId -> {slotId, oddsHome, oddsAway}
 
     let myTipsByMatch = new Map();
-    let doublesByDay  = new Map();
-    let earliestStartByDay = new Map();
-    let matchesByDay = new Map();
+    let doublesByDay  = new Map();            // YYYY-MM-DD -> matchId
+    let earliestStartByDay = new Map();       // YYYY-MM-DD -> Date
+    let matchesByDay = new Map();             // YYYY-MM-DD -> [{match}]
 
     const isDayLocked = dayKey => {
       const first = earliestStartByDay.get(dayKey);
       return first ? (new Date() >= first) : false;
     };
 
-    function getStakeValue(m){
-      const s = m?.stake ?? m?.stakeUcl ?? m?.stakeMultiplier ?? m?.roundStake ?? null;
-      const n = parseFloat(String(s ?? "").replace(",", "."));
-      if (isFinite(n)) return n;
-      if (s === null || s === undefined || s === "") return null;
-      return s;
-    }
-    function fmtStake(st){
-      if (st === null || st === undefined) return "-";
-      if (typeof st === "number") return String(st).replace(".", ",");
-      return String(st);
-    }
-    function isDoubleRound(m){
-      const rnum = parseInt(matchRound(m)) || 0;
-      return rnum > 0 && rnum <= 8;
-    }
-
     document.addEventListener("DOMContentLoaded", () => {
+      /* Liga-váltó mount: BAL SZÉL – cím mellett */
       initLeagueSwitcher({ mountTarget: document.getElementById('leagueSwitchMount') });
 
       onAuthStateChanged(auth, async (user) => {
@@ -477,7 +497,7 @@
           currentUserNick  = d.nickname || currentUserEmail;
           currentUserRole  = d.role || "user";
           favouriteTeamucl = d.favouriteTeamucl || "";
-          chatLastSeenUcl  = d.chatLastSeenUcl || null;
+          chatLastSeenUcl  = d.chatLastSeenUcl || null;   // <-- itt is BL mező
         } else {
           currentUserNick = currentUserEmail;
         }
@@ -485,6 +505,7 @@
         document.getElementById("welcome").textContent = `Üdv, ${currentUserNick}!`;
         if (currentUserRole === "admin") document.getElementById("adminLink").style.display = "flex";
 
+        /* THEME */
         if (favouriteTeamucl) {
           const themeClass = "theme-" + favouriteTeamucl.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, '')
@@ -494,6 +515,7 @@
           if (crest) { const img = document.getElementById("favCrest"); img.src = crest; img.alt = favouriteTeamucl; img.hidden = false; }
         }
 
+        /* === Top8 határidő beolvasása + számláló indítása === */
         try{
           const snap = await getDoc(doc(db,'settings','positionsLock_ucl'));
           let until = null, isLocked = false;
@@ -511,9 +533,11 @@
         try{
           const now = new Date();
 
+          // 1) Közelgő meccsek (idő szerint)
           const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
           const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
 
+          // 2) Saját tippek (legfrissebb per match)
           const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
           const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
           const latestByMatch = new Map();
@@ -527,9 +551,12 @@
 
           await loadBracketFirstLegs();
           await loadMyAdvanceTips();
+          await loadRoundStakes(); // ✅ STAKE betöltés adminból
 
+          // ÚJ: duplák felépítése a tippekből
           await rebuildDoublesFromTips(tips);
 
+          // 3) Napok előállítása + meglévő dupla per nap
           matchesByDay.clear();
           for (const m of upcoming){
             const st = asDate(m.startTime);
@@ -546,6 +573,7 @@
             arr.sort((a,b)=> asDate(a.startTime) - asDate(b.startTime));
           }
 
+          // 4) Napi zár idők: a nap első meccse
           earliestStartByDay.clear();
           const allSnap = await getDocs(query(collection(db,"ucl_matches"), orderBy("startTime","asc")));
           allSnap.forEach(docu=>{
@@ -584,16 +612,15 @@
 
       const dayKeys = Array.from(matchesByDay.keys()).sort();
       for (const dk of dayKeys){
-        const matches = matchesByDay.get(dk) || [];
-        const dayHasDouble = matches.some(m => isDoubleRound(m));
-
         const dayBlock = document.createElement('div');
         dayBlock.className = 'day-block';
         dayBlock.dataset.day = dk;
 
+        const matches = matchesByDay.get(dk) || [];
+        const dayHasDouble = matches.some(m => (parseInt(matchRound(m))||0) <= 8); // ✅ csak ha van 1-8 kör
+
         const head = document.createElement('div');
         head.className = 'day-head';
-
         head.innerHTML = `
           <div class="day-title">${dayLabel(dk)}</div>
           ${dayHasDouble ? `
@@ -615,12 +642,10 @@
           const curChoice = tipChoice(tip);
           const isDouble  = tipDouble(tip);
           const roundStr  = matchRound(m);
+          const stakeVal  = stakeForRound(roundStr);
 
           const o1 = getOdds(m,"1"); const oX = getOdds(m,"X"); const o2 = getOdds(m,"2");
           const oddsLine = `Odds: 1: ${o1 ?? "-"} • X: ${oX ?? "-"} • 2: ${o2 ?? "-"}`;
-
-          const stakeVal = getStakeValue(m);
-          const stakeLine = `Stake: ${fmtStake(stakeVal)}`;
 
           const row = document.createElement('div');
           row.className = 'match';
@@ -634,9 +659,8 @@
               <span class="vs">vs</span>
               <div class="team"><img class="crest" src="${crestFor(m.awayTeam)||''}" alt=""> <span>${m.awayTeam||''}</span></div>
             </div>
-            <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"}</div>
+            <div class="meta">${fmtTime(m.startTime)} • Forduló: ${roundStr || "–"} • Stake: ${formatStake(stakeVal)}</div>
             <div class="odds">${oddsLine}</div>
-            <div class="meta">${stakeLine}</div>
           `;
 
           const right = document.createElement('div');
@@ -743,7 +767,7 @@
             }
             if (dbl.checked){
               reflectDoubleStateForDay(dk, m.id);
-              await enforceSingleDoubleForDay(dk, m.id);
+              await enforceSingleDoubleForDay(dk, m.id); // auditál
               doublesByDay.set(dk, m.id);
               updateDayFlag(dk);
             }else{
@@ -757,7 +781,7 @@
           if (lockedId && lockedId !== m.id){ dbl.checked = false; }
         }
 
-        if (dayHasDouble) updateDayFlag(dk);
+        if (dayHasDouble) updateDayFlag(dk); // ✅ csak ha van dupla-flag
       }
     }
 
@@ -791,6 +815,7 @@
       });
     }
 
+    // --- rendszer által kényszerített dupla-levétel + AUDIT ---
     async function enforceSingleDoubleForDay(dayKey, keepMatchId){
       const idsForDay = new Set((matchesByDay.get(dayKey) || []).map(m=>m.id));
       const qTips = query(collection(db,"ucl_tips"), where("user","==", currentUserEmail));
@@ -824,10 +849,14 @@
       }
     }
 
+    // --- mentés + AUDIT ---
     async function saveTipWithAudit(matchObj, choice, isDouble, dayKey, savedEl){
       const matchId = matchObj.id;
       const roundStr = matchRound(matchObj);
+      const roundNum = parseInt(roundStr)||0;
+      const fixedDouble = (roundNum<=8) ? !!isDouble : false;
 
+      // előző állapot
       let existingId = null, prevChoice = null, prevDouble = null;
       try{
         const snap = await getDocs(query(collection(db,"ucl_tips"),
@@ -846,6 +875,7 @@
       const newChoice = choice || "";
       const newDouble = !!isDouble;
 
+      // nincs tényleges változás
       if (existingId && prevChoice === newChoice && prevDouble === newDouble){
         savedEl.classList.add("show");
         setTimeout(()=>savedEl.classList.remove("show"), 900);
@@ -856,12 +886,12 @@
         if (existingId){
           await updateDoc(doc(db,"ucl_tips", existingId), {
             choice: newChoice,
-            tip: newChoice,
+            tip: newChoice,                // kompat
             double: newDouble,
-            isDouble: newDouble,
+            isDouble: newDouble,           // kompat
             day: dayKey,
             round: String(roundStr),
-            roundId: String(roundStr),
+            roundId: String(roundStr),     // kompat
             updatedAt: serverTimestamp(),
             timestamp: serverTimestamp()
           });
@@ -885,6 +915,7 @@
           existingId = fixedId;
         }
 
+        // AUDIT sor
         await addDoc(collection(db, TIP_HISTORY), {
           user: currentUserEmail,
           matchId,
@@ -901,6 +932,7 @@
           ts: serverTimestamp()
         });
 
+        // lokális cache
         myTipsByMatch.set(matchId, {
           user: currentUserEmail,
           matchId,
@@ -918,6 +950,7 @@
       }
     }
 
+    /* ===== Chat – BL külön: chatMessages_ucl + chatLastSeenUcl ===== */
     function initChat(userRef){
       const fab = document.getElementById('chatToggle');
       const fabBadge = document.getElementById('chatFabBadge');
@@ -935,7 +968,7 @@
 
       let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
 
-      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc'));
+      const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc')); // <-- UCL gyűjtemény
       onSnapshot(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
@@ -988,7 +1021,7 @@
         const backup = txt;
         inputEl.value = '';
         try{
-          await addDoc(collection(db,'chatMessages_ucl'), {
+          await addDoc(collection(db,'chatMessages_ucl'), {  // <-- UCL gyűjtemény
             email: currentUserEmail,
             nick: currentUserNick || 'Ismeretlen',
             text: backup,
@@ -1003,7 +1036,7 @@
 
       async function markSeen(){
         try{
-          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true });
+          await setDoc(userRef, { chatLastSeenUcl: serverTimestamp() }, { merge:true }); // <-- külön mező
           fab.classList.remove('has-unread');
           fabBadge.textContent = '';
         }catch(e){}
@@ -1020,6 +1053,7 @@
           <h1>BL TippLiga</h1>
           <p id="welcome" class="welcome"></p>
         </div>
+        <!-- LIGA / TIPPJÁTÉK VÁLASZTÓ – BAL OLDALON A CÍM MELLETT -->
         <div id="leagueSwitchMount" class="league-switch-left" aria-label="Tippjáték választó"></div>
       </div>
       <div>
@@ -1032,6 +1066,7 @@
       </div>
     </div>
 
+    <!-- UCL nav linkek -->
     <nav class="nav-grid">
       <a class="nav-card" href="dashboard_ucl.html">
         <div class="icon-wrap" aria-hidden="true">
@@ -1115,6 +1150,7 @@
     </section>
   </div>
 
+  <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
