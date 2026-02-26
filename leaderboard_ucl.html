@@ -25,21 +25,14 @@
     @media (max-width:700px){.league-switch-left{width:100%;margin-left:0}}
 
     /* Navigációs kártyák – egyezik a dashboarddal; mobil érintetlen, desktopon fix igazítás */
-    .nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
-    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-    .nav-card{display:flex;gap:12px;align-items:flex-start;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05);min-width:0}
-    /* ⬇️ Csak desktopon középre igazítjuk és NEM törjük a címet (Összpontszám egy sorban marad) */
-    @media (min-width:701px){
-      .nav-card{align-items:center}
-      .nav-card .title{white-space:nowrap}
-      .nav-card .desc{margin-top:2px}
-    }
-    .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent,#3b82f6) 15%, white);color:var(--accent,#3b82f6);border:1px solid var(--line,#e6eaf1);flex:0 0 auto}
-    .nav-card .text{display:flex;flex-direction:column;line-height:1.2;min-width:0}
-    .nav-card .title{font-weight:800;overflow-wrap:anywhere;word-break:break-word}
-    .nav-card .desc{color:var(--muted,#64748b);font-size:12px;overflow-wrap:anywhere;word-break:break-word}
+    .nav-grid{ display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:14px; }
+    @media (max-width:1100px){ .nav-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width:700px){ .nav-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .nav-card{ display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; padding:14px; background:#fff; border:1px solid var(--line,#e6eaf1); border-radius:14px; box-shadow:0 6px 18px rgba(15,23,42,.05); }
+    .nav-card .icon-wrap{ width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:color-mix(in oklab, var(--accent,#3b82f6) 15%, white); color:var(--accent,#3b82f6); }
+    .nav-card .text{ display:flex; flex-direction:column; line-height:1.2; }
+    .nav-card .title{ font-weight:800; }
+    .nav-card .desc{ color:var(--muted,#64748b); font-size:12px; }
     @media (max-width:700px){
       .nav-card .title{-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
       .nav-card .desc{-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
@@ -179,16 +172,7 @@
     .wrong{color:#b91c1c;font-weight:700}
     .dbl{font-weight:800}
   
-/* === OVERRIDE: NAV from dashboard_ucl (1).html === */
-.nav-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
-    @media (max-width:1100px){.nav-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media (max-width:700px){.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    .nav-card{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px;background:#fff;border:1px solid var(--line,#e6eaf1);border-radius:14px;box-shadow:0 6px 18px rgba(15,23,42,.05)}
-    .nav-card .icon-wrap{position:relative;width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--accent,#3b82f6) 15%,white);color:var(--accent,#3b82f6)}
-    .nav-card .text{display:flex;flex-direction:column;line-height:1.2}
-    .nav-card .title{font-weight:800}
-    .nav-card .desc{color:var(--muted,#64748b);font-size:12px}
-/* === /OVERRIDE === */
+
 </style>
 
   <script type="module">
