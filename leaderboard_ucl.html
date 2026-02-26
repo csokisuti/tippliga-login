@@ -236,23 +236,38 @@
 
     /* Top8 – bónuszhoz */
     function deriveTop8FromMatches(allMatches){
-      const teams = Array.from(new Set((allMatches||[]).flatMap(m => [m.homeTeam||m.home||"", m.awayTeam||m.away||""]))).filter(Boolean);
-      const S = {}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
+      const teams = Object.keys(crestMap);
+      const S={}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
+
       (allMatches||[]).forEach(m=>{
-        const A=m.homeTeam||m.home||"", B=m.awayTeam||m.away||"";
-        const r=parseRes(m.result); const a=S[A], b=S[B]; if(!a||!b||!r) return;
+        const rid = Number(m.roundId ?? m.round ?? 0);
+        if (rid >= 9) return;
+
+        const A=m.homeTeam||m.home||"";
+        const B=m.awayTeam||m.away||"";
+        const r=parseRes(m.result);
+        const a=S[A], b=S[B];
+        if(!a || !b || !r) return;
+
         const [hg,ag]=r;
-        a.MP++; b.MP++; a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA; b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
-        if(hg>ag){ a.W++; b.L++; a.Pts+=3; } else if(hg<ag){ b.W++; a.L++; b.Pts+=3; } else { a.D++; b.D++; a.Pts++; b.Pts++; }
+        a.MP++; b.MP++;
+        a.GF+=hg; a.GA+=ag; a.GD=a.GF-a.GA;
+        b.GF+=ag; b.GA+=hg; b.GD=b.GF-b.GA;
+
+        if(hg>ag){a.W++;b.L++;a.Pts+=3}
+        else if(hg<ag){b.W++;a.L++;b.Pts+=3}
+        else{a.D++;b.D++;a.Pts+=1;b.Pts+=1}
       });
+
       function cmp(a,b){
-        if(b.Pts!==a.Pts) return b.Pts-a.Pts;
-        if(b.W!==a.W)     return b.W-a.W;
-        if(b.GD!==a.GD)   return b.GD-a.GD;
-        if(b.GF!==a.GF)   return b.GF-a.GF;
+        if (b.Pts !== a.Pts) return b.Pts - a.Pts;
+        if (b.GD  !== a.GD)  return b.GD  - a.GD;
+        if (b.GF  !== a.GF)  return b.GF  - a.GF;
         return a.team.localeCompare(b.team,'hu');
       }
-      return Object.values(S).sort(cmp).slice(0,8).map(r=>r.team);
+
+      const rows=Object.values(S).sort(cmp);
+      return rows.slice(0,8).map(r=>r.team);
     }
 
     const BONUS_CFG=Object.freeze({winnerPct:10,topScorerPct:5,top8PerHitPct:1,top8MaxPct:8});
