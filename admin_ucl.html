@@ -957,6 +957,11 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
               <input value="${d.odds?.["1"]??''}" id="odds1-${d.id}" placeholder="Odds 1" style="width:90px">
               <input value="${d.odds?.["X"]??''}" id="oddsX-${d.id}" placeholder="Odds X" style="width:90px">
               <input value="${d.odds?.["2"]??''}" id="odds2-${d.id}" placeholder="Odds 2" style="width:90px">
+              <label class="inline" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;user-select:none">
+                <input type="checkbox" id="published-${d.id}" ${(d.published !== false) ? 'checked' : ''}>
+                <span>Publikus</span>
+              </label>
+              <span class="tag">${(d.published !== false) ? 'Publikus' : 'Rejtett'}</span>
               <button class="btn primary" onclick="updateMatch('${d.id}')">Mentés</button>
               <button class="btn danger" onclick="deleteMatch('${d.id}')">Törlés</button>
             </div>
@@ -977,7 +982,8 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
           "1": parseFloat(document.getElementById(`odds1-${id}`).value),
           "X": parseFloat(document.getElementById(`oddsX-${id}`).value),
           "2": parseFloat(document.getElementById(`odds2-${id}`).value)
-        }
+        },
+        published: !!document.getElementById(`published-${id}`)?.checked
       });
       alert('Mentve');
       await loadMatches();
@@ -1012,7 +1018,8 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         awayTeam: away,
         startTime,
         roundId: round,
-        odds: {"1":o1,"X":oX,"2":o2}
+        odds: {"1":o1,"X":oX,"2":o2},
+        published: false
       });
       alert('UCL meccs mentve');
       e.target.reset();
@@ -1834,6 +1841,7 @@ verzió: ${data.version || 'n/a'}`);
     const activeMatchIds = new Set();
     matchesSnap.forEach(d => {
       const m = d.data() || {};
+      if(m.published === false) return;
       let st=null; try{ st = m.startTime?.toDate?.() || (m.startTime? new Date(m.startTime): null); }catch{}
       if(!m.result && st && st>now) activeMatchIds.add(d.id);
     });
