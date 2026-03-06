@@ -518,7 +518,9 @@
           const now = new Date();
 
           const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
-          const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+          const upcoming = upcomingSnap.docs
+            .map(d => ({ id:d.id, ...d.data() }))
+            .filter(m => m.published !== false);
 
           const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
           const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
@@ -554,9 +556,7 @@
           }
 
           earliestStartByDay.clear();
-          const allSnap = await getDocs(query(collection(db,"ucl_matches"), orderBy("startTime","asc")));
-          allSnap.forEach(docu=>{
-            const m = docu.data();
+          upcoming.forEach(m=>{
             const dt = asDate(m.startTime);
             if (isNaN(+dt)) return;
             const dk = dayKeyFromDate(dt);
