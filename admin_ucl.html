@@ -530,6 +530,36 @@ async function loadUclBracketUiSettingAdmin() {
       s.append(h,b); return {section:s, body:b}
     }
 
+
+    function toDateSafe(value){
+      try{
+        if(!value) return null;
+        if(value?.toDate) return value.toDate();
+        const d = new Date(value);
+        return String(d)==='Invalid Date' ? null : d;
+      }catch(e){ return null; }
+    }
+
+    function pad2(n){ return String(n).padStart(2,'0'); }
+
+    function toDatetimeLocalValue(value){
+      const d = toDateSafe(value);
+      if(!d) return '';
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function toDayKey(value){
+      const d = toDateSafe(value);
+      if(!d) return 'nincs-idopont';
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    }
+
+    function toDayLabel(dayKey){
+      if(dayKey === 'nincs-idopont') return 'Időpont nélkül';
+      const d = new Date(`${dayKey}T00:00`);
+      return d.toLocaleDateString('hu-HU',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+    }
+
     function initUI(){
       const top=document.createElement('div'); top.className='topbar';
       const left=document.createElement('div'); left.className='left';
@@ -933,8 +963,12 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       if(list.length===0){ container.innerHTML = '<div class="muted">Nincs találat.</div>'; return }
 
       list.sort((a,b)=>{
+        const da = toDateSafe(a.startTime) || new Date(0);
+        const db = toDateSafe(b.startTime) || new Date(0);
+        const dayCmp = toDayKey(da).localeCompare(toDayKey(db));
+        if(dayCmp) return dayCmp;
         const ra = (parseInt(a.roundId||0) - parseInt(b.roundId||0)); if(ra) return ra;
-        const ta = (a.startTime?.toDate?.()||new Date(0)) - (b.startTime?.toDate?.()||new Date(0)); return ta;
+        return da - db;
       });
 
       const dataList = document.createElement('datalist');
@@ -942,32 +976,59 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       dataList.innerHTML = teams.map(t=>`<option value="${t}">`).join('');
       container.appendChild(dataList);
 
-      list.forEach(d=>{
-        const div=document.createElement('div');
-        div.className='card';
-        const iso = d.startTime?.toDate ? new Date(d.startTime.toDate()).toISOString().slice(0,16) : new Date(d.startTime).toISOString().slice(0,16);
-        div.innerHTML = `
-          <div class="card-head"><h3>${d.roundId||''}. forduló – ${d.homeTeam||''} vs ${d.awayTeam||''}</h3><div class="hint">${d.startTime?.toDate?.()?.toLocaleString('hu-HU')||''}</div></div>
-          <div class="card-body">
-            <div class="row">
-              <input list="teamsList" value="${d.homeTeam||''}" id="home-${d.id}">
-              <input list="teamsList" value="${d.awayTeam||''}" id="away-${d.id}">
-              <input type="datetime-local" value="${iso}" id="start-${d.id}">
-              <input value="${d.roundId||''}" id="round-${d.id}">
-              <input value="${d.odds?.["1"]??''}" id="odds1-${d.id}" placeholder="Odds 1" style="width:90px">
-              <input value="${d.odds?.["X"]??''}" id="oddsX-${d.id}" placeholder="Odds X" style="width:90px">
-              <input value="${d.odds?.["2"]??''}" id="odds2-${d.id}" placeholder="Odds 2" style="width:90px">
-              <label class="inline" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;user-select:none">
-                <input type="checkbox" id="published-${d.id}" ${(d.published !== false) ? 'checked' : ''}>
-                <span>Publikus</span>
-              </label>
-              <span class="tag">${(d.published !== false) ? 'Publikus' : 'Rejtett'}</span>
-              <button class="btn primary" onclick="updateMatch('${d.id}')">Mentés</button>
-              <button class="btn danger" onclick="deleteMatch('${d.id}')">Törlés</button>
+      const grouped = {};
+      list.forEach(m=>{
+        const key = toDayKey(m.startTime);
+        (grouped[key] ||= []).push(m);
+      });
+
+      Object.keys(grouped).sort().forEach(dayKey=>{
+        const dayMatches = grouped[dayKey];
+        const allPublished = dayMatches.length > 0 && dayMatches.every(x => x.published !== false);
+
+        const groupCard = document.createElement('div');
+        groupCard.className = 'card';
+        groupCard.innerHTML = `
+          <div class="card-head" style="cursor:default">
+            <h3>${toDayLabel(dayKey)}</h3>
+            <div class="row" style="gap:8px;justify-content:flex-end">
+              <span class="tag">${dayMatches.length} meccs</span>
+              <span class="tag">${allPublished ? 'Mind publikus' : 'Van rejtett meccs'}</span>
+              <button class="btn" onclick="setPublishedForDay('${dayKey}', true)">Napi publikálás</button>
+              <button class="btn" onclick="setPublishedForDay('${dayKey}', false)">Nap elrejtése</button>
             </div>
-          </div>`;
-        div.querySelector('.card-head').onclick = ()=> div.classList.toggle('open');
-        container.appendChild(div);
+          </div>
+        `;
+        container.appendChild(groupCard);
+
+        dayMatches.forEach(d=>{
+          const div=document.createElement('div');
+          div.className='card';
+          const localValue = toDatetimeLocalValue(d.startTime);
+          const localHint = toDateSafe(d.startTime)?.toLocaleString('hu-HU') || '';
+          div.innerHTML = `
+            <div class="card-head"><h3>${d.roundId||''}. forduló – ${d.homeTeam||''} vs ${d.awayTeam||''}</h3><div class="hint">${localHint}</div></div>
+            <div class="card-body">
+              <div class="row">
+                <input list="teamsList" value="${d.homeTeam||''}" id="home-${d.id}">
+                <input list="teamsList" value="${d.awayTeam||''}" id="away-${d.id}">
+                <input type="datetime-local" value="${localValue}" id="start-${d.id}">
+                <input value="${d.roundId||''}" id="round-${d.id}">
+                <input value="${d.odds?.["1"]??''}" id="odds1-${d.id}" placeholder="Odds 1" style="width:90px">
+                <input value="${d.odds?.["X"]??''}" id="oddsX-${d.id}" placeholder="Odds X" style="width:90px">
+                <input value="${d.odds?.["2"]??''}" id="odds2-${d.id}" placeholder="Odds 2" style="width:90px">
+                <label class="inline" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;user-select:none">
+                  <input type="checkbox" id="published-${d.id}" ${(d.published !== false) ? 'checked' : ''}>
+                  <span>Publikus</span>
+                </label>
+                <span class="tag">${(d.published !== false) ? 'Publikus' : 'Rejtett'}</span>
+                <button class="btn primary" onclick="updateMatch('${d.id}')">Mentés</button>
+                <button class="btn danger" onclick="deleteMatch('${d.id}')">Törlés</button>
+              </div>
+            </div>`;
+          div.querySelector('.card-head').onclick = ()=> div.classList.toggle('open');
+          container.appendChild(div);
+        });
       });
     }
 
@@ -988,6 +1049,20 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       alert('Mentve');
       await loadMatches();
       await loadResults();
+    }
+
+
+    async function setPublishedForDay(dayKey, published){
+      const targets = _matchesCache.filter(m => toDayKey(m.startTime) === dayKey);
+      if(!targets.length){
+        alert('Ehhez a naphoz nincs meccs.');
+        return;
+      }
+      await Promise.all(targets.map(m => updateDoc(doc(db,'ucl_matches',m.id), { published: !!published })));
+      alert(published ? 'A napi meccsek publikálva.' : 'A napi meccsek elrejtve.');
+      await loadMatches();
+      await loadResults();
+      await loadTipStatus();
     }
 
     async function deleteMatch(id){
@@ -1820,6 +1895,7 @@ verzió: ${data.version || 'n/a'}`);
     /* ===== Window hooks ===== */
     window.updateMatch = updateMatch;
     window.deleteMatch = deleteMatch;
+    window.setPublishedForDay = setPublishedForDay;
     window.saveLock = saveLock;
     window.clearLock = clearLock;
   
