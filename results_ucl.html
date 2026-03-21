@@ -1132,9 +1132,21 @@
         });
 
         const tippedIds = new Set(Array.from(latestByMatch.keys()));
-        const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+        const pending = upcoming.filter(m => {
+          if (m.published === false) return false;
+          const startTime = m.startTime?.toDate?.() || (m.startTime ? new Date(m.startTime) : null);
+          if (!startTime || startTime <= new Date()) return false;
+          return !tippedIds.has(m.id);
+        }).length;
         const badge = document.getElementById("tipsBadge");
-        if (badge){ if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; } }
+        if (badge){
+          if (pending>0){
+            badge.textContent = pending;
+            badge.hidden = false;
+          } else {
+            badge.hidden = true;
+          }
+        }
       }catch{}
     }
 
