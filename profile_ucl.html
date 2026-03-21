@@ -364,7 +364,12 @@
         getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
           const tippedIds = new Set();
           tipsSnap.forEach(x=>{ const t=x.data(); if(t?.matchId) tippedIds.add(t.matchId); });
-          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+          const pending = upcoming.filter(m => {
+            if (m.published === false) return false;
+            const startTime = m.startTime?.toDate?.() || (m.startTime ? new Date(m.startTime) : null);
+            if (!startTime || startTime <= new Date()) return false;
+            return !tippedIds.has(m.id);
+          }).length;
           const badge = document.getElementById("tipsBadge");
           if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
         });
