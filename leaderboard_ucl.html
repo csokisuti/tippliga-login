@@ -204,7 +204,22 @@
     const escapeHtml=s=>String(s||"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const NORM=s=>String(s??"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
     const eqTeam=(a,b)=>!!a&&!!b&&NORM(a)===NORM(b);
+    const emailKey=s=>String(s||"").trim().toLowerCase();
     const eqText=(a,b)=>NORM(a)===NORM(b);
+    const toBonusNum=v=>{
+      if(v==null||v==="")return 0;
+      if(typeof v==="string")v=v.trim().replace("%","").replace(",",".");
+      const n=Number(v);
+      return Number.isFinite(n)&&n>0?n:0;
+    };
+    const candidateBonusValue=c=>{
+      const fields=["displayPoints","bonusPoints","points","bonusPct","bonusPercent"];
+      for(const f of fields){
+        const n=toBonusNum(c?.[f]);
+        if(n>0)return n;
+      }
+      return 0;
+    };
     function getOdds(m,key){ if(m?.odds&&(key in m.odds))return m.odds[key]; if(key==="1")return m.odds1??m["odds1"]; if(key==="X")return m.oddsX??m["oddsX"]; if(key==="2")return m.odds2??m["odds2"]; return undefined; }
     const tipChoice=t=>t?.choice??t?.tip??"";
     const tipDouble=t=>!!(t?.double??t?.isDouble);
@@ -254,7 +269,7 @@
       return rows.slice(0,8).map(r=>r.team);
     }
 
-    const BONUS_CFG=Object.freeze({winnerPct:10,topScorerPct:5,top8PerHitPct:1,top8MaxPct:8});
+    const BONUS_CFG=Object.freeze({top8PerHitPct:1,top8MaxPct:8});
 
     /* Állapot */
     let currentUserEmail="",currentUserNick="",currentUserRole="user",favouriteTeamucl="",chatLastSeenUcl=null;
@@ -262,6 +277,9 @@
     let matchesById={}, roundsAsc=[];
     let officialTop8=[], officialChampion="", officialGoldenPlayer="";
     let top8TipsByEmail={}, championPickByEmail={}, goldenPickByEmail={};
+    let championBonusByTeam={}, goldenBonusByPlayer={};
+    const championBonusFor=team=>championBonusByTeam[NORM(team)]||0;
+    const goldenBonusFor=player=>goldenBonusByPlayer[NORM(player)]||0;
     let latestTipsByUserMatch=new Map();
     let rows=[];
     let showBots=false;
@@ -431,7 +449,11 @@ const stakeForRound = (roundId)=>{
 
         /* USERS */
         const usersSnap=await getDocs(collection(db,"users"));
-        usersSnap.forEach(d=>{const u=d.data();if(u?.email){usersMap[u.email]=u.nickname||u.email;usersFavUcl[u.email]=u.favouriteTeamucl||""}});
+        usersSnap.forEach(d=>{
+          const u=d.data()||{};
+          const email=emailKey(u.email||d.id);
+          if(email){usersMap[email]=u.nickname||u.email||email;usersFavUcl[email]=u.favouriteTeamucl||""}
+        });
 
         /* MATCHES */
         onSnapshot(collection(db,"ucl_matches"), snap=>{
@@ -460,8 +482,8 @@ const stakeForRound = (roundId)=>{
         /* OFFICIAL (győztes/gólkirály) */
         onSnapshot(doc(db,"ucl_official","current"), snap=>{
           const d=snap.exists()?snap.data():{};
-          officialChampion=d.champion||"";
-          officialGoldenPlayer=(d.goldenBoot&&d.goldenBoot.player)?d.goldenBoot.player:"";
+          officialChampion=d.champion||d.winner||d.finalWinner||d.team||"";
+          officialGoldenPlayer=(d.goldenBoot&&d.goldenBoot.player)||d.goldenBootPlayer||d.topScorer||d.player||"";
           recomputeRows(); renderTable();
         });
         /* ROUND STAKES (tét szorzó) */
@@ -495,20 +517,42 @@ const stakeForRound = (roundId)=>{
 
 
 
+        onSnapshot(collection(db,"ucl_championCandidates"), snap=>{
+          championBonusByTeam={};
+          snap.forEach(docu=>{
+            const c=docu.data()||{};
+            const team=c.team||c.name||c.label||"";
+            const bonus=candidateBonusValue(c);
+            if(team&&bonus>0)championBonusByTeam[NORM(team)]=bonus;
+          });
+          recomputeRows(); renderTable();
+        });
+
+        onSnapshot(collection(db,"ucl_goldenBootCandidates"), snap=>{
+          goldenBonusByPlayer={};
+          snap.forEach(docu=>{
+            const c=docu.data()||{};
+            const player=c.player||c.name||c.label||"";
+            const bonus=candidateBonusValue(c);
+            if(player&&bonus>0)goldenBonusByPlayer[NORM(player)]=bonus;
+          });
+          recomputeRows(); renderTable();
+        });
+
         /* TOP8/CHAMP/GOLDEN tippek */
         onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
           top8TipsByEmail={};
-          snap.forEach(docu=>{const t=docu.data()||{};const email=t.email||docu.id; top8TipsByEmail[email]=(Array.isArray(t.picks)?t.picks.slice(0,8):[])});
+          snap.forEach(docu=>{const t=docu.data()||{};const email=emailKey(t.email||t.user||t.userEmail||docu.id); if(email)top8TipsByEmail[email]=(Array.isArray(t.picks)?t.picks.slice(0,8):[])});
           recomputeRows(); renderTable();
         });
         onSnapshot(collection(db,"ucl_championPickTips"), snap=>{
           championPickByEmail={};
-          snap.forEach(docu=>{const t=docu.data()||{};const email=t.email||docu.id; championPickByEmail[email]=t.team||""});
+          snap.forEach(docu=>{const t=docu.data()||{};const email=emailKey(t.email||t.user||t.userEmail||docu.id); if(email)championPickByEmail[email]=t.team||t.champion||t.winner||t.pick||""});
           recomputeRows(); renderTable();
         });
         onSnapshot(collection(db,"ucl_goldenBootTips"), snap=>{
           goldenPickByEmail={};
-          snap.forEach(docu=>{const t=docu.data()||{};const email=t.email||docu.id; goldenPickByEmail[email]=t.player||""});
+          snap.forEach(docu=>{const t=docu.data()||{};const email=emailKey(t.email||t.user||t.userEmail||docu.id); if(email)goldenPickByEmail[email]=t.player||t.name||t.pick||""});
           recomputeRows(); renderTable();
         });
 
@@ -563,10 +607,11 @@ const stakeForRound = (roundId)=>{
     function collectLatestTips(snap){
       const latest=new Map();
       snap.forEach(docu=>{
-        const t=docu.data();if(!t?.matchId||!t?.user)return;
-        const k=t.user+"|"+t.matchId;
+        const t=docu.data();if(!t?.matchId||!(t?.user||t?.email||t?.userEmail))return;
+        const user=emailKey(t.user||t.email||t.userEmail);
+        const k=user+"|"+t.matchId;
         const cur=latest.get(k);
-        if(!cur||tipTsMs(t)>=tipTsMs(cur))latest.set(k,{id:docu.id,...t});
+        if(!cur||tipTsMs(t)>=tipTsMs(cur))latest.set(k,{id:docu.id,...t,user});
       });
       return latest;
     }
@@ -653,7 +698,8 @@ const stakeForRound = (roundId)=>{
         const correct=pick===oc; const ov=getOdds(m,pick); const mult=tipDouble(tip)?2:1;
         const stake = stakeForRound(r);
         const pts = (correct && ov)? Number(ov)*mult*stake : 0;
-        const email=tip.user; const nick=usersMap[email]||email;
+        const email=emailKey(tip.user||tip.email||tip.userEmail); if(!email)return;
+        const nick=usersMap[email]||email;
         if(!player[email]) player[email]={nick,email,base:0,perRound:{}};
         player[email].base+=pts; player[email].perRound[r]=(player[email].perRound[r]||0)+pts;
       });
@@ -674,7 +720,7 @@ const stakeForRound = (roundId)=>{
             const advOdds = advPointsForUserInTie(email, slot, info.winnerSide, info.oddsHome, info.oddsAway);
             if(advOdds<=0) return;
             const advPts = advOdds * stakeForRound(r);
-            if(!player[email]) player[email] = { base: 0, perRound: {} };
+            if(!player[email]) player[email] = { nick: usersMap[email]||email, email, base: 0, perRound: {} };
             player[email].base += advPts;
             player[email].perRound[String(r)] = (player[email].perRound[String(r)] || 0) + advPts;
           });
@@ -682,10 +728,13 @@ const stakeForRound = (roundId)=>{
       roundsAsc=Array.from(rounds).sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
 
       rows = Object.values(player).map(obj=>{
-        const {pct:top8Pct,hits:top8Hits}=calcTop8Pct(obj.email);
-        const email=obj.email; const champPick=championPickByEmail[email]||""; const goldenPick=goldenPickByEmail[email]||"";
-        const champPct=(officialChampion && eqTeam(champPick, officialChampion)) ? BONUS_CFG.winnerPct : 0;
-        const goldenPct=(officialGoldenPlayer && eqText(goldenPick, officialGoldenPlayer)) ? BONUS_CFG.topScorerPct : 0;
+        const email=emailKey(obj.email);
+        const {pct:top8Pct,hits:top8Hits}=calcTop8Pct(email);
+        const champPick=championPickByEmail[email]||""; const goldenPick=goldenPickByEmail[email]||"";
+        const champCorrect=!!officialChampion && eqTeam(champPick, officialChampion);
+        const goldenCorrect=!!officialGoldenPlayer && eqText(goldenPick, officialGoldenPlayer);
+        const champPct=champCorrect ? championBonusFor(officialChampion) : 0;
+        const goldenPct=goldenCorrect ? goldenBonusFor(officialGoldenPlayer) : 0;
         const bonusPct=top8Pct+champPct+goldenPct;
         const bonusPts=Number((obj.base*(bonusPct/100)).toFixed(2));
         const total=Number((obj.base+bonusPts).toFixed(2));
@@ -694,8 +743,8 @@ const stakeForRound = (roundId)=>{
           bonusPct, bonusPts,
           parts:{
             top8:{pct:top8Pct,hits:top8Hits},
-            winner:{pct:champPct, pick:champPick, official:officialChampion, status: champPct? 'ok' : (officialChampion? 'no':'pending')},
-            topScorer:{pct:goldenPct, pick:goldenPick, official:officialGoldenPlayer, status: goldenPct? 'ok' : (officialGoldenPlayer? 'no':'pending')}
+            winner:{pct:champPct, pick:champPick, official:officialChampion, status: champCorrect? 'ok' : (officialChampion? 'no':'pending')},
+            topScorer:{pct:goldenPct, pick:goldenPick, official:officialGoldenPlayer, status: goldenCorrect? 'ok' : (officialGoldenPlayer? 'no':'pending')}
           }
         };
       });
