@@ -1,9 +1,7 @@
-// league-switcher.js  —  egyszerű NB1 ⇄ BL váltó mindegyik oldalra
+// league-switcher.js — NB1 ⇄ BL váltó + NB1 archívum menüpont
 // Használat:
 //   import { initLeagueSwitcher, setLeagueBadge, redirectToLastLeague } from './league-switcher.js';
-//   initLeagueSwitcher();  // minden NB1/BL oldalon
-//   // (opcionális) badge frissítés: setLeagueBadge('ucl', 3); setLeagueBadge('nb1', 0);
-//   // (opcionális) indexen: redirectToLastLeague('dashboard.html','dashboard_ucl.html');
+//   initLeagueSwitcher();
 
 const LS_KEY = 'lastLeague'; // 'nb1' | 'ucl'
 
@@ -37,12 +35,10 @@ function ensureStyles() {
 }
 
 function computeHref(forUcl) {
-  // Az aktuális fájlnév párját képezzük: X.html  ⇄  X_ucl.html
   const url = new URL(location.href);
   const parts = url.pathname.split('/');
   const file = parts.pop() || '';
   const m = file.match(/^(.*?)(_ucl)?\.html$/i);
-  // Ha nincs .html (pl. route-os környezet), fallback: csak visszaadjuk self-et
   if (!m) return url.pathname + url.search + url.hash;
   const base = m[1];
   const nextFile = forUcl ? `${base}_ucl.html` : `${base.replace(/_ucl$/i,'')}.html`;
@@ -89,11 +85,9 @@ function buildSwitcherDOM(curIsUcl){
   badgeUcl.hidden = true;
   aUcl.appendChild(badgeUcl);
 
-  // Kattintáskor elmentjük, mit választott a user
   aNb1.addEventListener('click', ()=> setLastLeague('nb1'));
   aUcl.addEventListener('click', ()=> setLastLeague('ucl'));
 
-  // Szimpla bal/jobb nyilas fókusz (két tab közt)
   wrap.addEventListener('keydown', (e)=>{
     if (!['ArrowLeft','ArrowRight'].includes(e.key)) return;
     e.preventDefault();
@@ -109,24 +103,54 @@ function buildSwitcherDOM(curIsUcl){
 }
 
 function findDefaultMountPoint(){
-  // A te layoutodban a jobb oldali header-div jó hely:
-  // <div class="header"><div class="header-left">...</div><div> [IDE] Kilépés + Szabályzat </div></div>
-  // Ezt célozzuk meg, és a Switcher-t a "Kilépés" elé szúrjuk.
   const right = document.querySelector('.header > div:last-child');
   return right || document.querySelector('.header');
 }
 
-/** Publikus: hívjad minden NB1/BL oldalon */
+function archiveCardMarkup(){
+  return `
+    <div class="icon-wrap" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4 3h16a2 2 0 0 1 2 2v3a2 2 0 0 1-1 1.73V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.73A2 2 0 0 1 2 8V5a2 2 0 0 1 2-2Zm0 2v3h16V5H4Zm1 5v9h14v-9H5Zm4 2h6v2H9v-2Z"/>
+      </svg>
+    </div>
+    <div class="text">
+      <span class="title">Korábbi szezonok</span>
+      <span class="desc">2025/26 archívum</span>
+    </div>`;
+}
+
+function ensureArchiveNavCard(curIsUcl){
+  if (curIsUcl) return;
+  if (document.getElementById('archiveNavLink')) return;
+
+  const nav = document.querySelector('.nav-grid');
+  if (!nav) return;
+
+  const link = document.createElement('a');
+  link.id = 'archiveNavLink';
+  link.className = 'nav-card';
+  link.href = 'archive.html';
+  link.innerHTML = archiveCardMarkup();
+
+  const adminLink = nav.querySelector('#adminLink');
+  if (adminLink) nav.insertBefore(link, adminLink);
+  else nav.appendChild(link);
+}
+
+/** Publikus: hívd minden NB1/BL oldalon. */
 export function initLeagueSwitcher({ mountTarget } = {}){
   ensureStyles();
-  const mount = mountTarget || findDefaultMountPoint();
-  if (!mount) return;
   const curIsUcl = isUclPage();
-  const node = buildSwitcherDOM(curIsUcl);
-  // a jobb oldal elejére tesszük (Kilépés gomb előttre)
-  mount.insertBefore(node, mount.firstChild || null);
-  // frissítjük a lastLeague-et, hogy a belépés után is ez maradjon
+  const mount = mountTarget || findDefaultMountPoint();
+
+  if (mount && !mount.querySelector('.league-switch')){
+    const node = buildSwitcherDOM(curIsUcl);
+    mount.insertBefore(node, mount.firstChild || null);
+  }
+
   setLastLeague(curIsUcl ? 'ucl' : 'nb1');
+  ensureArchiveNavCard(curIsUcl);
 }
 
 /** Opció: állíts badge-et. league: 'nb1' | 'ucl' */
@@ -151,5 +175,4 @@ export function redirectToLastLeague(nb1Href, uclHref){
   else if (last === 'nb1' && nb1Href) location.replace(nb1Href);
 }
 
-// Opcionális helper, ha valaha szükséges lenne más modulból:
 export function getLastLeagueChoice(){ return getLastLeague(); }
