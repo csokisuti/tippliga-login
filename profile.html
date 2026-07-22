@@ -109,8 +109,25 @@
       "Paksi FC": "crest/crest-paks.png",
       "Puskás Akadémia": "crest/crest-puskas.png",
       "Újpest FC": "crest/crest-ujpest.png",
-      "Zalaegerszegi TE FC": "crest/crest-zte.png"
+      "Zalaegerszegi TE FC": "crest/crest-zte.png",
+      "Kispest-Honvéd FC": "crest/crest-honved.png",
+      "Vasas FC": "crest/crest-vasas.png"
     };
+
+    const ACTIVE_NB1_TEAMS = [
+      "Debreceni VSC",
+      "Kispest-Honvéd FC",
+      "Ferencváros",
+      "ETO FC Győr",
+      "Vasas FC",
+      "Kisvárda FC",
+      "MTK Budapest",
+      "Nyíregyháza Spartacus",
+      "Paksi FC",
+      "Puskás Akadémia",
+      "Újpest FC",
+      "Zalaegerszegi TE FC"
+    ];
 
     const escapeHtml = s => String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const fmtTime = ts => { try{ return ts.toDate().toLocaleString("hu-HU",{hour12:false}); }catch{ return ""; } };
@@ -214,7 +231,7 @@
         });
 
         // Kedvenc csapat választó
-        Object.keys(crestMap).forEach(team=>{
+        ACTIVE_NB1_TEAMS.forEach(team=>{
           const opt = document.createElement("option");
           opt.value = team;
           opt.textContent = team;
@@ -596,7 +613,7 @@
   <!-- Chat -->
   <button id="chatToggle" class="chat-fab" title="Közösségi chat">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1 2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
+      <path d="M4 4h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2Z"/>
     </svg>
     <span id="chatFabBadge" class="fab-badge"></span>
   </button>
@@ -616,4 +633,3 @@
   <script type="module" src="logger.js"></script>
 </body>
 </html>
-
