@@ -210,6 +210,21 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    const ACTIVE_NB1_TEAMS = [
+      "Debreceni VSC",
+      "Kispest-Honvéd FC",
+      "Ferencváros",
+      "ETO FC Győr",
+      "Vasas FC",
+      "Kisvárda FC",
+      "MTK Budapest",
+      "Nyíregyháza Spartacus",
+      "Paksi FC",
+      "Puskás Akadémia",
+      "Újpest FC",
+      "Zalaegerszegi TE FC"
+    ];
+
     const crestMap = {
       "Ferencváros": "crest/crest-fradi.png",
       "Újpest FC": "crest/crest-ujpest.png",
@@ -222,7 +237,9 @@
       "Diósgyőri VTK": "crest/crest-dvtk.png",
       "Zalaegerszegi TE FC": "crest/crest-zte.png",
       "ETO FC Győr": "crest/crest-gyor.png",
-      "MTK Budapest": "crest/crest-mtk.png"
+      "MTK Budapest": "crest/crest-mtk.png",
+      "Kispest-Honvéd FC": "crest/crest-honved.png",
+      "Vasas FC": "crest/crest-vasas.png"
     };
 
     const facebookLinks = {
@@ -237,7 +254,9 @@
       "Diósgyőri VTK": "https://www.facebook.com/DVTK1910",
       "Zalaegerszegi TE FC": "https://www.facebook.com/ztefc.hu",
       "ETO FC Győr": "https://www.facebook.com/etofcgyor",
-      "MTK Budapest": "https://www.facebook.com/MTKBudapest"
+      "MTK Budapest": "https://www.facebook.com/MTKBudapest",
+      "Kispest-Honvéd FC": "https://www.facebook.com/honvedfc",
+      "Vasas FC": "https://www.facebook.com/VasasFC/"
     };
 
     function fmtTime(ts){
@@ -265,12 +284,7 @@
     }
 
     function renderComputedTable(rows, updatedAt){
-      const crest = {
-        "Debreceni VSC":"crest/crest-dvsc.png","Diósgyőri VTK":"crest/crest-dvtk.png","Ferencváros":"crest/crest-fradi.png",
-        "ETO FC Győr":"crest/crest-gyor.png","Kazincbarcikai SC":"crest/crest-kazincbarcika.png","Kisvárda FC":"crest/crest-kisvarda.png",
-        "MTK Budapest":"crest/crest-mtk.png","Nyíregyháza Spartacus":"crest/crest-nyiregyhaza.png","Paksi FC":"crest/crest-paks.png",
-        "Puskás Akadémia":"crest/crest-puskas.png","Újpest FC":"crest/crest-ujpest.png","Zalaegerszegi TE FC":"crest/crest-zte.png"
-      };
+      const crest = crestMap;
 
       const wrap = document.getElementById("tableContainer");
       const tbl = document.createElement("table");
@@ -348,7 +362,7 @@
 
       if (onbSel) {
         onbSel.innerHTML = `<option value="">– Válassz csapatot –</option>` +
-          Object.keys(crestMap).map(t=>`<option value="${t}">${t}</option>`).join("");
+          ACTIVE_NB1_TEAMS.map(t=>`<option value="${t}">${t}</option>`).join("");
         onbSel.addEventListener("change", () => {
           const ok = !!onbSel.value;
           if (onbSave){
