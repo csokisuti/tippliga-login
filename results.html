@@ -163,9 +163,25 @@
       "Paksi FC": "crest/crest-paks.png",
       "Puskás Akadémia": "crest/crest-puskas.png",
       "Újpest FC": "crest/crest-ujpest.png",
-      "Zalaegerszegi TE FC": "crest/crest-zte.png"
+      "Zalaegerszegi TE FC": "crest/crest-zte.png",
+      "Kispest-Honvéd FC": "crest/crest-honved.png",
+      "Vasas FC": "crest/crest-vasas.png"
     };
-    const TEAM_LIST = Object.keys(crestMap);
+
+    const TEAM_LIST = [
+      "Debreceni VSC",
+      "Kispest-Honvéd FC",
+      "Ferencváros",
+      "ETO FC Győr",
+      "Vasas FC",
+      "Kisvárda FC",
+      "MTK Budapest",
+      "Nyíregyháza Spartacus",
+      "Paksi FC",
+      "Puskás Akadémia",
+      "Újpest FC",
+      "Zalaegerszegi TE FC"
+    ];
 
     function crestFor(team){ return crestMap[team] || ""; }
     function fmt(n){ return (Number(n)||0).toFixed(2); }
@@ -793,7 +809,7 @@
 
       <a class="nav-card" id="adminLink" href="admin.html" style="display:none;">
         <div class="icon-wrap" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0 1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 1 1-4 4 4 4 0 0 1 4-4Zm8.94 4a6.94 6.94 0 0 0-.12-1l2.02-1.56-2-3.46-2.44 1a6.9 6.9 0 0 0-1.74-1l-.37-2.6H9.71l-.37-2.6a6.9 6.9 0 0 0-1.74-1l-2.44-1-2 3.46L5.18 11a7 7 0 0 0 0 2l-2.02 1.56 2 3.46 2.44-1a6.9 6.9 0 0 0 1.74 1l.37 2.6h4.56l.37-2.6a6.9 6.9 0 0 0 1.74-1l2.44 1 2-3.46L20.82 13a6.94 6.94 0 0 0 .12-1Z"/></svg>
         </div>
         <div class="text">
           <span class="title">Admin</span>
@@ -875,4 +891,3 @@
   <script type="module" src="logger.js"></script>
 </body>
 </html>
-
