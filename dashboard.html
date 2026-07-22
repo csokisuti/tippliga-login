@@ -274,6 +274,7 @@
           wrap.innerHTML = '<div class="muted" style="padding:12px;">Még nincs publikált tabella. Az admin felületen számoltasd újra.</div>';
           return;
         }
+
         const data = snap.data() || {};
         const rows = Array.isArray(data.rows) ? data.rows : [];
         renderComputedTable(rows, data.updatedAt);
@@ -327,6 +328,7 @@
           `).join("")}
         </tbody>
       `;
+
       const footerInfo = document.createElement("div");
       footerInfo.className = "muted";
       footerInfo.style.cssText = "padding:8px 10px;border-top:1px solid var(--line,#e6eaf1);font-size:12px;";
@@ -750,8 +752,10 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
 <p><strong>4. Pontszámítás</strong><br>
 - A helyes tipp pontszáma: <strong>odds × tét</strong> (tét = 1 pont, duplázásnál 2 pont).<br>
 - Rossz tipp esetén <strong>0 pont</strong> jár.<br>
-- <strong>Szezon végi sorrend pontozás:</strong> ahány csapat pontos helyezését eltalálja a játékos, annyiszor <strong>+1% bónusz</strong> kerül hozzáadásra a <strong>teljes szezonos összpontszámához</strong>.<br>
-  <em>Példa:</em> ha egy játékos <strong>5 csapat pontos helyét</strong> találja el, akkor a szezon végén összpontszámát <strong>+5%-kal növeljük</strong>.<br>
+- <strong>Szezon végi sorrend pontozás:</strong> minden csapatnál összehasonlítjuk a játékos által tippelt helyezést a csapat tényleges szezon végi helyezésével.<br>
+- Pontos helyezés esetén <strong>10 pont</strong>, 1 hely eltérésnél <strong>6 pont</strong>, 2 hely eltérésnél <strong>3 pont</strong>, 3 hely eltérésnél <strong>1 pont</strong>, 4 vagy több hely eltérésnél <strong>0 pont</strong> jár.<br>
+- A 12 csapatra összesen legfeljebb <strong>120 pozíciós pont</strong> szerezhető. A szezon végi bónusz százaléka a pozíciós pontszám tizede, ezért a maximális bónusz <strong>+12%</strong>.<br>
+  <em>Példa:</em> 83 pozíciós pont esetén a játékos teljes szezonos alappontszáma <strong>+8,3%-kal</strong> növekszik.<br>
 - Az oddsok <strong>a Tippmixpro alapján kerülnek meghatározásra</strong> abban az időpontban, amikor a mérkőzés feltöltésre kerül.<br>
   <strong>A kezdésig az odds módosulhat</strong>, és nem feltétlenül egyezik az aktuálisan érvényes oddsokkal, mivel az értékek manuálisan kerülnek feltöltésre, és nem frissülnek folyamatosan.</p>
 <p><strong>5. Eredmények és rangsor</strong><br>
@@ -761,7 +765,7 @@ A TippLiga célja, hogy a játékosok minél több pontot gyűjtsenek az <strong
 - <strong>A profil menüben érdemes kiválasztani a kedvenc csapatodat</strong>, mert így a felület színe és megjelenése a csapatodhoz igazodik, és a klubcímere is megjelenik a profilodnál.</p>
         </div>
         <div class="rules-foot">
-          <span id="rulesUpdated" class="rules-updated">Utoljára frissítve: 2025. 08. 14.</span>
+          <span id="rulesUpdated" class="rules-updated">Utoljára frissítve: 2026. 07. 22.</span>
           <button id="closeRules2" class="btn-accent">Bezárás</button>
         </div>
       </div>
