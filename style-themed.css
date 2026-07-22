@@ -31,7 +31,7 @@ button {
 }
 button:hover { filter: brightness(0.96); }
 
-/* ===== TÉMÁK – NB I (változatlan) ===== */
+/* ===== TÉMÁK – NB I ===== */
 body.theme-debreceni-vsc      { --accent:#da1a32; --bg-soft:#ffecee; --text:#251015; }
 body.theme-diosgyori-vtk      { --accent:#c00000; --bg-soft:#fff1f1; --text:#241010; }
 body.theme-ferencvaros        { --accent:#0a7d44; --bg-soft:#eaf7ef; --text:#0d2419; }
@@ -44,6 +44,8 @@ body.theme-paksi-fc           { --accent:#009933; --bg-soft:#e9f6ef; --text:#0f2
 body.theme-puskas-akademia    { --accent:#ffc72c; --bg-soft:#fff9e8; --text:#1d1602; }
 body.theme-ujpest-fc          { --accent:#9d4edd; --bg-soft:#f6f0fb; --text:#1b1024; }
 body.theme-zalaegerszegi-te-fc{ --accent:#0047ab; --bg-soft:#eaf1ff; --text:#0c1a33; }
+body.theme-kispest-honved-fc  { --accent:#c8102e; --bg-soft:#fff0f2; --text:#2b0b10; }
+body.theme-vasas-fc           { --accent:#d71920; --bg-soft:#fff0f1; --text:#2a0b0d; }
 
 /* ===== TÉMÁK – BL: aliasokkal (több név ugyanarra a témára) ===== */
 
