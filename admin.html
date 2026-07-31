@@ -118,6 +118,73 @@
       );
     }
 
+    function optionalOdd(value){
+      const raw=String(value??"")
+        .trim()
+        .replace(",",".");
+
+      if(!raw) return null;
+
+      const n=Number(raw);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function oddsFromInputs(idPrefix=""){
+      const suffix=idPrefix ? `-${idPrefix}` : "";
+
+      return {
+        "1":optionalOdd(
+          document.getElementById(`odds1${suffix}`)?.value
+        ),
+        "X":optionalOdd(
+          document.getElementById(`oddsX${suffix}`)?.value
+        ),
+        "2":optionalOdd(
+          document.getElementById(`odds2${suffix}`)?.value
+        )
+      };
+    }
+
+    function dateTimeLocalValue(date){
+      if(!(date instanceof Date)||Number.isNaN(date.getTime())){
+        return "";
+      }
+
+      const pad=n=>String(n).padStart(2,"0");
+
+      return [
+        date.getFullYear(),
+        pad(date.getMonth()+1),
+        pad(date.getDate())
+      ].join("-")+"T"+[
+        pad(date.getHours()),
+        pad(date.getMinutes())
+      ].join(":");
+    }
+
+    function normalizedManualLocks(value){
+      const v=value||{};
+
+      return {
+        teams:!!v.teams,
+        startTime:!!v.startTime,
+        result:!!v.result
+      };
+    }
+
+    function isApiLinkedMatch(match){
+      return !!(
+        match?.externalEventId||
+        match?.externalSource||
+        match?.createdAutomatically
+      );
+    }
+
+    function apiUpdatedText(value){
+      const d=value?.toDate?.();
+      return d ? d.toLocaleString("hu-HU") : "—";
+    }
+
     // === NB I tabella számoló: Firestore match-dokikból → sorok (rows)
     function computeStandingsFromMatchesDocs(docs){
       const T = [
@@ -426,28 +493,34 @@
               >
 
               <input
+                placeholder="TheSportsDB Event ID (opcionális)"
+                id="externalEventId"
+              >
+
+              <input
                 type="number"
                 step="0.01"
-                placeholder="Odds 1"
+                placeholder="Odds 1 (később is megadható)"
                 id="odds1"
-                required
               >
 
               <input
                 type="number"
                 step="0.01"
-                placeholder="Odds X"
+                placeholder="Odds X (később is megadható)"
                 id="oddsX"
-                required
               >
 
               <input
                 type="number"
                 step="0.01"
-                placeholder="Odds 2"
+                placeholder="Odds 2 (később is megadható)"
                 id="odds2"
-                required
               >
+
+              <span class="muted small">
+                Odds nélkül is elmenthető és később kitölthető.
+              </span>
 
               <button
                 type="submit"
@@ -1078,7 +1151,16 @@ onAuthStateChanged(auth, ()=>{
           roundId:d.roundId,
           odds:d.odds||{},
           result:d.result||"",
-          outcome:d.outcome||""
+          outcome:d.outcome||"",
+          externalSource:d.externalSource||"",
+          externalEventId:d.externalEventId||"",
+          apiStatus:d.apiStatus||"",
+          apiUpdatedAt:d.apiUpdatedAt||null,
+          createdAutomatically:!!d.createdAutomatically,
+          homeTeamExternalId:d.homeTeamExternalId||"",
+          awayTeamExternalId:d.awayTeamExternalId||"",
+          manualLocks:normalizedManualLocks(d.manualLocks),
+          resultSource:d.resultSource||""
         });
 
         if(d.roundId!=null){
@@ -1159,7 +1241,7 @@ onAuthStateChanged(auth, ()=>{
       dataList.id="teamsList";
 
       dataList.innerHTML=teams
-        .map(t=>`<option value="${t}">`)
+        .map(t=>`<option value="${esc(t)}">`)
         .join("");
 
       container.appendChild(dataList);
@@ -1171,23 +1253,66 @@ onAuthStateChanged(auth, ()=>{
         const startDate=
           d.startTime?.toDate?.();
 
-        const datetimeValue=startDate
-          ? new Date(startDate)
-              .toISOString()
-              .slice(0,16)
-          : "";
+        const datetimeValue=
+          dateTimeLocalValue(startDate);
+
+        const apiLinked=isApiLinkedMatch(d);
+        const locks=normalizedManualLocks(d.manualLocks);
+        const activeLocks=[
+          locks.teams ? "csapatok" : "",
+          locks.startTime ? "kezdési idő" : "",
+          locks.result ? "eredmény" : ""
+        ].filter(Boolean);
+
+        const apiMeta=apiLinked
+          ? `
+            <div style="margin-top:10px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:#f8fafc;">
+              <div class="small">
+                <strong>API-kapcsolat:</strong>
+                ${esc(d.externalSource||"thesportsdb")}
+                • Event ID: <span class="kbd">${esc(d.externalEventId||"—")}</span>
+                • Státusz: <strong>${esc(d.apiStatus||"—")}</strong>
+                • Utolsó API-frissítés: ${esc(apiUpdatedText(d.apiUpdatedAt))}
+              </div>
+
+              <div class="small" style="margin-top:5px;">
+                <strong>Kézi védelem:</strong>
+                ${activeLocks.length ? esc(activeLocks.join(", ")) : "nincs"}
+              </div>
+
+              <div class="row" style="margin-top:8px;">
+                <button
+                  class="btn"
+                  type="button"
+                  onclick="unlockApiMatch('${d.id}')"
+                >
+                  API felülírás újraengedélyezése
+                </button>
+
+                <span class="muted small">
+                  A kézzel módosított API-adatokat a későbbi automatikus szinkron nem írja felül, amíg ezt fel nem oldod.
+                </span>
+              </div>
+            </div>
+          `
+          : `
+            <div class="muted small" style="margin-top:10px;">
+              Kézzel létrehozott meccs, nincs API-hoz kapcsolva.
+            </div>
+          `;
 
         div.innerHTML=`
           <div class="card-head">
             <h3>
-              ${d.roundId||""}. forduló –
-              ${d.homeTeam||""}
+              ${esc(d.roundId||"")}. forduló –
+              ${esc(d.homeTeam||"")}
               vs
-              ${d.awayTeam||""}
+              ${esc(d.awayTeam||"")}
             </h3>
 
             <div class="hint">
-              ${startDate?.toLocaleString("hu-HU")||""}
+              ${esc(startDate?.toLocaleString("hu-HU")||"")}
+              ${apiLinked ? " • API" : ""}
             </div>
           </div>
 
@@ -1195,43 +1320,58 @@ onAuthStateChanged(auth, ()=>{
             <div class="row">
               <input
                 list="teamsList"
-                value="${d.homeTeam||""}"
+                value="${esc(d.homeTeam||"")}"
                 id="home-${d.id}"
               >
 
               <input
                 list="teamsList"
-                value="${d.awayTeam||""}"
+                value="${esc(d.awayTeam||"")}"
                 id="away-${d.id}"
               >
 
               <input
                 type="datetime-local"
-                value="${datetimeValue}"
+                value="${esc(datetimeValue)}"
                 id="start-${d.id}"
               >
 
               <input
-                value="${d.roundId||""}"
+                value="${esc(d.roundId||"")}"
                 id="round-${d.id}"
+                placeholder="Forduló"
+                style="width:90px"
               >
 
               <input
-                value="${d.odds["1"]??""}"
+                value="${esc(d.externalEventId||"")}"
+                id="event-${d.id}"
+                placeholder="TheSportsDB Event ID"
+                style="width:190px"
+              >
+
+              <input
+                type="number"
+                step="0.01"
+                value="${esc(d.odds["1"]??"")}"
                 id="odds1-${d.id}"
                 placeholder="Odds 1"
                 style="width:90px"
               >
 
               <input
-                value="${d.odds["X"]??""}"
+                type="number"
+                step="0.01"
+                value="${esc(d.odds["X"]??"")}"
                 id="oddsX-${d.id}"
                 placeholder="Odds X"
                 style="width:90px"
               >
 
               <input
-                value="${d.odds["2"]??""}"
+                type="number"
+                step="0.01"
+                value="${esc(d.odds["2"]??"")}"
                 id="odds2-${d.id}"
                 placeholder="Odds 2"
                 style="width:90px"
@@ -1251,6 +1391,8 @@ onAuthStateChanged(auth, ()=>{
                 Törlés
               </button>
             </div>
+
+            ${apiMeta}
           </div>
         `;
 
@@ -1264,50 +1406,91 @@ onAuthStateChanged(auth, ()=>{
 
     async function updateMatch(id){
       const ref=doc(db,"matches",id);
+      const existing=_matchesCache.find(m=>m.id===id)||{};
+
+      const homeTeam=
+        document.getElementById(`home-${id}`).value.trim();
+
+      const awayTeam=
+        document.getElementById(`away-${id}`).value.trim();
+
+      const startRaw=
+        document.getElementById(`start-${id}`).value;
+
+      const startDate=new Date(startRaw);
+
+      const roundId=
+        document.getElementById(`round-${id}`).value.trim();
+
+      const externalEventId=
+        document.getElementById(`event-${id}`).value.trim();
+
+      if(!homeTeam||!awayTeam){
+        alert("A hazai és a vendégcsapat megadása kötelező.");
+        return;
+      }
+
+      if(homeTeam===awayTeam){
+        alert("A hazai és a vendégcsapat nem lehet ugyanaz.");
+        return;
+      }
+
+      if(Number.isNaN(startDate.getTime())){
+        alert("Adj meg érvényes kezdési időpontot.");
+        return;
+      }
+
+      if(!roundId){
+        alert("Add meg a fordulót.");
+        return;
+      }
+
+      if(
+        externalEventId&&
+        _matchesCache.some(
+          m=>m.id!==id&&
+          String(m.externalEventId||"")===externalEventId
+        )
+      ){
+        alert("Ez a TheSportsDB Event ID már egy másik meccshez tartozik.");
+        return;
+      }
+
+      const manualLocks=
+        normalizedManualLocks(existing.manualLocks);
+
+      if(isApiLinkedMatch(existing)){
+        if(
+          homeTeam!==(existing.homeTeam||"")||
+          awayTeam!==(existing.awayTeam||"")
+        ){
+          manualLocks.teams=true;
+        }
+
+        const oldStart=
+          existing.startTime?.toDate?.();
+
+        if(
+          !oldStart||
+          Math.abs(oldStart.getTime()-startDate.getTime())>30000
+        ){
+          manualLocks.startTime=true;
+        }
+      }
 
       await updateDoc(ref,{
-        homeTeam:
-          document
-            .getElementById(`home-${id}`)
-            .value,
-
-        awayTeam:
-          document
-            .getElementById(`away-${id}`)
-            .value,
-
-        startTime:Timestamp.fromDate(
-          new Date(
-            document
-              .getElementById(`start-${id}`)
-              .value
-          )
-        ),
-
-        roundId:
-          document
-            .getElementById(`round-${id}`)
-            .value,
-
-        odds:{
-          "1":parseFloat(
-            document
-              .getElementById(`odds1-${id}`)
-              .value
-          ),
-
-          "X":parseFloat(
-            document
-              .getElementById(`oddsX-${id}`)
-              .value
-          ),
-
-          "2":parseFloat(
-            document
-              .getElementById(`odds2-${id}`)
-              .value
-          )
-        }
+        homeTeam,
+        awayTeam,
+        startTime:Timestamp.fromDate(startDate),
+        roundId,
+        odds:oddsFromInputs(id),
+        externalEventId:externalEventId||null,
+        externalSource:externalEventId
+          ? (existing.externalSource||"thesportsdb")
+          : null,
+        manualLocks,
+        manualUpdatedAt:Timestamp.fromDate(new Date()),
+        manualUpdatedBy:auth.currentUser?.email||""
       });
 
       alert("Mentve");
@@ -1320,6 +1503,40 @@ onAuthStateChanged(auth, ()=>{
       }catch(e){
         console.warn(e);
       }
+    }
+
+    async function unlockApiMatch(id){
+      const existing=_matchesCache.find(m=>m.id===id);
+
+      if(!existing||!isApiLinkedMatch(existing)){
+        alert("Ez a meccs nincs API-hoz kapcsolva.");
+        return;
+      }
+
+      if(
+        !confirm(
+          "Feloldod a kézi védelmet? A következő automatikus API-frissítés ismét felülírhatja a csapatokat, a kezdési időt és az eredményt."
+        )
+      ){
+        return;
+      }
+
+      await updateDoc(
+        doc(db,"matches",id),
+        {
+          manualLocks:{
+            teams:false,
+            startTime:false,
+            result:false
+          },
+          manualUnlockedAt:Timestamp.fromDate(new Date()),
+          manualUnlockedBy:auth.currentUser?.email||""
+        }
+      );
+
+      await loadMatches();
+      await loadResults();
+      alert("Az API felülírása újra engedélyezve.");
     }
 
     async function deleteMatch(id){
@@ -1344,48 +1561,107 @@ onAuthStateChanged(auth, ()=>{
     async function onAddMatch(e){
       e.preventDefault();
 
-      const startTime=Timestamp.fromDate(
-        new Date(
-          document
-            .getElementById("startTime")
-            .value
-        )
-      );
-
       const homeTeam=
-        document.getElementById("homeTeam");
+        document.getElementById("homeTeam").value.trim();
 
       const awayTeam=
-        document.getElementById("awayTeam");
+        document.getElementById("awayTeam").value.trim();
+
+      const startRaw=
+        document.getElementById("startTime").value;
+
+      const startDate=new Date(startRaw);
 
       const roundId=
-        document.getElementById("roundId");
+        document.getElementById("roundId").value.trim();
 
-      const odds1=
-        document.getElementById("odds1");
+      const externalEventId=
+        document.getElementById("externalEventId").value.trim();
 
-      const oddsX=
-        document.getElementById("oddsX");
+      if(!homeTeam||!awayTeam){
+        alert("A hazai és a vendégcsapat megadása kötelező.");
+        return;
+      }
 
-      const odds2=
-        document.getElementById("odds2");
+      if(homeTeam===awayTeam){
+        alert("A hazai és a vendégcsapat nem lehet ugyanaz.");
+        return;
+      }
+
+      if(Number.isNaN(startDate.getTime())){
+        alert("Adj meg érvényes kezdési időpontot.");
+        return;
+      }
+
+      if(!roundId){
+        alert("Add meg a fordulót.");
+        return;
+      }
+
+      const snap=await getDocs(collection(db,"matches"));
+      let duplicate="";
+
+      snap.forEach(d=>{
+        if(duplicate) return;
+
+        const m=d.data()||{};
+
+        if(
+          externalEventId&&
+          String(m.externalEventId||"")===externalEventId
+        ){
+          duplicate="Ez a TheSportsDB Event ID már szerepel a meccsek között.";
+          return;
+        }
+
+        const oldStart=m.startTime?.toDate?.();
+
+        if(
+          m.homeTeam===homeTeam&&
+          m.awayTeam===awayTeam&&
+          oldStart&&
+          Math.abs(oldStart.getTime()-startDate.getTime())<5*60*1000
+        ){
+          duplicate="Ugyanez a párosítás és kezdési idő már szerepel a meccsek között.";
+        }
+      });
+
+      if(duplicate){
+        alert(duplicate);
+        return;
+      }
 
       await addDoc(
         collection(db,"matches"),
         {
-          homeTeam:homeTeam.value,
-          awayTeam:awayTeam.value,
-          startTime,
-          roundId:roundId.value,
-          odds:{
-            "1":parseFloat(odds1.value),
-            "X":parseFloat(oddsX.value),
-            "2":parseFloat(odds2.value)
-          }
+          homeTeam,
+          awayTeam,
+          startTime:Timestamp.fromDate(startDate),
+          roundId,
+          odds:oddsFromInputs(),
+          externalSource:externalEventId
+            ? "thesportsdb"
+            : null,
+          externalEventId:externalEventId||null,
+          apiStatus:externalEventId
+            ? "linked"
+            : "",
+          createdAutomatically:false,
+          manualLocks:{
+            teams:false,
+            startTime:false,
+            result:false
+          },
+          createdAt:Timestamp.fromDate(new Date()),
+          createdBy:auth.currentUser?.email||""
         }
       );
 
-      alert("Meccs mentve");
+      alert(
+        externalEventId
+          ? "API-hoz kapcsolt meccs mentve."
+          : "Meccs mentve. Az oddsok később is megadhatók."
+      );
 
       e.target.reset();
 
@@ -1451,7 +1727,12 @@ onAuthStateChanged(auth, ()=>{
           awayTeam:d.awayTeam,
           startTime:d.startTime,
           roundId:d.roundId,
-          result:d.result||""
+          result:d.result||"",
+          resultSource:d.resultSource||"",
+          externalSource:d.externalSource||"",
+          externalEventId:d.externalEventId||"",
+          apiStatus:d.apiStatus||"",
+          manualLocks:normalizedManualLocks(d.manualLocks)
         };
 
         if(d.result){
@@ -1497,20 +1778,26 @@ onAuthStateChanged(auth, ()=>{
 
             div.className="card";
 
+            const apiLinked=isApiLinkedMatch(match);
+            const locks=normalizedManualLocks(match.manualLocks);
+
             div.innerHTML=`
               <div class="card-head">
                 <h3>
-                  ${match.homeTeam}
+                  ${esc(match.homeTeam)}
                   -
-                  ${match.awayTeam}
+                  ${esc(match.awayTeam)}
                 </h3>
 
                 <div class="hint">
                   ${
-                    match.startTime
-                      ?.toDate?.()
-                      ?.toLocaleString("hu-HU")||""
+                    esc(
+                      match.startTime
+                        ?.toDate?.()
+                        ?.toLocaleString("hu-HU")||""
+                    )
                   }
+                  ${apiLinked ? " • API" : ""}
                 </div>
               </div>
 
@@ -1518,7 +1805,7 @@ onAuthStateChanged(auth, ()=>{
                 <div class="row">
                   <input
                     placeholder="pl. 2-1"
-                    value="${match.result||""}"
+                    value="${esc(match.result||"")}"
                     id="res-${match.id}"
                     style="width:80px"
                   >
@@ -1533,6 +1820,30 @@ onAuthStateChanged(auth, ()=>{
                         : "Mentés"
                     }
                   </button>
+
+                  ${
+                    hasResult
+                      ? `<button class="btn danger" id="clear-res-${match.id}">Eredmény törlése</button>`
+                      : ""
+                  }
+
+                  <span class="muted small">
+                    ${
+                      apiLinked
+                        ? `TheSportsDB Event ID: ${esc(match.externalEventId||"—")} • API státusz: ${esc(match.apiStatus||"—")}`
+                        : "Kézzel létrehozott meccs"
+                    }
+                    ${
+                      match.resultSource
+                        ? ` • Eredmény forrása: ${esc(match.resultSource)}`
+                        : ""
+                    }
+                    ${
+                      locks.result
+                        ? " • Kézzel védett eredmény"
+                        : ""
+                    }
+                  </span>
                 </div>
               </div>
             `;
@@ -1558,14 +1869,26 @@ onAuthStateChanged(auth, ()=>{
                   return;
                 }
 
+                const manualLocks=
+                  normalizedManualLocks(match.manualLocks);
+
+                if(apiLinked){
+                  manualLocks.result=true;
+                }
+
                 await updateDoc(
                   doc(db,"matches",match.id),
                   {
                     result:v,
-                    outcome:oc
+                    outcome:oc,
+                    resultSource:"manual",
+                    manualLocks,
+                    manualResultUpdatedAt:Timestamp.fromDate(new Date()),
+                    manualResultUpdatedBy:auth.currentUser?.email||""
                   }
                 );
 
+                await loadMatches();
                 await loadResults();
 
                 try{
@@ -1577,6 +1900,48 @@ onAuthStateChanged(auth, ()=>{
                   );
                 }
               };
+
+            const clearBtn=
+              div.querySelector(`#clear-res-${match.id}`);
+
+            if(clearBtn){
+              clearBtn.onclick=async()=>{
+                if(!confirm("Biztos törlöd ezt az eredményt?")){
+                  return;
+                }
+
+                const manualLocks=
+                  normalizedManualLocks(match.manualLocks);
+
+                if(apiLinked){
+                  manualLocks.result=true;
+                }
+
+                await updateDoc(
+                  doc(db,"matches",match.id),
+                  {
+                    result:"",
+                    outcome:"",
+                    resultSource:"manual",
+                    manualLocks,
+                    manualResultUpdatedAt:Timestamp.fromDate(new Date()),
+                    manualResultUpdatedBy:auth.currentUser?.email||""
+                  }
+                );
+
+                await loadMatches();
+                await loadResults();
+
+                try{
+                  await recomputeAndPublishTable();
+                }catch(e){
+                  console.warn(
+                    "Tabella publikálás hiba:",
+                    e
+                  );
+                }
+              };
+            }
 
             container.appendChild(div);
           });
@@ -2243,6 +2608,7 @@ verzió: ${data.version||"n/a"}`);
 
     window.updateMatch=updateMatch;
     window.deleteMatch=deleteMatch;
+    window.unlockApiMatch=unlockApiMatch;
 
     async function loadPositionsLock(){
       const status=
