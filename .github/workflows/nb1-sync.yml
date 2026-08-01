@@ -12,8 +12,16 @@ on:
           - preview
           - write
 
+  schedule:
+    - cron: "47 23 * * *"
+      timezone: "Europe/Budapest"
+
 permissions:
   contents: read
+
+concurrency:
+  group: nb1-sync
+  cancel-in-progress: false
 
 jobs:
   sync:
@@ -37,7 +45,7 @@ jobs:
       - name: Futtatási mód beállítása
         shell: bash
         run: |
-          if [ "${{ inputs.mode }}" = "write" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.mode }}" = "write" ]; then
             echo "DRY_RUN=false" >> "$GITHUB_ENV"
             echo "ÉLES FIRESTORE-ÍRÁS"
           else
