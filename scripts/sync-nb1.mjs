@@ -630,7 +630,160 @@ function formatLocalDate(date) {
   ).format(date);
 }
 
-function buildExistingUpdates(
+function timestampMillis(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value.toMillis === "function") {
+    return value.toMillis();
+  }
+
+  if (typeof value.toDate === "function") {
+    return value.toDate().getTime();
+  }
+
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : parsed.getTime();
+}
+
+function valuesEqual(
+  currentValue,
+  nextValue
+) {
+  if (
+    currentValue &&
+    typeof currentValue.toMillis === "function"
+  ) {
+    return (
+      currentValue.toMillis() ===
+      timestampMillis(nextValue)
+    );
+  }
+
+  if (nextValue instanceof Date) {
+    return (
+      timestampMillis(currentValue) ===
+      nextValue.getTime()
+    );
+  }
+
+  return (
+    String(currentValue ?? "") ===
+    String(nextValue ?? "")
+  );
+}
+
+function buildDesiredData(
+  event,
+  existing
+) {
+  const locks =
+    existing?.manualLocks || {};
+
+  const desired = {
+    externalSource:
+      "thesportsdb",
+    externalEventId:
+      event.externalEventId,
+    homeTeamExternalId:
+      event.homeTeamExternalId,
+    awayTeamExternalId:
+      event.awayTeamExternalId,
+    apiStatus:
+      event.apiStatus,
+    apiManaged:
+      true,
+    published:
+      true,
+    roundId:
+      String(event.round)
+  };
+
+  if (!locks.teams) {
+    desired.homeTeam =
+      event.homeTeam;
+    desired.awayTeam =
+      event.awayTeam;
+  }
+
+  if (!locks.startTime) {
+    desired.startTime =
+      event.startDate;
+  }
+
+  if (
+    event.finalResult &&
+    !locks.result
+  ) {
+    desired.result =
+      event.finalResult.result;
+    desired.outcome =
+      event.finalResult.outcome;
+  }
+
+  return desired;
+}
+
+function buildChangedFields(
+  existing,
+  desired
+) {
+  const changes = {};
+  const changedKeys = [];
+
+  for (
+    const [key, nextValue]
+    of Object.entries(desired)
+  ) {
+    const currentValue =
+      existing?.[key];
+
+    if (
+      !valuesEqual(
+        currentValue,
+        nextValue
+      )
+    ) {
+      changes[key] =
+        nextValue instanceof Date
+          ? Timestamp.fromDate(nextValue)
+          : nextValue;
+
+      changedKeys.push(key);
+    }
+  }
+
+  if (changedKeys.length > 0) {
+    changes.apiUpdatedAt =
+      Timestamp.fromDate(
+        new Date()
+      );
+  }
+
+  return {
+    changes,
+    changedKeys
+  };
+}
+
+function resultWasChanged(
+  changedKeys
+) {
+  return (
+    changedKeys.includes("result") ||
+    changedKeys.includes("outcome")
+  );
+}
+
+function buildExistingPlans(
   mappedEvents,
   existingMatches
 ) {
@@ -638,7 +791,7 @@ function buildExistingUpdates(
     indexExistingMatches(
       existingMatches
     );
-  const updates = [];
+  const plans = [];
 
   for (const event of mappedEvents) {
     if (
@@ -659,9 +812,25 @@ function buildExistingUpdates(
       continue;
     }
 
-    updates.push({
+    const desired =
+      buildDesiredData(
+        event,
+        existing
+      );
+
+    const {
+      changes,
+      changedKeys
+    } = buildChangedFields(
+      existing,
+      desired
+    );
+
+    plans.push({
       event,
       existing,
+      changes,
+      changedKeys,
       linkedBy:
         String(existing.externalEventId || "") ===
           event.externalEventId
@@ -670,7 +839,7 @@ function buildExistingUpdates(
     });
   }
 
-  return updates;
+  return plans;
 }
 
 function buildNewMatches(
@@ -701,7 +870,7 @@ function buildNewMatches(
 
 function printPreview({
   mappedEvents,
-  existingUpdates,
+  existingPlans,
   newMatches,
   targetRound,
   targetReason
@@ -710,6 +879,18 @@ function printPreview({
     mappedEvents.filter(event =>
       !event.homeTeam ||
       !event.awayTeam
+    );
+
+  const changedPlans =
+    existingPlans.filter(
+      plan =>
+        plan.changedKeys.length > 0
+    );
+
+  const unchangedPlans =
+    existingPlans.filter(
+      plan =>
+        plan.changedKeys.length === 0
     );
 
   console.log("");
@@ -740,28 +921,27 @@ function printPreview({
 
   console.log("");
   console.log(
-    "Meglévő meccsek API-frissítése:"
+    "Ténylegesen módosítandó meglévő meccsek:"
   );
 
-  if (existingUpdates.length === 0) {
+  if (changedPlans.length === 0) {
     console.log(
-      "- Nincs frissíthető meglévő meccs."
+      "- Nincs módosítandó meglévő meccs."
     );
   }
 
-  for (const item of existingUpdates) {
-    const event = item.event;
+  for (const plan of changedPlans) {
+    const event = plan.event;
     const resultText =
       event.finalResult
         ? ` | eredmény: ${event.finalResult.result}`
         : "";
 
     console.log(
-      `[${item.linkedBy === "event-id" ? "FRISSÍTÉS" : "ÖSSZEKAPCSOLÁS"}] ` +
-      `${event.round}. forduló | ` +
+      `[MÓDOSÍTÁS] ${event.round}. forduló | ` +
       `${event.homeTeam || event.externalHomeTeam} – ` +
       `${event.awayTeam || event.externalAwayTeam} | ` +
-      `${formatLocalDate(event.startDate)} | ` +
+      `mezők: ${plan.changedKeys.join(", ")} | ` +
       `Event ID: ${event.externalEventId} | ` +
       `státusz: ${event.apiStatus || "-"}${resultText}`
     );
@@ -805,105 +985,110 @@ function printPreview({
 
   console.log("");
   console.log(
-    `Meglévő meccs frissítése/összekapcsolása: ${existingUpdates.length}`
+    `Módosítandó meglévő meccs: ${changedPlans.length}`
   );
   console.log(
-    `Új meccs létrehozása: ${newMatches.length}`
+    `Változatlan meglévő meccs: ${unchangedPlans.length}`
+  );
+  console.log(
+    `Új meccs: ${newMatches.length}`
   );
   console.log(
     `Ismeretlen csapat: ${unknownTeams.length}`
   );
 }
 
-function buildApiData(event) {
-  const data = {
-    homeTeam: event.homeTeam,
-    awayTeam: event.awayTeam,
-    startTime:
-      Timestamp.fromDate(
-        event.startDate
-      ),
-    roundId:
-      String(event.round),
-
-    externalSource:
-      "thesportsdb",
-    externalEventId:
-      event.externalEventId,
-    homeTeamExternalId:
-      event.homeTeamExternalId,
-    awayTeamExternalId:
-      event.awayTeamExternalId,
-
-    apiStatus:
-      event.apiStatus,
-    apiUpdatedAt:
-      Timestamp.fromDate(
-        new Date()
-      ),
-    apiManaged:
-      true,
-    published:
-      true
-  };
-
-  if (event.finalResult) {
-    data.result =
-      event.finalResult.result;
-    data.outcome =
-      event.finalResult.outcome;
+function applyChangesToLocalMatch(
+  existing,
+  changes
+) {
+  for (
+    const [key, value]
+    of Object.entries(changes)
+  ) {
+    existing[key] = value;
   }
-
-  return data;
 }
 
-async function updateExistingMatches(
+async function executeExistingPlans(
   db,
-  updates
+  plans
 ) {
-  for (const item of updates) {
-    const event = item.event;
-    const existing = item.existing;
-    const data = buildApiData(event);
-    const locks =
-      existing.manualLocks || {};
+  let changedCount = 0;
+  let resultChanged = false;
 
+  for (const plan of plans) {
     if (
-      !event.homeTeam ||
-      !event.awayTeam
+      plan.changedKeys.length === 0
     ) {
-      delete data.homeTeam;
-      delete data.awayTeam;
-    }
-
-    if (locks.teams) {
-      delete data.homeTeam;
-      delete data.awayTeam;
-    }
-
-    if (locks.startTime) {
-      delete data.startTime;
-    }
-
-    if (locks.result) {
-      delete data.result;
-      delete data.outcome;
+      continue;
     }
 
     await db
       .collection("matches")
-      .doc(existing.id)
+      .doc(plan.existing.id)
       .set(
-        data,
+        plan.changes,
         { merge: true }
       );
+
+    applyChangesToLocalMatch(
+      plan.existing,
+      plan.changes
+    );
+
+    changedCount += 1;
+
+    if (
+      resultWasChanged(
+        plan.changedKeys
+      )
+    ) {
+      resultChanged = true;
+    }
   }
+
+  return {
+    changedCount,
+    resultChanged
+  };
+}
+
+function buildNewMatchDocument(
+  event
+) {
+  return {
+    ...buildDesiredData(
+      event,
+      null
+    ),
+    startTime:
+      Timestamp.fromDate(
+        event.startDate
+      ),
+    createdAutomatically:
+      true,
+    odds: {},
+    manualLocks: {
+      teams: false,
+      startTime: false,
+      result: false
+    },
+    apiUpdatedAt:
+      Timestamp.fromDate(
+        new Date()
+      )
+  };
 }
 
 async function createNewMatches(
   db,
-  newMatches
+  newMatches,
+  existingMatches
 ) {
+  let createdCount = 0;
+  let resultChanged = false;
+
   for (const event of newMatches) {
     if (
       !event.homeTeam ||
@@ -914,26 +1099,38 @@ async function createNewMatches(
       );
     }
 
+    const documentId =
+      `tsdb_${event.externalEventId}`;
+
+    const data =
+      buildNewMatchDocument(
+        event
+      );
+
     await db
       .collection("matches")
-      .doc(
-        `tsdb_${event.externalEventId}`
-      )
+      .doc(documentId)
       .set(
-        {
-          ...buildApiData(event),
-          createdAutomatically:
-            true,
-          odds: {},
-          manualLocks: {
-            teams: false,
-            startTime: false,
-            result: false
-          }
-        },
+        data,
         { merge: true }
       );
+
+    existingMatches.push({
+      id: documentId,
+      ...data
+    });
+
+    createdCount += 1;
+
+    if (event.finalResult) {
+      resultChanged = true;
+    }
   }
+
+  return {
+    createdCount,
+    resultChanged
+  };
 }
 
 function parseResult(value) {
@@ -1130,17 +1327,10 @@ function computeStandingsFromMatches(
   ).sort(compare);
 }
 
-async function recomputeAndPublishTable(
-  db
+async function publishTable(
+  db,
+  matches
 ) {
-  const snapshot =
-    await db.collection("matches").get();
-
-  const matches =
-    snapshot.docs.map(
-      document => document.data()
-    );
-
   const rows =
     computeStandingsFromMatches(
       matches
@@ -1188,13 +1378,14 @@ async function main() {
     apiEvents.map(
       buildMappedEvent
     );
+
   const groupedEvents =
     groupEventsByRound(
       mappedEvents
     );
 
-  const existingUpdates =
-    buildExistingUpdates(
+  const existingPlans =
+    buildExistingPlans(
       mappedEvents,
       existingMatches
     );
@@ -1216,7 +1407,7 @@ async function main() {
 
   printPreview({
     mappedEvents,
-    existingUpdates,
+    existingPlans,
     newMatches,
     targetRound,
     targetReason
@@ -1230,29 +1421,41 @@ async function main() {
     return;
   }
 
-  await updateExistingMatches(
-    db,
-    existingUpdates
-  );
+  const existingResult =
+    await executeExistingPlans(
+      db,
+      existingPlans
+    );
 
-  await createNewMatches(
-    db,
-    newMatches
-  );
+  const newResult =
+    await createNewMatches(
+      db,
+      newMatches,
+      existingMatches
+    );
 
-  await recomputeAndPublishTable(
-    db
-  );
+  const shouldRecomputeTable =
+    existingResult.resultChanged ||
+    newResult.resultChanged;
+
+  if (shouldRecomputeTable) {
+    await publishTable(
+      db,
+      existingMatches
+    );
+  }
 
   console.log("");
   console.log(
-    `${existingUpdates.length} meglévő meccs frissítve vagy összekapcsolva.`
+    `${existingResult.changedCount} meglévő meccs ténylegesen módosítva.`
   );
   console.log(
-    `${newMatches.length} új meccs létrehozva.`
+    `${newResult.createdCount} új meccs létrehozva.`
   );
   console.log(
-    "Az NB I tabella újraszámítása megtörtént."
+    shouldRecomputeTable
+      ? "Az NB I tabella újraszámítása megtörtént."
+      : "Nem változott eredmény, ezért a tabellát nem kellett újraírni."
   );
 }
 
