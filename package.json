@@ -1,0 +1,15 @@
+{
+  "name": "nb1-tippliga-sync",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync:nb1": "node scripts/sync-nb1.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.4.0"
+  },
+  "engines": {
+    "node": "22"
+  }
+}
