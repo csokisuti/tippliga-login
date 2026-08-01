@@ -13,8 +13,8 @@ on:
           - write
 
   schedule:
-    - cron: "47 23 * * *"
-      timezone: "Europe/Budapest"
+  - cron: "*/5 * * * *"
+    timezone: "Europe/Budapest"
 
 permissions:
   contents: read
