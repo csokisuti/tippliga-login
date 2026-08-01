@@ -1,14 +1,23 @@
-name: NB I API-szinkron előnézet
+name: NB I API-szinkron
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Futtatási mód"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - write
 
 permissions:
   contents: read
 
 jobs:
-  preview:
-    name: Meccsek ellenőrzése írás nélkül
+  sync:
+    name: NB I meccsek szinkronizálása
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -25,11 +34,22 @@ jobs:
       - name: Függőségek telepítése
         run: npm install --no-audit --no-fund
 
-      - name: NB I-szinkron előnézet futtatása
+      - name: Futtatási mód beállítása
+        shell: bash
+        run: |
+          if [ "${{ inputs.mode }}" = "write" ]; then
+            echo "DRY_RUN=false" >> "$GITHUB_ENV"
+            echo "ÉLES FIRESTORE-ÍRÁS"
+          else
+            echo "DRY_RUN=true" >> "$GITHUB_ENV"
+            echo "ELŐNÉZET – NINCS FIRESTORE-ÍRÁS"
+          fi
+
+      - name: NB I-szinkron futtatása
         run: npm run sync:nb1
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           THESPORTSDB_API_KEY: "123"
           LOOKBACK_DAYS: "10"
           LOOKAHEAD_DAYS: "14"
-          DRY_RUN: "true"
+          RELEASE_DELAY_HOURS: "26"
