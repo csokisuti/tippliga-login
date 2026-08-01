@@ -14,7 +14,6 @@ on:
 
   schedule:
   - cron: "*/5 * * * *"
-    timezone: "Europe/Budapest"
 
 permissions:
   contents: read
