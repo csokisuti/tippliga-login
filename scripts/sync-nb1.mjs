@@ -5,6 +5,7 @@ const PROJECT_ID = "tippliga-4b3af";
 const LEAGUE_ID = "4690";
 const SEASON = "2026-2027";
 const API_KEY = process.env.THESPORTSDB_API_KEY || "123";
+const LOOKBACK_DAYS = Number.parseInt(process.env.LOOKBACK_DAYS || "3", 10);
 const LOOKAHEAD_DAYS = Number.parseInt(process.env.LOOKAHEAD_DAYS || "14", 10);
 const DRY_RUN = process.env.DRY_RUN !== "false";
 
@@ -190,11 +191,11 @@ async function fetchEventsForDate(dateString) {
   return Array.isArray(data.events) ? data.events : [];
 }
 
-async function fetchUpcomingEvents() {
+async function fetchEventsWindow() {
   const today = new Date();
   const byEventId = new Map();
 
-  for (let offset = 0; offset <= LOOKAHEAD_DAYS; offset += 1) {
+  for (let offset = -LOOKBACK_DAYS; offset <= LOOKAHEAD_DAYS; offset += 1) {
     const dateString = budapestDateString(addUtcDays(today, offset));
     const events = await fetchEventsForDate(dateString);
 
@@ -297,24 +298,44 @@ function classifyEvents(mappedEvents, existingMatches) {
   };
 }
 
-function selectNextRound(candidates) {
-  const rounds = candidates
-    .map(item => item.round)
-    .filter(Number.isFinite)
+function selectCurrentRound(candidates) {
+  const now = Date.now();
+  const grouped = new Map();
+
+  for (const item of candidates) {
+    if (!Number.isFinite(item.round)) {
+      continue;
+    }
+
+    if (!grouped.has(item.round)) {
+      grouped.set(item.round, []);
+    }
+
+    grouped.get(item.round).push(item);
+  }
+
+  const eligibleRounds = Array.from(grouped.entries())
+    .filter(([, matches]) =>
+      matches.some(match => match.startDate?.getTime?.() >= now)
+    )
+    .map(([round]) => round)
     .sort((a, b) => a - b);
 
-  if (rounds.length === 0) {
+  if (eligibleRounds.length === 0) {
     return {
       targetRound: null,
       matches: []
     };
   }
 
-  const targetRound = rounds[0];
+  const targetRound = eligibleRounds[0];
 
   return {
     targetRound,
-    matches: candidates.filter(item => item.round === targetRound)
+    matches: grouped
+      .get(targetRound)
+      .slice()
+      .sort((a, b) => a.startDate - b.startDate)
   };
 }
 
@@ -334,7 +355,7 @@ function printPreview(targetRound, matches, unknownTeams) {
   console.log("NB I szinkron – előnézet");
   console.log("=======================");
   console.log(`Üzemmód: ${DRY_RUN ? "ELŐNÉZET, nincs Firestore-írás" : "ÉLES ÍRÁS"}`);
-  console.log(`Vizsgált időszak: ma + ${LOOKAHEAD_DAYS} nap`);
+  console.log(`Vizsgált időszak: ma - ${LOOKBACK_DAYS} nap / ma + ${LOOKAHEAD_DAYS} nap`);
   console.log(`Kiválasztott forduló: ${targetRound ?? "nincs"}`);
   console.log("");
 
@@ -462,6 +483,10 @@ async function writeMatches(db, matches) {
 }
 
 async function main() {
+  if (!Number.isFinite(LOOKBACK_DAYS) || LOOKBACK_DAYS < 0 || LOOKBACK_DAYS > 14) {
+    throw new Error("A LOOKBACK_DAYS értéke 0 és 14 közötti egész szám legyen.");
+  }
+
   if (!Number.isFinite(LOOKAHEAD_DAYS) || LOOKAHEAD_DAYS < 1 || LOOKAHEAD_DAYS > 28) {
     throw new Error("A LOOKAHEAD_DAYS értéke 1 és 28 közötti egész szám legyen.");
   }
@@ -475,7 +500,7 @@ async function main() {
 
   const db = getFirestore();
   const [apiEvents, existingMatches] = await Promise.all([
-    fetchUpcomingEvents(),
+    fetchEventsWindow(),
     loadExistingMatches(db)
   ]);
 
@@ -484,7 +509,7 @@ async function main() {
     mappedEvents,
     existingMatches
   );
-  const { targetRound, matches } = selectNextRound(candidates);
+  const { targetRound, matches } = selectCurrentRound(candidates);
 
   printPreview(targetRound, matches, unknownTeams);
 
