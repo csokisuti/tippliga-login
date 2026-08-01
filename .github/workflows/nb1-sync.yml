@@ -1,0 +1,34 @@
+name: NB I API-szinkron előnézet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    name: Meccsek ellenőrzése írás nélkül
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository letöltése
+        uses: actions/checkout@v6
+
+      - name: Node.js beállítása
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Függőségek telepítése
+        run: npm install --no-audit --no-fund
+
+      - name: NB I-szinkron előnézet futtatása
+        run: npm run sync:nb1
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          THESPORTSDB_API_KEY: "123"
+          LOOKAHEAD_DAYS: "14"
+          DRY_RUN: "true"
