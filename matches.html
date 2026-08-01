@@ -535,6 +535,26 @@
       return undefined;
     }
 
+    function hasOddsValue(value){
+      if(value===null||value===undefined||value===""){
+        return false;
+      }
+
+      const numberValue=Number(value);
+
+      return Number.isFinite(numberValue)&&numberValue>0;
+    }
+
+    function formatOddsValue(value){
+      if(!hasOddsValue(value)){
+        return "–";
+      }
+
+      return Number(value)
+        .toFixed(2)
+        .replace(".",",");
+    }
+
     function matchRound(m){
       return String(
         m.round??
@@ -935,8 +955,17 @@
         const oX=getOdds(m,"X");
         const o2=getOdds(m,"2");
 
-        const oddsLine=
-          `Odds: 1: ${o1??"-"} • X: ${oX??"-"} • 2: ${o2??"-"}`;
+        const hasOdds1=hasOddsValue(o1);
+        const hasOddsX=hasOddsValue(oX);
+        const hasOdds2=hasOddsValue(o2);
+        const hasAllOdds=hasOdds1&&hasOddsX&&hasOdds2;
+        const hasAnyOdds=hasOdds1||hasOddsX||hasOdds2;
+
+        const oddsLine=hasAllOdds
+          ? `Odds: 1: ${formatOddsValue(o1)} • X: ${formatOddsValue(oX)} • 2: ${formatOddsValue(o2)}`
+          : hasAnyOdds
+            ? `Odds: 1: ${formatOddsValue(o1)} • X: ${formatOddsValue(oX)} • 2: ${formatOddsValue(o2)} • A hiányzó oddsok később érkeznek.`
+            : "Az oddsok később érkeznek – tippet már most is leadhatsz.";
 
         const row=
           document.createElement("div");
