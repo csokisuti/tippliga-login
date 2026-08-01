@@ -13,7 +13,7 @@ on:
           - write
 
   schedule:
-  - cron: "*/5 * * * *"
+  - cron: "9,14,19,37,47,57 * * * *"
 
 permissions:
   contents: read
