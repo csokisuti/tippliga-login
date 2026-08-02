@@ -12,7 +12,7 @@ on:
           - preview
           - write
 
-  permissions:
+permissions:
   contents: read
 
 concurrency:
@@ -41,7 +41,7 @@ jobs:
       - name: Futtatási mód beállítása
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.mode }}" = "write" ]; then
+          if [ "${{ inputs.mode }}" = "write" ]; then
             echo "DRY_RUN=false" >> "$GITHUB_ENV"
             echo "ÉLES FIRESTORE-ÍRÁS"
           else
