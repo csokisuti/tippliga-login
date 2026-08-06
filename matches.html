@@ -207,6 +207,24 @@
       flex-wrap:wrap;
     }
 
+    .postponed-note{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      margin-top:6px;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#fff7ed;
+      border:1px solid #fdba74;
+      color:#9a3412;
+      font-size:12px;
+      font-weight:700;
+    }
+
+    #postponedSection[hidden]{
+      display:none !important;
+    }
+
     .ctl{
       display:flex;
       align-items:center;
@@ -563,6 +581,43 @@
       );
     }
 
+    const FINISHED_STATUSES=new Set([
+      "FT","AET","PEN","AWD","CANC","ABD"
+    ]);
+
+    function isPostponedWithoutDate(m){
+      return !!(
+        m?.postponedWithoutDate||
+        (m?.postponed&&String(m?.apiStatus||"").toUpperCase()==="PST")
+      );
+    }
+
+    function matchHasFinished(m){
+      return !!(
+        String(m?.result||"").trim()||
+        FINISHED_STATUSES.has(
+          String(m?.apiStatus||"").toUpperCase()
+        )
+      );
+    }
+
+    function shouldShowInPostponedSection(match,allMatches){
+      if(!isPostponedWithoutDate(match)){
+        return false;
+      }
+
+      const otherPlayableMatches=allMatches.filter(other=>
+        other.id!==match.id&&
+        matchRound(other)===matchRound(match)&&
+        !isPostponedWithoutDate(other)
+      );
+
+      return (
+        otherPlayableMatches.length>0&&
+        otherPlayableMatches.every(matchHasFinished)
+      );
+    }
+
     const sanitizeEmail=e=>
       String(e).replace(
         /[^a-zA-Z0-9._-]/g,
@@ -601,8 +656,18 @@
     }
 
     let matchStartById=new Map();
+    let matchStateById=new Map();
 
     function isMatchStartedById(matchId){
+      const state=
+        matchStateById.get(
+          String(matchId)
+        );
+
+      if(isPostponedWithoutDate(state)){
+        return false;
+      }
+
       const s=
         matchStartById.get(
           String(matchId)
@@ -733,15 +798,10 @@
             try{
               const now=new Date();
 
-              const upcomingSnap=
+              const allSnap=
                 await getDocs(
                   query(
                     collection(db,"matches"),
-                    where(
-                      "startTime",
-                      ">=",
-                      now
-                    ),
                     orderBy(
                       "startTime",
                       "asc"
@@ -749,13 +809,49 @@
                   )
                 );
 
-              const upcoming=
-                upcomingSnap.docs.map(
+              const allMatches=
+                allSnap.docs.map(
                   d=>({
                     id:d.id,
                     ...d.data()
                   })
                 );
+
+              const postponedMatches=
+                allMatches.filter(m=>
+                  m.published!==false&&
+                  shouldShowInPostponedSection(
+                    m,
+                    allMatches
+                  )
+                );
+
+              const postponedIds=
+                new Set(
+                  postponedMatches.map(m=>m.id)
+                );
+
+              const upcoming=
+                allMatches.filter(m=>{
+                  if(m.published===false){
+                    return false;
+                  }
+
+                  if(isPostponedWithoutDate(m)){
+                    return !postponedIds.has(m.id);
+                  }
+
+                  const start=
+                    m.startTime?.toDate
+                      ? m.startTime.toDate()
+                      : new Date(m.startTime);
+
+                  return (
+                    start instanceof Date&&
+                    !Number.isNaN(start.getTime())&&
+                    start>=now
+                  );
+                });
 
               const tipsSnap=
                 await getDocs(
@@ -826,33 +922,35 @@
 
               earliestStartByRound.clear();
               matchStartById.clear();
+              matchStateById.clear();
 
-              const allSnap=
-                await getDocs(
-                  query(
-                    collection(db,"matches"),
-                    orderBy(
-                      "startTime",
-                      "asc"
-                    )
-                  )
+              allMatches.forEach(m=>{
+                const r=matchRound(m);
+
+                matchStateById.set(
+                  String(m.id),
+                  m
                 );
 
-              allSnap.forEach(docu=>{
-                const m=docu.data();
-                const r=matchRound(m);
+                if(isPostponedWithoutDate(m)){
+                  return;
+                }
 
                 const start=
                   m.startTime?.toDate
                     ? m.startTime.toDate()
                     : new Date(m.startTime);
 
-                if(!r||!start){
+                if(
+                  !r||
+                  !(start instanceof Date)||
+                  Number.isNaN(start.getTime())
+                ){
                   return;
                 }
 
                 matchStartById.set(
-                  String(docu.id),
+                  String(m.id),
                   start
                 );
 
@@ -870,7 +968,25 @@
                 }
               });
 
-              buildMatchesList(upcoming);
+              buildMatchesList(
+                upcoming,
+                "matchList"
+              );
+              buildMatchesList(
+                postponedMatches,
+                "postponedMatchList"
+              );
+
+              const postponedSection=
+                document.getElementById(
+                  "postponedSection"
+                );
+
+              if(postponedSection){
+                postponedSection.hidden=
+                  postponedMatches.length===0;
+              }
+
               updatePendingBadge(upcoming);
             }catch(e){
               console.warn(e);
@@ -902,8 +1018,14 @@
       const tippedIds=
         new Set(
           Array.from(
-            myTipsByMatch.keys()
+            myTipsByMatch.entries()
           )
+            .filter(([,tip])=>
+              ["1","X","2"].includes(
+                tip?.choice??tip?.tip??""
+              )
+            )
+            .map(([matchId])=>matchId)
         );
 
       const pending=
@@ -924,13 +1046,26 @@
       }
     }
 
-    function buildMatchesList(matches){
+    function buildMatchesList(
+      matches,
+      wrapId="matchList"
+    ){
       const wrap=
         document.getElementById(
-          "matchList"
+          wrapId
         );
 
+      if(!wrap){
+        return;
+      }
+
       wrap.innerHTML="";
+
+      if(matches.length===0){
+        wrap.innerHTML=
+          '<div class="meta">Nincs megjeleníthető mérkőzés.</div>';
+        return;
+      }
 
       for(const m of matches){
         const tip=
@@ -1002,10 +1137,16 @@
           </div>
 
           <div class="meta">
-            ${fmtTime(m.startTime)}
+            ${isPostponedWithoutDate(m)
+              ? "Új időpont még nincs"
+              : fmtTime(m.startTime)}
             • Forduló:
             ${roundStr||"–"}
           </div>
+
+          ${isPostponedWithoutDate(m)
+            ? '<div class="postponed-note">⏸ Halasztva</div>'
+            : ""}
 
           <div class="odds">
             ${oddsLine}
@@ -2083,6 +2224,19 @@
 
       <div
         id="matchList"
+        class="match-list"
+      ></div>
+    </section>
+
+    <section
+      class="card"
+      id="postponedSection"
+      hidden
+    >
+      <h3>Elhalasztott mérkőzések</h3>
+
+      <div
+        id="postponedMatchList"
         class="match-list"
       ></div>
     </section>

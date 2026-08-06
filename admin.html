@@ -168,7 +168,8 @@
       return {
         teams:!!v.teams,
         startTime:!!v.startTime,
-        result:!!v.result
+        result:!!v.result,
+        postponed:!!v.postponed
       };
     }
 
@@ -496,6 +497,14 @@
                 placeholder="TheSportsDB Event ID (opcionális)"
                 id="externalEventId"
               >
+
+              <label class="inline" title="A régi időpont nem jelenik meg a tippelőknek, és a dupla az új kezdésig nyitva marad.">
+                <input
+                  type="checkbox"
+                  id="postponedWithoutDate"
+                >
+                Halasztva – új időpont még nincs
+              </label>
 
               <input
                 type="number"
@@ -1160,7 +1169,11 @@ onAuthStateChanged(auth, ()=>{
           homeTeamExternalId:d.homeTeamExternalId||"",
           awayTeamExternalId:d.awayTeamExternalId||"",
           manualLocks:normalizedManualLocks(d.manualLocks),
-          resultSource:d.resultSource||""
+          resultSource:d.resultSource||"",
+          postponed:!!d.postponed,
+          postponedWithoutDate:!!d.postponedWithoutDate,
+          postponementSource:d.postponementSource||"",
+          originalStartTime:d.originalStartTime||null
         });
 
         if(d.roundId!=null){
@@ -1261,7 +1274,8 @@ onAuthStateChanged(auth, ()=>{
         const activeLocks=[
           locks.teams ? "csapatok" : "",
           locks.startTime ? "kezdési idő" : "",
-          locks.result ? "eredmény" : ""
+          locks.result ? "eredmény" : "",
+          locks.postponed ? "halasztás" : ""
         ].filter(Boolean);
 
         const apiMeta=apiLinked
@@ -1272,6 +1286,7 @@ onAuthStateChanged(auth, ()=>{
                 ${esc(d.externalSource||"thesportsdb")}
                 • Event ID: <span class="kbd">${esc(d.externalEventId||"—")}</span>
                 • Státusz: <strong>${esc(d.apiStatus||"—")}</strong>
+                • Halasztás: <strong>${d.postponedWithoutDate ? "igen, új időpont nélkül" : "nem"}</strong>
                 • Utolsó API-frissítés: ${esc(apiUpdatedText(d.apiUpdatedAt))}
               </div>
 
@@ -1290,7 +1305,7 @@ onAuthStateChanged(auth, ()=>{
                 </button>
 
                 <span class="muted small">
-                  A kézzel módosított API-adatokat a későbbi automatikus szinkron nem írja felül, amíg ezt fel nem oldod.
+                  A kézzel módosított API-adatokat és a kézi halasztást a későbbi automatikus szinkron nem írja felül, amíg ezt fel nem oldod.
                 </span>
               </div>
             </div>
@@ -1311,7 +1326,9 @@ onAuthStateChanged(auth, ()=>{
             </h3>
 
             <div class="hint">
-              ${esc(startDate?.toLocaleString("hu-HU")||"")}
+              ${d.postponedWithoutDate
+                ? "Halasztva – új időpont még nincs"
+                : esc(startDate?.toLocaleString("hu-HU")||"")}
               ${apiLinked ? " • API" : ""}
             </div>
           </div>
@@ -1377,6 +1394,15 @@ onAuthStateChanged(auth, ()=>{
                 style="width:90px"
               >
 
+              <label class="inline" title="A régi kezdési idő nem jelenik meg, és a duplázás nem záródik le az alapján.">
+                <input
+                  type="checkbox"
+                  id="postponed-${d.id}"
+                  ${d.postponedWithoutDate ? "checked" : ""}
+                >
+                Halasztva – új időpont még nincs
+              </label>
+
               <button
                 class="btn primary"
                 onclick="updateMatch('${d.id}')"
@@ -1425,6 +1451,9 @@ onAuthStateChanged(auth, ()=>{
       const externalEventId=
         document.getElementById(`event-${id}`).value.trim();
 
+      const postponedWithoutDate=
+        !!document.getElementById(`postponed-${id}`)?.checked;
+
       if(!homeTeam||!awayTeam){
         alert("A hazai és a vendégcsapat megadása kötelező.");
         return;
@@ -1459,7 +1488,7 @@ onAuthStateChanged(auth, ()=>{
       const manualLocks=
         normalizedManualLocks(existing.manualLocks);
 
-      if(isApiLinkedMatch(existing)){
+      if(isApiLinkedMatch(existing)||externalEventId){
         if(
           homeTeam!==(existing.homeTeam||"")||
           awayTeam!==(existing.awayTeam||"")
@@ -1476,9 +1505,16 @@ onAuthStateChanged(auth, ()=>{
         ){
           manualLocks.startTime=true;
         }
+
+        if(
+          postponedWithoutDate!==
+          !!existing.postponedWithoutDate
+        ){
+          manualLocks.postponed=true;
+        }
       }
 
-      await updateDoc(ref,{
+      const updatePayload={
         homeTeam,
         awayTeam,
         startTime:Timestamp.fromDate(startDate),
@@ -1489,9 +1525,24 @@ onAuthStateChanged(auth, ()=>{
           ? (existing.externalSource||"thesportsdb")
           : null,
         manualLocks,
+        postponed:postponedWithoutDate,
+        postponedWithoutDate,
+        postponementSource:postponedWithoutDate
+          ? "manual"
+          : "",
         manualUpdatedAt:Timestamp.fromDate(new Date()),
         manualUpdatedBy:auth.currentUser?.email||""
-      });
+      };
+
+      if(
+        postponedWithoutDate&&
+        !existing.originalStartTime
+      ){
+        updatePayload.originalStartTime=
+          existing.startTime||Timestamp.fromDate(startDate);
+      }
+
+      await updateDoc(ref,updatePayload);
 
       alert("Mentve");
 
@@ -1515,7 +1566,7 @@ onAuthStateChanged(auth, ()=>{
 
       if(
         !confirm(
-          "Feloldod a kézi védelmet? A következő automatikus API-frissítés ismét felülírhatja a csapatokat, a kezdési időt és az eredményt."
+          "Feloldod a kézi védelmet? A következő automatikus API-frissítés ismét felülírhatja a csapatokat, a kezdési időt, az eredményt és a halasztási állapotot."
         )
       ){
         return;
@@ -1527,7 +1578,8 @@ onAuthStateChanged(auth, ()=>{
           manualLocks:{
             teams:false,
             startTime:false,
-            result:false
+            result:false,
+            postponed:false
           },
           manualUnlockedAt:Timestamp.fromDate(new Date()),
           manualUnlockedBy:auth.currentUser?.email||""
@@ -1577,6 +1629,9 @@ onAuthStateChanged(auth, ()=>{
 
       const externalEventId=
         document.getElementById("externalEventId").value.trim();
+
+      const postponedWithoutDate=
+        !!document.getElementById("postponedWithoutDate")?.checked;
 
       if(!homeTeam||!awayTeam){
         alert("A hazai és a vendégcsapat megadása kötelező.");
@@ -1647,10 +1702,19 @@ onAuthStateChanged(auth, ()=>{
             ? "linked"
             : "",
           createdAutomatically:false,
+          postponed:postponedWithoutDate,
+          postponedWithoutDate,
+          postponementSource:postponedWithoutDate
+            ? "manual"
+            : "",
+          originalStartTime:postponedWithoutDate
+            ? Timestamp.fromDate(startDate)
+            : null,
           manualLocks:{
             teams:false,
             startTime:false,
-            result:false
+            result:false,
+            postponed:postponedWithoutDate
           },
           createdAt:Timestamp.fromDate(new Date()),
           createdBy:auth.currentUser?.email||""
