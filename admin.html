@@ -52,7 +52,9 @@
     .quick-odds-table .qo-odd input{width:82px;text-align:center;font-weight:700}
     .quick-odds-table tr.qo-incomplete{background:#fff7ed}
     .quick-odds-table tr.qo-complete{background:#f0fdf4}
+    .quick-odds-table tr.qo-imported{box-shadow:inset 4px 0 #2563eb}
     .quick-odds-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .bookmarklet-help{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0;padding:10px;border:1px dashed var(--border);border-radius:10px;background:#f8fafc}
     .quick-odds-actions .right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   </style>
 
@@ -387,6 +389,7 @@
       );
 
       tryImportFromHash();
+      tryBulkOddsImportFromHash();
     });
 
     function makeCard({
@@ -587,6 +590,20 @@
                 Kitöltött oddsok mentése
               </button>
             </div>
+          </div>
+
+          <div class="bookmarklet-help">
+            <a
+              id="tippmixOddsBookmarklet"
+              class="btn"
+              href="#"
+              title="Húzd ezt a gombot a böngésző könyvjelzősávjára"
+            >
+              Tippmixpro → TippLiga oddsok
+            </a>
+            <span class="muted small">
+              Első alkalommal húzd a gombot a könyvjelzősávra. Utána a Tippmixpro NB I oldalon egy kattintással kitölti ezt a táblát; menteni továbbra is neked kell.
+            </span>
           </div>
 
           <div id="quickOddsList"></div>
@@ -1109,6 +1126,8 @@ onAuthStateChanged(auth, ()=>{
         .addEventListener("click",async()=>{
           await loadMatches();
         });
+
+      setupTippmixOddsBookmarklet();
 
       document
         .getElementById("uploadTableImage")
@@ -3198,6 +3217,8 @@ verzió: ${data.version||"n/a"}`);
 
     const _teamNameMap={
       "Debrecen":"Debreceni VSC",
+      "DVSC":"Debreceni VSC",
+      "dvsc":"Debreceni VSC",
       "Debreceni VSC":"Debreceni VSC",
       "debrecen":"Debreceni VSC",
       "debreceni vsc":"Debreceni VSC",
@@ -3219,6 +3240,10 @@ verzió: ${data.version||"n/a"}`);
       "kispest-honved fc":"Kispest-Honvéd FC",
 
       "Ferencvaros":"Ferencváros",
+      "FTC":"Ferencváros",
+      "ftc":"Ferencváros",
+      "Fradi":"Ferencváros",
+      "fradi":"Ferencváros",
       "Ferencváros":"Ferencváros",
       "ferencvaros":"Ferencváros",
 
@@ -3268,6 +3293,8 @@ verzió: ${data.version||"n/a"}`);
       "ujpest fc":"Újpest FC",
 
       "Zalaegerszeg":"Zalaegerszegi TE FC",
+      "ZTE":"Zalaegerszegi TE FC",
+      "zte":"Zalaegerszegi TE FC",
       "zalaegerszeg":"Zalaegerszegi TE FC",
       "Zalaegerszegi TE FC":"Zalaegerszegi TE FC",
       "zalaegerszegi te fc":"Zalaegerszegi TE FC"
@@ -3294,6 +3321,142 @@ verzió: ${data.version||"n/a"}`);
         ];
 
       return fromMap||s.trim();
+    }
+
+    function setupTippmixOddsBookmarklet(){
+      const link=document.getElementById("tippmixOddsBookmarklet");
+      if(!link) return;
+      link.href="javascript:(()=>{const A=\"https://csokisuti.github.io/tippliga-login/admin.html\",N=s=>String(s||\"\").normalize(\"NFD\").replace(/[\\u0300-\\u036f]/g,\"\").toLowerCase().replace(/[.\\-_]+/g,\" \").replace(/\\s+/g,\" \").trim(),M={\"debrecen\":\"Debreceni VSC\",\"debreceni vsc\":\"Debreceni VSC\",\"dvsc\":\"Debreceni VSC\",\"kispest honved\":\"Kispest-Honvéd FC\",\"kispest honved fc\":\"Kispest-Honvéd FC\",\"honved\":\"Kispest-Honvéd FC\",\"budapest honved\":\"Kispest-Honvéd FC\",\"ferencvaros\":\"Ferencváros\",\"ferencvarosi tc\":\"Ferencváros\",\"ftc\":\"Ferencváros\",\"fradi\":\"Ferencváros\",\"gyor\":\"ETO FC Győr\",\"gyori eto\":\"ETO FC Győr\",\"eto\":\"ETO FC Győr\",\"eto fc gyor\":\"ETO FC Győr\",\"vasas\":\"Vasas FC\",\"vasas fc\":\"Vasas FC\",\"kisvarda\":\"Kisvárda FC\",\"kisvarda fc\":\"Kisvárda FC\",\"mtk\":\"MTK Budapest\",\"mtk budapest\":\"MTK Budapest\",\"nyiregyhaza\":\"Nyíregyháza Spartacus\",\"nyiregyhaza spartacus\":\"Nyíregyháza Spartacus\",\"paks\":\"Paksi FC\",\"paksi fc\":\"Paksi FC\",\"puskas akademia\":\"Puskás Akadémia\",\"puskas akademia fc\":\"Puskás Akadémia\",\"ujpest\":\"Újpest FC\",\"ujpest fc\":\"Újpest FC\",\"zte\":\"Zalaegerszegi TE FC\",\"zalaegerszeg\":\"Zalaegerszegi TE FC\",\"zalaegerszegi te fc\":\"Zalaegerszegi TE FC\"},C=s=>M[N(s)]||null,L=(document.body.innerText||\"\").split(/\\n+/).map(x=>x.trim()).filter(Boolean),D=/^\\d{1,2}\\.\\d{1,2}\\.\\s+\\d{1,2}:\\d{2}$/,O=x=>{const m=String(x||\"\").match(/\\d+[,.]\\d+/);return m?Number(m[0].replace(\",\",\".\")):NaN},R=[];for(let i=0;i<L.length;i++){if(!D.test(L[i]))continue;const T=[];for(let j=i-1;j>=0&&j>=i-10&&T.length<2;j--){const c=C(L[j]);if(c&&!T.includes(c))T.push(c)}if(T.length<2)continue;const away=T[0],home=T[1];let e=L.length;for(let j=i+1;j<L.length;j++){if(D.test(L[j])){e=j;break}}const B=L.slice(i+1,e).join(\"\\n\"),f=l=>{const m=B.match(new RegExp(l+\"\\\\s*[\\\\n ]+\\\\s*(\\\\d+[,.]\\\\d+)\",\"i\"));return m?O(m[1]):NaN},o1=f(\"Hazai\"),ox=f(\"Döntetlen\"),o2=f(\"Vendég\");if([o1,ox,o2].every(Number.isFinite)&&!R.some(r=>r.home===home&&r.away===away&&r.when===L[i]))R.push({home,away,when:L[i],odds:{\"1\":o1,\"X\":ox,\"2\":o2}})}if(!R.length){alert(\"Nem találtam felismerhető NB I 1X2 oddsokat. Legyen megnyitva a Tippmixpro NB I fogadási listája.\");return}const P=btoa(unescape(encodeURIComponent(JSON.stringify({type:\"nb1-odds-bulk\",source:\"Tippmixpro\",matches:R}))));const U=A+\"#oddsbulk=\"+P,w=window.open(U,\"_blank\");if(!w)location.href=U;})()";
+      link.addEventListener("click",e=>{
+        if(location.hostname.includes("github.io")){
+          e.preventDefault();
+          alert("Ezt a gombot ne itt kattintsd: húzd fel a böngésző könyvjelzősávjára, majd a Tippmixpro NB I oldalán kattints a könyvjelzőre.");
+        }
+      });
+    }
+
+    function _bulkImportDateKey(value){
+      const m=String(value||"").match(/(\d{1,2})\.(\d{1,2})\.\s+(\d{1,2}):(\d{2})/);
+      if(!m) return "";
+      return `${String(+m[1]).padStart(2,"0")}-${String(+m[2]).padStart(2,"0")} ${String(+m[3]).padStart(2,"0")}:${m[4]}`;
+    }
+
+    function _matchDateKey(match){
+      const d=match?.startTime?.toDate?.();
+      if(!d) return "";
+      return `${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    }
+
+    function _canonicalBulkImportTeam(raw){
+      return _normTeamName(raw||"");
+    }
+
+    function _importOddNumber(value){
+      const n=Number(String(value??"").replace(",","."));
+      return Number.isFinite(n)&&n>0 ? n : null;
+    }
+
+    function _applyBulkOddsImport(data){
+      const imported=Array.isArray(data?.matches) ? data.matches : [];
+      if(!imported.length){
+        alert("Az importban nem találtam meccseket.");
+        return;
+      }
+
+      let filled=0;
+      let alreadyComplete=0;
+      let notFound=0;
+      let ambiguous=0;
+
+      imported.forEach(item=>{
+        const home=_canonicalBulkImportTeam(item.home);
+        const away=_canonicalBulkImportTeam(item.away);
+        const whenKey=_bulkImportDateKey(item.when);
+
+        let matches=_matchesCache.filter(m=>
+          _canonicalBulkImportTeam(m.homeTeam)===home &&
+          _canonicalBulkImportTeam(m.awayTeam)===away &&
+          !String(m.result||"").trim()
+        );
+
+        if(matches.length>1 && whenKey){
+          const dated=matches.filter(m=>_matchDateKey(m)===whenKey);
+          if(dated.length) matches=dated;
+        }
+
+        if(matches.length===0){
+          notFound++;
+          return;
+        }
+
+        if(matches.length>1){
+          ambiguous++;
+          return;
+        }
+
+        const match=matches[0];
+        const row=document.querySelector(`tr[data-quick-odds-match="${CSS.escape(match.id)}"]`);
+
+        if(!row){
+          if(!matchNeedsOdds(match)) alreadyComplete++;
+          else notFound++;
+          return;
+        }
+
+        const vals={
+          "1":_importOddNumber(item?.odds?.["1"]),
+          "X":_importOddNumber(item?.odds?.["X"]),
+          "2":_importOddNumber(item?.odds?.["2"])
+        };
+
+        if(!vals["1"]||!vals["X"]||!vals["2"]){
+          notFound++;
+          return;
+        }
+
+        ["1","X","2"].forEach(key=>{
+          const inp=row.querySelector(`[data-odd-key="${key}"]`);
+          if(inp){
+            inp.value=String(vals[key]);
+            inp.dispatchEvent(new Event("input",{bubbles:true}));
+          }
+        });
+
+        row.classList.add("qo-imported");
+        filled++;
+      });
+
+      const info=document.getElementById("quickOddsInfo");
+      if(info){
+        const extras=[];
+        if(alreadyComplete) extras.push(`${alreadyComplete} már korábban teljes oddsos`);
+        if(notFound) extras.push(`${notFound} nem párosítható`);
+        if(ambiguous) extras.push(`${ambiguous} többértelmű`);
+        info.textContent=`Tippmixpro import: ${filled} meccs kitöltve${extras.length ? " • "+extras.join(" • ") : ""}. Ellenőrizd az értékeket, majd nyomd meg a „Kitöltött oddsok mentése” gombot.`;
+      }
+
+      const card=document.getElementById("card-quick-odds");
+      card?.classList.add("open");
+      card?.scrollIntoView({behavior:"smooth",block:"start"});
+
+      history.replaceState(null,"",location.pathname+location.search);
+
+      if(!filled){
+        alert("Az oddsokat kiolvastam, de egyetlen Tippmixpro-meccset sem tudtam biztosan összepárosítani az adminban lévő oddsra váró meccsekkel.");
+      }
+    }
+
+    function tryBulkOddsImportFromHash(){
+      const m=(location.hash||"").match(/^#oddsbulk=(.+)$/);
+      if(!m) return;
+
+      try{
+        const data=_b64ToJson(m[1]);
+        _applyBulkOddsImport(data);
+      }catch(e){
+        console.error("Tippmixpro odds import hiba:",e);
+        alert("A Tippmixpro odds import nem sikerült: "+(e?.message||e));
+      }
     }
 
     function _looksLikeJunkTeam(s){
@@ -3576,6 +3739,11 @@ verzió: ${data.version||"n/a"}`);
     window.addEventListener(
       "hashchange",
       tryImportFromHash
+    );
+
+    window.addEventListener(
+      "hashchange",
+      tryBulkOddsImportFromHash
     );
 
     // === Analytics helpers (fixed) ===
