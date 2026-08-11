@@ -41,6 +41,19 @@
     .xscroll{overflow:auto}
     details summary{cursor:pointer;color:#334155}
     .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px}
+    .quick-odds-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px}
+    .quick-odds-table{min-width:760px;margin:0}
+    .quick-odds-table th{position:sticky;top:0;z-index:1}
+    .quick-odds-table td{vertical-align:middle}
+    .quick-odds-table .qo-round{width:90px;white-space:nowrap}
+    .quick-odds-table .qo-match{min-width:280px;font-weight:700}
+    .quick-odds-table .qo-time{min-width:180px;color:var(--muted);font-size:12px}
+    .quick-odds-table .qo-odd{width:92px}
+    .quick-odds-table .qo-odd input{width:82px;text-align:center;font-weight:700}
+    .quick-odds-table tr.qo-incomplete{background:#fff7ed}
+    .quick-odds-table tr.qo-complete{background:#f0fdf4}
+    .quick-odds-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .quick-odds-actions .right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   </style>
 
   <script type="module">
@@ -60,7 +73,8 @@
       orderBy,
       query,
       setDoc,
-      updateDoc
+      updateDoc,
+      writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -539,6 +553,43 @@
               </button>
             </div>
           </form>
+        `
+      });
+
+      const cQuickOdds=makeCard({
+        title:"Oddsok gyors feltöltése",
+        hint:"Csak az eredmény nélküli, hiányos oddsú meccsek",
+        id:"card-quick-odds",
+        open:true,
+        bodyHTML:`
+          <div class="quick-odds-actions">
+            <div>
+              <strong id="quickOddsTitle">Betöltés…</strong>
+              <div class="muted small" id="quickOddsInfo">
+                Itt egy helyen kitölthető az összes hiányzó 1 / X / 2 odds.
+              </div>
+            </div>
+
+            <div class="right">
+              <button
+                type="button"
+                class="btn"
+                id="quickOddsReload"
+              >
+                Lista frissítése
+              </button>
+
+              <button
+                type="button"
+                class="btn primary"
+                id="quickOddsSave"
+              >
+                Kitöltött oddsok mentése
+              </button>
+            </div>
+          </div>
+
+          <div id="quickOddsList"></div>
         `
       });
 
@@ -1033,6 +1084,7 @@ onAuthStateChanged(auth, ()=>{
 
       wrap.append(
         cAdd.section,
+        cQuickOdds.section,
         cManage.section,
         cRes.section,
         cUsers.section,
@@ -1047,6 +1099,16 @@ onAuthStateChanged(auth, ()=>{
       document
         .getElementById("matchForm")
         .addEventListener("submit",onAddMatch);
+
+      document
+        .getElementById("quickOddsSave")
+        .addEventListener("click",saveQuickOdds);
+
+      document
+        .getElementById("quickOddsReload")
+        .addEventListener("click",async()=>{
+          await loadMatches();
+        });
 
       document
         .getElementById("uploadTableImage")
@@ -1173,7 +1235,8 @@ onAuthStateChanged(auth, ()=>{
           postponed:!!d.postponed,
           postponedWithoutDate:!!d.postponedWithoutDate,
           postponementSource:d.postponementSource||"",
-          originalStartTime:d.originalStartTime||null
+          originalStartTime:d.originalStartTime||null,
+          published:d.published!==false
         });
 
         if(d.roundId!=null){
@@ -1192,6 +1255,248 @@ onAuthStateChanged(auth, ()=>{
           .join("");
 
       renderMatchesFiltered();
+      renderQuickOdds();
+    }
+
+    function validOddValue(value){
+      const n=optionalOdd(value);
+      return n!==null && n>0;
+    }
+
+    function matchNeedsOdds(match){
+      const odds=match?.odds||{};
+      return ["1","X","2"].some(key=>!validOddValue(odds[key]));
+    }
+
+    function quickOddsCandidates(){
+      return _matchesCache
+        .filter(m=>
+          m.published!==false &&
+          !String(m.result||"").trim() &&
+          !String(m.outcome||"").trim() &&
+          matchNeedsOdds(m)
+        )
+        .sort((a,b)=>{
+          const ra=parseInt(a.roundId||0,10);
+          const rb=parseInt(b.roundId||0,10);
+          if(ra!==rb) return ra-rb;
+
+          const ta=a.startTime?.toDate?.()?.getTime?.()||0;
+          const tb=b.startTime?.toDate?.()?.getTime?.()||0;
+          return ta-tb;
+        });
+    }
+
+    function updateQuickOddsRowState(row){
+      if(!row) return;
+
+      const values=["1","X","2"].map(key=>
+        row.querySelector(`[data-odd-key="${key}"]`)?.value||""
+      );
+
+      const any=values.some(v=>String(v).trim());
+      const complete=values.every(validOddValue);
+
+      row.classList.toggle("qo-complete",complete);
+      row.classList.toggle("qo-incomplete",any&&!complete);
+    }
+
+    function renderQuickOdds(){
+      const box=document.getElementById("quickOddsList");
+      const title=document.getElementById("quickOddsTitle");
+      const info=document.getElementById("quickOddsInfo");
+      const saveBtn=document.getElementById("quickOddsSave");
+
+      if(!box||!title||!info||!saveBtn) return;
+
+      const list=quickOddsCandidates();
+
+      title.textContent=list.length
+        ? `${list.length} meccsnél hiányzik legalább egy odds`
+        : "Minden aktuális meccshez van teljes odds";
+
+      info.textContent=list.length
+        ? "Tölts ki egy teljes 1 / X / 2 sort. A Mentés csak a teljesen kitöltött sorokat menti, így nem kell minden meccset egyszerre befejezned."
+        : "Jelenleg nincs teendő.";
+
+      saveBtn.disabled=list.length===0;
+
+      if(!list.length){
+        box.innerHTML='<div class="muted" style="padding:10px 0">Nincs oddsra váró mérkőzés.</div>';
+        return;
+      }
+
+      const rows=list.map(m=>{
+        const start=m.startTime?.toDate?.();
+        const when=m.postponedWithoutDate
+          ? "Halasztva – új időpont még nincs"
+          : (start ? start.toLocaleString("hu-HU") : "—");
+
+        const o1=m.odds?.["1"]??"";
+        const oX=m.odds?.["X"]??"";
+        const o2=m.odds?.["2"]??"";
+
+        return `
+          <tr data-quick-odds-match="${esc(m.id)}">
+            <td class="qo-round">${esc(m.roundId||"—")}. ford.</td>
+            <td class="qo-match">
+              ${esc(m.homeTeam||"")} – ${esc(m.awayTeam||"")}
+            </td>
+            <td class="qo-time">${esc(when)}</td>
+            <td class="qo-odd">
+              <input
+                type="number"
+                inputmode="decimal"
+                min="1"
+                step="0.01"
+                value="${esc(o1)}"
+                placeholder="1"
+                data-odd-key="1"
+              >
+            </td>
+            <td class="qo-odd">
+              <input
+                type="number"
+                inputmode="decimal"
+                min="1"
+                step="0.01"
+                value="${esc(oX)}"
+                placeholder="X"
+                data-odd-key="X"
+              >
+            </td>
+            <td class="qo-odd">
+              <input
+                type="number"
+                inputmode="decimal"
+                min="1"
+                step="0.01"
+                value="${esc(o2)}"
+                placeholder="2"
+                data-odd-key="2"
+              >
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      box.innerHTML=`
+        <div class="quick-odds-wrap">
+          <table class="quick-odds-table">
+            <thead>
+              <tr>
+                <th>Forduló</th>
+                <th>Meccs</th>
+                <th>Kezdés</th>
+                <th>1</th>
+                <th>X</th>
+                <th>2</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+
+      box.querySelectorAll("tr[data-quick-odds-match]").forEach(row=>{
+        row.querySelectorAll('input[data-odd-key]').forEach(inp=>{
+          inp.addEventListener("input",()=>updateQuickOddsRowState(row));
+        });
+        updateQuickOddsRowState(row);
+      });
+    }
+
+    async function saveQuickOdds(){
+      const saveBtn=document.getElementById("quickOddsSave");
+      const rows=[...document.querySelectorAll("tr[data-quick-odds-match]")];
+
+      if(!rows.length){
+        alert("Nincs menthető odds.");
+        return;
+      }
+
+      const updates=[];
+      let incomplete=0;
+
+      rows.forEach(row=>{
+        const matchId=row.dataset.quickOddsMatch;
+        const existing=_matchesCache.find(m=>m.id===matchId);
+        if(!existing) return;
+
+        const values={};
+        let any=false;
+        let complete=true;
+
+        ["1","X","2"].forEach(key=>{
+          const raw=row.querySelector(`[data-odd-key="${key}"]`)?.value||"";
+          if(String(raw).trim()) any=true;
+          const n=optionalOdd(raw);
+          if(n===null||n<=0){
+            complete=false;
+          }else{
+            values[key]=n;
+          }
+        });
+
+        if(!complete){
+          if(any) incomplete++;
+          updateQuickOddsRowState(row);
+          return;
+        }
+
+        const old=existing.odds||{};
+        const changed=["1","X","2"].some(key=>
+          Number(old[key])!==Number(values[key])
+        );
+
+        if(changed){
+          updates.push({matchId,odds:values});
+        }
+      });
+
+      if(!updates.length){
+        if(incomplete){
+          alert(`Nincs teljesen kitöltött új sor. ${incomplete} sor még hiányos.`);
+        }else{
+          alert("Nincs új mentendő módosítás.");
+        }
+        return;
+      }
+
+      saveBtn.disabled=true;
+      const oldText=saveBtn.textContent;
+      saveBtn.textContent="Mentés…";
+
+      try{
+        const batch=writeBatch(db);
+        const now=Timestamp.fromDate(new Date());
+        const email=auth.currentUser?.email||"";
+
+        updates.forEach(item=>{
+          batch.update(
+            doc(db,"matches",item.matchId),
+            {
+              odds:item.odds,
+              oddsUpdatedAt:now,
+              oddsUpdatedBy:email
+            }
+          );
+        });
+
+        await batch.commit();
+        await loadMatches();
+
+        alert(
+          `${updates.length} meccs oddsai elmentve.`+
+          (incomplete ? ` ${incomplete} hiányos sor kimaradt.` : "")
+        );
+      }catch(e){
+        console.error(e);
+        alert("Az oddsok mentése nem sikerült: "+(e?.message||e));
+      }finally{
+        saveBtn.textContent=oldText;
+        saveBtn.disabled=false;
+      }
     }
 
     function renderMatchesFiltered(){
