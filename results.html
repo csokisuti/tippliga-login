@@ -240,9 +240,46 @@
     let communityTips = [];           // {email,nick,order,updatedAt}
     let bonusOverlayOpen = false;
 
+    function positionPointsByDifference(diff){
+      if (diff === 0) return 10;
+      if (diff === 1) return 6;
+      if (diff === 2) return 3;
+      if (diff === 3) return 1;
+      return 0;
+    }
+
     function calcBonus(order, official){
-      let correct=0; for (let i=0;i<12;i++){ if (eqTeam(order?.[i], official?.[i])) correct++; }
-      return { correct, pct: correct, total:12 }; // 1 egyezés = +1%
+      let score = 0;
+      const maxScore = 120;
+      const details = [];
+
+      for (let predictedIndex = 0; predictedIndex < 12; predictedIndex++){
+        const team = order?.[predictedIndex];
+
+        if (!team){
+          details.push({ predictedIndex, team:"", officialIndex:-1, difference:null, points:0 });
+          continue;
+        }
+
+        const officialIndex = (official || []).findIndex(
+          officialTeam => eqTeam(officialTeam, team)
+        );
+
+        if (officialIndex < 0){
+          details.push({ predictedIndex, team, officialIndex:-1, difference:null, points:0 });
+          continue;
+        }
+
+        const difference = Math.abs(predictedIndex - officialIndex);
+        const points = positionPointsByDifference(difference);
+        score += points;
+
+        details.push({ predictedIndex, team, officialIndex, difference, points });
+      }
+
+      const pct = Number((score / 10).toFixed(1));
+
+      return { score, maxScore, pct, total:12, details };
     }
 
     function refreshBonusCard(){
@@ -251,22 +288,25 @@
       const bonusBar = document.getElementById("bonusBar");
 
       if (!officialOrder.filter(Boolean).length){
-        bonusCount.textContent = "—/12";
+        bonusCount.textContent = "—/120";
         bonusPct.textContent = "+0%";
         bonusBar.style.width = "0%";
         return;
       }
+
       const me = communityTips.find(t => t.email === currentUserEmail);
+
       if (!me){
         bonusCount.textContent = "Nincs tipped";
         bonusPct.textContent = "+0%";
         bonusBar.style.width = "0%";
         return;
       }
-      const {correct,pct,total} = calcBonus(me.order, officialOrder);
-      bonusCount.textContent = `${correct}/${total}`;
+
+      const {score,maxScore,pct} = calcBonus(me.order, officialOrder);
+      bonusCount.textContent = `${score}/${maxScore}`;
       bonusPct.textContent = `+${pct}%`;
-      bonusBar.style.width = `${pct}%`;
+      bonusBar.style.width = `${Math.max(0, Math.min(100, (pct / 12) * 100))}%`;
     }
 
     function openBonusModal(){
@@ -274,6 +314,7 @@
       ov.style.display = "flex"; bonusOverlayOpen = true;
       renderUsersList(document.getElementById("userSearch")?.value || "");
     }
+
     function closeBonusModal(){
       const ov = document.getElementById("bonusOverlay");
       ov.style.display = "none"; bonusOverlayOpen = false;
@@ -290,18 +331,24 @@
       }
 
       const rows = communityTips.map(u=>{
-        const {correct,pct,total} = calcBonus(u.order, officialOrder);
+        const bonus = calcBonus(u.order, officialOrder);
         const display = nickByEmail[u.email] || u.nick || u.email;
-        return { ...u, correct, pct, total, display };
-      }).filter(u => !term || (u.display||"").toLowerCase().includes(term) || (u.email||"").toLowerCase().includes(term))
-        .sort((a,b)=> b.correct - a.correct || (a.display||"").localeCompare(b.display||""));
+        return { ...u, ...bonus, display };
+      }).filter(u =>
+        !term ||
+        (u.display||"").toLowerCase().includes(term) ||
+        (u.email||"").toLowerCase().includes(term)
+      ).sort((a,b)=>
+        b.score - a.score ||
+        (a.display||"").localeCompare(b.display||"", "hu")
+      );
 
       rows.forEach(u=>{
         const row = document.createElement("button");
         row.className = "userrow";
         row.onclick = ()=> renderDetail(u);
         row.innerHTML = `<span class="name">${escapeHtml(u.display)}</span>
-                         <span class="badge">${u.correct}/${u.total}</span>`;
+                         <span class="badge">${u.score}/${u.maxScore} • +${u.pct}%</span>`;
         usersList.appendChild(row);
       });
 
@@ -312,19 +359,27 @@
     function renderDetail(u){
       const tableBody = document.getElementById("bonusTableBody");
       const display = nickByEmail[u.email] || u.nick || u.email;
+
       document.getElementById("detailTitle").textContent = `Összehasonlítás – ${display}`;
-      document.getElementById("detailCount").textContent = `${u.correct}/${u.total}`;
+      document.getElementById("detailCount").textContent = `${u.score}/${u.maxScore}`;
       document.getElementById("detailPct").textContent = `+${u.pct}%`;
       tableBody.innerHTML = "";
-      for (let i=0;i<u.total;i++){
-        const o = canonTeam(officialOrder[i] || "");
-        const pick = canonTeam(u.order[i] || "");
-        const ok = eqTeam(o, pick);
+
+      u.details.forEach(d=>{
+        const team = canonTeam(d.team || "");
+        const actualPlace = d.officialIndex >= 0 ? d.officialIndex + 1 : "—";
         const tr = document.createElement("tr");
-        if (ok) tr.className = "ok";
-        tr.innerHTML = `<td>${i+1}</td><td><strong>${escapeHtml(o)}</strong></td><td>${escapeHtml(pick||"—")}</td><td>${ok ? "✅" : "✖"}</td>`;
+
+        if (d.points === 10) tr.className = "ok";
+
+        tr.innerHTML =
+          `<td>${d.predictedIndex + 1}.</td>` +
+          `<td><strong>${escapeHtml(team || "—")}</strong></td>` +
+          `<td>${actualPlace}${d.officialIndex >= 0 ? "." : ""}</td>` +
+          `<td><strong>+${d.points}</strong></td>`;
+
         tableBody.appendChild(tr);
-      }
+      });
     }
 
     /* ---------------- Forduló eredmények ---------------- */
@@ -841,8 +896,8 @@
       <h3>Szezon végi bónusz</h3>
       <div class="bonus-wrap">
         <div>
-          <div class="bonus-muted">Minden pontos helyezés +1% (max +12%)</div>
-          <div class="bonus-title"><span id="bonusCount">—/12</span> → <span id="bonusPct">+0%</span></div>
+          <div class="bonus-muted">Helyezési pont: pontos = 10, ±1 hely = 6, ±2 = 3, ±3 = 1 • 10 pont = +1% (max +12%)</div>
+          <div class="bonus-title"><span id="bonusCount">—/120</span> → <span id="bonusPct">+0%</span></div>
           <div class="bonus-bar"><div id="bonusBar" style="width:0%"></div></div>
         </div>
         <button class="btn-accent" id="bonusDetailsBtn">Részletek</button>
@@ -894,10 +949,10 @@
           <button class="btn-accent" id="bonusClose" style="background:#e5e7eb;color:#111;">Bezár</button>
         </div>
         <div class="body">
-          <div style="color:#555; font-size:14px; margin-bottom:8px"><span id="detailCount">—/12</span> → <strong id="detailPct">+0%</strong></div>
+          <div style="color:#555; font-size:14px; margin-bottom:8px"><span id="detailCount">—/120</span> → <strong id="detailPct">+0%</strong></div>
           <div style="overflow:auto; max-height:62vh; border:1px solid var(--line,#e6eaf1); border-radius:10px">
             <table>
-              <thead><tr><th>Hely</th><th>Hivatalos</th><th>Tippelt</th><th>Stimmel</th></tr></thead>
+              <thead><tr><th>Tippelt hely</th><th>Csapat</th><th>Aktuális hely</th><th>Pont</th></tr></thead>
               <tbody id="bonusTableBody"></tbody>
             </table>
           </div>
