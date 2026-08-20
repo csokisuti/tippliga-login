@@ -306,7 +306,59 @@ async function fetchEventsForDate(dateString) {
     : [];
 }
 
-async function fetchEventsWindow() {
+async function fetchEventsForRound(round) {
+  const url = new URL(
+    `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsround.php`
+  );
+
+  url.searchParams.set("id", LEAGUE_ID);
+  url.searchParams.set("r", String(round));
+  url.searchParams.set("s", SEASON);
+
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "NB1-TippLiga-Sync/2.1"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `TheSportsDB körlekérés hiba ${response.status} a ${round}. fordulónál.`
+    );
+  }
+
+  const data = await response.json();
+
+  return Array.isArray(data.events)
+    ? data.events
+    : [];
+}
+
+function addValidEventsToMap(byEventId, events) {
+  let added = 0;
+
+  for (const event of events) {
+    if (
+      String(event.idLeague || "") !== LEAGUE_ID ||
+      String(event.strSeason || "") !== SEASON ||
+      !event.idEvent
+    ) {
+      continue;
+    }
+
+    const key = String(event.idEvent);
+
+    if (!byEventId.has(key)) {
+      added += 1;
+    }
+
+    byEventId.set(key, event);
+  }
+
+  return added;
+}
+
+async function fetchEventsWindow(existingMatches = []) {
   const today = new Date();
   const byEventId = new Map();
 
@@ -318,22 +370,51 @@ async function fetchEventsWindow() {
     const dateString = budapestDateString(
       addUtcDays(today, offset)
     );
+
     const events = await fetchEventsForDate(
       dateString
     );
 
-    for (const event of events) {
-      if (
-        String(event.idLeague || "") !== LEAGUE_ID ||
-        String(event.strSeason || "") !== SEASON ||
-        !event.idEvent
-      ) {
-        continue;
-      }
+    addValidEventsToMap(
+      byEventId,
+      events
+    );
+  }
 
-      byEventId.set(
-        String(event.idEvent),
-        event
+  const highestExistingRound =
+    getHighestExistingRound(
+      existingMatches
+    );
+
+  const roundsToCheck =
+    highestExistingRound === null
+      ? [1, 2]
+      : [
+          highestExistingRound,
+          highestExistingRound + 1
+        ];
+
+  for (const round of roundsToCheck) {
+    try {
+      const roundEvents =
+        await fetchEventsForRound(
+          round
+        );
+
+      const added =
+        addValidEventsToMap(
+          byEventId,
+          roundEvents
+        );
+
+      console.log(
+        `TheSportsDB biztonsági körlekérés: ${round}. forduló | ` +
+        `${roundEvents.length} esemény | ${added} új esemény a napi lekéréshez képest.`
+      );
+    } catch (error) {
+      console.warn(
+        `Figyelmeztetés: a ${round}. forduló biztonsági lekérése nem sikerült:`,
+        error?.message || error
       );
     }
   }
@@ -919,6 +1000,57 @@ function printPreview({
     `Döntés oka: ${targetReason}`
   );
 
+  if (
+    targetRound === null &&
+    /fordulóból még nem érhető el mind/i.test(
+      targetReason
+    )
+  ) {
+    const match =
+      targetReason.match(
+        /A (\d+)\. fordulóból/
+      );
+
+    const missingRound =
+      match
+        ? Number.parseInt(
+            match[1],
+            10
+          )
+        : null;
+
+    if (
+      Number.isFinite(
+        missingRound
+      )
+    ) {
+      const seen =
+        mappedEvents.filter(
+          event =>
+            event.round ===
+            missingRound
+        );
+
+      console.log("");
+      console.log(
+        `${missingRound}. forduló API-ból látott meccsei (${seen.length}/${MATCHES_PER_ROUND}):`
+      );
+
+      if (!seen.length) {
+        console.log(
+          "- Egyetlen meccs sem érkezett."
+        );
+      }
+
+      for (const event of seen) {
+        console.log(
+          `- ${event.externalHomeTeam || "?"} – ${event.externalAwayTeam || "?"} | ` +
+          `${formatLocalDate(event.startDate)} | Event ID: ${event.externalEventId}`
+        );
+      }
+    }
+  }
+
   console.log("");
   console.log(
     "Ténylegesen módosítandó meglévő meccsek:"
@@ -1366,13 +1498,13 @@ async function main() {
 
   const db = getFirestore();
 
-  const [
-    apiEvents,
-    existingMatches
-  ] = await Promise.all([
-    fetchEventsWindow(),
-    loadExistingMatches(db)
-  ]);
+  const existingMatches =
+    await loadExistingMatches(db);
+
+  const apiEvents =
+    await fetchEventsWindow(
+      existingMatches
+    );
 
   const mappedEvents =
     apiEvents.map(
