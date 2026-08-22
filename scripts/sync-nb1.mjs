@@ -5,849 +5,587 @@ const PROJECT_ID = "tippliga-4b3af";
 const LEAGUE_ID = "4690";
 const SEASON = "2026-2027";
 const API_KEY = process.env.THESPORTSDB_API_KEY || "123";
-
-const LOOKBACK_DAYS = Number.parseInt(
-  process.env.LOOKBACK_DAYS || "7",
-  10
-);
-
-const LOOKAHEAD_DAYS = Number.parseInt(
-  process.env.LOOKAHEAD_DAYS || "14",
-  10
-);
-
-const RELEASE_DELAY_HOURS = Number.parseInt(
-  process.env.RELEASE_DELAY_HOURS || "26",
-  10
-);
-
-const DRY_RUN =
-  process.env.DRY_RUN !== "false";
-
+const RELEASE_DELAY_HOURS = Number.parseInt(process.env.RELEASE_DELAY_HOURS || "26", 10);
+const DRY_RUN = process.env.DRY_RUN !== "false";
 const MATCHES_PER_ROUND = 6;
+const MAX_DIRECT_LOOKUPS = 24;
 
 const TEAMS = [
-  "Debreceni VSC",
-  "Kispest-Honvéd FC",
-  "Ferencváros",
-  "ETO FC Győr",
-  "Vasas FC",
-  "Kisvárda FC",
-  "MTK Budapest",
-  "Nyíregyháza Spartacus",
-  "Paksi FC",
-  "Puskás Akadémia",
-  "Újpest FC",
-  "Zalaegerszegi TE FC"
+  "Debreceni VSC", "Kispest-Honvéd FC", "Ferencváros", "ETO FC Győr",
+  "Vasas FC", "Kisvárda FC", "MTK Budapest", "Nyíregyháza Spartacus",
+  "Paksi FC", "Puskás Akadémia", "Újpest FC", "Zalaegerszegi TE FC"
 ];
 
 const TEAM_ALIASES = {
-  "debrecen": "Debreceni VSC",
-  "debreceni vsc": "Debreceni VSC",
-
-  "budapest honved": "Kispest-Honvéd FC",
-  "budapest honved fc": "Kispest-Honvéd FC",
-  "honved": "Kispest-Honvéd FC",
-  "kispest honved": "Kispest-Honvéd FC",
-  "kispest honved fc": "Kispest-Honvéd FC",
-
-  "ferencvaros": "Ferencváros",
-  "ferencvarosi tc": "Ferencváros",
-  "ferencvaros tc": "Ferencváros",
-
-  "gyori eto": "ETO FC Győr",
-  "gyori eto fc": "ETO FC Győr",
-  "eto fc gyor": "ETO FC Győr",
-
-  "vasas": "Vasas FC",
-  "vasas fc": "Vasas FC",
-
-  "kisvarda": "Kisvárda FC",
-  "kisvarda fc": "Kisvárda FC",
-
-  "mtk": "MTK Budapest",
-  "mtk budapest": "MTK Budapest",
-
-  "nyiregyhaza": "Nyíregyháza Spartacus",
-  "nyiregyhaza spartacus": "Nyíregyháza Spartacus",
-
-  "paks": "Paksi FC",
-  "paksi fc": "Paksi FC",
-
-  "puskas akademia": "Puskás Akadémia",
-  "puskas akademia fc": "Puskás Akadémia",
-
-  "ujpest": "Újpest FC",
-  "ujpest fc": "Újpest FC",
-
-  "zalaegerszeg": "Zalaegerszegi TE FC",
-  "zalaegerszegi te": "Zalaegerszegi TE FC",
-  "zalaegerszegi te fc": "Zalaegerszegi TE FC"
+  "debrecen":"Debreceni VSC", "debreceni vsc":"Debreceni VSC",
+  "budapest honved":"Kispest-Honvéd FC", "budapest honved fc":"Kispest-Honvéd FC",
+  "honved":"Kispest-Honvéd FC", "kispest honved":"Kispest-Honvéd FC", "kispest honved fc":"Kispest-Honvéd FC",
+  "ferencvaros":"Ferencváros", "ferencvarosi tc":"Ferencváros", "ferencvaros tc":"Ferencváros",
+  "gyori eto":"ETO FC Győr", "gyori eto fc":"ETO FC Győr", "eto fc gyor":"ETO FC Győr",
+  "vasas":"Vasas FC", "vasas fc":"Vasas FC",
+  "kisvarda":"Kisvárda FC", "kisvarda fc":"Kisvárda FC",
+  "mtk":"MTK Budapest", "mtk budapest":"MTK Budapest",
+  "nyiregyhaza":"Nyíregyháza Spartacus", "nyiregyhaza spartacus":"Nyíregyháza Spartacus",
+  "paks":"Paksi FC", "paksi fc":"Paksi FC",
+  "puskas akademia":"Puskás Akadémia", "puskas akademia fc":"Puskás Akadémia",
+  "ujpest":"Újpest FC", "ujpest fc":"Újpest FC",
+  "zalaegerszeg":"Zalaegerszegi TE FC", "zalaegerszegi te":"Zalaegerszegi TE FC", "zalaegerszegi te fc":"Zalaegerszegi TE FC"
 };
 
-const ROUND_RELEASE_STATUSES = new Set([
-  "FT",
-  "AET",
-  "PEN",
-  "PST",
-  "CANC",
-  "ABD",
-  "AWD"
-]);
+const ROUND_RELEASE_STATUSES = new Set(["FT","AET","PEN","PST","CANC","ABD","AWD"]);
+const RESULT_STATUSES = new Set(["FT","AET","PEN","FINISHED","MATCH FINISHED"]);
 
-const RESULT_STATUSES = new Set([
-  "FT",
-  "AET",
-  "PEN"
-]);
-
-function normalizeText(value) {
-  return String(value ?? "")
-    .trim()
-    .toLocaleLowerCase("hu")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+function normalizeText(v){
+  return String(v ?? "").trim().toLocaleLowerCase("hu").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function mapTeam(externalName) {
-  return (
-    TEAM_ALIASES[
-      normalizeText(externalName)
-    ] || null
-  );
+function mapTeam(name){
+  return TEAM_ALIASES[normalizeText(name)] || null;
 }
 
-function parseServiceAccount() {
-  const raw =
-    process.env
-      .FIREBASE_SERVICE_ACCOUNT_JSON;
-
-  if (!raw) {
-    throw new Error(
-      "Hiányzik a FIREBASE_SERVICE_ACCOUNT_JSON környezeti változó."
-    );
-  }
-
-  let serviceAccount;
-
-  try {
-    serviceAccount =
-      JSON.parse(raw);
-  } catch {
-    throw new Error(
-      "A FIREBASE_SERVICE_ACCOUNT_JSON nem érvényes JSON."
-    );
-  }
-
-  if (
-    serviceAccount.private_key
-  ) {
-    serviceAccount.private_key =
-      serviceAccount.private_key.replace(
-        /\\n/g,
-        "\n"
-      );
-  }
-
-  return serviceAccount;
+function normalizedStatus(e){
+  return String(e?.strStatus || "").trim().toUpperCase();
 }
 
-function validateSettings() {
-  if (
-    !Number.isFinite(
-      LOOKBACK_DAYS
-    ) ||
-    LOOKBACK_DAYS < 0 ||
-    LOOKBACK_DAYS > 14
-  ) {
-    throw new Error(
-      "A LOOKBACK_DAYS értéke 0 és 14 közötti egész szám legyen."
-    );
+function eventRound(e){
+  const n=Number.parseInt(e?.intRound,10);
+  return Number.isFinite(n)?n:null;
+}
+
+function matchRound(m){
+  const n=Number.parseInt(m?.roundId ?? m?.round ?? "",10);
+  return Number.isFinite(n)?n:null;
+}
+
+function apiPostponed(e){
+  return normalizedStatus(e)==="PST" ||
+    String(e?.strPostponed || "").trim().toLowerCase()==="yes";
+}
+
+function eventStartDate(e){
+  if(e?.strTimestamp){
+    const d=new Date(e.strTimestamp);
+    if(!Number.isNaN(d.getTime())) return d;
   }
 
-  if (
-    !Number.isFinite(
-      LOOKAHEAD_DAYS
-    ) ||
-    LOOKAHEAD_DAYS < 1 ||
-    LOOKAHEAD_DAYS > 28
-  ) {
-    throw new Error(
-      "A LOOKAHEAD_DAYS értéke 1 és 28 közötti egész szám legyen."
-    );
+  const date=e?.dateEventLocal || e?.dateEvent;
+  const time=e?.strTimeLocal || e?.strTime || "00:00:00";
+
+  if(!date) return null;
+
+  const d=new Date(`${date}T${time}+02:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function hasFinalResult(e){
+  const hs=e?.intHomeScore;
+  const as=e?.intAwayScore;
+
+  const scores=
+    hs!==null &&
+    hs!==undefined &&
+    as!==null &&
+    as!==undefined &&
+    Number.isFinite(Number(hs)) &&
+    Number.isFinite(Number(as));
+
+  return scores && RESULT_STATUSES.has(normalizedStatus(e));
+}
+
+function resultFromEvent(e){
+  if(!hasFinalResult(e)) return null;
+
+  const h=Number(e.intHomeScore);
+  const a=Number(e.intAwayScore);
+
+  return {
+    result:`${h}-${a}`,
+    outcome:h>a?"1":h<a?"2":"X"
+  };
+}
+
+function formatLocalDate(date){
+  if(!date) return "-";
+
+  return new Intl.DateTimeFormat("hu-HU",{
+    timeZone:"Europe/Budapest",
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit",
+    hour:"2-digit",
+    minute:"2-digit"
+  }).format(date);
+}
+
+function timestampMillis(v){
+  if(!v) return null;
+
+  if(typeof v.toMillis==="function") return v.toMillis();
+  if(typeof v.toDate==="function") return v.toDate().getTime();
+  if(v instanceof Date) return v.getTime();
+
+  const d=new Date(v);
+  return Number.isNaN(d.getTime())?null:d.getTime();
+}
+
+function valuesEqual(a,b){
+  if(a && typeof a.toMillis==="function"){
+    return a.toMillis()===timestampMillis(b);
   }
 
-  if (
-    LOOKBACK_DAYS +
-      LOOKAHEAD_DAYS +
-      1 >
-    30
-  ) {
-    throw new Error(
-      "A vizsgált napok száma meghaladná a 30 lekéréses percenkénti keretet."
-    );
+  if(b instanceof Date){
+    return timestampMillis(a)===b.getTime();
   }
 
-  if (
-    !Number.isFinite(
-      RELEASE_DELAY_HOURS
-    ) ||
-    RELEASE_DELAY_HOURS < 0 ||
-    RELEASE_DELAY_HOURS > 72
-  ) {
+  return String(a ?? "")===String(b ?? "");
+}
+
+function parseServiceAccount(){
+  const raw=process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+  if(!raw){
+    throw new Error("Hiányzik a FIREBASE_SERVICE_ACCOUNT_JSON környezeti változó.");
+  }
+
+  let sa;
+
+  try{
+    sa=JSON.parse(raw);
+  }catch{
+    throw new Error("A FIREBASE_SERVICE_ACCOUNT_JSON nem érvényes JSON.");
+  }
+
+  if(sa.private_key){
+    sa.private_key=sa.private_key.replace(/\\n/g,"\n");
+  }
+
+  return sa;
+}
+
+function validateSettings(){
+  if(
+    !Number.isFinite(RELEASE_DELAY_HOURS) ||
+    RELEASE_DELAY_HOURS<0 ||
+    RELEASE_DELAY_HOURS>72
+  ){
     throw new Error(
       "A RELEASE_DELAY_HOURS értéke 0 és 72 közötti egész szám legyen."
     );
   }
 }
 
-function budapestDateString(
-  date
-) {
-  const parts =
-    new Intl.DateTimeFormat(
-      "en-CA",
-      {
-        timeZone:
-          "Europe/Budapest",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit"
-      }
-    ).formatToParts(date);
-
-  const values =
-    Object.fromEntries(
-      parts
-        .filter(
-          part =>
-            part.type !==
-            "literal"
-        )
-        .map(
-          part => [
-            part.type,
-            part.value
-          ]
-        )
-    );
-
-  return (
-    `${values.year}-` +
-    `${values.month}-` +
-    `${values.day}`
-  );
-}
-
-function addUtcDays(
-  date,
-  days
-) {
-  const next =
-    new Date(date);
-
-  next.setUTCDate(
-    next.getUTCDate() +
-      days
-  );
-
-  return next;
-}
-
-function eventStartDate(
-  event
-) {
-  if (
-    event.strTimestamp
-  ) {
-    const parsed =
-      new Date(
-        event.strTimestamp
-      );
-
-    if (
-      !Number.isNaN(
-        parsed.getTime()
-      )
-    ) {
-      return parsed;
+async function apiJson(url,label){
+  const response=await fetch(url,{
+    headers:{
+      "User-Agent":"NB1-TippLiga-Sync/3.1"
     }
+  });
+
+  if(!response.ok){
+    throw new Error(`${label}: HTTP ${response.status}`);
   }
 
-  const localDate =
-    event.dateEventLocal ||
-    event.dateEvent;
-
-  const localTime =
-    event.strTimeLocal ||
-    event.strTime ||
-    "00:00:00";
-
-  if (!localDate) {
-    return null;
-  }
-
-  const parsed =
-    new Date(
-      `${localDate}T${localTime}+02:00`
-    );
-
-  return Number.isNaN(
-    parsed.getTime()
-  )
-    ? null
-    : parsed;
+  return response.json();
 }
 
-function eventRound(
-  event
-) {
-  const value =
-    Number.parseInt(
-      event.intRound,
-      10
-    );
+async function fetchEventsForRound(round){
+  const url=new URL(
+    `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsround.php`
+  );
 
-  return Number.isFinite(
-    value
-  )
-    ? value
+  url.searchParams.set("id",LEAGUE_ID);
+  url.searchParams.set("r",String(round));
+  url.searchParams.set("s",SEASON);
+
+  const data=await apiJson(
+    url,
+    `${round}. forduló lekérése`
+  );
+
+  return Array.isArray(data.events)
+    ? data.events
+    : [];
+}
+
+async function fetchEventById(id){
+  const url=new URL(
+    `https://www.thesportsdb.com/api/v1/json/${API_KEY}/lookupevent.php`
+  );
+
+  url.searchParams.set("id",String(id));
+
+  const data=await apiJson(
+    url,
+    `Event ID ${id} lekérése`
+  );
+
+  return Array.isArray(data.events) && data.events.length
+    ? data.events[0]
     : null;
 }
 
-function normalizedStatus(
-  event
-) {
-  return String(
-    event.strStatus || ""
-  )
-    .trim()
-    .toUpperCase();
+function validApiEvent(e){
+  if(!e?.idEvent) return false;
+
+  if(
+    e.idLeague &&
+    String(e.idLeague)!==LEAGUE_ID
+  ){
+    return false;
+  }
+
+  if(
+    e.strSeason &&
+    String(e.strSeason)!==SEASON
+  ){
+    return false;
+  }
+
+  return true;
 }
 
-function hasFinalResult(
-  event
-) {
-  const status =
-    normalizedStatus(event);
+function putEvent(map,e){
+  if(validApiEvent(e)){
+    map.set(
+      String(e.idEvent),
+      e
+    );
+  }
+}
 
-  return (
-    RESULT_STATUSES.has(
-      status
-    ) &&
-    event.intHomeScore !==
-      null &&
-    event.intAwayScore !==
-      null &&
-    Number.isFinite(
-      Number(
-        event.intHomeScore
-      )
-    ) &&
-    Number.isFinite(
-      Number(
-        event.intAwayScore
-      )
-    )
+async function loadExistingMatches(db){
+  const snap=await db
+    .collection("matches")
+    .get();
+
+  return snap.docs.map(
+    d=>({
+      id:d.id,
+      ...d.data()
+    })
   );
 }
 
-function resultFromEvent(
-  event
-) {
-  if (
-    !hasFinalResult(event)
-  ) {
-    return null;
-  }
+function getHighestExistingRound(matches){
+  const rounds=matches
+    .map(matchRound)
+    .filter(Number.isFinite);
 
-  const home =
-    Number(
-      event.intHomeScore
-    );
+  return rounds.length
+    ? Math.max(...rounds)
+    : null;
+}
 
-  const away =
-    Number(
-      event.intAwayScore
-    );
+function lookupCandidateIds(
+  existingMatches,
+  roundEvents,
+  highestRound
+){
+  const ids=[];
+  const seen=new Set();
 
-  return {
-    result:
-      `${home}-${away}`,
-    outcome:
-      home > away
-        ? "1"
-        : home < away
-          ? "2"
-          : "X"
+  const add=id=>{
+    const s=String(id||"").trim();
+
+    if(
+      s &&
+      !seen.has(s)
+    ){
+      seen.add(s);
+      ids.push(s);
+    }
   };
-}
 
-async function fetchEventsForDate(
-  dateString
-) {
-  const url =
-    new URL(
-      `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsday.php`
-    );
-
-  url.searchParams.set(
-    "d",
-    dateString
-  );
-
-  url.searchParams.set(
-    "l",
-    LEAGUE_ID
-  );
-
-  const response =
-    await fetch(
-      url,
-      {
-        headers: {
-          "User-Agent":
-            "NB1-TippLiga-Sync/2.2"
-        }
-      }
-    );
-
-  if (!response.ok) {
-    throw new Error(
-      `TheSportsDB hiba ${response.status} a következő napnál: ${dateString}`
-    );
+  for(const e of roundEvents){
+    if(
+      eventRound(e)===highestRound
+    ){
+      add(e.idEvent);
+    }
   }
 
-  const data =
-    await response.json();
-
-  return Array.isArray(
-    data.events
-  )
-    ? data.events
-    : [];
-}
-
-async function fetchEventsForRound(
-  round
-) {
-  const url =
-    new URL(
-      `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsround.php`
-    );
-
-  url.searchParams.set(
-    "id",
-    LEAGUE_ID
-  );
-
-  url.searchParams.set(
-    "r",
-    String(round)
-  );
-
-  url.searchParams.set(
-    "s",
-    SEASON
-  );
-
-  const response =
-    await fetch(
-      url,
-      {
-        headers: {
-          "User-Agent":
-            "NB1-TippLiga-Sync/2.2"
-        }
-      }
-    );
-
-  if (!response.ok) {
-    throw new Error(
-      `TheSportsDB körlekérés hiba ${response.status} a ${round}. fordulónál.`
-    );
-  }
-
-  const data =
-    await response.json();
-
-  return Array.isArray(
-    data.events
-  )
-    ? data.events
-    : [];
-}
-
-function isValidApiEvent(
-  event
-) {
-  return (
-    String(
-      event.idLeague || ""
-    ) === LEAGUE_ID &&
-    String(
-      event.strSeason || ""
-    ) === SEASON &&
-    !!event.idEvent
-  );
-}
-
-/*
- * FONTOS:
- *
- * A napi API az elsődleges.
- *
- * Ha overwrite = true:
- *   a kapott esemény frissítheti
- *   a már eltárolt API-adatot.
- *
- * Ha overwrite = false:
- *   csak olyan eseményt ad hozzá,
- *   amely még nincs benne.
- *
- * Így az eventsround fallback
- * nem tudja felülírni az
- * eventsday frissebb eredményét.
- */
-function addValidEventsToMap(
-  byEventId,
-  events,
-  {
-    overwrite = true
-  } = {}
-) {
-  let added = 0;
-  let replaced = 0;
-  let skipped = 0;
-
-  for (
-    const event of events
-  ) {
-    if (
-      !isValidApiEvent(
-        event
-      )
-    ) {
+  for(const m of existingMatches){
+    if(!m.externalEventId){
       continue;
     }
 
-    const key =
-      String(
-        event.idEvent
-      );
+    const hasResult=
+      !!String(m.result||"").trim() &&
+      !!String(m.outcome||"").trim();
 
-    const alreadyExists =
-      byEventId.has(key);
-
-    if (
-      alreadyExists &&
-      !overwrite
-    ) {
-      skipped += 1;
-      continue;
+    if(
+      !hasResult ||
+      matchRound(m)>=((highestRound??0)-1)
+    ){
+      add(m.externalEventId);
     }
-
-    if (
-      alreadyExists
-    ) {
-      replaced += 1;
-    } else {
-      added += 1;
-    }
-
-    byEventId.set(
-      key,
-      event
-    );
   }
 
-  return {
-    added,
-    replaced,
-    skipped
-  };
+  return ids.slice(
+    0,
+    MAX_DIRECT_LOOKUPS
+  );
 }
 
-async function fetchEventsWindow(
-  existingMatches = []
-) {
-  const today =
-    new Date();
+async function fetchApiEvents(existingMatches){
+  const byId=new Map();
 
-  const byEventId =
-    new Map();
-
-  /*
-   * 1. ELSŐDLEGES FORRÁS
-   *
-   * Napokra bontott lekérés.
-   * Ez szolgál eredmények és
-   * státuszok frissítésére is.
-   */
-  for (
-    let offset =
-      -LOOKBACK_DAYS;
-    offset <=
-      LOOKAHEAD_DAYS;
-    offset += 1
-  ) {
-    const dateString =
-      budapestDateString(
-        addUtcDays(
-          today,
-          offset
-        )
-      );
-
-    const events =
-      await fetchEventsForDate(
-        dateString
-      );
-
-    addValidEventsToMap(
-      byEventId,
-      events,
-      {
-        overwrite: true
-      }
-    );
-  }
-
-  const highestExistingRound =
+  const highest=
     getHighestExistingRound(
       existingMatches
     );
 
-  const roundsToCheck =
-    highestExistingRound ===
-    null
-      ? [1, 2]
+  const rounds=
+    highest===null
+      ? [1,2]
       : [
-          highestExistingRound,
-          highestExistingRound +
-            1
+          highest,
+          highest+1
         ];
 
-  /*
-   * 2. BIZTONSÁGI FORRÁS
-   *
-   * A forduló API csak azt
-   * pótolja, ami a napi
-   * lekérésből hiányzott.
-   *
-   * Meglévő Event ID-t SOHA
-   * nem ír felül.
-   */
-  for (
-    const round of
-      roundsToCheck
-  ) {
-    try {
-      const roundEvents =
+  const roundEvents=[];
+
+  for(const round of rounds){
+    try{
+      const events=
         await fetchEventsForRound(
           round
         );
 
-      const result =
-        addValidEventsToMap(
-          byEventId,
-          roundEvents,
-          {
-            overwrite: false
-          }
-        );
+      roundEvents.push(
+        ...events
+      );
+
+      events.forEach(
+        e=>putEvent(byId,e)
+      );
 
       console.log(
-        `TheSportsDB biztonsági körlekérés: ` +
-        `${round}. forduló | ` +
-        `${roundEvents.length} esemény | ` +
-        `${result.added} hiányzó esemény hozzáadva | ` +
-        `${result.skipped} már meglévő esemény érintetlenül hagyva.`
+        `TheSportsDB körlekérés: ${round}. forduló | ${events.length} esemény.`
       );
-    } catch (error) {
+    }catch(err){
       console.warn(
-        `Figyelmeztetés: a ${round}. forduló biztonsági lekérése nem sikerült:`,
-        error?.message ||
-          error
+        `Figyelmeztetés: ${round}. forduló:`,
+        err?.message||err
       );
     }
   }
 
-  return Array.from(
-    byEventId.values()
+  const ids=
+    lookupCandidateIds(
+      existingMatches,
+      roundEvents,
+      highest
+    );
+
+  console.log(
+    `Közvetlen Event ID ellenőrzés: ${ids.length} meccs.`
   );
+
+  for(const id of ids){
+    try{
+      const e=
+        await fetchEventById(
+          id
+        );
+
+      if(!e){
+        console.warn(
+          `Event ID ${id}: nincs esemény.`
+        );
+        continue;
+      }
+
+      if(!validApiEvent(e)){
+        console.warn(
+          `Event ID ${id}: nem ehhez az NB I szezonhoz tartozik.`
+        );
+        continue;
+      }
+
+      putEvent(
+        byId,
+        e
+      );
+
+      const score=
+        e.intHomeScore!=null &&
+        e.intAwayScore!=null
+          ? `${e.intHomeScore}-${e.intAwayScore}`
+          : "-";
+
+      console.log(
+        `Event ID ${id}: ` +
+        `${e.strHomeTeam||"?"} – ${e.strAwayTeam||"?"} | ` +
+        `státusz: ${normalizedStatus(e)||"-"} | eredmény: ${score}`
+      );
+    }catch(err){
+      console.warn(
+        `Figyelmeztetés: Event ID ${id}:`,
+        err?.message||err
+      );
+    }
+  }
+
+  return [
+    ...byId.values()
+  ];
 }
 
-function buildMappedEvent(
-  event
-) {
+function buildMappedEvent(e){
   return {
     externalEventId:
-      String(
-        event.idEvent
-      ),
+      String(e.idEvent),
 
     externalSource:
       "thesportsdb",
 
     externalHomeTeam:
-      event.strHomeTeam ||
-      "",
+      e.strHomeTeam||"",
 
     externalAwayTeam:
-      event.strAwayTeam ||
-      "",
+      e.strAwayTeam||"",
 
     homeTeam:
       mapTeam(
-        event.strHomeTeam
+        e.strHomeTeam
       ),
 
     awayTeam:
       mapTeam(
-        event.strAwayTeam
+        e.strAwayTeam
       ),
 
     homeTeamExternalId:
-      event.idHomeTeam
-        ? String(
-            event.idHomeTeam
-          )
+      e.idHomeTeam
+        ? String(e.idHomeTeam)
         : "",
 
     awayTeamExternalId:
-      event.idAwayTeam
-        ? String(
-            event.idAwayTeam
-          )
+      e.idAwayTeam
+        ? String(e.idAwayTeam)
         : "",
 
     startDate:
-      eventStartDate(event),
+      eventStartDate(e),
 
     round:
-      eventRound(event),
+      eventRound(e),
 
     apiStatus:
-      normalizedStatus(
-        event
-      ),
+      normalizedStatus(e),
+
+    apiPostponed:
+      apiPostponed(e),
 
     finalResult:
-      resultFromEvent(
-        event
-      )
+      resultFromEvent(e)
   };
-}
-
-function matchRound(
-  match
-) {
-  const value =
-    Number.parseInt(
-      match.roundId ??
-        match.round ??
-        "",
-      10
-    );
-
-  return Number.isFinite(
-    value
-  )
-    ? value
-    : null;
 }
 
 function sameInternalMatch(
   existing,
   event
-) {
+){
   return (
     normalizeText(
       existing.homeTeam
-    ) ===
-      normalizeText(
-        event.homeTeam
-      ) &&
+    )===
+    normalizeText(
+      event.homeTeam
+    ) &&
+
     normalizeText(
       existing.awayTeam
-    ) ===
-      normalizeText(
-        event.awayTeam
-      ) &&
+    )===
+    normalizeText(
+      event.awayTeam
+    ) &&
+
     matchRound(
       existing
-    ) === event.round
+    )===
+    event.round
   );
 }
 
-async function loadExistingMatches(
-  db
-) {
-  const snapshot =
-    await db
-      .collection(
-        "matches"
-      )
-      .get();
+function indexExistingMatches(matches){
+  const map=new Map();
 
-  return snapshot.docs.map(
-    doc => ({
-      id: doc.id,
-      ...doc.data()
-    })
+  for(const m of matches){
+    if(m.externalEventId){
+      map.set(
+        String(
+          m.externalEventId
+        ),
+        m
+      );
+    }
+  }
+
+  return map;
+}
+
+function findExistingMatch(
+  event,
+  matches,
+  byId
+){
+  return (
+    byId.get(
+      event.externalEventId
+    ) ||
+
+    matches.find(
+      m=>
+        sameInternalMatch(
+          m,
+          event
+        )
+    ) ||
+
+    null
   );
 }
 
-function groupEventsByRound(
-  events
-) {
-  const grouped =
+function groupEventsByRound(events){
+  const grouped=
     new Map();
 
-  for (
-    const event of events
-  ) {
-    if (
-      !Number.isFinite(
-        event.round
-      ) ||
-      !event.startDate ||
-      !event.homeTeam ||
-      !event.awayTeam
-    ) {
+  for(const e of events){
+    if(
+      !Number.isFinite(e.round) ||
+      !e.startDate ||
+      !e.homeTeam ||
+      !e.awayTeam
+    ){
       continue;
     }
 
-    if (
+    if(
       !grouped.has(
-        event.round
+        e.round
       )
-    ) {
+    ){
       grouped.set(
-        event.round,
+        e.round,
         []
       );
     }
 
     grouped
-      .get(
-        event.round
-      )
-      .push(
-        event
-      );
+      .get(e.round)
+      .push(e);
   }
 
-  for (
-    const matches of
+  for(
+    const arr of
       grouped.values()
-  ) {
-    matches.sort(
-      (a, b) =>
-        a.startDate -
+  ){
+    arr.sort(
+      (a,b)=>
+        a.startDate-
         b.startDate
     );
   }
@@ -855,78 +593,64 @@ function groupEventsByRound(
   return grouped;
 }
 
-function indexExistingMatches(
-  existingMatches
-) {
-  const byExternalId =
-    new Map();
-
-  for (
-    const match of
-      existingMatches
-  ) {
-    if (
-      match.externalEventId
-    ) {
-      byExternalId.set(
-        String(
-          match.externalEventId
-        ),
-        match
-      );
-    }
-  }
-
-  return byExternalId;
-}
-
-function findExistingMatch(
+function existingForEvent(
   event,
-  existingMatches,
-  byExternalId
-) {
+  existingMatches
+){
   return (
-    byExternalId.get(
-      event.externalEventId
-    ) ||
     existingMatches.find(
-      match =>
+      m=>
+        String(
+          m.externalEventId||
+          ""
+        )===
+        event.externalEventId ||
+
         sameInternalMatch(
-          match,
+          m,
           event
         )
     ) ||
+
     null
   );
 }
 
-function getHighestExistingRound(
+function eventCountsAsClosed(
+  event,
   existingMatches
-) {
-  const rounds =
-    existingMatches
-      .map(matchRound)
-      .filter(
-        Number.isFinite
-      );
+){
+  if(
+    ROUND_RELEASE_STATUSES.has(
+      event.apiStatus
+    )
+  ){
+    return true;
+  }
 
-  return rounds.length
-    ? Math.max(
-        ...rounds
-      )
-    : null;
+  const existing=
+    existingForEvent(
+      event,
+      existingMatches
+    );
+
+  return !!existing
+    ?.postponedWithoutDate;
 }
 
 function isRoundComplete(
-  roundEvents
-) {
+  roundEvents,
+  existingMatches
+){
   return (
-    roundEvents.length ===
+    roundEvents.length===
       MATCHES_PER_ROUND &&
+
     roundEvents.every(
-      event =>
-        ROUND_RELEASE_STATUSES.has(
-          event.apiStatus
+      e=>
+        eventCountsAsClosed(
+          e,
+          existingMatches
         )
     )
   );
@@ -934,270 +658,160 @@ function isRoundComplete(
 
 function roundReleaseTime(
   roundEvents
-) {
-  const latestStart =
+){
+  return new Date(
     Math.max(
       ...roundEvents.map(
-        event =>
-          event.startDate.getTime()
+        e=>
+          e.startDate
+            .getTime()
       )
-    );
-
-  return new Date(
-    latestStart +
-      RELEASE_DELAY_HOURS *
-        60 *
-        60 *
-        1000
+    ) +
+    RELEASE_DELAY_HOURS*
+      3600000
   );
 }
 
 function selectRoundForCreation(
-  groupedEvents,
+  grouped,
   existingMatches
-) {
-  const now =
+){
+  const now=
     Date.now();
 
-  const highestExistingRound =
+  const highest=
     getHighestExistingRound(
       existingMatches
     );
 
-  if (
-    highestExistingRound ===
-    null
-  ) {
-    const firstAvailableRound =
-      Array.from(
-        groupedEvents.entries()
-      )
+  if(highest===null){
+    const first=
+      [...grouped.entries()]
         .filter(
-          ([, events]) =>
-            events.length ===
+          ([,ev])=>
+            ev.length===
               MATCHES_PER_ROUND &&
-            events.some(
-              event =>
-                event.startDate.getTime() >=
-                now
+
+            ev.some(
+              e=>
+                e.startDate
+                  .getTime()>=now
             )
         )
         .map(
-          ([round]) =>
-            round
+          ([r])=>r
         )
         .sort(
-          (a, b) =>
-            a - b
+          (a,b)=>a-b
         )[0] ??
       null;
 
     return {
-      targetRound:
-        firstAvailableRound,
+      targetRound:first,
 
       reason:
-        firstAvailableRound ===
-        null
+        first===null
           ? "Nincs teljes, közelgő forduló."
           : "Még nincs meccs a Firestore-ban."
     };
   }
 
-  const currentRoundEvents =
-    groupedEvents.get(
-      highestExistingRound
-    ) || [];
+  const current=
+    grouped.get(
+      highest
+    )||[];
 
-  const existingCurrentRoundCount =
+  const existingCount=
     existingMatches.filter(
-      match =>
-        matchRound(
-          match
-        ) ===
-        highestExistingRound
+      m=>
+        matchRound(m)===
+        highest
     ).length;
 
-  if (
-    existingCurrentRoundCount <
+  if(
+    existingCount<
       MATCHES_PER_ROUND &&
-    currentRoundEvents.length ===
+    current.length===
       MATCHES_PER_ROUND
-  ) {
+  ){
     return {
       targetRound:
-        highestExistingRound,
+        highest,
 
       reason:
         "A jelenlegi fordulóból hiányzik meccs a Firestore-ban."
     };
   }
 
-  if (
+  if(
     !isRoundComplete(
-      currentRoundEvents
+      current,
+      existingMatches
     )
-  ) {
+  ){
     return {
-      targetRound: null,
+      targetRound:null,
 
       reason:
         "A jelenlegi forduló még nem zárult le."
     };
   }
 
-  const releaseAt =
+  const releaseAt=
     roundReleaseTime(
-      currentRoundEvents
+      current
     );
 
-  if (
-    now <
+  if(
+    now<
     releaseAt.getTime()
-  ) {
+  ){
     return {
-      targetRound: null,
+      targetRound:null,
 
       reason:
-        `A következő forduló csak ${formatLocalDate(
-          releaseAt
-        )} után jelenhet meg.`
+        `A következő forduló csak ${formatLocalDate(releaseAt)} után jelenhet meg.`
     };
   }
 
-  const nextRound =
-    highestExistingRound +
-    1;
+  const next=
+    highest+1;
 
-  const nextEvents =
-    groupedEvents.get(
-      nextRound
-    ) || [];
+  const nextEvents=
+    grouped.get(
+      next
+    )||[];
 
-  if (
-    nextEvents.length !==
-    MATCHES_PER_ROUND
-  ) {
+  if(
+    nextEvents.length!==
+      MATCHES_PER_ROUND
+  ){
     return {
-      targetRound: null,
+      targetRound:null,
 
       reason:
-        `A ${nextRound}. fordulóból még nem érhető el mind a ${MATCHES_PER_ROUND} meccs.`
+        `A ${next}. fordulóból még nem érhető el mind a ${MATCHES_PER_ROUND} meccs.`
     };
   }
 
   return {
     targetRound:
-      nextRound,
+      next,
 
     reason:
       "Az előző forduló lezárult, és letelt a megjelenési várakozás."
   };
 }
 
-function formatLocalDate(
-  date
-) {
-  return new Intl.DateTimeFormat(
-    "hu-HU",
-    {
-      timeZone:
-        "Europe/Budapest",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    }
-  ).format(date);
-}
-
-function timestampMillis(
-  value
-) {
-  if (!value) {
-    return null;
-  }
-
-  if (
-    typeof value.toMillis ===
-    "function"
-  ) {
-    return value.toMillis();
-  }
-
-  if (
-    typeof value.toDate ===
-    "function"
-  ) {
-    return value
-      .toDate()
-      .getTime();
-  }
-
-  if (
-    value instanceof Date
-  ) {
-    return value.getTime();
-  }
-
-  const parsed =
-    new Date(value);
-
-  return Number.isNaN(
-    parsed.getTime()
-  )
-    ? null
-    : parsed.getTime();
-}
-
-function valuesEqual(
-  currentValue,
-  nextValue
-) {
-  if (
-    currentValue &&
-    typeof currentValue.toMillis ===
-      "function"
-  ) {
-    return (
-      currentValue.toMillis() ===
-      timestampMillis(
-        nextValue
-      )
-    );
-  }
-
-  if (
-    nextValue instanceof Date
-  ) {
-    return (
-      timestampMillis(
-        currentValue
-      ) ===
-      nextValue.getTime()
-    );
-  }
-
-  return (
-    String(
-      currentValue ?? ""
-    ) ===
-    String(
-      nextValue ?? ""
-    )
-  );
-}
-
 function buildDesiredData(
   event,
   existing
-) {
-  const locks =
-    existing?.manualLocks ||
+){
+  const locks=
+    existing?.manualLocks||
     {};
 
-  const desired = {
+  const desired={
     externalSource:
       "thesportsdb",
 
@@ -1213,9 +827,11 @@ function buildDesiredData(
     apiStatus:
       event.apiStatus,
 
-    apiManaged: true,
+    apiManaged:
+      true,
 
-    published: true,
+    published:
+      true,
 
     roundId:
       String(
@@ -1223,41 +839,69 @@ function buildDesiredData(
       )
   };
 
-  if (
-    !locks.teams
-  ) {
-    desired.homeTeam =
+  if(!locks.teams){
+    desired.homeTeam=
       event.homeTeam;
 
-    desired.awayTeam =
+    desired.awayTeam=
       event.awayTeam;
   }
 
-  if (
-    !locks.startTime
-  ) {
-    desired.startTime =
+  if(
+    !locks.startTime &&
+    event.startDate
+  ){
+    desired.startTime=
       event.startDate;
   }
 
-  /*
-   * Az eredmény frissítése
-   * független attól, hogy
-   * van-e publikálható új
-   * forduló.
-   *
-   * Ha a napi API kész
-   * eredményt ad, bekerül.
-   */
-  if (
+  if(
     event.finalResult &&
     !locks.result
-  ) {
-    desired.result =
+  ){
+    desired.result=
       event.finalResult.result;
 
-    desired.outcome =
+    desired.outcome=
       event.finalResult.outcome;
+
+    desired.resultSource=
+      "api";
+  }
+
+  if(
+    !locks.postponed
+  ){
+    if(
+      event.apiPostponed
+    ){
+      desired.postponed=
+        true;
+
+      desired.postponedWithoutDate=
+        true;
+
+      desired.postponementSource=
+        "api";
+
+      if(
+        existing &&
+        !existing.originalStartTime &&
+        existing.startTime
+      ){
+        desired.originalStartTime=
+          existing.startTime;
+      }
+    }else{
+      desired.postponed=
+        false;
+
+      desired.postponedWithoutDate=
+        false;
+
+      desired.postponementSource=
+        "";
+    }
   }
 
   return desired;
@@ -1266,34 +910,29 @@ function buildDesiredData(
 function buildChangedFields(
   existing,
   desired
-) {
-  const changes = {};
-  const changedKeys = [];
+){
+  const changes={};
+  const changedKeys=[];
 
-  for (
-    const [
-      key,
-      nextValue
-    ] of Object.entries(
-      desired
-    )
-  ) {
-    const currentValue =
+  for(
+    const [key,next]
+    of Object.entries(desired)
+  ){
+    const cur=
       existing?.[key];
 
-    if (
+    if(
       !valuesEqual(
-        currentValue,
-        nextValue
+        cur,
+        next
       )
-    ) {
-      changes[key] =
-        nextValue instanceof
-        Date
+    ){
+      changes[key]=
+        next instanceof Date
           ? Timestamp.fromDate(
-              nextValue
+              next
             )
-          : nextValue;
+          : next;
 
       changedKeys.push(
         key
@@ -1301,11 +940,10 @@ function buildChangedFields(
     }
   }
 
-  if (
-    changedKeys.length >
-    0
-  ) {
-    changes.apiUpdatedAt =
+  if(
+    changedKeys.length
+  ){
+    changes.apiUpdatedAt=
       Timestamp.fromDate(
         new Date()
       );
@@ -1317,83 +955,57 @@ function buildChangedFields(
   };
 }
 
-function resultWasChanged(
-  changedKeys
-) {
-  return (
-    changedKeys.includes(
-      "result"
-    ) ||
-    changedKeys.includes(
-      "outcome"
-    )
-  );
-}
-
 function buildExistingPlans(
-  mappedEvents,
+  mapped,
   existingMatches
-) {
-  const byExternalId =
+){
+  const byId=
     indexExistingMatches(
       existingMatches
     );
 
-  const plans = [];
+  const plans=[];
 
-  for (
-    const event of
-      mappedEvents
-  ) {
-    if (
+  for(
+    const event of mapped
+  ){
+    if(
       !event.startDate ||
       !Number.isFinite(
         event.round
       )
-    ) {
+    ){
       continue;
     }
 
-    const existing =
+    const existing=
       findExistingMatch(
         event,
         existingMatches,
-        byExternalId
+        byId
       );
 
-    if (!existing) {
+    if(!existing){
       continue;
     }
-
-    const desired =
-      buildDesiredData(
-        event,
-        existing
-      );
 
     const {
       changes,
       changedKeys
-    } =
+    }=
       buildChangedFields(
         existing,
-        desired
+        buildDesiredData(
+          event,
+          existing
+        )
       );
 
     plans.push({
       event,
       existing,
       changes,
-      changedKeys,
-
-      linkedBy:
-        String(
-          existing.externalEventId ||
-            ""
-        ) ===
-        event.externalEventId
-          ? "event-id"
-          : "teams"
+      changedKeys
     });
   }
 
@@ -1402,326 +1014,100 @@ function buildExistingPlans(
 
 function buildNewMatches(
   targetRound,
-  groupedEvents,
+  grouped,
   existingMatches
-) {
-  if (
+){
+  if(
     !Number.isFinite(
       targetRound
     )
-  ) {
+  ){
     return [];
   }
 
-  const byExternalId =
+  const byId=
     indexExistingMatches(
       existingMatches
     );
 
   return (
-    groupedEvents.get(
+    grouped.get(
       targetRound
-    ) || []
+    )||[]
   ).filter(
-    event =>
+    e=>
       !findExistingMatch(
-        event,
+        e,
         existingMatches,
-        byExternalId
+        byId
       )
   );
 }
 
-function printPreview({
-  mappedEvents,
-  existingPlans,
-  newMatches,
-  targetRound,
-  targetReason
-}) {
-  const unknownTeams =
-    mappedEvents.filter(
-      event =>
-        !event.homeTeam ||
-        !event.awayTeam
-    );
-
-  const changedPlans =
-    existingPlans.filter(
-      plan =>
-        plan.changedKeys
-          .length > 0
-    );
-
-  const unchangedPlans =
-    existingPlans.filter(
-      plan =>
-        plan.changedKeys
-          .length === 0
-    );
-
-  console.log("");
-
-  console.log(
-    "NB I szinkron – előnézet"
-  );
-
-  console.log(
-    "======================="
-  );
-
-  console.log(
-    `Üzemmód: ${
-      DRY_RUN
-        ? "ELŐNÉZET, nincs Firestore-írás"
-        : "ÉLES ÍRÁS"
-    }`
-  );
-
-  console.log(
-    `Vizsgált időszak: ma - ${LOOKBACK_DAYS} nap / ma + ${LOOKAHEAD_DAYS} nap`
-  );
-
-  console.log(
-    `Újonnan publikálható forduló: ${
-      targetRound ??
-      "nincs"
-    }`
-  );
-
-  console.log(
-    `Döntés oka: ${targetReason}`
-  );
-
-  if (
-    targetRound ===
-      null &&
-    /fordulóból még nem érhető el mind/i.test(
-      targetReason
+function resultWasChanged(keys){
+  return (
+    keys.includes(
+      "result"
+    ) ||
+    keys.includes(
+      "outcome"
     )
-  ) {
-    const match =
-      targetReason.match(
-        /A (\d+)\. fordulóból/
-      );
-
-    const missingRound =
-      match
-        ? Number.parseInt(
-            match[1],
-            10
-          )
-        : null;
-
-    if (
-      Number.isFinite(
-        missingRound
-      )
-    ) {
-      const seen =
-        mappedEvents.filter(
-          event =>
-            event.round ===
-            missingRound
-        );
-
-      console.log("");
-
-      console.log(
-        `${missingRound}. forduló API-ból látott meccsei (${seen.length}/${MATCHES_PER_ROUND}):`
-      );
-
-      if (
-        !seen.length
-      ) {
-        console.log(
-          "- Egyetlen meccs sem érkezett."
-        );
-      }
-
-      for (
-        const event of
-          seen
-      ) {
-        console.log(
-          `- ${event.externalHomeTeam || "?"} – ` +
-          `${event.externalAwayTeam || "?"} | ` +
-          `${formatLocalDate(event.startDate)} | ` +
-          `Event ID: ${event.externalEventId}`
-        );
-      }
-    }
-  }
-
-  console.log("");
-
-  console.log(
-    "Ténylegesen módosítandó meglévő meccsek:"
-  );
-
-  if (
-    changedPlans.length ===
-    0
-  ) {
-    console.log(
-      "- Nincs módosítandó meglévő meccs."
-    );
-  }
-
-  for (
-    const plan of
-      changedPlans
-  ) {
-    const event =
-      plan.event;
-
-    const resultText =
-      event.finalResult
-        ? ` | eredmény: ${event.finalResult.result}`
-        : "";
-
-    console.log(
-      `[MÓDOSÍTÁS] ${event.round}. forduló | ` +
-      `${event.homeTeam || event.externalHomeTeam} – ` +
-      `${event.awayTeam || event.externalAwayTeam} | ` +
-      `mezők: ${plan.changedKeys.join(", ")} | ` +
-      `Event ID: ${event.externalEventId} | ` +
-      `státusz: ${event.apiStatus || "-"}${resultText}`
-    );
-  }
-
-  console.log("");
-
-  console.log(
-    "Újonnan létrehozandó meccsek:"
-  );
-
-  if (
-    newMatches.length ===
-    0
-  ) {
-    console.log(
-      "- Nincs új meccs."
-    );
-  }
-
-  for (
-    const event of
-      newMatches
-  ) {
-    console.log(
-      `[ÚJ] ${event.round}. forduló | ` +
-      `${event.homeTeam} – ${event.awayTeam} | ` +
-      `${formatLocalDate(event.startDate)} | ` +
-      `Event ID: ${event.externalEventId} | ` +
-      `státusz: ${event.apiStatus || "-"}`
-    );
-  }
-
-  if (
-    unknownTeams.length >
-    0
-  ) {
-    console.log("");
-
-    console.log(
-      "Ismeretlen csapatnevek:"
-    );
-
-    for (
-      const event of
-        unknownTeams
-    ) {
-      console.log(
-        `- ${event.externalHomeTeam || "?"} – ` +
-        `${event.externalAwayTeam || "?"} ` +
-        `(Event ID: ${event.externalEventId})`
-      );
-    }
-  }
-
-  console.log("");
-
-  console.log(
-    `Módosítandó meglévő meccs: ${changedPlans.length}`
-  );
-
-  console.log(
-    `Változatlan meglévő meccs: ${unchangedPlans.length}`
-  );
-
-  console.log(
-    `Új meccs: ${newMatches.length}`
-  );
-
-  console.log(
-    `Ismeretlen csapat: ${unknownTeams.length}`
   );
 }
 
 function applyChangesToLocalMatch(
   existing,
   changes
-) {
-  for (
-    const [
-      key,
-      value
-    ] of Object.entries(
+){
+  for(
+    const [k,v]
+    of Object.entries(
       changes
     )
-  ) {
-    existing[key] =
-      value;
+  ){
+    existing[k]=v;
   }
 }
 
 async function executeExistingPlans(
   db,
   plans
-) {
-  let changedCount = 0;
-  let resultChanged =
-    false;
+){
+  let changedCount=0;
+  let resultChanged=false;
 
-  for (
-    const plan of plans
-  ) {
-    if (
-      plan.changedKeys
-        .length === 0
-    ) {
+  for(const p of plans){
+    if(
+      !p.changedKeys.length
+    ){
       continue;
     }
 
     await db
-      .collection(
-        "matches"
-      )
+      .collection("matches")
       .doc(
-        plan.existing.id
+        p.existing.id
       )
       .set(
-        plan.changes,
+        p.changes,
         {
-          merge: true
+          merge:true
         }
       );
 
     applyChangesToLocalMatch(
-      plan.existing,
-      plan.changes
+      p.existing,
+      p.changes
     );
 
-    changedCount += 1;
+    changedCount++;
 
-    if (
+    if(
       resultWasChanged(
-        plan.changedKeys
+        p.changedKeys
       )
-    ) {
-      resultChanged =
-        true;
+    ){
+      resultChanged=true;
     }
   }
 
@@ -1733,7 +1119,7 @@ async function executeExistingPlans(
 
 function buildNewMatchDocument(
   event
-) {
+){
   return {
     ...buildDesiredData(
       event,
@@ -1748,12 +1134,13 @@ function buildNewMatchDocument(
     createdAutomatically:
       true,
 
-    odds: {},
+    odds:{},
 
-    manualLocks: {
-      teams: false,
-      startTime: false,
-      result: false
+    manualLocks:{
+      teams:false,
+      startTime:false,
+      result:false,
+      postponed:false
     },
 
     apiUpdatedAt:
@@ -1767,58 +1154,52 @@ async function createNewMatches(
   db,
   newMatches,
   existingMatches
-) {
-  let createdCount = 0;
-  let resultChanged =
-    false;
+){
+  let createdCount=0;
+  let resultChanged=false;
 
-  for (
+  for(
     const event of
       newMatches
-  ) {
-    if (
+  ){
+    if(
       !event.homeTeam ||
       !event.awayTeam
-    ) {
+    ){
       throw new Error(
         `Ismeretlen csapat miatt nem hozható létre: ${event.externalEventId}`
       );
     }
 
-    const documentId =
+    const id=
       `tsdb_${event.externalEventId}`;
 
-    const data =
+    const data=
       buildNewMatchDocument(
         event
       );
 
     await db
-      .collection(
-        "matches"
-      )
-      .doc(
-        documentId
-      )
+      .collection("matches")
+      .doc(id)
       .set(
         data,
         {
-          merge: true
+          merge:true
         }
       );
 
     existingMatches.push({
-      id: documentId,
+      id,
       ...data
     });
 
-    createdCount += 1;
+    createdCount++;
 
-    if (
+    if(
       event.finalResult
-    ) {
-      resultChanged =
-        true;
+    ){
+      resultChanged=true;
     }
   }
 
@@ -1828,328 +1209,132 @@ async function createNewMatches(
   };
 }
 
-function parseResult(
-  value
-) {
-  const match =
-    String(value || "")
+function parseResult(v){
+  const m=
+    String(v||"")
       .match(
         /^\s*(\d+)\s*-\s*(\d+)\s*$/
       );
 
-  return match
+  return m
     ? [
-        Number.parseInt(
-          match[1],
-          10
-        ),
-        Number.parseInt(
-          match[2],
-          10
-        )
+        Number(m[1]),
+        Number(m[2])
       ]
     : null;
 }
 
-function computeStandingsFromMatches(
-  matches
-) {
-  const standings = {};
+function computeStandingsFromMatches(matches){
+  const st={};
 
-  for (
+  for(
     const team of TEAMS
-  ) {
-    standings[team] = {
+  ){
+    st[team]={
       team,
-      MP: 0,
-      W: 0,
-      D: 0,
-      L: 0,
-      GF: 0,
-      GA: 0,
-      GD: 0,
-      Pts: 0
+      MP:0,
+      W:0,
+      D:0,
+      L:0,
+      GF:0,
+      GA:0,
+      GD:0,
+      Pts:0
     };
   }
 
-  const headToHead = {};
-
-  for (
-    const match of
-      matches
-  ) {
-    const home =
-      match.homeTeam ||
-      match.home ||
+  for(
+    const m of matches
+  ){
+    const h=
+      m.homeTeam||
+      m.home||
       "";
 
-    const away =
-      match.awayTeam ||
-      match.away ||
+    const a=
+      m.awayTeam||
+      m.away||
       "";
 
-    const result =
+    const r=
       parseResult(
-        match.result
+        m.result
       );
 
-    const homeRow =
-      standings[home];
+    const H=st[h];
+    const A=st[a];
 
-    const awayRow =
-      standings[away];
-
-    if (
-      !homeRow ||
-      !awayRow ||
-      !result
-    ) {
+    if(
+      !H ||
+      !A ||
+      !r
+    ){
       continue;
     }
 
-    const [
-      homeGoals,
-      awayGoals
-    ] = result;
+    const [hg,ag]=r;
 
-    homeRow.MP += 1;
-    awayRow.MP += 1;
+    H.MP++;
+    A.MP++;
 
-    homeRow.GF +=
-      homeGoals;
+    H.GF+=hg;
+    H.GA+=ag;
 
-    homeRow.GA +=
-      awayGoals;
+    A.GF+=ag;
+    A.GA+=hg;
 
-    homeRow.GD =
-      homeRow.GF -
-      homeRow.GA;
+    H.GD=
+      H.GF-
+      H.GA;
 
-    awayRow.GF +=
-      awayGoals;
+    A.GD=
+      A.GF-
+      A.GA;
 
-    awayRow.GA +=
-      homeGoals;
-
-    awayRow.GD =
-      awayRow.GF -
-      awayRow.GA;
-
-    if (
-      homeGoals >
-      awayGoals
-    ) {
-      homeRow.W += 1;
-      awayRow.L += 1;
-      homeRow.Pts += 3;
-    } else if (
-      homeGoals <
-      awayGoals
-    ) {
-      awayRow.W += 1;
-      homeRow.L += 1;
-      awayRow.Pts += 3;
-    } else {
-      homeRow.D += 1;
-      awayRow.D += 1;
-      homeRow.Pts += 1;
-      awayRow.Pts += 1;
+    if(hg>ag){
+      H.W++;
+      A.L++;
+      H.Pts+=3;
+    }else if(hg<ag){
+      A.W++;
+      H.L++;
+      A.Pts+=3;
+    }else{
+      H.D++;
+      A.D++;
+      H.Pts++;
+      A.Pts++;
     }
-
-    const key =
-      [home, away]
-        .slice()
-        .sort(
-          (a, b) =>
-            a.localeCompare(
-              b,
-              "hu"
-            )
-        )
-        .join("|");
-
-    headToHead[key] ||= {
-      [home]: {
-        Pts: 0,
-        GF: 0,
-        GA: 0
-      },
-
-      [away]: {
-        Pts: 0,
-        GF: 0,
-        GA: 0
-      }
-    };
-
-    if (
-      homeGoals >
-      awayGoals
-    ) {
-      headToHead[key][
-        home
-      ].Pts += 3;
-    } else if (
-      homeGoals <
-      awayGoals
-    ) {
-      headToHead[key][
-        away
-      ].Pts += 3;
-    } else {
-      headToHead[key][
-        home
-      ].Pts += 1;
-
-      headToHead[key][
-        away
-      ].Pts += 1;
-    }
-
-    headToHead[key][
-      home
-    ].GF += homeGoals;
-
-    headToHead[key][
-      home
-    ].GA += awayGoals;
-
-    headToHead[key][
-      away
-    ].GF += awayGoals;
-
-    headToHead[key][
-      away
-    ].GA += homeGoals;
   }
 
-  function compare(
-    a,
-    b
-  ) {
-    if (
-      b.Pts !== a.Pts
-    ) {
-      return (
-        b.Pts -
-        a.Pts
-      );
-    }
-
-    if (
-      b.W !== a.W
-    ) {
-      return (
-        b.W -
-        a.W
-      );
-    }
-
-    if (
-      b.GD !== a.GD
-    ) {
-      return (
-        b.GD -
-        a.GD
-      );
-    }
-
-    if (
-      b.GF !== a.GF
-    ) {
-      return (
-        b.GF -
-        a.GF
-      );
-    }
-
-    const key =
-      [a.team, b.team]
-        .slice()
-        .sort(
-          (x, y) =>
-            x.localeCompare(
-              y,
-              "hu"
-            )
+  return Object
+    .values(st)
+    .sort(
+      (a,b)=>
+        b.Pts-a.Pts ||
+        b.W-a.W ||
+        b.GD-a.GD ||
+        b.GF-a.GF ||
+        a.team.localeCompare(
+          b.team,
+          "hu"
         )
-        .join("|");
-
-    const row =
-      headToHead[key];
-
-    if (row) {
-      const aPoints =
-        row[a.team]?.Pts ??
-        0;
-
-      const bPoints =
-        row[b.team]?.Pts ??
-        0;
-
-      if (
-        bPoints !==
-        aPoints
-      ) {
-        return (
-          bPoints -
-          aPoints
-        );
-      }
-
-      const aDiff =
-        (row[a.team]?.GF ??
-          0) -
-        (row[a.team]?.GA ??
-          0);
-
-      const bDiff =
-        (row[b.team]?.GF ??
-          0) -
-        (row[b.team]?.GA ??
-          0);
-
-      if (
-        bDiff !==
-        aDiff
-      ) {
-        return (
-          bDiff -
-          aDiff
-        );
-      }
-    }
-
-    return a.team.localeCompare(
-      b.team,
-      "hu"
     );
-  }
-
-  return Object.values(
-    standings
-  ).sort(compare);
 }
 
 async function publishTable(
   db,
   matches
-) {
-  const rows =
-    computeStandingsFromMatches(
-      matches
-    );
-
+){
   await db
-    .collection(
-      "computed"
-    )
-    .doc(
-      "nb1_table"
-    )
+    .collection("computed")
+    .doc("nb1_table")
     .set(
       {
-        rows,
+        rows:
+          computeStandingsFromMatches(
+            matches
+          ),
 
         updatedAt:
           Timestamp.fromDate(
@@ -2157,72 +1342,187 @@ async function publishTable(
           )
       },
       {
-        merge: true
+        merge:true
       }
     );
 }
 
-async function main() {
-  validateSettings();
+function printPreview({
+  mappedEvents,
+  existingPlans,
+  newMatches,
+  targetRound,
+  targetReason
+}){
+  const changed=
+    existingPlans.filter(
+      p=>
+        p.changedKeys.length
+    );
 
-  const serviceAccount =
-    parseServiceAccount();
+  const unchanged=
+    existingPlans.filter(
+      p=>
+        !p.changedKeys.length
+    );
+
+  console.log(
+    "\nNB I szinkron – előnézet\n======================="
+  );
+
+  console.log(
+    `Üzemmód: ${
+      DRY_RUN
+        ? "ELŐNÉZET, nincs Firestore-írás"
+        : "ÉLES ÍRÁS"
+    }`
+  );
+
+  console.log(
+    `Újonnan publikálható forduló: ${
+      targetRound ??
+      "nincs"
+    }`
+  );
+
+  console.log(
+    `Döntés oka: ${targetReason}`
+  );
+
+  console.log(
+    "\nTénylegesen módosítandó meglévő meccsek:"
+  );
+
+  if(
+    !changed.length
+  ){
+    console.log(
+      "- Nincs módosítandó meglévő meccs."
+    );
+  }
+
+  for(
+    const p of changed
+  ){
+    const e=
+      p.event;
+
+    const res=
+      e.finalResult
+        ? ` | eredmény: ${e.finalResult.result}`
+        : "";
+
+    console.log(
+      `[MÓDOSÍTÁS] ${e.round}. forduló | ` +
+      `${e.homeTeam||e.externalHomeTeam} – ` +
+      `${e.awayTeam||e.externalAwayTeam} | ` +
+      `mezők: ${p.changedKeys.join(", ")} | ` +
+      `Event ID: ${e.externalEventId} | ` +
+      `státusz: ${e.apiStatus||"-"}${res}`
+    );
+  }
+
+  console.log(
+    "\nÚjonnan létrehozandó meccsek:"
+  );
+
+  if(
+    !newMatches.length
+  ){
+    console.log(
+      "- Nincs új meccs."
+    );
+  }
+
+  for(
+    const e of newMatches
+  ){
+    console.log(
+      `[ÚJ] ${e.round}. forduló | ` +
+      `${e.homeTeam} – ${e.awayTeam} | ` +
+      `${formatLocalDate(e.startDate)} | ` +
+      `Event ID: ${e.externalEventId}`
+    );
+  }
+
+  const unknown=
+    mappedEvents.filter(
+      e=>
+        !e.homeTeam ||
+        !e.awayTeam
+    );
+
+  if(
+    unknown.length
+  ){
+    console.log(
+      "\nIsmeretlen csapatnevek:"
+    );
+
+    unknown.forEach(
+      e=>
+        console.log(
+          `- ${e.externalHomeTeam||"?"} – ` +
+          `${e.externalAwayTeam||"?"} ` +
+          `(${e.externalEventId})`
+        )
+    );
+  }
+
+  console.log(
+    `\nMódosítandó meglévő meccs: ${changed.length}`
+  );
+
+  console.log(
+    `Változatlan meglévő meccs: ${unchanged.length}`
+  );
+
+  console.log(
+    `Új meccs: ${newMatches.length}`
+  );
+
+  console.log(
+    `Ismeretlen csapat: ${unknown.length}`
+  );
+}
+
+async function main(){
+  validateSettings();
 
   initializeApp({
     credential:
       cert(
-        serviceAccount
+        parseServiceAccount()
       ),
 
     projectId:
       PROJECT_ID
   });
 
-  const db =
+  const db=
     getFirestore();
 
-  /*
-   * Firestore először,
-   * mert ebből tudjuk,
-   * melyik a jelenlegi és
-   * következő forduló.
-   */
-  const existingMatches =
+  const existingMatches=
     await loadExistingMatches(
       db
     );
 
-  /*
-   * API:
-   *
-   * eventsday = elsődleges,
-   * eventsround = csak fallback.
-   */
-  const apiEvents =
-    await fetchEventsWindow(
+  const apiEvents=
+    await fetchApiEvents(
       existingMatches
     );
 
-  const mappedEvents =
+  const mappedEvents=
     apiEvents.map(
       buildMappedEvent
     );
 
-  const groupedEvents =
+  const groupedEvents=
     groupEventsByRound(
       mappedEvents
     );
 
-  /*
-   * EZ MINDEN API-BÓL
-   * ELÉRHETŐ, MÁR MEGLÉVŐ
-   * MECCSET FRISSÍT.
-   *
-   * Az eredményfrissítés
-   * nincs összekötve az új
-   * forduló publikálásával.
-   */
-  const existingPlans =
+  const existingPlans=
     buildExistingPlans(
       mappedEvents,
       existingMatches
@@ -2230,15 +1530,14 @@ async function main() {
 
   const {
     targetRound,
-    reason:
-      targetReason
-  } =
+    reason:targetReason
+  }=
     selectRoundForCreation(
       groupedEvents,
       existingMatches
     );
 
-  const newMatches =
+  const newMatches=
     buildNewMatches(
       targetRound,
       groupedEvents,
@@ -2253,58 +1552,39 @@ async function main() {
     targetReason
   });
 
-  if (DRY_RUN) {
-    console.log("");
-
+  if(DRY_RUN){
     console.log(
-      "Nem történt Firestore-módosítás."
+      "\nNem történt Firestore-módosítás."
     );
-
     return;
   }
 
-  /*
-   * Először mindig a
-   * meglévő meccsek
-   * frissítése történik.
-   *
-   * Így az eredmények akkor
-   * is bekerülnek, ha új
-   * forduló még nem
-   * publikálható.
-   */
-  const existingResult =
+  const existingResult=
     await executeExistingPlans(
       db,
       existingPlans
     );
 
-  const newResult =
+  const newResult=
     await createNewMatches(
       db,
       newMatches,
       existingMatches
     );
 
-  const shouldRecomputeTable =
-    existingResult
-      .resultChanged ||
-    newResult
-      .resultChanged;
+  const recompute=
+    existingResult.resultChanged ||
+    newResult.resultChanged;
 
-  if (
-    shouldRecomputeTable
-  ) {
+  if(recompute){
     await publishTable(
       db,
       existingMatches
     );
   }
 
-  console.log("");
-
   console.log(
-    `${existingResult.changedCount} meglévő meccs ténylegesen módosítva.`
+    `\n${existingResult.changedCount} meglévő meccs ténylegesen módosítva.`
   );
 
   console.log(
@@ -2312,18 +1592,16 @@ async function main() {
   );
 
   console.log(
-    shouldRecomputeTable
+    recompute
       ? "Az NB I tabella újraszámítása megtörtént."
       : "Nem változott eredmény, ezért a tabellát nem kellett újraírni."
   );
 }
 
 main().catch(
-  error => {
-    console.error("");
-
+  error=>{
     console.error(
-      "SZINKRON HIBA:"
+      "\nSZINKRON HIBA:"
     );
 
     console.error(
@@ -2332,6 +1610,6 @@ main().catch(
       String(error)
     );
 
-    process.exitCode = 1;
+    process.exitCode=1;
   }
 );
