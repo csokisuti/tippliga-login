@@ -10,15 +10,19 @@ const LOOKBACK_DAYS = Number.parseInt(
   process.env.LOOKBACK_DAYS || "7",
   10
 );
+
 const LOOKAHEAD_DAYS = Number.parseInt(
   process.env.LOOKAHEAD_DAYS || "14",
   10
 );
+
 const RELEASE_DELAY_HOURS = Number.parseInt(
   process.env.RELEASE_DELAY_HOURS || "26",
   10
 );
-const DRY_RUN = process.env.DRY_RUN !== "false";
+
+const DRY_RUN =
+  process.env.DRY_RUN !== "false";
 
 const MATCHES_PER_ROUND = 6;
 
@@ -108,11 +112,17 @@ function normalizeText(value) {
 }
 
 function mapTeam(externalName) {
-  return TEAM_ALIASES[normalizeText(externalName)] || null;
+  return (
+    TEAM_ALIASES[
+      normalizeText(externalName)
+    ] || null
+  );
 }
 
 function parseServiceAccount() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw =
+    process.env
+      .FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (!raw) {
     throw new Error(
@@ -123,16 +133,22 @@ function parseServiceAccount() {
   let serviceAccount;
 
   try {
-    serviceAccount = JSON.parse(raw);
+    serviceAccount =
+      JSON.parse(raw);
   } catch {
     throw new Error(
       "A FIREBASE_SERVICE_ACCOUNT_JSON nem érvényes JSON."
     );
   }
 
-  if (serviceAccount.private_key) {
+  if (
+    serviceAccount.private_key
+  ) {
     serviceAccount.private_key =
-      serviceAccount.private_key.replace(/\\n/g, "\n");
+      serviceAccount.private_key.replace(
+        /\\n/g,
+        "\n"
+      );
   }
 
   return serviceAccount;
@@ -140,7 +156,9 @@ function parseServiceAccount() {
 
 function validateSettings() {
   if (
-    !Number.isFinite(LOOKBACK_DAYS) ||
+    !Number.isFinite(
+      LOOKBACK_DAYS
+    ) ||
     LOOKBACK_DAYS < 0 ||
     LOOKBACK_DAYS > 14
   ) {
@@ -150,7 +168,9 @@ function validateSettings() {
   }
 
   if (
-    !Number.isFinite(LOOKAHEAD_DAYS) ||
+    !Number.isFinite(
+      LOOKAHEAD_DAYS
+    ) ||
     LOOKAHEAD_DAYS < 1 ||
     LOOKAHEAD_DAYS > 28
   ) {
@@ -160,7 +180,10 @@ function validateSettings() {
   }
 
   if (
-    LOOKBACK_DAYS + LOOKAHEAD_DAYS + 1 > 30
+    LOOKBACK_DAYS +
+      LOOKAHEAD_DAYS +
+      1 >
+    30
   ) {
     throw new Error(
       "A vizsgált napok száma meghaladná a 30 lekéréses percenkénti keretet."
@@ -168,7 +191,9 @@ function validateSettings() {
   }
 
   if (
-    !Number.isFinite(RELEASE_DELAY_HOURS) ||
+    !Number.isFinite(
+      RELEASE_DELAY_HOURS
+    ) ||
     RELEASE_DELAY_HOURS < 0 ||
     RELEASE_DELAY_HOURS > 72
   ) {
@@ -178,34 +203,75 @@ function validateSettings() {
   }
 }
 
-function budapestDateString(date) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Budapest",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).formatToParts(date);
+function budapestDateString(
+  date
+) {
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone:
+          "Europe/Budapest",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }
+    ).formatToParts(date);
 
-  const values = Object.fromEntries(
-    parts
-      .filter(part => part.type !== "literal")
-      .map(part => [part.type, part.value])
+  const values =
+    Object.fromEntries(
+      parts
+        .filter(
+          part =>
+            part.type !==
+            "literal"
+        )
+        .map(
+          part => [
+            part.type,
+            part.value
+          ]
+        )
+    );
+
+  return (
+    `${values.year}-` +
+    `${values.month}-` +
+    `${values.day}`
   );
-
-  return `${values.year}-${values.month}-${values.day}`;
 }
 
-function addUtcDays(date, days) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
+function addUtcDays(
+  date,
+  days
+) {
+  const next =
+    new Date(date);
+
+  next.setUTCDate(
+    next.getUTCDate() +
+      days
+  );
+
   return next;
 }
 
-function eventStartDate(event) {
-  if (event.strTimestamp) {
-    const parsed = new Date(event.strTimestamp);
+function eventStartDate(
+  event
+) {
+  if (
+    event.strTimestamp
+  ) {
+    const parsed =
+      new Date(
+        event.strTimestamp
+      );
 
-    if (!Number.isNaN(parsed.getTime())) {
+    if (
+      !Number.isNaN(
+        parsed.getTime()
+      )
+    ) {
       return parsed;
     }
   }
@@ -213,6 +279,7 @@ function eventStartDate(event) {
   const localDate =
     event.dateEventLocal ||
     event.dateEvent;
+
   const localTime =
     event.strTimeLocal ||
     event.strTime ||
@@ -222,54 +289,93 @@ function eventStartDate(event) {
     return null;
   }
 
-  const parsed = new Date(
-    `${localDate}T${localTime}+02:00`
-  );
+  const parsed =
+    new Date(
+      `${localDate}T${localTime}+02:00`
+    );
 
-  return Number.isNaN(parsed.getTime())
+  return Number.isNaN(
+    parsed.getTime()
+  )
     ? null
     : parsed;
 }
 
-function eventRound(event) {
-  const value = Number.parseInt(
-    event.intRound,
-    10
-  );
+function eventRound(
+  event
+) {
+  const value =
+    Number.parseInt(
+      event.intRound,
+      10
+    );
 
-  return Number.isFinite(value)
+  return Number.isFinite(
+    value
+  )
     ? value
     : null;
 }
 
-function normalizedStatus(event) {
-  return String(event.strStatus || "")
+function normalizedStatus(
+  event
+) {
+  return String(
+    event.strStatus || ""
+  )
     .trim()
     .toUpperCase();
 }
 
-function hasFinalResult(event) {
-  const status = normalizedStatus(event);
+function hasFinalResult(
+  event
+) {
+  const status =
+    normalizedStatus(event);
 
   return (
-    RESULT_STATUSES.has(status) &&
-    event.intHomeScore !== null &&
-    event.intAwayScore !== null &&
-    Number.isFinite(Number(event.intHomeScore)) &&
-    Number.isFinite(Number(event.intAwayScore))
+    RESULT_STATUSES.has(
+      status
+    ) &&
+    event.intHomeScore !==
+      null &&
+    event.intAwayScore !==
+      null &&
+    Number.isFinite(
+      Number(
+        event.intHomeScore
+      )
+    ) &&
+    Number.isFinite(
+      Number(
+        event.intAwayScore
+      )
+    )
   );
 }
 
-function resultFromEvent(event) {
-  if (!hasFinalResult(event)) {
+function resultFromEvent(
+  event
+) {
+  if (
+    !hasFinalResult(event)
+  ) {
     return null;
   }
 
-  const home = Number(event.intHomeScore);
-  const away = Number(event.intAwayScore);
+  const home =
+    Number(
+      event.intHomeScore
+    );
+
+  const away =
+    Number(
+      event.intAwayScore
+    );
 
   return {
-    result: `${home}-${away}`,
+    result:
+      `${home}-${away}`,
     outcome:
       home > away
         ? "1"
@@ -279,19 +385,34 @@ function resultFromEvent(event) {
   };
 }
 
-async function fetchEventsForDate(dateString) {
-  const url = new URL(
-    `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsday.php`
+async function fetchEventsForDate(
+  dateString
+) {
+  const url =
+    new URL(
+      `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsday.php`
+    );
+
+  url.searchParams.set(
+    "d",
+    dateString
   );
 
-  url.searchParams.set("d", dateString);
-  url.searchParams.set("l", LEAGUE_ID);
+  url.searchParams.set(
+    "l",
+    LEAGUE_ID
+  );
 
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "NB1-TippLiga-Sync/2.0"
-    }
-  });
+  const response =
+    await fetch(
+      url,
+      {
+        headers: {
+          "User-Agent":
+            "NB1-TippLiga-Sync/2.2"
+        }
+      }
+    );
 
   if (!response.ok) {
     throw new Error(
@@ -299,27 +420,49 @@ async function fetchEventsForDate(dateString) {
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
-  return Array.isArray(data.events)
+  return Array.isArray(
+    data.events
+  )
     ? data.events
     : [];
 }
 
-async function fetchEventsForRound(round) {
-  const url = new URL(
-    `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsround.php`
+async function fetchEventsForRound(
+  round
+) {
+  const url =
+    new URL(
+      `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsround.php`
+    );
+
+  url.searchParams.set(
+    "id",
+    LEAGUE_ID
   );
 
-  url.searchParams.set("id", LEAGUE_ID);
-  url.searchParams.set("r", String(round));
-  url.searchParams.set("s", SEASON);
+  url.searchParams.set(
+    "r",
+    String(round)
+  );
 
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "NB1-TippLiga-Sync/2.1"
-    }
-  });
+  url.searchParams.set(
+    "s",
+    SEASON
+  );
+
+  const response =
+    await fetch(
+      url,
+      {
+        headers: {
+          "User-Agent":
+            "NB1-TippLiga-Sync/2.2"
+        }
+      }
+    );
 
   if (!response.ok) {
     throw new Error(
@@ -327,57 +470,148 @@ async function fetchEventsForRound(round) {
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
-  return Array.isArray(data.events)
+  return Array.isArray(
+    data.events
+  )
     ? data.events
     : [];
 }
 
-function addValidEventsToMap(byEventId, events) {
-  let added = 0;
+function isValidApiEvent(
+  event
+) {
+  return (
+    String(
+      event.idLeague || ""
+    ) === LEAGUE_ID &&
+    String(
+      event.strSeason || ""
+    ) === SEASON &&
+    !!event.idEvent
+  );
+}
 
-  for (const event of events) {
+/*
+ * FONTOS:
+ *
+ * A napi API az elsődleges.
+ *
+ * Ha overwrite = true:
+ *   a kapott esemény frissítheti
+ *   a már eltárolt API-adatot.
+ *
+ * Ha overwrite = false:
+ *   csak olyan eseményt ad hozzá,
+ *   amely még nincs benne.
+ *
+ * Így az eventsround fallback
+ * nem tudja felülírni az
+ * eventsday frissebb eredményét.
+ */
+function addValidEventsToMap(
+  byEventId,
+  events,
+  {
+    overwrite = true
+  } = {}
+) {
+  let added = 0;
+  let replaced = 0;
+  let skipped = 0;
+
+  for (
+    const event of events
+  ) {
     if (
-      String(event.idLeague || "") !== LEAGUE_ID ||
-      String(event.strSeason || "") !== SEASON ||
-      !event.idEvent
+      !isValidApiEvent(
+        event
+      )
     ) {
       continue;
     }
 
-    const key = String(event.idEvent);
+    const key =
+      String(
+        event.idEvent
+      );
 
-    if (!byEventId.has(key)) {
+    const alreadyExists =
+      byEventId.has(key);
+
+    if (
+      alreadyExists &&
+      !overwrite
+    ) {
+      skipped += 1;
+      continue;
+    }
+
+    if (
+      alreadyExists
+    ) {
+      replaced += 1;
+    } else {
       added += 1;
     }
 
-    byEventId.set(key, event);
+    byEventId.set(
+      key,
+      event
+    );
   }
 
-  return added;
+  return {
+    added,
+    replaced,
+    skipped
+  };
 }
 
-async function fetchEventsWindow(existingMatches = []) {
-  const today = new Date();
-  const byEventId = new Map();
+async function fetchEventsWindow(
+  existingMatches = []
+) {
+  const today =
+    new Date();
 
+  const byEventId =
+    new Map();
+
+  /*
+   * 1. ELSŐDLEGES FORRÁS
+   *
+   * Napokra bontott lekérés.
+   * Ez szolgál eredmények és
+   * státuszok frissítésére is.
+   */
   for (
-    let offset = -LOOKBACK_DAYS;
-    offset <= LOOKAHEAD_DAYS;
+    let offset =
+      -LOOKBACK_DAYS;
+    offset <=
+      LOOKAHEAD_DAYS;
     offset += 1
   ) {
-    const dateString = budapestDateString(
-      addUtcDays(today, offset)
-    );
+    const dateString =
+      budapestDateString(
+        addUtcDays(
+          today,
+          offset
+        )
+      );
 
-    const events = await fetchEventsForDate(
-      dateString
-    );
+    const events =
+      await fetchEventsForDate(
+        dateString
+      );
 
     addValidEventsToMap(
       byEventId,
-      events
+      events,
+      {
+        overwrite: true
+      }
     );
   }
 
@@ -387,34 +621,56 @@ async function fetchEventsWindow(existingMatches = []) {
     );
 
   const roundsToCheck =
-    highestExistingRound === null
+    highestExistingRound ===
+    null
       ? [1, 2]
       : [
           highestExistingRound,
-          highestExistingRound + 1
+          highestExistingRound +
+            1
         ];
 
-  for (const round of roundsToCheck) {
+  /*
+   * 2. BIZTONSÁGI FORRÁS
+   *
+   * A forduló API csak azt
+   * pótolja, ami a napi
+   * lekérésből hiányzott.
+   *
+   * Meglévő Event ID-t SOHA
+   * nem ír felül.
+   */
+  for (
+    const round of
+      roundsToCheck
+  ) {
     try {
       const roundEvents =
         await fetchEventsForRound(
           round
         );
 
-      const added =
+      const result =
         addValidEventsToMap(
           byEventId,
-          roundEvents
+          roundEvents,
+          {
+            overwrite: false
+          }
         );
 
       console.log(
-        `TheSportsDB biztonsági körlekérés: ${round}. forduló | ` +
-        `${roundEvents.length} esemény | ${added} új esemény a napi lekéréshez képest.`
+        `TheSportsDB biztonsági körlekérés: ` +
+        `${round}. forduló | ` +
+        `${roundEvents.length} esemény | ` +
+        `${result.added} hiányzó esemény hozzáadva | ` +
+        `${result.skipped} már meglévő esemény érintetlenül hagyva.`
       );
     } catch (error) {
       console.warn(
         `Figyelmeztetés: a ${round}. forduló biztonsági lekérése nem sikerült:`,
-        error?.message || error
+        error?.message ||
+          error
       );
     }
   }
@@ -424,78 +680,140 @@ async function fetchEventsWindow(existingMatches = []) {
   );
 }
 
-function buildMappedEvent(event) {
+function buildMappedEvent(
+  event
+) {
   return {
-    externalEventId: String(event.idEvent),
-    externalSource: "thesportsdb",
+    externalEventId:
+      String(
+        event.idEvent
+      ),
+
+    externalSource:
+      "thesportsdb",
 
     externalHomeTeam:
-      event.strHomeTeam || "",
-    externalAwayTeam:
-      event.strAwayTeam || "",
+      event.strHomeTeam ||
+      "",
 
-    homeTeam: mapTeam(
-      event.strHomeTeam
-    ),
-    awayTeam: mapTeam(
-      event.strAwayTeam
-    ),
+    externalAwayTeam:
+      event.strAwayTeam ||
+      "",
+
+    homeTeam:
+      mapTeam(
+        event.strHomeTeam
+      ),
+
+    awayTeam:
+      mapTeam(
+        event.strAwayTeam
+      ),
 
     homeTeamExternalId:
       event.idHomeTeam
-        ? String(event.idHomeTeam)
-        : "",
-    awayTeamExternalId:
-      event.idAwayTeam
-        ? String(event.idAwayTeam)
+        ? String(
+            event.idHomeTeam
+          )
         : "",
 
-    startDate: eventStartDate(event),
-    round: eventRound(event),
-    apiStatus: normalizedStatus(event),
-    finalResult: resultFromEvent(event)
+    awayTeamExternalId:
+      event.idAwayTeam
+        ? String(
+            event.idAwayTeam
+          )
+        : "",
+
+    startDate:
+      eventStartDate(event),
+
+    round:
+      eventRound(event),
+
+    apiStatus:
+      normalizedStatus(
+        event
+      ),
+
+    finalResult:
+      resultFromEvent(
+        event
+      )
   };
 }
 
-function matchRound(match) {
-  const value = Number.parseInt(
-    match.roundId ??
-    match.round ??
-    "",
-    10
-  );
+function matchRound(
+  match
+) {
+  const value =
+    Number.parseInt(
+      match.roundId ??
+        match.round ??
+        "",
+      10
+    );
 
-  return Number.isFinite(value)
+  return Number.isFinite(
+    value
+  )
     ? value
     : null;
 }
 
-function sameInternalMatch(existing, event) {
+function sameInternalMatch(
+  existing,
+  event
+) {
   return (
-    normalizeText(existing.homeTeam) ===
-      normalizeText(event.homeTeam) &&
-    normalizeText(existing.awayTeam) ===
-      normalizeText(event.awayTeam) &&
-    matchRound(existing) === event.round
+    normalizeText(
+      existing.homeTeam
+    ) ===
+      normalizeText(
+        event.homeTeam
+      ) &&
+    normalizeText(
+      existing.awayTeam
+    ) ===
+      normalizeText(
+        event.awayTeam
+      ) &&
+    matchRound(
+      existing
+    ) === event.round
   );
 }
 
-async function loadExistingMatches(db) {
+async function loadExistingMatches(
+  db
+) {
   const snapshot =
-    await db.collection("matches").get();
+    await db
+      .collection(
+        "matches"
+      )
+      .get();
 
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
+  return snapshot.docs.map(
+    doc => ({
+      id: doc.id,
+      ...doc.data()
+    })
+  );
 }
 
-function groupEventsByRound(events) {
-  const grouped = new Map();
+function groupEventsByRound(
+  events
+) {
+  const grouped =
+    new Map();
 
-  for (const event of events) {
+  for (
+    const event of events
+  ) {
     if (
-      !Number.isFinite(event.round) ||
+      !Number.isFinite(
+        event.round
+      ) ||
       !event.startDate ||
       !event.homeTeam ||
       !event.awayTeam
@@ -503,29 +821,57 @@ function groupEventsByRound(events) {
       continue;
     }
 
-    if (!grouped.has(event.round)) {
-      grouped.set(event.round, []);
+    if (
+      !grouped.has(
+        event.round
+      )
+    ) {
+      grouped.set(
+        event.round,
+        []
+      );
     }
 
-    grouped.get(event.round).push(event);
+    grouped
+      .get(
+        event.round
+      )
+      .push(
+        event
+      );
   }
 
-  for (const matches of grouped.values()) {
+  for (
+    const matches of
+      grouped.values()
+  ) {
     matches.sort(
-      (a, b) => a.startDate - b.startDate
+      (a, b) =>
+        a.startDate -
+        b.startDate
     );
   }
 
   return grouped;
 }
 
-function indexExistingMatches(existingMatches) {
-  const byExternalId = new Map();
+function indexExistingMatches(
+  existingMatches
+) {
+  const byExternalId =
+    new Map();
 
-  for (const match of existingMatches) {
-    if (match.externalEventId) {
+  for (
+    const match of
+      existingMatches
+  ) {
+    if (
+      match.externalEventId
+    ) {
       byExternalId.set(
-        String(match.externalEventId),
+        String(
+          match.externalEventId
+        ),
         match
       );
     }
@@ -543,8 +889,12 @@ function findExistingMatch(
     byExternalId.get(
       event.externalEventId
     ) ||
-    existingMatches.find(match =>
-      sameInternalMatch(match, event)
+    existingMatches.find(
+      match =>
+        sameInternalMatch(
+          match,
+          event
+        )
     ) ||
     null
   );
@@ -553,12 +903,17 @@ function findExistingMatch(
 function getHighestExistingRound(
   existingMatches
 ) {
-  const rounds = existingMatches
-    .map(matchRound)
-    .filter(Number.isFinite);
+  const rounds =
+    existingMatches
+      .map(matchRound)
+      .filter(
+        Number.isFinite
+      );
 
   return rounds.length
-    ? Math.max(...rounds)
+    ? Math.max(
+        ...rounds
+      )
     : null;
 }
 
@@ -568,10 +923,11 @@ function isRoundComplete(
   return (
     roundEvents.length ===
       MATCHES_PER_ROUND &&
-    roundEvents.every(event =>
-      ROUND_RELEASE_STATUSES.has(
-        event.apiStatus
-      )
+    roundEvents.every(
+      event =>
+        ROUND_RELEASE_STATUSES.has(
+          event.apiStatus
+        )
     )
   );
 }
@@ -579,15 +935,20 @@ function isRoundComplete(
 function roundReleaseTime(
   roundEvents
 ) {
-  const latestStart = Math.max(
-    ...roundEvents.map(
-      event => event.startDate.getTime()
-    )
-  );
+  const latestStart =
+    Math.max(
+      ...roundEvents.map(
+        event =>
+          event.startDate.getTime()
+      )
+    );
 
   return new Date(
     latestStart +
-    RELEASE_DELAY_HOURS * 60 * 60 * 1000
+      RELEASE_DELAY_HOURS *
+        60 *
+        60 *
+        1000
   );
 }
 
@@ -595,30 +956,49 @@ function selectRoundForCreation(
   groupedEvents,
   existingMatches
 ) {
-  const now = Date.now();
+  const now =
+    Date.now();
+
   const highestExistingRound =
     getHighestExistingRound(
       existingMatches
     );
 
-  if (highestExistingRound === null) {
+  if (
+    highestExistingRound ===
+    null
+  ) {
     const firstAvailableRound =
-      Array.from(groupedEvents.entries())
-        .filter(([, events]) =>
-          events.length ===
-            MATCHES_PER_ROUND &&
-          events.some(event =>
-            event.startDate.getTime() >= now
-          )
+      Array.from(
+        groupedEvents.entries()
+      )
+        .filter(
+          ([, events]) =>
+            events.length ===
+              MATCHES_PER_ROUND &&
+            events.some(
+              event =>
+                event.startDate.getTime() >=
+                now
+            )
         )
-        .map(([round]) => round)
-        .sort((a, b) => a - b)[0] ??
+        .map(
+          ([round]) =>
+            round
+        )
+        .sort(
+          (a, b) =>
+            a - b
+        )[0] ??
       null;
 
     return {
-      targetRound: firstAvailableRound,
+      targetRound:
+        firstAvailableRound,
+
       reason:
-        firstAvailableRound === null
+        firstAvailableRound ===
+        null
           ? "Nincs teljes, közelgő forduló."
           : "Még nincs meccs a Firestore-ban."
     };
@@ -632,7 +1012,9 @@ function selectRoundForCreation(
   const existingCurrentRoundCount =
     existingMatches.filter(
       match =>
-        matchRound(match) ===
+        matchRound(
+          match
+        ) ===
         highestExistingRound
     ).length;
 
@@ -645,6 +1027,7 @@ function selectRoundForCreation(
     return {
       targetRound:
         highestExistingRound,
+
       reason:
         "A jelenlegi fordulóból hiányzik meccs a Firestore-ban."
     };
@@ -657,51 +1040,69 @@ function selectRoundForCreation(
   ) {
     return {
       targetRound: null,
+
       reason:
         "A jelenlegi forduló még nem zárult le."
     };
   }
 
-  const releaseAt = roundReleaseTime(
-    currentRoundEvents
-  );
+  const releaseAt =
+    roundReleaseTime(
+      currentRoundEvents
+    );
 
-  if (now < releaseAt.getTime()) {
+  if (
+    now <
+    releaseAt.getTime()
+  ) {
     return {
       targetRound: null,
+
       reason:
-        `A következő forduló csak ${formatLocalDate(releaseAt)} után jelenhet meg.`
+        `A következő forduló csak ${formatLocalDate(
+          releaseAt
+        )} után jelenhet meg.`
     };
   }
 
   const nextRound =
-    highestExistingRound + 1;
+    highestExistingRound +
+    1;
+
   const nextEvents =
-    groupedEvents.get(nextRound) || [];
+    groupedEvents.get(
+      nextRound
+    ) || [];
 
   if (
     nextEvents.length !==
-      MATCHES_PER_ROUND
+    MATCHES_PER_ROUND
   ) {
     return {
       targetRound: null,
+
       reason:
         `A ${nextRound}. fordulóból még nem érhető el mind a ${MATCHES_PER_ROUND} meccs.`
     };
   }
 
   return {
-    targetRound: nextRound,
+    targetRound:
+      nextRound,
+
     reason:
       "Az előző forduló lezárult, és letelt a megjelenési várakozás."
   };
 }
 
-function formatLocalDate(date) {
+function formatLocalDate(
+  date
+) {
   return new Intl.DateTimeFormat(
     "hu-HU",
     {
-      timeZone: "Europe/Budapest",
+      timeZone:
+        "Europe/Budapest",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -711,26 +1112,41 @@ function formatLocalDate(date) {
   ).format(date);
 }
 
-function timestampMillis(value) {
+function timestampMillis(
+  value
+) {
   if (!value) {
     return null;
   }
 
-  if (typeof value.toMillis === "function") {
+  if (
+    typeof value.toMillis ===
+    "function"
+  ) {
     return value.toMillis();
   }
 
-  if (typeof value.toDate === "function") {
-    return value.toDate().getTime();
+  if (
+    typeof value.toDate ===
+    "function"
+  ) {
+    return value
+      .toDate()
+      .getTime();
   }
 
-  if (value instanceof Date) {
+  if (
+    value instanceof Date
+  ) {
     return value.getTime();
   }
 
-  const parsed = new Date(value);
+  const parsed =
+    new Date(value);
 
-  return Number.isNaN(parsed.getTime())
+  return Number.isNaN(
+    parsed.getTime()
+  )
     ? null
     : parsed.getTime();
 }
@@ -741,24 +1157,35 @@ function valuesEqual(
 ) {
   if (
     currentValue &&
-    typeof currentValue.toMillis === "function"
+    typeof currentValue.toMillis ===
+      "function"
   ) {
     return (
       currentValue.toMillis() ===
-      timestampMillis(nextValue)
+      timestampMillis(
+        nextValue
+      )
     );
   }
 
-  if (nextValue instanceof Date) {
+  if (
+    nextValue instanceof Date
+  ) {
     return (
-      timestampMillis(currentValue) ===
+      timestampMillis(
+        currentValue
+      ) ===
       nextValue.getTime()
     );
   }
 
   return (
-    String(currentValue ?? "") ===
-    String(nextValue ?? "")
+    String(
+      currentValue ?? ""
+    ) ===
+    String(
+      nextValue ?? ""
+    )
   );
 }
 
@@ -767,45 +1194,68 @@ function buildDesiredData(
   existing
 ) {
   const locks =
-    existing?.manualLocks || {};
+    existing?.manualLocks ||
+    {};
 
   const desired = {
     externalSource:
       "thesportsdb",
+
     externalEventId:
       event.externalEventId,
+
     homeTeamExternalId:
       event.homeTeamExternalId,
+
     awayTeamExternalId:
       event.awayTeamExternalId,
+
     apiStatus:
       event.apiStatus,
-    apiManaged:
-      true,
-    published:
-      true,
+
+    apiManaged: true,
+
+    published: true,
+
     roundId:
-      String(event.round)
+      String(
+        event.round
+      )
   };
 
-  if (!locks.teams) {
+  if (
+    !locks.teams
+  ) {
     desired.homeTeam =
       event.homeTeam;
+
     desired.awayTeam =
       event.awayTeam;
   }
 
-  if (!locks.startTime) {
+  if (
+    !locks.startTime
+  ) {
     desired.startTime =
       event.startDate;
   }
 
+  /*
+   * Az eredmény frissítése
+   * független attól, hogy
+   * van-e publikálható új
+   * forduló.
+   *
+   * Ha a napi API kész
+   * eredményt ad, bekerül.
+   */
   if (
     event.finalResult &&
     !locks.result
   ) {
     desired.result =
       event.finalResult.result;
+
     desired.outcome =
       event.finalResult.outcome;
   }
@@ -821,8 +1271,12 @@ function buildChangedFields(
   const changedKeys = [];
 
   for (
-    const [key, nextValue]
-    of Object.entries(desired)
+    const [
+      key,
+      nextValue
+    ] of Object.entries(
+      desired
+    )
   ) {
     const currentValue =
       existing?.[key];
@@ -834,15 +1288,23 @@ function buildChangedFields(
       )
     ) {
       changes[key] =
-        nextValue instanceof Date
-          ? Timestamp.fromDate(nextValue)
+        nextValue instanceof
+        Date
+          ? Timestamp.fromDate(
+              nextValue
+            )
           : nextValue;
 
-      changedKeys.push(key);
+      changedKeys.push(
+        key
+      );
     }
   }
 
-  if (changedKeys.length > 0) {
+  if (
+    changedKeys.length >
+    0
+  ) {
     changes.apiUpdatedAt =
       Timestamp.fromDate(
         new Date()
@@ -859,8 +1321,12 @@ function resultWasChanged(
   changedKeys
 ) {
   return (
-    changedKeys.includes("result") ||
-    changedKeys.includes("outcome")
+    changedKeys.includes(
+      "result"
+    ) ||
+    changedKeys.includes(
+      "outcome"
+    )
   );
 }
 
@@ -872,12 +1338,18 @@ function buildExistingPlans(
     indexExistingMatches(
       existingMatches
     );
+
   const plans = [];
 
-  for (const event of mappedEvents) {
+  for (
+    const event of
+      mappedEvents
+  ) {
     if (
       !event.startDate ||
-      !Number.isFinite(event.round)
+      !Number.isFinite(
+        event.round
+      )
     ) {
       continue;
     }
@@ -902,19 +1374,24 @@ function buildExistingPlans(
     const {
       changes,
       changedKeys
-    } = buildChangedFields(
-      existing,
-      desired
-    );
+    } =
+      buildChangedFields(
+        existing,
+        desired
+      );
 
     plans.push({
       event,
       existing,
       changes,
       changedKeys,
+
       linkedBy:
-        String(existing.externalEventId || "") ===
-          event.externalEventId
+        String(
+          existing.externalEventId ||
+            ""
+        ) ===
+        event.externalEventId
           ? "event-id"
           : "teams"
     });
@@ -928,7 +1405,11 @@ function buildNewMatches(
   groupedEvents,
   existingMatches
 ) {
-  if (!Number.isFinite(targetRound)) {
+  if (
+    !Number.isFinite(
+      targetRound
+    )
+  ) {
     return [];
   }
 
@@ -938,15 +1419,17 @@ function buildNewMatches(
     );
 
   return (
-    groupedEvents.get(targetRound) || []
-  )
-    .filter(event =>
+    groupedEvents.get(
+      targetRound
+    ) || []
+  ).filter(
+    event =>
       !findExistingMatch(
         event,
         existingMatches,
         byExternalId
       )
-    );
+  );
 }
 
 function printPreview({
@@ -957,30 +1440,36 @@ function printPreview({
   targetReason
 }) {
   const unknownTeams =
-    mappedEvents.filter(event =>
-      !event.homeTeam ||
-      !event.awayTeam
+    mappedEvents.filter(
+      event =>
+        !event.homeTeam ||
+        !event.awayTeam
     );
 
   const changedPlans =
     existingPlans.filter(
       plan =>
-        plan.changedKeys.length > 0
+        plan.changedKeys
+          .length > 0
     );
 
   const unchangedPlans =
     existingPlans.filter(
       plan =>
-        plan.changedKeys.length === 0
+        plan.changedKeys
+          .length === 0
     );
 
   console.log("");
+
   console.log(
     "NB I szinkron – előnézet"
   );
+
   console.log(
     "======================="
   );
+
   console.log(
     `Üzemmód: ${
       DRY_RUN
@@ -988,20 +1477,25 @@ function printPreview({
         : "ÉLES ÍRÁS"
     }`
   );
+
   console.log(
     `Vizsgált időszak: ma - ${LOOKBACK_DAYS} nap / ma + ${LOOKAHEAD_DAYS} nap`
   );
+
   console.log(
     `Újonnan publikálható forduló: ${
-      targetRound ?? "nincs"
+      targetRound ??
+      "nincs"
     }`
   );
+
   console.log(
     `Döntés oka: ${targetReason}`
   );
 
   if (
-    targetRound === null &&
+    targetRound ===
+      null &&
     /fordulóból még nem érhető el mind/i.test(
       targetReason
     )
@@ -1032,38 +1526,55 @@ function printPreview({
         );
 
       console.log("");
+
       console.log(
         `${missingRound}. forduló API-ból látott meccsei (${seen.length}/${MATCHES_PER_ROUND}):`
       );
 
-      if (!seen.length) {
+      if (
+        !seen.length
+      ) {
         console.log(
           "- Egyetlen meccs sem érkezett."
         );
       }
 
-      for (const event of seen) {
+      for (
+        const event of
+          seen
+      ) {
         console.log(
-          `- ${event.externalHomeTeam || "?"} – ${event.externalAwayTeam || "?"} | ` +
-          `${formatLocalDate(event.startDate)} | Event ID: ${event.externalEventId}`
+          `- ${event.externalHomeTeam || "?"} – ` +
+          `${event.externalAwayTeam || "?"} | ` +
+          `${formatLocalDate(event.startDate)} | ` +
+          `Event ID: ${event.externalEventId}`
         );
       }
     }
   }
 
   console.log("");
+
   console.log(
     "Ténylegesen módosítandó meglévő meccsek:"
   );
 
-  if (changedPlans.length === 0) {
+  if (
+    changedPlans.length ===
+    0
+  ) {
     console.log(
       "- Nincs módosítandó meglévő meccs."
     );
   }
 
-  for (const plan of changedPlans) {
-    const event = plan.event;
+  for (
+    const plan of
+      changedPlans
+  ) {
+    const event =
+      plan.event;
+
     const resultText =
       event.finalResult
         ? ` | eredmény: ${event.finalResult.result}`
@@ -1080,17 +1591,24 @@ function printPreview({
   }
 
   console.log("");
+
   console.log(
     "Újonnan létrehozandó meccsek:"
   );
 
-  if (newMatches.length === 0) {
+  if (
+    newMatches.length ===
+    0
+  ) {
     console.log(
       "- Nincs új meccs."
     );
   }
 
-  for (const event of newMatches) {
+  for (
+    const event of
+      newMatches
+  ) {
     console.log(
       `[ÚJ] ${event.round}. forduló | ` +
       `${event.homeTeam} – ${event.awayTeam} | ` +
@@ -1100,13 +1618,20 @@ function printPreview({
     );
   }
 
-  if (unknownTeams.length > 0) {
+  if (
+    unknownTeams.length >
+    0
+  ) {
     console.log("");
+
     console.log(
       "Ismeretlen csapatnevek:"
     );
 
-    for (const event of unknownTeams) {
+    for (
+      const event of
+        unknownTeams
+    ) {
       console.log(
         `- ${event.externalHomeTeam || "?"} – ` +
         `${event.externalAwayTeam || "?"} ` +
@@ -1116,15 +1641,19 @@ function printPreview({
   }
 
   console.log("");
+
   console.log(
     `Módosítandó meglévő meccs: ${changedPlans.length}`
   );
+
   console.log(
     `Változatlan meglévő meccs: ${unchangedPlans.length}`
   );
+
   console.log(
     `Új meccs: ${newMatches.length}`
   );
+
   console.log(
     `Ismeretlen csapat: ${unknownTeams.length}`
   );
@@ -1135,10 +1664,15 @@ function applyChangesToLocalMatch(
   changes
 ) {
   for (
-    const [key, value]
-    of Object.entries(changes)
+    const [
+      key,
+      value
+    ] of Object.entries(
+      changes
+    )
   ) {
-    existing[key] = value;
+    existing[key] =
+      value;
   }
 }
 
@@ -1147,21 +1681,31 @@ async function executeExistingPlans(
   plans
 ) {
   let changedCount = 0;
-  let resultChanged = false;
+  let resultChanged =
+    false;
 
-  for (const plan of plans) {
+  for (
+    const plan of plans
+  ) {
     if (
-      plan.changedKeys.length === 0
+      plan.changedKeys
+        .length === 0
     ) {
       continue;
     }
 
     await db
-      .collection("matches")
-      .doc(plan.existing.id)
+      .collection(
+        "matches"
+      )
+      .doc(
+        plan.existing.id
+      )
       .set(
         plan.changes,
-        { merge: true }
+        {
+          merge: true
+        }
       );
 
     applyChangesToLocalMatch(
@@ -1176,7 +1720,8 @@ async function executeExistingPlans(
         plan.changedKeys
       )
     ) {
-      resultChanged = true;
+      resultChanged =
+        true;
     }
   }
 
@@ -1194,18 +1739,23 @@ function buildNewMatchDocument(
       event,
       null
     ),
+
     startTime:
       Timestamp.fromDate(
         event.startDate
       ),
+
     createdAutomatically:
       true,
+
     odds: {},
+
     manualLocks: {
       teams: false,
       startTime: false,
       result: false
     },
+
     apiUpdatedAt:
       Timestamp.fromDate(
         new Date()
@@ -1219,9 +1769,13 @@ async function createNewMatches(
   existingMatches
 ) {
   let createdCount = 0;
-  let resultChanged = false;
+  let resultChanged =
+    false;
 
-  for (const event of newMatches) {
+  for (
+    const event of
+      newMatches
+  ) {
     if (
       !event.homeTeam ||
       !event.awayTeam
@@ -1240,11 +1794,17 @@ async function createNewMatches(
       );
 
     await db
-      .collection("matches")
-      .doc(documentId)
+      .collection(
+        "matches"
+      )
+      .doc(
+        documentId
+      )
       .set(
         data,
-        { merge: true }
+        {
+          merge: true
+        }
       );
 
     existingMatches.push({
@@ -1254,8 +1814,11 @@ async function createNewMatches(
 
     createdCount += 1;
 
-    if (event.finalResult) {
-      resultChanged = true;
+    if (
+      event.finalResult
+    ) {
+      resultChanged =
+        true;
     }
   }
 
@@ -1265,16 +1828,25 @@ async function createNewMatches(
   };
 }
 
-function parseResult(value) {
-  const match = String(value || "")
-    .match(
-      /^\s*(\d+)\s*-\s*(\d+)\s*$/
-    );
+function parseResult(
+  value
+) {
+  const match =
+    String(value || "")
+      .match(
+        /^\s*(\d+)\s*-\s*(\d+)\s*$/
+      );
 
   return match
     ? [
-        Number.parseInt(match[1], 10),
-        Number.parseInt(match[2], 10)
+        Number.parseInt(
+          match[1],
+          10
+        ),
+        Number.parseInt(
+          match[2],
+          10
+        )
       ]
     : null;
 }
@@ -1284,7 +1856,9 @@ function computeStandingsFromMatches(
 ) {
   const standings = {};
 
-  for (const team of TEAMS) {
+  for (
+    const team of TEAMS
+  ) {
     standings[team] = {
       team,
       MP: 0,
@@ -1300,20 +1874,28 @@ function computeStandingsFromMatches(
 
   const headToHead = {};
 
-  for (const match of matches) {
+  for (
+    const match of
+      matches
+  ) {
     const home =
       match.homeTeam ||
       match.home ||
       "";
+
     const away =
       match.awayTeam ||
       match.away ||
       "";
+
     const result =
-      parseResult(match.result);
+      parseResult(
+        match.result
+      );
 
     const homeRow =
       standings[home];
+
     const awayRow =
       standings[away];
 
@@ -1325,28 +1907,44 @@ function computeStandingsFromMatches(
       continue;
     }
 
-    const [homeGoals, awayGoals] =
-      result;
+    const [
+      homeGoals,
+      awayGoals
+    ] = result;
 
     homeRow.MP += 1;
     awayRow.MP += 1;
 
-    homeRow.GF += homeGoals;
-    homeRow.GA += awayGoals;
+    homeRow.GF +=
+      homeGoals;
+
+    homeRow.GA +=
+      awayGoals;
+
     homeRow.GD =
-      homeRow.GF - homeRow.GA;
+      homeRow.GF -
+      homeRow.GA;
 
-    awayRow.GF += awayGoals;
-    awayRow.GA += homeGoals;
+    awayRow.GF +=
+      awayGoals;
+
+    awayRow.GA +=
+      homeGoals;
+
     awayRow.GD =
-      awayRow.GF - awayRow.GA;
+      awayRow.GF -
+      awayRow.GA;
 
-    if (homeGoals > awayGoals) {
+    if (
+      homeGoals >
+      awayGoals
+    ) {
       homeRow.W += 1;
       awayRow.L += 1;
       homeRow.Pts += 3;
     } else if (
-      homeGoals < awayGoals
+      homeGoals <
+      awayGoals
     ) {
       awayRow.W += 1;
       homeRow.L += 1;
@@ -1358,12 +1956,17 @@ function computeStandingsFromMatches(
       awayRow.Pts += 1;
     }
 
-    const key = [home, away]
-      .slice()
-      .sort((a, b) =>
-        a.localeCompare(b, "hu")
-      )
-      .join("|");
+    const key =
+      [home, away]
+        .slice()
+        .sort(
+          (a, b) =>
+            a.localeCompare(
+              b,
+              "hu"
+            )
+        )
+        .join("|");
 
     headToHead[key] ||= {
       [home]: {
@@ -1371,6 +1974,7 @@ function computeStandingsFromMatches(
         GF: 0,
         GA: 0
       },
+
       [away]: {
         Pts: 0,
         GF: 0,
@@ -1378,73 +1982,141 @@ function computeStandingsFromMatches(
       }
     };
 
-    if (homeGoals > awayGoals) {
-      headToHead[key][home].Pts += 3;
-    } else if (
-      homeGoals < awayGoals
+    if (
+      homeGoals >
+      awayGoals
     ) {
-      headToHead[key][away].Pts += 3;
+      headToHead[key][
+        home
+      ].Pts += 3;
+    } else if (
+      homeGoals <
+      awayGoals
+    ) {
+      headToHead[key][
+        away
+      ].Pts += 3;
     } else {
-      headToHead[key][home].Pts += 1;
-      headToHead[key][away].Pts += 1;
+      headToHead[key][
+        home
+      ].Pts += 1;
+
+      headToHead[key][
+        away
+      ].Pts += 1;
     }
 
-    headToHead[key][home].GF +=
-      homeGoals;
-    headToHead[key][home].GA +=
-      awayGoals;
+    headToHead[key][
+      home
+    ].GF += homeGoals;
 
-    headToHead[key][away].GF +=
-      awayGoals;
-    headToHead[key][away].GA +=
-      homeGoals;
+    headToHead[key][
+      home
+    ].GA += awayGoals;
+
+    headToHead[key][
+      away
+    ].GF += awayGoals;
+
+    headToHead[key][
+      away
+    ].GA += homeGoals;
   }
 
-  function compare(a, b) {
-    if (b.Pts !== a.Pts) {
-      return b.Pts - a.Pts;
+  function compare(
+    a,
+    b
+  ) {
+    if (
+      b.Pts !== a.Pts
+    ) {
+      return (
+        b.Pts -
+        a.Pts
+      );
     }
 
-    if (b.W !== a.W) {
-      return b.W - a.W;
+    if (
+      b.W !== a.W
+    ) {
+      return (
+        b.W -
+        a.W
+      );
     }
 
-    if (b.GD !== a.GD) {
-      return b.GD - a.GD;
+    if (
+      b.GD !== a.GD
+    ) {
+      return (
+        b.GD -
+        a.GD
+      );
     }
 
-    if (b.GF !== a.GF) {
-      return b.GF - a.GF;
+    if (
+      b.GF !== a.GF
+    ) {
+      return (
+        b.GF -
+        a.GF
+      );
     }
 
-    const key = [a.team, b.team]
-      .slice()
-      .sort((x, y) =>
-        x.localeCompare(y, "hu")
-      )
-      .join("|");
+    const key =
+      [a.team, b.team]
+        .slice()
+        .sort(
+          (x, y) =>
+            x.localeCompare(
+              y,
+              "hu"
+            )
+        )
+        .join("|");
 
-    const row = headToHead[key];
+    const row =
+      headToHead[key];
 
     if (row) {
       const aPoints =
-        row[a.team]?.Pts ?? 0;
-      const bPoints =
-        row[b.team]?.Pts ?? 0;
+        row[a.team]?.Pts ??
+        0;
 
-      if (bPoints !== aPoints) {
-        return bPoints - aPoints;
+      const bPoints =
+        row[b.team]?.Pts ??
+        0;
+
+      if (
+        bPoints !==
+        aPoints
+      ) {
+        return (
+          bPoints -
+          aPoints
+        );
       }
 
       const aDiff =
-        (row[a.team]?.GF ?? 0) -
-        (row[a.team]?.GA ?? 0);
-      const bDiff =
-        (row[b.team]?.GF ?? 0) -
-        (row[b.team]?.GA ?? 0);
+        (row[a.team]?.GF ??
+          0) -
+        (row[a.team]?.GA ??
+          0);
 
-      if (bDiff !== aDiff) {
-        return bDiff - aDiff;
+      const bDiff =
+        (row[b.team]?.GF ??
+          0) -
+        (row[b.team]?.GA ??
+          0);
+
+      if (
+        bDiff !==
+        aDiff
+      ) {
+        return (
+          bDiff -
+          aDiff
+        );
       }
     }
 
@@ -1469,17 +2141,24 @@ async function publishTable(
     );
 
   await db
-    .collection("computed")
-    .doc("nb1_table")
+    .collection(
+      "computed"
+    )
+    .doc(
+      "nb1_table"
+    )
     .set(
       {
         rows,
+
         updatedAt:
           Timestamp.fromDate(
             new Date()
           )
       },
-      { merge: true }
+      {
+        merge: true
+      }
     );
 }
 
@@ -1491,16 +2170,34 @@ async function main() {
 
   initializeApp({
     credential:
-      cert(serviceAccount),
+      cert(
+        serviceAccount
+      ),
+
     projectId:
       PROJECT_ID
   });
 
-  const db = getFirestore();
+  const db =
+    getFirestore();
 
+  /*
+   * Firestore először,
+   * mert ebből tudjuk,
+   * melyik a jelenlegi és
+   * következő forduló.
+   */
   const existingMatches =
-    await loadExistingMatches(db);
+    await loadExistingMatches(
+      db
+    );
 
+  /*
+   * API:
+   *
+   * eventsday = elsődleges,
+   * eventsround = csak fallback.
+   */
   const apiEvents =
     await fetchEventsWindow(
       existingMatches
@@ -1516,6 +2213,15 @@ async function main() {
       mappedEvents
     );
 
+  /*
+   * EZ MINDEN API-BÓL
+   * ELÉRHETŐ, MÁR MEGLÉVŐ
+   * MECCSET FRISSÍT.
+   *
+   * Az eredményfrissítés
+   * nincs összekötve az új
+   * forduló publikálásával.
+   */
   const existingPlans =
     buildExistingPlans(
       mappedEvents,
@@ -1524,11 +2230,13 @@ async function main() {
 
   const {
     targetRound,
-    reason: targetReason
-  } = selectRoundForCreation(
-    groupedEvents,
-    existingMatches
-  );
+    reason:
+      targetReason
+  } =
+    selectRoundForCreation(
+      groupedEvents,
+      existingMatches
+    );
 
   const newMatches =
     buildNewMatches(
@@ -1547,12 +2255,24 @@ async function main() {
 
   if (DRY_RUN) {
     console.log("");
+
     console.log(
       "Nem történt Firestore-módosítás."
     );
+
     return;
   }
 
+  /*
+   * Először mindig a
+   * meglévő meccsek
+   * frissítése történik.
+   *
+   * Így az eredmények akkor
+   * is bekerülnek, ha új
+   * forduló még nem
+   * publikálható.
+   */
   const existingResult =
     await executeExistingPlans(
       db,
@@ -1567,10 +2287,14 @@ async function main() {
     );
 
   const shouldRecomputeTable =
-    existingResult.resultChanged ||
-    newResult.resultChanged;
+    existingResult
+      .resultChanged ||
+    newResult
+      .resultChanged;
 
-  if (shouldRecomputeTable) {
+  if (
+    shouldRecomputeTable
+  ) {
     await publishTable(
       db,
       existingMatches
@@ -1578,12 +2302,15 @@ async function main() {
   }
 
   console.log("");
+
   console.log(
     `${existingResult.changedCount} meglévő meccs ténylegesen módosítva.`
   );
+
   console.log(
     `${newResult.createdCount} új meccs létrehozva.`
   );
+
   console.log(
     shouldRecomputeTable
       ? "Az NB I tabella újraszámítása megtörtént."
@@ -1591,15 +2318,20 @@ async function main() {
   );
 }
 
-main().catch(error => {
-  console.error("");
-  console.error(
-    "SZINKRON HIBA:"
-  );
-  console.error(
-    error?.stack ||
-    error?.message ||
-    String(error)
-  );
-  process.exitCode = 1;
-});
+main().catch(
+  error => {
+    console.error("");
+
+    console.error(
+      "SZINKRON HIBA:"
+    );
+
+    console.error(
+      error?.stack ||
+      error?.message ||
+      String(error)
+    );
+
+    process.exitCode = 1;
+  }
+);
