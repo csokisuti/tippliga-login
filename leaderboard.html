@@ -590,36 +590,46 @@
       .link-btn{ padding:5px 9px; }
     }
 
-    /* Mobil menü: a results.html kártyáinak megjelenése,
-       a leaderboard táblázat szabályainak módosítása nélkül */
+    /* Mobil navigáció:
+       a results.html viewport nélküli mobilmegjelenését emulálja,
+       miközben a leaderboard táblázata valódi mobil viewporton marad. */
+    .results-nav-mobile-shell{ width:100%; }
+
     @media (max-width:820px){
-      .nav-card{
+      .results-nav-mobile-shell{
+        position:relative;
+        width:100vw;
+        margin-left:calc((100% - 100vw) / 2);
+        overflow:hidden;
+        box-sizing:border-box;
+      }
+
+      .results-nav-mobile-shell .nav-grid{
+        width:940px;
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:14px;
+        transform-origin:top left;
+      }
+
+      .results-nav-mobile-shell .nav-card{
         gap:12px;
         align-items:center;
         padding:14px;
         min-width:initial;
       }
 
-      .nav-card .icon-wrap{
+      .results-nav-mobile-shell .nav-card .icon-wrap{
         width:42px;
         height:42px;
         flex:0 1 auto;
       }
 
-      .nav-card .text{
-        min-width:auto;
+      .results-nav-mobile-shell .nav-card .text{
+        min-width:initial;
       }
 
-      .nav-card .title{
-        display:block;
-        overflow:visible;
-        overflow-wrap:normal;
-        word-break:normal;
-        -webkit-line-clamp:unset;
-        -webkit-box-orient:initial;
-      }
-
-      .nav-card .desc{
+      .results-nav-mobile-shell .nav-card .title,
+      .results-nav-mobile-shell .nav-card .desc{
         display:block;
         overflow:visible;
         overflow-wrap:normal;
@@ -3013,7 +3023,8 @@
       </div>
     </div>
 
-    <nav class="nav-grid">
+    <div class="results-nav-mobile-shell">
+<nav class="nav-grid">
       <a
         class="nav-card"
         href="dashboard.html"
@@ -3225,6 +3236,7 @@
         </div>
       </a>
     </nav>
+</div>
 
     <section class="card">
       <div class="subhdr">
@@ -3421,5 +3433,51 @@
     src="loader.js"
     defer
   ></script>
+
+  <script>
+    (() => {
+      const shell = document.querySelector('.results-nav-mobile-shell');
+      const nav = shell?.querySelector('.nav-grid');
+      if (!shell || !nav) return;
+
+      const RESULTS_LAYOUT_VIEWPORT = 980;
+      const RESULTS_LAYOUT_PADDING = 20;
+      const RESULTS_NAV_WIDTH =
+        RESULTS_LAYOUT_VIEWPORT - RESULTS_LAYOUT_PADDING * 2;
+
+      function syncResultsLikeMobileNav(){
+        if (window.innerWidth <= 820){
+          const scale = window.innerWidth / RESULTS_LAYOUT_VIEWPORT;
+
+          nav.style.width = RESULTS_NAV_WIDTH + 'px';
+          nav.style.transform = `scale(${scale})`;
+
+          shell.style.paddingLeft =
+            (RESULTS_LAYOUT_PADDING * scale) + 'px';
+
+          shell.style.height =
+            (nav.offsetHeight * scale) + 'px';
+        } else {
+          nav.style.width = '';
+          nav.style.transform = '';
+          shell.style.paddingLeft = '';
+          shell.style.height = '';
+        }
+      }
+
+      syncResultsLikeMobileNav();
+
+      window.addEventListener(
+        'resize',
+        syncResultsLikeMobileNav,
+        { passive:true }
+      );
+
+      if ('ResizeObserver' in window){
+        new ResizeObserver(syncResultsLikeMobileNav).observe(nav);
+      }
+    })();
+  </script>
+
 </body>
 </html>
