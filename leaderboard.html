@@ -598,17 +598,19 @@
     @media (max-width:820px){
       .results-nav-mobile-shell{
         position:relative;
-        width:100vw;
-        margin-left:calc((100% - 100vw) / 2);
+        width:100%;
+        max-width:100%;
         overflow:hidden;
         box-sizing:border-box;
       }
 
       .results-nav-mobile-shell .nav-grid{
         width:940px;
+        max-width:none;
         grid-template-columns:repeat(3,minmax(0,1fr));
         gap:14px;
         transform-origin:top left;
+        margin:0;
       }
 
       .results-nav-mobile-shell .nav-card{
@@ -3023,7 +3025,7 @@
       </div>
     </div>
 
-    <div class="results-nav-mobile-shell">
+    <div class="results-nav-mobile-shell" aria-label="Fő navigáció results-szerű mobil nézettel">
 <nav class="nav-grid">
       <a
         class="nav-card"
@@ -3447,19 +3449,20 @@
 
       function syncResultsLikeMobileNav(){
         if (window.innerWidth <= 820){
-          const scale = window.innerWidth / RESULTS_LAYOUT_VIEWPORT;
+          const availableWidth = shell.clientWidth || shell.getBoundingClientRect().width || window.innerWidth;
+          const scale = availableWidth / RESULTS_NAV_WIDTH;
 
           nav.style.width = RESULTS_NAV_WIDTH + 'px';
           nav.style.transform = `scale(${scale})`;
+          nav.style.marginLeft = '0';
 
-          shell.style.paddingLeft =
-            (RESULTS_LAYOUT_PADDING * scale) + 'px';
-
+          shell.style.paddingLeft = '0';
           shell.style.height =
-            (nav.offsetHeight * scale) + 'px';
+            Math.ceil(nav.scrollHeight * scale) + 'px';
         } else {
           nav.style.width = '';
           nav.style.transform = '';
+          nav.style.marginLeft = '';
           shell.style.paddingLeft = '';
           shell.style.height = '';
         }
@@ -3474,7 +3477,9 @@
       );
 
       if ('ResizeObserver' in window){
-        new ResizeObserver(syncResultsLikeMobileNav).observe(nav);
+        const ro = new ResizeObserver(() => syncResultsLikeMobileNav());
+        ro.observe(nav);
+        ro.observe(shell);
       }
     })();
   </script>
