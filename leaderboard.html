@@ -590,6 +590,45 @@
       .link-btn{ padding:5px 9px; }
     }
 
+    /* Mobil menü: a results.html kártyáinak megjelenése,
+       a leaderboard táblázat szabályainak módosítása nélkül */
+    @media (max-width:820px){
+      .nav-card{
+        gap:12px;
+        align-items:center;
+        padding:14px;
+        min-width:initial;
+      }
+
+      .nav-card .icon-wrap{
+        width:42px;
+        height:42px;
+        flex:0 1 auto;
+      }
+
+      .nav-card .text{
+        min-width:auto;
+      }
+
+      .nav-card .title{
+        display:block;
+        overflow:visible;
+        overflow-wrap:normal;
+        word-break:normal;
+        -webkit-line-clamp:unset;
+        -webkit-box-orient:initial;
+      }
+
+      .nav-card .desc{
+        display:block;
+        overflow:visible;
+        overflow-wrap:normal;
+        word-break:normal;
+        -webkit-line-clamp:unset;
+        -webkit-box-orient:initial;
+      }
+    }
+
     @media (pointer:coarse){
       .btn,.link-btn,#chatSendBtn{ min-height:40px; }
     }
