@@ -599,6 +599,47 @@ async function loadUclBracketUiSettingAdmin() {
       return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
     }
 
+    function normalizedManualLocks(value){
+      const v=value||{};
+      return {
+        teams:!!v.teams,
+        startTime:!!v.startTime,
+        result:!!v.result,
+        postponed:!!v.postponed
+      };
+    }
+
+    function isApiLinkedMatch(match){
+      return !!(
+        match?.externalEventId ||
+        match?.apiMatchId ||
+        match?.externalSource ||
+        match?.createdAutomatically
+      );
+    }
+
+    function apiUpdatedText(value){
+      const d=value?.toDate?.();
+      return d ? d.toLocaleString('hu-HU') : '—';
+    }
+
+    function oddsFromMatchInputs(id){
+      const read=(key)=>{
+        const raw=(document.getElementById(`${key}-${id}`)?.value||'').trim().replace(',','.');
+        if(!raw) return null;
+        const n=Number(raw);
+        return Number.isFinite(n)&&n>0 ? n : null;
+      };
+      const o1=read('odds1');
+      const oX=read('oddsX');
+      const o2=read('odds2');
+      const odds={};
+      if(o1!=null) odds['1']=o1;
+      if(oX!=null) odds['X']=oX;
+      if(o2!=null) odds['2']=o2;
+      return odds;
+    }
+
     function toDayKey(value){
       const d = toDateSafe(value);
       if(!d) return 'nincs-idopont';
@@ -1240,98 +1281,371 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
     }
 
     function renderMatches(list){
-      const container = document.getElementById('matchesList');
+      const container=document.getElementById('matchesList');
       if(!container) return;
-      container.innerHTML = '';
-      if(list.length===0){ container.innerHTML = '<div class="muted">Nincs találat.</div>'; return }
+
+      container.innerHTML='';
+
+      if(list.length===0){
+        container.innerHTML='<div class="muted">Nincs találat.</div>';
+        return;
+      }
 
       list.sort((a,b)=>{
-        const da = toDateSafe(a.startTime) || new Date(0);
-        const db = toDateSafe(b.startTime) || new Date(0);
-        const dayCmp = toDayKey(da).localeCompare(toDayKey(db));
-        if(dayCmp) return dayCmp;
-        const ra = (parseInt(a.roundId||0) - parseInt(b.roundId||0)); if(ra) return ra;
-        return da - db;
+        const ra=parseInt(a.roundId||0)-parseInt(b.roundId||0);
+        if(ra) return ra;
+        return (toDateSafe(a.startTime)||new Date(0))-(toDateSafe(b.startTime)||new Date(0));
       });
 
-      const dataList = document.createElement('datalist');
-      dataList.id = 'teamsList';
-      dataList.innerHTML = teams.map(t=>`<option value="${t}">`).join('');
+      const dataList=document.createElement('datalist');
+      dataList.id='teamsList';
+      dataList.innerHTML=teams.map(t=>`<option value="${esc(t)}">`).join('');
       container.appendChild(dataList);
 
-      const grouped = {};
-      list.forEach(m=>{
-        const key = toDayKey(m.startTime);
-        (grouped[key] ||= []).push(m);
-      });
+      list.forEach(d=>{
+        const div=document.createElement('div');
+        div.className='card';
 
-      Object.keys(grouped).sort().forEach(dayKey=>{
-        const dayMatches = grouped[dayKey];
-        const allPublished = dayMatches.length > 0 && dayMatches.every(x => x.published !== false);
+        const startDate=toDateSafe(d.startTime);
+        const datetimeValue=toDatetimeLocalValue(d.startTime);
 
-        const groupCard = document.createElement('div');
-        groupCard.className = 'card';
-        groupCard.innerHTML = `
-          <div class="card-head" style="cursor:default">
-            <h3>${toDayLabel(dayKey)}</h3>
-            <div class="row" style="gap:8px;justify-content:flex-end">
-              <span class="tag">${dayMatches.length} meccs</span>
-              <span class="tag">${allPublished ? 'Mind publikus' : 'Van rejtett meccs'}</span>
-              <button class="btn" onclick="setPublishedForDay('${dayKey}', true)">Napi publikálás</button>
-              <button class="btn" onclick="setPublishedForDay('${dayKey}', false)">Nap elrejtése</button>
+        const apiLinked=isApiLinkedMatch(d);
+        const locks=normalizedManualLocks(d.manualLocks);
+        const activeLocks=[
+          locks.teams ? 'csapatok' : '',
+          locks.startTime ? 'kezdési idő' : '',
+          locks.result ? 'eredmény' : '',
+          locks.postponed ? 'halasztás' : ''
+        ].filter(Boolean);
+
+        const apiMeta=apiLinked
+          ? `
+            <div style="margin-top:10px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:#f8fafc;">
+              <div class="small">
+                <strong>API-kapcsolat:</strong>
+                ${esc(d.externalSource||'football-data.org')}
+                • Match ID: <span class="kbd">${esc(d.externalEventId||d.apiMatchId||'—')}</span>
+                • Státusz: <strong>${esc(d.apiStatus||'—')}</strong>
+                • Halasztás: <strong>${d.postponedWithoutDate ? 'igen, új időpont nélkül' : 'nem'}</strong>
+                • Utolsó API-frissítés: ${esc(apiUpdatedText(d.apiUpdatedAt))}
+              </div>
+
+              <div class="small" style="margin-top:5px;">
+                <strong>Kézi védelem:</strong>
+                ${activeLocks.length ? esc(activeLocks.join(', ')) : 'nincs'}
+              </div>
+
+              <div class="row" style="margin-top:8px;">
+                <button
+                  class="btn"
+                  type="button"
+                  onclick="unlockApiMatch('${d.id}')"
+                >
+                  API felülírás újraengedélyezése
+                </button>
+
+                <span class="muted small">
+                  A kézzel módosított csapatokat, kezdési időt és eredményt az automatikus BL-szinkron nem írja felül, amíg ezt fel nem oldod.
+                </span>
+              </div>
+            </div>
+          `
+          : `
+            <div class="muted small" style="margin-top:10px;">
+              Kézzel létrehozott meccs, nincs API-hoz kapcsolva.
+            </div>
+          `;
+
+        div.innerHTML=`
+          <div class="card-head">
+            <h3>
+              ${esc(d.roundId||'')}. forduló –
+              ${esc(d.homeTeam||'')}
+              vs
+              ${esc(d.awayTeam||'')}
+            </h3>
+
+            <div class="hint">
+              ${d.postponedWithoutDate
+                ? 'Halasztva – új időpont még nincs'
+                : esc(startDate?.toLocaleString('hu-HU')||'')}
+              ${apiLinked ? ' • API' : ''}
             </div>
           </div>
-        `;
-        container.appendChild(groupCard);
 
-        dayMatches.forEach(d=>{
-          const div=document.createElement('div');
-          div.className='card';
-          const localValue = toDatetimeLocalValue(d.startTime);
-          const localHint = toDateSafe(d.startTime)?.toLocaleString('hu-HU') || '';
-          div.innerHTML = `
-            <div class="card-head"><h3>${d.roundId||''}. forduló – ${d.homeTeam||''} vs ${d.awayTeam||''}</h3><div class="hint">${localHint}</div></div>
-            <div class="card-body">
-              <div class="row">
-                <input list="teamsList" value="${d.homeTeam||''}" id="home-${d.id}">
-                <input list="teamsList" value="${d.awayTeam||''}" id="away-${d.id}">
-                <input type="datetime-local" value="${localValue}" id="start-${d.id}">
-                <input value="${d.roundId||''}" id="round-${d.id}">
-                <input value="${d.odds?.["1"]??''}" id="odds1-${d.id}" placeholder="Odds 1" style="width:90px">
-                <input value="${d.odds?.["X"]??''}" id="oddsX-${d.id}" placeholder="Odds X" style="width:90px">
-                <input value="${d.odds?.["2"]??''}" id="odds2-${d.id}" placeholder="Odds 2" style="width:90px">
-                <label class="inline" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;user-select:none">
-                  <input type="checkbox" id="published-${d.id}" ${(d.published !== false) ? 'checked' : ''}>
-                  <span>Publikus</span>
-                </label>
-                <span class="tag">${(d.published !== false) ? 'Publikus' : 'Rejtett'}</span>
-                <button class="btn primary" onclick="updateMatch('${d.id}')">Mentés</button>
-                <button class="btn danger" onclick="deleteMatch('${d.id}')">Törlés</button>
-              </div>
-            </div>`;
-          div.querySelector('.card-head').onclick = ()=> div.classList.toggle('open');
-          container.appendChild(div);
-        });
+          <div class="card-body">
+            <div class="row">
+              <input
+                list="teamsList"
+                value="${esc(d.homeTeam||'')}"
+                id="home-${d.id}"
+              >
+
+              <input
+                list="teamsList"
+                value="${esc(d.awayTeam||'')}"
+                id="away-${d.id}"
+              >
+
+              <input
+                type="datetime-local"
+                value="${esc(datetimeValue)}"
+                id="start-${d.id}"
+              >
+
+              <input
+                value="${esc(d.roundId||'')}"
+                id="round-${d.id}"
+                placeholder="Forduló"
+                style="width:90px"
+              >
+
+              <input
+                value="${esc(d.externalEventId||d.apiMatchId||'')}"
+                id="event-${d.id}"
+                placeholder="football-data Match ID"
+                style="width:190px"
+              >
+
+              <input
+                type="number"
+                step="0.01"
+                value="${esc(d.odds?.['1']??'')}"
+                id="odds1-${d.id}"
+                placeholder="Odds 1"
+                style="width:90px"
+              >
+
+              <input
+                type="number"
+                step="0.01"
+                value="${esc(d.odds?.['X']??'')}"
+                id="oddsX-${d.id}"
+                placeholder="Odds X"
+                style="width:90px"
+              >
+
+              <input
+                type="number"
+                step="0.01"
+                value="${esc(d.odds?.['2']??'')}"
+                id="odds2-${d.id}"
+                placeholder="Odds 2"
+                style="width:90px"
+              >
+
+              <label class="inline" title="A régi kezdési idő nem jelenik meg kezdési időként, amíg nincs új dátum.">
+                <input
+                  type="checkbox"
+                  id="postponed-${d.id}"
+                  ${d.postponedWithoutDate ? 'checked' : ''}
+                >
+                Halasztva – új időpont még nincs
+              </label>
+
+              <label class="inline" style="padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;user-select:none">
+                <input
+                  type="checkbox"
+                  id="published-${d.id}"
+                  ${d.published !== false ? 'checked' : ''}
+                >
+                Publikus
+              </label>
+
+              <button
+                class="btn primary"
+                onclick="updateMatch('${d.id}')"
+              >
+                Mentés
+              </button>
+
+              <button
+                class="btn danger"
+                onclick="deleteMatch('${d.id}')"
+              >
+                Törlés
+              </button>
+            </div>
+
+            ${apiMeta}
+          </div>
+        `;
+
+        div.querySelector('.card-head').onclick=()=>{
+          div.classList.toggle('open');
+        };
+
+        container.appendChild(div);
       });
     }
 
     async function updateMatch(id){
-      const ref = doc(db,'ucl_matches',id);
-      await updateDoc(ref,{
-        homeTeam: document.getElementById(`home-${id}`).value,
-        awayTeam: document.getElementById(`away-${id}`).value,
-        startTime: Timestamp.fromDate(new Date(document.getElementById(`start-${id}`).value)),
-        roundId: document.getElementById(`round-${id}`).value,
-        odds: {
-          "1": parseFloat(document.getElementById(`odds1-${id}`).value),
-          "X": parseFloat(document.getElementById(`oddsX-${id}`).value),
-          "2": parseFloat(document.getElementById(`odds2-${id}`).value)
-        },
-        published: !!document.getElementById(`published-${id}`)?.checked
-      });
+      const ref=doc(db,'ucl_matches',id);
+      const existing=_matchesCache.find(m=>m.id===id)||{};
+
+      const homeTeam=
+        document.getElementById(`home-${id}`).value.trim();
+
+      const awayTeam=
+        document.getElementById(`away-${id}`).value.trim();
+
+      const startRaw=
+        document.getElementById(`start-${id}`).value;
+
+      const startDate=new Date(startRaw);
+
+      const roundId=
+        document.getElementById(`round-${id}`).value.trim();
+
+      const externalEventId=
+        document.getElementById(`event-${id}`).value.trim();
+
+      const postponedWithoutDate=
+        !!document.getElementById(`postponed-${id}`)?.checked;
+
+      const published=
+        !!document.getElementById(`published-${id}`)?.checked;
+
+      if(!homeTeam||!awayTeam){
+        alert('A hazai és a vendégcsapat megadása kötelező.');
+        return;
+      }
+
+      if(homeTeam===awayTeam){
+        alert('A hazai és a vendégcsapat nem lehet ugyanaz.');
+        return;
+      }
+
+      if(Number.isNaN(startDate.getTime())){
+        alert('Adj meg érvényes kezdési időpontot.');
+        return;
+      }
+
+      if(!roundId){
+        alert('Add meg a fordulót.');
+        return;
+      }
+
+      if(
+        externalEventId &&
+        _matchesCache.some(
+          m=>m.id!==id &&
+          String(m.externalEventId||m.apiMatchId||'')===externalEventId
+        )
+      ){
+        alert('Ez a football-data Match ID már egy másik meccshez tartozik.');
+        return;
+      }
+
+      const manualLocks=
+        normalizedManualLocks(existing.manualLocks);
+
+      if(isApiLinkedMatch(existing)||externalEventId){
+        if(
+          homeTeam!==(existing.homeTeam||'') ||
+          awayTeam!==(existing.awayTeam||'')
+        ){
+          manualLocks.teams=true;
+        }
+
+        const oldStart=toDateSafe(existing.startTime);
+
+        if(
+          !oldStart ||
+          Math.abs(oldStart.getTime()-startDate.getTime())>30000
+        ){
+          manualLocks.startTime=true;
+        }
+
+        if(
+          postponedWithoutDate !==
+          !!existing.postponedWithoutDate
+        ){
+          manualLocks.postponed=true;
+        }
+      }
+
+      const updatePayload={
+        homeTeam,
+        awayTeam,
+        startTime:Timestamp.fromDate(startDate),
+
+        // A biztonságos BL API-sync ezt meglévő meccsnél nem írja át.
+        roundId,
+
+        odds:oddsFromMatchInputs(id),
+        published,
+
+        externalEventId:externalEventId||null,
+        apiMatchId:externalEventId && /^\d+$/.test(externalEventId)
+          ? Number(externalEventId)
+          : (existing.apiMatchId??null),
+
+        externalSource:externalEventId
+          ? (existing.externalSource||'football-data.org')
+          : null,
+
+        manualLocks,
+
+        postponed:postponedWithoutDate,
+        postponedWithoutDate,
+        postponementSource:postponedWithoutDate ? 'manual' : '',
+
+        manualUpdatedAt:Timestamp.fromDate(new Date()),
+        manualUpdatedBy:auth.currentUser?.email||''
+      };
+
+      if(
+        postponedWithoutDate &&
+        !existing.originalStartTime
+      ){
+        updatePayload.originalStartTime=
+          existing.startTime||Timestamp.fromDate(startDate);
+      }
+
+      await updateDoc(ref,updatePayload);
+
       alert('Mentve');
+
       await loadMatches();
       await loadResults();
+      await loadTipStatus();
+    }
+
+    async function unlockApiMatch(id){
+      const existing=_matchesCache.find(m=>m.id===id);
+
+      if(!existing||!isApiLinkedMatch(existing)){
+        alert('Ez a meccs nincs API-hoz kapcsolva.');
+        return;
+      }
+
+      if(
+        !confirm(
+          'Feloldod a kézi védelmet? A következő automatikus BL API-frissítés ismét felülírhatja a csapatokat, a kezdési időt és az eredményt.'
+        )
+      ){
+        return;
+      }
+
+      await updateDoc(
+        doc(db,'ucl_matches',id),
+        {
+          manualLocks:{
+            teams:false,
+            startTime:false,
+            result:false,
+            postponed:false
+          },
+          manualUnlockedAt:Timestamp.fromDate(new Date()),
+          manualUnlockedBy:auth.currentUser?.email||''
+        }
+      );
+
+      await loadMatches();
+      await loadResults();
+
+      alert('Az API felülírása újra engedélyezve.');
     }
 
 
@@ -1453,8 +1767,23 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
             if(decided==='pens'){
               if(pens && !/^\d+\s*-\s*\d+$/.test(pens)){ alert('Hibás 11-es eredmény. pl. 4-3'); return }
             }
-            const payload={ result:v90, outcome:oc, finalResult: (ft||''), decidedBy:(decided||'regular'), pensScore:(decided==='pens' ? (pens||'') : '') };
+            const manualLocks=normalizedManualLocks(match.manualLocks);
+            if(isApiLinkedMatch(match)) manualLocks.result=true;
+
+            const payload={
+              result:v90,
+              outcome:oc,
+              finalResult:(ft||''),
+              decidedBy:(decided||'regular'),
+              pensScore:(decided==='pens' ? (pens||'') : ''),
+              resultSource:'manual',
+              manualLocks,
+              manualResultUpdatedAt:Timestamp.fromDate(new Date()),
+              manualResultUpdatedBy:auth.currentUser?.email||''
+            };
+
             await updateDoc(doc(db,'ucl_matches',match.id),payload);
+            await loadMatches();
             await loadResults();
           };
           container.appendChild(div);
@@ -2177,6 +2506,7 @@ verzió: ${data.version || 'n/a'}`);
 
     /* ===== Window hooks ===== */
     window.updateMatch = updateMatch;
+    window.unlockApiMatch = unlockApiMatch;
     window.deleteMatch = deleteMatch;
     window.setPublishedForDay = setPublishedForDay;
     window.saveLock = saveLock;
