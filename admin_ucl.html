@@ -558,6 +558,7 @@ async function loadUclBracketUiSettingAdmin() {
       }
       initUI();
       await loadMatches();
+      tryBulkOddsImportFromHash();
       await loadUsers();
       await initBracketAdmin();
       await loadResults();
@@ -717,6 +718,22 @@ const teamOpts = teams.map(t=>`<option value="${t}">${t}</option>`).join('');
               <button type="button" class="btn primary" id="quickOddsSave">Kitöltött oddsok mentése</button>
             </div>
           </div>
+
+          <div class="bookmarklet-help" style="margin:10px 0;padding:10px;border:1px dashed var(--border);border-radius:10px;background:#f8fafc;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <a
+              id="tippmixOddsBookmarklet"
+              class="btn"
+              href="#"
+              title="Húzd ezt a gombot a böngésző könyvjelzősávjára"
+            >
+              Tippmixpro → BL oddsok
+            </a>
+
+            <span class="muted small">
+              Első alkalommal húzd ezt a gombot a könyvjelzősávra. Utána a Tippmixpro BL / Bajnokok Ligája 1X2 oldalán kattints rá. Az oddsokat kitölti itt, menteni továbbra is neked kell.
+            </span>
+          </div>
+
           <div id="quickOddsList"></div>`
       });
 
@@ -976,6 +993,8 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
       document.getElementById('quickOddsReload').addEventListener('click', async()=>{
         await loadMatches();
       });
+
+      setupTippmixOddsBookmarklet();
 
       // --- NEW: startTime előtöltése az utoljára használt értékkel (localStorage) ---
       try {
@@ -1270,6 +1289,189 @@ Robert Lewandowski [Barcelona] 8,75" style="min-width:420px;min-height:140px;fle
         saveBtn.disabled=false;
       }
     }
+
+
+    /* =========================================================
+       TIPPMIXPRO → BL GYORS ODDS IMPORT
+       Az NB1-ben bevált bookmarklet logika UCL-re adaptálva.
+    ========================================================= */
+
+    const _uclTippmixTeamMap = {"aek":"AEK Athens","aek athens":"AEK Athens","aek athen":"AEK Athens","arsenal":"Arsenal","arsenal fc":"Arsenal","aston villa":"Aston Villa","aston villa fc":"Aston Villa","atletico madrid":"Atlético Madrid","atletico":"Atlético Madrid","barcelona":"Barcelona","fc barcelona":"Barcelona","barca":"Barcelona","bayern munchen":"Bayern München","bayern":"Bayern München","bodo glimt":"Bodø/Glimt","bodø glimt":"Bodø/Glimt","borussia dortmund":"Borussia Dortmund","dortmund":"Borussia Dortmund","club brugge":"Club Bruges","club bruges":"Club Bruges","brugge":"Club Bruges","como":"Como","como 1907":"Como","fenerbahce":"Fenerbahçe","fener":"Fenerbahçe","feyenoord":"Feyenoord","feyenoord rotterdam":"Feyenoord","galatasaray":"Galatasaray","galatasaray sk":"Galatasaray","inter":"Internazionale","internazionale":"Internazionale","inter milan":"Internazionale","internazionale milano":"Internazionale","lask":"LASK","lask linz":"LASK","leipzig":"Leipzig","rb leipzig":"Leipzig","lens":"Lens","rc lens":"Lens","racing club de lens":"Lens","lille":"Lille","lille osc":"Lille","liverpool":"Liverpool","liverpool fc":"Liverpool","manchester city":"Manchester City","man city":"Manchester City","mancity":"Manchester City","manchester united":"Manchester United","man united":"Manchester United","man utd":"Manchester United","manu":"Manchester United","napoli":"Napoli","ssc napoli":"Napoli","paris saint germain":"Paris Saint-Germain","psg":"Paris Saint-Germain","porto":"Porto","fc porto":"Porto","psv":"PSV","psv eindhoven":"PSV","real betis":"Real Betis","betis":"Real Betis","real betis balompie":"Real Betis","real madrid":"Real Madrid","real madrid cf":"Real Madrid","roma":"Roma","as roma":"Roma","sabah":"Sabah","sabah fk":"Sabah","shakhtar donetsk":"Shakhtar Donetsk","shakhtar":"Shakhtar Donetsk","sahtar donyeck":"Shakhtar Donetsk","sahtar doneck":"Shakhtar Donetsk","slavia praha":"Slavia Praha","slavia prague":"Slavia Praha","slavia":"Slavia Praha","slovan bratislava":"Slovan Bratislava","slovan":"Slovan Bratislava","sporting cp":"Sporting CP","sporting":"Sporting CP","sporting lisboa":"Sporting CP","sporting lisbon":"Sporting CP","stuttgart":"Stuttgart","vfb stuttgart":"Stuttgart","viking":"Viking","viking fk":"Viking","villarreal":"Villarreal","villarreal cf":"Villarreal"};
+
+    function _uclTippmixNorm(value){
+      return String(value||"")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g,"")
+        .toLowerCase()
+        .replace(/[.\-_\/]+/g," ")
+        .replace(/\s+/g," ")
+        .trim();
+    }
+
+    function _canonicalUclTippmixTeam(value){
+      const raw=String(value||"").trim();
+      return _uclTippmixTeamMap[_uclTippmixNorm(raw)] || raw;
+    }
+
+    function setupTippmixOddsBookmarklet(){
+      const link=document.getElementById("tippmixOddsBookmarklet");
+      if(!link) return;
+
+      link.href="javascript:(()=>{const A=\"https://csokisuti.github.io/tippliga-login/admin_ucl.html\";const N=s=>String(s||\"\").normalize(\"NFD\").replace(/[\\u0300-\\u036f]/g,\"\").toLowerCase().replace(/[.\\-_\\/]+/g,\" \").replace(/\\s+/g,\" \").trim();const M={\"aek\":\"AEK Athens\",\"aek athens\":\"AEK Athens\",\"aek athen\":\"AEK Athens\",\"arsenal\":\"Arsenal\",\"arsenal fc\":\"Arsenal\",\"aston villa\":\"Aston Villa\",\"aston villa fc\":\"Aston Villa\",\"atletico madrid\":\"Atlético Madrid\",\"atletico\":\"Atlético Madrid\",\"barcelona\":\"Barcelona\",\"fc barcelona\":\"Barcelona\",\"barca\":\"Barcelona\",\"bayern munchen\":\"Bayern München\",\"bayern\":\"Bayern München\",\"bodo glimt\":\"Bodø/Glimt\",\"bodø glimt\":\"Bodø/Glimt\",\"borussia dortmund\":\"Borussia Dortmund\",\"dortmund\":\"Borussia Dortmund\",\"club brugge\":\"Club Bruges\",\"club bruges\":\"Club Bruges\",\"brugge\":\"Club Bruges\",\"como\":\"Como\",\"como 1907\":\"Como\",\"fenerbahce\":\"Fenerbahçe\",\"fener\":\"Fenerbahçe\",\"feyenoord\":\"Feyenoord\",\"feyenoord rotterdam\":\"Feyenoord\",\"galatasaray\":\"Galatasaray\",\"galatasaray sk\":\"Galatasaray\",\"inter\":\"Internazionale\",\"internazionale\":\"Internazionale\",\"inter milan\":\"Internazionale\",\"internazionale milano\":\"Internazionale\",\"lask\":\"LASK\",\"lask linz\":\"LASK\",\"leipzig\":\"Leipzig\",\"rb leipzig\":\"Leipzig\",\"lens\":\"Lens\",\"rc lens\":\"Lens\",\"racing club de lens\":\"Lens\",\"lille\":\"Lille\",\"lille osc\":\"Lille\",\"liverpool\":\"Liverpool\",\"liverpool fc\":\"Liverpool\",\"manchester city\":\"Manchester City\",\"man city\":\"Manchester City\",\"mancity\":\"Manchester City\",\"manchester united\":\"Manchester United\",\"man united\":\"Manchester United\",\"man utd\":\"Manchester United\",\"manu\":\"Manchester United\",\"napoli\":\"Napoli\",\"ssc napoli\":\"Napoli\",\"paris saint germain\":\"Paris Saint-Germain\",\"psg\":\"Paris Saint-Germain\",\"porto\":\"Porto\",\"fc porto\":\"Porto\",\"psv\":\"PSV\",\"psv eindhoven\":\"PSV\",\"real betis\":\"Real Betis\",\"betis\":\"Real Betis\",\"real betis balompie\":\"Real Betis\",\"real madrid\":\"Real Madrid\",\"real madrid cf\":\"Real Madrid\",\"roma\":\"Roma\",\"as roma\":\"Roma\",\"sabah\":\"Sabah\",\"sabah fk\":\"Sabah\",\"shakhtar donetsk\":\"Shakhtar Donetsk\",\"shakhtar\":\"Shakhtar Donetsk\",\"sahtar donyeck\":\"Shakhtar Donetsk\",\"sahtar doneck\":\"Shakhtar Donetsk\",\"slavia praha\":\"Slavia Praha\",\"slavia prague\":\"Slavia Praha\",\"slavia\":\"Slavia Praha\",\"slovan bratislava\":\"Slovan Bratislava\",\"slovan\":\"Slovan Bratislava\",\"sporting cp\":\"Sporting CP\",\"sporting\":\"Sporting CP\",\"sporting lisboa\":\"Sporting CP\",\"sporting lisbon\":\"Sporting CP\",\"stuttgart\":\"Stuttgart\",\"vfb stuttgart\":\"Stuttgart\",\"viking\":\"Viking\",\"viking fk\":\"Viking\",\"villarreal\":\"Villarreal\",\"villarreal cf\":\"Villarreal\"};const C=s=>M[N(s)]||null;const O=x=>{const m=String(x||\"\").match(/\\d+[,.]\\d+/);return m?Number(m[0].replace(\",\",\".\")):NaN};const lines=e=>String(e?.innerText||e?.textContent||\"\").split(/\\n+/).map(x=>x.trim()).filter(Boolean);const teams=e=>{const out=[];for(const l of lines(e)){const c=C(l);if(c&&!out.includes(c))out.push(c)}return out};const odd=(box,label)=>{const nl=N(label);const els=[box,...box.querySelectorAll(\"button,[role='button'],span,div\")];for(const e of els){const t=String(e.innerText||e.textContent||\"\").trim();if(!t||t.length>100)continue;const nt=N(t);if(nt===nl||nt.startsWith(nl+\" \")){const nums=t.match(/\\d+[,.]\\d+/g);if(nums?.length){const v=O(nums[nums.length-1]);if(Number.isFinite(v))return v}}}const ls=lines(box);for(let i=0;i<ls.length;i++){if(N(ls[i])!==nl)continue;for(let j=i+1;j<=i+3&&j<ls.length;j++){const v=O(ls[j]);if(Number.isFinite(v))return v}}return NaN};const labels=[\"Hazai\",\"Döntetlen\",\"Vendég\"];const candidates=[...document.querySelectorAll(\"button,[role='button'],span,div\")].filter(e=>{const t=String(e.innerText||e.textContent||\"\").trim();return t&&t.length<100&&(N(t)===\"hazai\"||N(t).startsWith(\"hazai \"))});const R=[],seen=new Set();for(const h of candidates){let p=h;for(let d=0;d<10;d++){p=p?.parentElement;if(!p)break;const tt=String(p.innerText||p.textContent||\"\");if(tt.length>8000)break;const T=teams(p);if(T.length<2)continue;const o1=odd(p,labels[0]),ox=odd(p,labels[1]),o2=odd(p,labels[2]);if(![o1,ox,o2].every(Number.isFinite))continue;const home=T[0],away=T[1],key=home+\"|\"+away;if(seen.has(key))break;const when=lines(p).find(x=>/\\b\\d{1,2}\\.\\d{1,2}\\.?\\s+\\d{1,2}:\\d{2}\\b/.test(x))||\"\";R.push({home,away,when,odds:{\"1\":o1,\"X\":ox,\"2\":o2}});seen.add(key);break}}if(!R.length){alert(\"Nem találtam felismerhető BL 1X2 oddsokat. Nyisd meg a Tippmixpro Bajnokok Ligája meccseit úgy, hogy a Hazai / Döntetlen / Vendég oddsok látszódjanak, majd próbáld újra.\");return}const P=btoa(unescape(encodeURIComponent(JSON.stringify({type:\"ucl-odds-bulk\",source:\"Tippmixpro\",matches:R}))));const U=A+\"#oddsbulk=\"+P,w=window.open(U,\"_blank\");if(!w)location.href=U})()";
+
+      link.addEventListener("click",e=>{
+        if(location.hostname.includes("github.io")){
+          e.preventDefault();
+          alert("Ezt a gombot ne itt kattintsd: húzd fel a böngésző könyvjelzősávjára, majd a Tippmixpro Bajnokok Ligája oldalán kattints a könyvjelzőre.");
+        }
+      });
+    }
+
+    function _bulkImportDateKey(value){
+      const m=String(value||"").match(/(\d{1,2})\.(\d{1,2})\.?\s+(\d{1,2}):(\d{2})/);
+      if(!m) return "";
+      return `${String(+m[1]).padStart(2,"0")}-${String(+m[2]).padStart(2,"0")} ${String(+m[3]).padStart(2,"0")}:${m[4]}`;
+    }
+
+    function _matchDateKey(match){
+      const d=match?.startTime?.toDate?.();
+      if(!d) return "";
+      return `${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    }
+
+    function _importOddNumber(value){
+      const n=Number(String(value??"").replace(",","."));
+      return Number.isFinite(n)&&n>0 ? n : null;
+    }
+
+    function _applyBulkOddsImport(data){
+      const imported=Array.isArray(data?.matches) ? data.matches : [];
+
+      if(!imported.length){
+        alert("Az importban nem találtam meccseket.");
+        return;
+      }
+
+      let filled=0;
+      let alreadyComplete=0;
+      let notFound=0;
+      let ambiguous=0;
+
+      imported.forEach(item=>{
+        const home=_canonicalUclTippmixTeam(item.home);
+        const away=_canonicalUclTippmixTeam(item.away);
+        const whenKey=_bulkImportDateKey(item.when);
+
+        let matches=_matchesCache.filter(m=>
+          _canonicalUclTippmixTeam(m.homeTeam)===home &&
+          _canonicalUclTippmixTeam(m.awayTeam)===away &&
+          !String(m.result||"").trim()
+        );
+
+        if(matches.length>1 && whenKey){
+          const dated=matches.filter(m=>_matchDateKey(m)===whenKey);
+          if(dated.length) matches=dated;
+        }
+
+        if(matches.length===0){
+          notFound++;
+          return;
+        }
+
+        if(matches.length>1){
+          ambiguous++;
+          return;
+        }
+
+        const match=matches[0];
+        const row=document.querySelector(
+          `tr[data-quick-odds-match="${CSS.escape(match.id)}"]`
+        );
+
+        if(!row){
+          if(!matchNeedsOdds(match)) alreadyComplete++;
+          else notFound++;
+          return;
+        }
+
+        const vals={
+          "1":_importOddNumber(item?.odds?.["1"]),
+          "X":_importOddNumber(item?.odds?.["X"]),
+          "2":_importOddNumber(item?.odds?.["2"])
+        };
+
+        if(!vals["1"]||!vals["X"]||!vals["2"]){
+          notFound++;
+          return;
+        }
+
+        ["1","X","2"].forEach(key=>{
+          const inp=row.querySelector(`[data-odd-key="${key}"]`);
+          if(inp){
+            inp.value=String(vals[key]);
+            inp.dispatchEvent(new Event("input",{bubbles:true}));
+          }
+        });
+
+        row.classList.add("qo-imported");
+        filled++;
+      });
+
+      const info=document.getElementById("quickOddsInfo");
+
+      if(info){
+        const extras=[];
+        if(alreadyComplete) extras.push(`${alreadyComplete} már teljes oddsos`);
+        if(notFound) extras.push(`${notFound} nem párosítható`);
+        if(ambiguous) extras.push(`${ambiguous} többértelmű`);
+
+        info.textContent=
+          `Tippmixpro import: ${filled} meccs kitöltve`+
+          `${extras.length ? " • "+extras.join(" • ") : ""}. `+
+          `Ellenőrizd az értékeket, majd nyomd meg a „Kitöltött oddsok mentése” gombot.`;
+      }
+
+      const card=document.getElementById("card-quick-odds");
+      if(card){
+        card.open=true;
+        card.scrollIntoView({behavior:"smooth",block:"start"});
+      }
+
+      history.replaceState(null,"",location.pathname+location.search);
+
+      if(!filled){
+        alert("Az oddsokat kiolvastam, de egyetlen Tippmixpro-meccset sem tudtam biztosan összepárosítani az adminban lévő oddsra váró BL-meccsekkel.");
+      }
+    }
+
+    function _b64ToJson(value){
+      return JSON.parse(
+        decodeURIComponent(
+          escape(
+            atob(value)
+          )
+        )
+      );
+    }
+
+    function tryBulkOddsImportFromHash(){
+      const m=(location.hash||"").match(/^#oddsbulk=(.+)$/);
+      if(!m) return;
+
+      try{
+        const data=_b64ToJson(m[1]);
+
+        if(data?.type && data.type!=="ucl-odds-bulk"){
+          throw new Error("Ez nem BL odds import.");
+        }
+
+        _applyBulkOddsImport(data);
+      }catch(e){
+        console.error("Tippmixpro BL odds import hiba:",e);
+        alert("A Tippmixpro BL odds import nem sikerült: "+(e?.message||e));
+      }
+    }
+
 
     function renderMatchesFiltered(){
       const container = document.getElementById('matchesList');
