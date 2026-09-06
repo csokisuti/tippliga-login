@@ -1,0 +1,36 @@
+name: BL automatikus API-szinkron
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "17 */3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: BL meccsek automatikus frissítése
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository letöltése
+        uses: actions/checkout@v6
+
+      - name: Node.js beállítása
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Firebase Admin telepítése
+        run: npm install firebase-admin --no-audit --no-fund
+
+      - name: BL szinkron futtatása
+        run: node sync-ucl.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+          DRY_RUN: "false"
