@@ -131,6 +131,7 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { cachedGetDocs, incrementalGetDocs, getUsersAll, attachChatLazy } from "./fs-cache.js";
 
     /* >>> ÚJ: standings modul az élő „hivatalos” sorrendhez <<< */
     import { computeLiveOrderFromMatches } from "./standings.js";
@@ -565,8 +566,12 @@
 
       let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
 
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: "chatMessages", qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
+      chatSnapshotLazy(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
           const empty = document.createElement('div');
@@ -711,12 +716,24 @@
         }
 
         // Becenevek
-        const usersSnap = await getDocs(collection(db, "users"));
+        const usersSnap = await getUsersAll(db);
         usersSnap.forEach(d => { const u = d.data(); if (u?.email) nickByEmail[u.email] = u.nickname || u.email; });
 
         // Meccsek
-        const matchesSnap = await getDocs(collection(db, "matches"));
-        matches = matchesSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+        // Meccsek: az első betöltés a realtime listenerből jön (nem olvassuk kétszer)
+        let matchesUiReady = false;
+        await new Promise(resolve => {
+          let first = true;
+          onSnapshot(collection(db,"matches"), snap => {
+            matches = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+            if (first){ first = false; resolve(); return; }
+            if (!matchesUiReady) return;
+            recomputeOfficialFromMatches();
+            // ha épp egy fordulót néz a user, ne ugorjunk máshova – csak újrarender
+            const sel = document.getElementById("roundSelect");
+            if (sel?.value) renderRound(sel.value);
+          }, err => { console.warn("matches snapshot error:", err); if (first){ first = false; resolve(); } });
+        });
 
         // Fordulók
         const roundSet = new Set();
@@ -727,18 +744,12 @@
         // >>> Itt számoljuk újra az „official” élő sorrendet meccsekből
         recomputeOfficialFromMatches();
 
-        // Realtime: ha bármelyik meccs változik (eredmény kerül be), frissítsünk
-        onSnapshot(collection(db,"matches"), snap => {
-          matches = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-          recomputeOfficialFromMatches();
-          // ha épp egy fordulót néz a user, ne ugorjunk máshova – csak újrarender
-          const sel = document.getElementById("roundSelect");
-          if (sel?.value) renderRound(sel.value);
-        });
+        // (a realtime meccs-listener fentebb indul, itt csak jelezzük, hogy a UI kész)
+        matchesUiReady = true;
 
         // Tippek (legfrissebb per user-meccs)
         tipsByMatch.clear();
-        const tipsSnap = await getDocs(collection(db, "tips"));
+        const tipsSnap = await incrementalGetDocs(db, "tips");
         const latest = new Map(); // key: user|match -> tip
         tipsSnap.forEach(d => {
           const t = d.data(); if (!t?.matchId || !t?.user) return;
@@ -783,15 +794,17 @@
 
     /* ---------------- Nav „függő tippek” badge ---------------- */
     function updatePendingBadge(){
-      getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
-        const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
-          const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
-          const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
-          const badge = document.getElementById("tipsBadge");
-          if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
-        });
-      });
+      // memóriából számolunk (a meccsek és a tippek már be vannak töltve) – nincs extra Firestore olvasás
+      const nowMs = Date.now();
+      const upcoming = matches.filter(m => m.startTime && typeof m.startTime.toMillis === "function" && m.startTime.toMillis() >= nowMs);
+      const tippedIds = new Set();
+      for (const arr of tipsByMatch.values()){
+        for (const t of arr){ if (t.user === currentUserEmail) tippedIds.add(t.matchId); }
+      }
+      const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
+      const badge = document.getElementById("tipsBadge");
+      if (!badge) return;
+      if (pending>0){ badge.textContent = pending; badge.hidden = false; } else { badge.hidden = true; }
     }
   </script>
 </head>

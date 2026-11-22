@@ -1312,6 +1312,7 @@
       getDocs
     } from
       "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+      import { cachedGetDocs } from "./fs-cache.js";
 
 
     const firebaseConfig = {
@@ -1743,12 +1744,7 @@
     async function loadSeasonList(){
 
       const snapshot =
-        await getDocs(
-          collection(
-            db,
-            "seasons"
-          )
-        );
+        await cachedGetDocs("seasons:all", collection(db, "seasons"), 600000);
 
 
       state.seasons =
@@ -1958,75 +1954,25 @@
           seasonRef
         ),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "leaderboard"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":leaderboard", collection(seasonRef, "leaderboard"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "botScores"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":botScores", collection(seasonRef, "botScores"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "matches"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":matches", collection(seasonRef, "matches"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "tipScores"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":tipScores", collection(seasonRef, "tipScores"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "botTips"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":botTips", collection(seasonRef, "botTips"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "users"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":users", collection(seasonRef, "users"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "advanceTips"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":advanceTips", collection(seasonRef, "advanceTips"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "top8Tips"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":top8Tips", collection(seasonRef, "top8Tips"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "championPickTips"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":championPickTips", collection(seasonRef, "championPickTips"), 43200000),
 
-        getDocs(
-          collection(
-            seasonRef,
-            "goldenBootTips"
-          )
-        ),
+        cachedGetDocs("archive:" + seasonRef.path + ":goldenBootTips", collection(seasonRef, "goldenBootTips"), 43200000),
 
         optionalMeta(
           seasonRef,

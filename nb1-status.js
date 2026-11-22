@@ -11,6 +11,7 @@ import {
   updateDoc,
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getMatchesAll, getOwnTips } from "./fs-cache.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -568,26 +569,9 @@ async function refreshStatus(user){
     tipsSnap,
     standingSnap
   ]=await Promise.all([
-    getDocs(
-      collection(
-        db,
-        "matches"
-      )
-    ),
+    getMatchesAll(db),
 
-    getDocs(
-      query(
-        collection(
-          db,
-          "tips"
-        ),
-        where(
-          "user",
-          "==",
-          user.email
-        )
-      )
-    ),
+    getOwnTips(db, user.email),
 
     getDoc(
       doc(

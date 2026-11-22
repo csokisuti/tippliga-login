@@ -194,6 +194,7 @@
       collection, addDoc, deleteDoc, serverTimestamp,
       query, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { attachChatLazy } from "./fs-cache.js";
 
     import { initLeagueSwitcher } from "./league-switcher.js";
 
@@ -458,8 +459,12 @@
 
       let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
 
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: "chatMessages", qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
+      chatSnapshotLazy(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
           const empty = document.createElement('div');

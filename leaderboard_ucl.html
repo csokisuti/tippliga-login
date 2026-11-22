@@ -183,6 +183,7 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getUsersAll, watchIncremental, getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig={apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",authDomain:"tippliga-4b3af.firebaseapp.com",projectId:"tippliga-4b3af",storageBucket:"tippliga-4b3af.appspot.com",messagingSenderId:"720359845241",appId:"1:720359845241:web:d3d6edcac6b43ebff053a8"};
@@ -448,7 +449,7 @@ const stakeForRound = (roundId)=>{
         await loadPositionsLockAndApply();
 
         /* USERS */
-        const usersSnap=await getDocs(collection(db,"users"));
+        const usersSnap=await getUsersAll(db);
         usersSnap.forEach(d=>{
           const u=d.data()||{};
           const email=emailKey(u.email||d.id);
@@ -472,10 +473,11 @@ const stakeForRound = (roundId)=>{
         });
 
         /* TIPS – utolsó verzió */
-        const tipsAll=await getDocs(collection(db,"ucl_tips"));
-        latestTipsByUserMatch=collectLatestTips(tipsAll);
-        onSnapshot(collection(db,"ucl_tips"), snap=>{
+        // Első betöltés gyorsítótárból + változások; utána csak a módosult tippeket figyeli (nem olvassa újra az egész gyűjteményt)
+        let tipsFirstLoad=true;
+        await watchIncremental(db,"ucl_tips",onSnapshot,snap=>{
           latestTipsByUserMatch=collectLatestTips(snap);
+          if(tipsFirstLoad){ tipsFirstLoad=false; return; }
           recomputeRows(); renderTable();
         });
 
@@ -955,9 +957,9 @@ const stakeForRound = (roundId)=>{
 
     /* ---- Leadatlan-tippek badge ---- */
     function updatePendingBadge(){
-      getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+      getUpcomingMatches(db,"ucl_matches").then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+        getOwnTips(db,currentUserEmail,"ucl_tips").then(tipsSnap=>{
           const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
           const pending = upcoming.filter(m => {
             if (m.published === false) return false;
@@ -992,8 +994,12 @@ const stakeForRound = (roundId)=>{
 
       let lastSeenMs = chatLastSeenUcl ? (chatLastSeenUcl.toMillis?.()||0) : 0;
 
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: "chatMessages_ucl", qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
+      chatSnapshotLazy(qAll, snap => {
         if (!listEl) return;
         listEl.innerHTML = '';
         if (snap.empty){

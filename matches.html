@@ -484,6 +484,7 @@
       orderBy,
       onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getMatchesByStart, getOwnTips, attachChatLazy } from "./fs-cache.js";
 
     import { initLeagueSwitcher } from "./league-switcher.js";
 
@@ -799,15 +800,7 @@
               const now=new Date();
 
               const allSnap=
-                await getDocs(
-                  query(
-                    collection(db,"matches"),
-                    orderBy(
-                      "startTime",
-                      "asc"
-                    )
-                  )
-                );
+                await getMatchesByStart(db);
 
               const allMatches=
                 allSnap.docs.map(
@@ -854,16 +847,7 @@
                 });
 
               const tipsSnap=
-                await getDocs(
-                  query(
-                    collection(db,"tips"),
-                    where(
-                      "user",
-                      "==",
-                      currentUserEmail
-                    )
-                  )
-                );
+                await getOwnTips(db, currentUserEmail);
 
               const tips=
                 tipsSnap.docs.map(
@@ -1732,13 +1716,16 @@
           ? chatLastSeen.toMillis()
           : 0;
 
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: "chatMessages", qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll=query(
         collection(db,"chatMessages"),
         orderBy("ts","asc")
       );
 
-      onSnapshot(
-        qAll,
+      chatSnapshotLazy(qAll,
         snap=>{
           listEl.innerHTML="";
 

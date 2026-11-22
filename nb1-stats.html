@@ -418,6 +418,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getMatchesAll, getUsersAll, incrementalGetDocs } from "./fs-cache.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -493,10 +494,10 @@
 
   async function loadAll(){
     const [mSnap, tSnap, uSnap, hSnap] = await Promise.all([
-      getDocs(collection(db, "matches")),
-      getDocs(collection(db, "tips")),
-      getDocs(collection(db, "users")),
-      getDocs(collection(db, "tipHistory"))
+      getMatchesAll(db),
+      incrementalGetDocs(db, "tips"),
+      getUsersAll(db),
+      incrementalGetDocs(db, "tipHistory", { field: "ts" })
     ]);
 
     state.matches = {};

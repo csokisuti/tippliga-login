@@ -88,6 +88,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
     import { initLeagueSwitcher } from "./league-switcher.js"; /* ← UGYANAZ, mint a dashboardon */
 
     /* ---------------- Firebase init ---------------- */
@@ -323,9 +324,9 @@
 
     /* ---------------- Nav „függő tippek” badge ---------------- */
     function updatePendingBadge(){
-      getDocs(query(collection(db,"matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+      getUpcomingMatches(db).then(upcomingSnap=>{
         const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-        getDocs(query(collection(db,"tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+        getOwnTips(db, currentUserEmail).then(tipsSnap=>{
           const tippedIds = new Set(tipsSnap.docs.map(x=>x.data().matchId));
           const pending = upcoming.filter(m => !tippedIds.has(m.id)).length;
           const badge = document.getElementById("tipsBadge");
@@ -357,8 +358,12 @@
 
       let lastSeenMs = chatLastSeen?.toMillis ? chatLastSeen.toMillis() : 0;
 
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: "chatMessages", qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll = query(collection(db,'chatMessages'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
+      chatSnapshotLazy(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
           const empty = document.createElement('div');

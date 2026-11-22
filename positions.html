@@ -127,6 +127,7 @@
       collection, getDocs, addDoc, deleteDoc, serverTimestamp,
       query, where, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
 
     /* ÚJ: liga-váltó komponens */
     import { initLeagueSwitcher } from "./league-switcher.js";
@@ -355,23 +356,13 @@
     }
 
     function updatePendingBadge(){
-      getDocs(
-        query(
-          collection(db, "matches"),
-          where("startTime", ">=", new Date())
-        )
-      ).then(upcomingSnap => {
+      getUpcomingMatches(db).then(upcomingSnap => {
         const upcoming = upcomingSnap.docs.map(d => ({
           id: d.id,
           ...d.data()
         }));
 
-        getDocs(
-          query(
-            collection(db, "tips"),
-            where("user", "==", currentUserEmail)
-          )
-        ).then(tipsSnap => {
+        getOwnTips(db, currentUserEmail).then(tipsSnap => {
           const tippedIds = new Set(
             tipsSnap.docs.map(x => x.data().matchId)
           );
@@ -700,12 +691,16 @@
         ? chatLastSeen.toMillis()
         : 0;
 
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: "chatMessages", qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll = query(
         collection(db, "chatMessages"),
         orderBy("ts", "asc")
       );
 
-      onSnapshot(qAll, snap => {
+      chatSnapshotLazy(qAll, snap => {
         listEl.innerHTML = "";
 
         if (snap.empty){

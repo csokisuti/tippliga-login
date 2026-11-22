@@ -221,6 +221,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getMatchesAll, getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
     import { computeLiveOrderFromMatches } from "./standings.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
@@ -375,7 +376,7 @@
       const teams=Object.keys(crestMap);
       const S={}; teams.forEach(t=>S[t]={team:t,MP:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0});
       const H2H={};
-      const snap=await getDocs(collection(db,"ucl_matches"));
+      const snap=await getMatchesAll(db,"ucl_matches");
       const matchesForModule=[];
 
       snap.forEach(d=>{
@@ -788,7 +789,7 @@
       bracketSlotsById = {};
 
       try{
-        const ms = await getDocs(collection(db,"ucl_matches"));
+        const ms = await getMatchesAll(db,"ucl_matches");
         ms.forEach(d=>{
           const m=d.data()||{};
           matchById.set(d.id,{id:d.id,...m});
@@ -962,9 +963,9 @@
         const badge = document.getElementById('tipsBadgeUcl');
         const matchesCard = document.getElementById('matchesCard');
         if (!badge) return;
-        getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", new Date()))).then(upcomingSnap=>{
+        getUpcomingMatches(db,"ucl_matches").then(upcomingSnap=>{
           const upcoming = upcomingSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-          getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail))).then(tipsSnap=>{
+          getOwnTips(db,currentUserEmail,"ucl_tips").then(tipsSnap=>{
             const tippedIds = new Set();
             tipsSnap.forEach(x=>{
               const t=x.data();
@@ -1058,8 +1059,12 @@
       closeBtn.addEventListener('click',close);
 
       let lastSeenMs=chatLastSeen?.toMillis?chatLastSeen.toMillis():0;
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: CHAT_COLLECTION, qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll=query(collection(db,CHAT_COLLECTION),orderBy('ts','asc'));
-      onSnapshot(qAll,snap=>{
+      chatSnapshotLazy(qAll,snap=>{
         listEl.innerHTML='';
         if(snap.empty){
           const empty=document.createElement('div');

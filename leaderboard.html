@@ -665,6 +665,7 @@
       onSnapshot,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { cachedGetDocs, incrementalGetDocs, getMatchesAll, getUsersAll, getStandingsTipsAll, getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
 
     let initLeagueSwitcher=null;
 
@@ -1369,26 +1370,11 @@
         officialSnap,
         standingsTipsSnap
       ]=await Promise.all([
-        getDocs(
-          collection(
-            db,
-            "matches"
-          )
-        ),
+        getMatchesAll(db),
 
-        getDocs(
-          collection(
-            db,
-            "tips"
-          )
-        ),
+        incrementalGetDocs(db, "tips"),
 
-        getDocs(
-          collection(
-            db,
-            "users"
-          )
-        ),
+        getUsersAll(db),
 
         getDoc(
           doc(
@@ -1398,12 +1384,7 @@
           )
         ),
 
-        getDocs(
-          collection(
-            db,
-            "standingsTips"
-          )
-        )
+        getStandingsTipsAll(db)
       ]);
 
       matchesCache={};
@@ -2572,16 +2553,7 @@
     }
 
     function updatePendingBadge(){
-      getDocs(
-        query(
-          collection(db,"matches"),
-          where(
-            "startTime",
-            ">=",
-            new Date()
-          )
-        )
-      ).then(upcomingSnap=>{
+      getUpcomingMatches(db).then(upcomingSnap=>{
         const upcoming=
           upcomingSnap.docs.map(
             d=>({
@@ -2590,16 +2562,7 @@
             })
           );
 
-        getDocs(
-          query(
-            collection(db,"tips"),
-            where(
-              "user",
-              "==",
-              currentUserEmail
-            )
-          )
-        ).then(tipsSnap=>{
+        getOwnTips(db, currentUserEmail).then(tipsSnap=>{
           const tippedIds=
             new Set(
               tipsSnap.docs.map(
@@ -2699,6 +2662,10 @@
 
       let lastSeenMs=0;
 
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: "chatMessages", qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll=query(
         collection(
           db,
@@ -2710,8 +2677,7 @@
         )
       );
 
-      onSnapshot(
-        qAll,
+      chatSnapshotLazy(qAll,
         snap=>{
           if(!listEl){
             return;

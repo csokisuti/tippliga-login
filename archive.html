@@ -549,6 +549,7 @@
       getDoc,
       getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { cachedGetDocs } from "./fs-cache.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
@@ -673,7 +674,7 @@
     }
 
     async function loadSeasonList(){
-      const snapshot = await getDocs(collection(db, "seasons"));
+      const snapshot = await cachedGetDocs("seasons:all", collection(db, "seasons"), 600000);
       state.seasons = snapshot.docs
         .map((item) => ({ id:item.id, ...item.data() }))
         .filter((season) => season.league === "nb1" && season.status === "archived")
@@ -725,13 +726,13 @@
         standingsSnap
       ] = await Promise.all([
         getDoc(seasonRef),
-        getDocs(collection(seasonRef, "leaderboard")),
-        getDocs(collection(seasonRef, "botScores")),
-        getDocs(collection(seasonRef, "matches")),
-        getDocs(collection(seasonRef, "tipScores")),
-        getDocs(collection(seasonRef, "botTips")),
-        getDocs(collection(seasonRef, "users")),
-        getDocs(collection(seasonRef, "standingsTips")),
+        cachedGetDocs("archive:" + seasonRef.path + ":leaderboard", collection(seasonRef, "leaderboard"), 43200000),
+        cachedGetDocs("archive:" + seasonRef.path + ":botScores", collection(seasonRef, "botScores"), 43200000),
+        cachedGetDocs("archive:" + seasonRef.path + ":matches", collection(seasonRef, "matches"), 43200000),
+        cachedGetDocs("archive:" + seasonRef.path + ":tipScores", collection(seasonRef, "tipScores"), 43200000),
+        cachedGetDocs("archive:" + seasonRef.path + ":botTips", collection(seasonRef, "botTips"), 43200000),
+        cachedGetDocs("archive:" + seasonRef.path + ":users", collection(seasonRef, "users"), 43200000),
+        cachedGetDocs("archive:" + seasonRef.path + ":standingsTips", collection(seasonRef, "standingsTips"), 43200000),
         getDoc(doc(seasonRef, "meta", "rules")),
         getDoc(doc(seasonRef, "meta", "standingsSnapshot"))
       ]);

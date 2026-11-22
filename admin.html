@@ -78,6 +78,10 @@
       updateDoc,
       writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { expireAll as __fsExpireAll } from "./fs-cache.js";
+    // az admin módosításai után a játékos oldalak friss adatot olvassanak (TTL-es cache lejáratása)
+    window.addEventListener("pagehide", () => { try{ __fsExpireAll(); }catch(_){} });
+    window.addEventListener("beforeunload", () => { try{ __fsExpireAll(); }catch(_){} });
 
     const firebaseConfig = {
       apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",

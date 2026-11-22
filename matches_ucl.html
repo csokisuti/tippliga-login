@@ -136,6 +136,7 @@
       collection, getDocs, addDoc, serverTimestamp,
       query, where, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig = {
@@ -536,12 +537,12 @@
         try{
           const now = new Date();
 
-          const upcomingSnap = await getDocs(query(collection(db,"ucl_matches"), where("startTime", ">=", now), orderBy("startTime","asc")));
+          const upcomingSnap = await getUpcomingMatches(db,"ucl_matches");
           const upcoming = upcomingSnap.docs
             .map(d => ({ id:d.id, ...d.data() }))
             .filter(m => m.published !== false);
 
-          const tipsSnap = await getDocs(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)));
+          const tipsSnap = await getOwnTips(db,currentUserEmail,"ucl_tips");
           const tips = tipsSnap.docs.map(x=>({ id:x.id, ...x.data() }));
           const latestByMatch = new Map();
           for (const t of tips){
@@ -989,8 +990,12 @@
 
       let lastSeenMs = chatLastSeenUcl?.toMillis ? chatLastSeenUcl.toMillis() : 0;
 
+      const chatSnapshotLazy = (q, handler, onErr) => attachChatLazy({
+        onSnapshotFn: onSnapshot, db, collName: "chatMessages_ucl", qFull: q, handler, onError: onErr,
+        fab, fabBadge, panel, getLastSeenMs: () => lastSeenMs
+      });
       const qAll = query(collection(db,'chatMessages_ucl'), orderBy('ts','asc'));
-      onSnapshot(qAll, snap => {
+      chatSnapshotLazy(qAll, snap => {
         listEl.innerHTML = '';
         if (snap.empty){
           const empty = document.createElement('div');

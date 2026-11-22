@@ -430,6 +430,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getMatchesAll, getUsersAll, incrementalGetDocs } from "./fs-cache.js";
 
   // ====== CONFIG (ugyanaz a projekt) ======
   const firebaseConfig = {
@@ -517,13 +518,13 @@
 
   async function loadAll(){
     let hSnapUcl=null, hSnapCommon=null;
-    try { hSnapUcl = await getDocs(collection(db, COLL_HIST1)); } catch(e){}
-    try { hSnapCommon = await getDocs(collection(db, COLL_HIST_FALLBACK)); } catch(e){}
+    try { hSnapUcl = await incrementalGetDocs(db, COLL_HIST1, { field: "ts" }); } catch(e){}
+    try { hSnapCommon = await incrementalGetDocs(db, COLL_HIST_FALLBACK, { field: "ts" }); } catch(e){}
 
     const [mSnap, tSnap, uSnap] = await Promise.all([
-      getDocs(collection(db, COLL_MATCHES)),
-      getDocs(collection(db, COLL_TIPS)),
-      getDocs(collection(db, "users"))
+      getMatchesAll(db, COLL_MATCHES),
+      incrementalGetDocs(db, COLL_TIPS),
+      getUsersAll(db)
     ]);
 
     // matches
