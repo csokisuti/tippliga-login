@@ -13,6 +13,7 @@
 
 import {
   collection,
+  getDoc,
   getDocs,
   query,
   where,
@@ -295,47 +296,29 @@ export async function getOwnTips(db, email, coll = "tips"){
   return wrapDocs(snap.docs.filter(d => d.data().user === email));
 }
 
-// Élő figyelés inkrementálisan: először a gyorsítótárból/változásokból tölt, majd csak a
-// legutóbbi módosítás óta változott dokumentumokat figyeli (nem olvassa újra az egész gyűjteményt).
-// onUpdate(snapshot) minden változáskor a teljes, összefésült állapotot kapja.
-export async function watchIncremental(db, collName, onSnapshotFn, onUpdate, opts = {}){
-  const field = opts.field || "updatedAt";
-  const key = "inc:" + collName + ":" + field;
-  const snap = await incrementalGetDocs(db, collName, { field });
-  onUpdate(snap);
-
-  const rec = lsGet(key);
-  let cursor = rec && rec.cursor ? rec.cursor : null;
-  let items = null;
-  try{
-    if(rec && rec.items) items = new Map(decodeItems(rec.items).map(it => [it.id, it]));
-  }catch(_){ items = null; }
-
-  if(!cursor || !items){
-    // nincs használható időbélyeg: marad az eredeti, teljes élő listener
-    return onSnapshotFn(collection(db, collName), s => onUpdate(s), opts.onError);
-  }
-
-  const fullAt = rec.fullAt;
-  return onSnapshotFn(
-    query(collection(db, collName), where(field, ">=", new Timestamp(cursor[0], cursor[1]))),
-    s => {
-      for(const d of s.docs){
-        const data = d.data();
-        items.set(d.id, { id: d.id, data });
-        const ts = data[field];
-        if(ts instanceof Timestamp){
-          const cand = [ts.seconds, ts.nanoseconds];
-          if(cmpTs(cand, cursor) > 0) cursor = cand;
-        }
+// Az onSnapshot egyszeri (nem élő) megfelelője: ugyanúgy hívja a kezelőt, de csak egyszer, a betöltéskor.
+// Frissítésnél (F5) az új adat jön. A nagy gyűjtemények gyorsítótárból / inkrementálisan töltődnek.
+export function snapshotOnce(ref, handler, onError){
+  (async () => {
+    let snap;
+    try{
+      if(ref.type === "document"){
+        snap = await getDoc(ref);
+      }else if(ref.type === "collection"){
+        const p = ref.path;
+        if(p === "tips" || p === "ucl_tips") snap = await incrementalGetDocs(ref.firestore, p);
+        else if(p === "matches" || p === "ucl_matches" || p === "users") snap = await cachedGetDocs(p + ":all", ref);
+        else snap = await getDocs(ref);
+      }else{
+        snap = await getDocs(ref);
       }
-      try{
-        lsSet(key, { t: Date.now(), fullAt, cursor, items: encodeItems([...items.values()]) });
-      }catch(_){}
-      onUpdate(makeSnapFromItems([...items.values()]));
-    },
-    opts.onError
-  );
+    }catch(e){
+      if(onError) onError(e); else console.warn("snapshotOnce:", e);
+      return;
+    }
+    handler(snap);
+  })();
+  return () => {};
 }
 
 // Admin oldalakhoz: a TTL-es cache-t lejáratja, így a játékos oldalak friss adatot kapnak

@@ -136,7 +136,7 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
+import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attachChatLazy, snapshotOnce } from "./fs-cache.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig = {
@@ -975,7 +975,7 @@ import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attach
         let applyMatchesLive = () => {};
         await new Promise(resolve => {
           let first = true;
-          onSnapshot(collection(db,"ucl_matches"), snap=>{
+          snapshotOnce(collection(db,"ucl_matches"), snap=>{
             matches = snap.docs.map(d=>({id:d.id, ...d.data()}));
             matchById = new Map(matches.map(m=>[m.id,m]));
             if (first){ first = false; resolve(); return; }
@@ -1008,7 +1008,7 @@ import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attach
         applyMatchesLive(); // az eredeti listener első (azonnali) lefutásának megfelelője
 
 
-        onSnapshot(doc(db,"settings","ucl_roundStakes"), snap=>{
+        snapshotOnce(doc(db,"settings","ucl_roundStakes"), snap=>{
           const d = snap.exists() ? (snap.data()||{}) : {};
           const stakes = (d.stakes && typeof d.stakes==="object") ? d.stakes : {};
           roundStakes = { ...stakes };
@@ -1048,7 +1048,7 @@ import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attach
           goldenCandidates = gSnap.docs.map(d=>({ id:d.id, ...(d.data()||{}) })).filter(x=>x.player);
         }catch{ goldenCandidates=[]; }
 
-        onSnapshot(doc(db,"ucl_official","current"), snap=>{
+        snapshotOnce(doc(db,"ucl_official","current"), snap=>{
           const d = snap.exists() ? snap.data() : {};
           officialChampion = d.champion || "";
           officialGolden = d.goldenBoot && d.goldenBoot.player ? { player:d.goldenBoot.player, team:d.goldenBoot.team||"" } : {player:"",team:""};
@@ -1056,7 +1056,7 @@ import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attach
           refreshGoldenCard();
         });
 
-        onSnapshot(doc(db,"settings","ucl_bracket"), async snap=>{
+        snapshotOnce(doc(db,"settings","ucl_bracket"), async snap=>{
           const data = snap.exists() ? (snap.data()||{}) : {};
           const slots = (data.slots && typeof data.slots==="object") ? data.slots : {};
           const mapped = {};
@@ -1072,7 +1072,7 @@ import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attach
           if (sel?.value) renderRound(sel.value);
         });
 
-        onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
+        snapshotOnce(collection(db,"ucl_advance_tips"), snap=>{
           advanceTipsBySlotId = new Map();
           snap.forEach(d=>{
             const t=d.data()||{};
@@ -1087,7 +1087,7 @@ import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attach
           if (sel?.value) renderRound(sel.value);
         });
 
-        onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
+        snapshotOnce(collection(db,"ucl_top8Tips"), snap=>{
           top8Tips = snap.docs.map(d=>{
             const t=d.data()||{};
             const email = t.email || d.id;
@@ -1097,7 +1097,7 @@ import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attach
           if (bonusOverlayOpen) renderUsersList(document.getElementById("userSearch")?.value || "");
         });
 
-        onSnapshot(collection(db,"ucl_championPickTips"), snap=>{
+        snapshotOnce(collection(db,"ucl_championPickTips"), snap=>{
           championTips = snap.docs.map(d=>{
             const t=d.data()||{}; const email=t.email || d.id;
             return { email, nick: nickByEmail[email] || t.nick || email, team: t.team || "" };
@@ -1105,7 +1105,7 @@ import { getUsersAll, incrementalGetDocs, getUpcomingMatches, getOwnTips, attach
           refreshChampionCard();
         });
 
-        onSnapshot(collection(db,"ucl_goldenBootTips"), snap=>{
+        snapshotOnce(collection(db,"ucl_goldenBootTips"), snap=>{
           goldenTips = snap.docs.map(d=>{
             const t=d.data()||{}; const email=t.email || d.id;
             return { email, nick: nickByEmail[email] || t.nick || email, player: t.player || "", team: t.team || "" };

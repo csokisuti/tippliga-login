@@ -221,7 +221,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, serverTimestamp, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getMatchesAll, getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
+import { getMatchesAll, getUpcomingMatches, getOwnTips, attachChatLazy, snapshotOnce } from "./fs-cache.js";
     import { computeLiveOrderFromMatches } from "./standings.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
@@ -823,11 +823,11 @@ import { getMatchesAll, getUpcomingMatches, getOwnTips, attachChatLazy } from ".
       }
 
       try{
-        onSnapshot(doc(db,"settings","ucl_bracket"), (snap)=>{ loadBracketDoc(snap); });
+        snapshotOnce(doc(db,"settings","ucl_bracket"), (snap)=>{ loadBracketDoc(snap); });
       }catch(e){}
 
       try{
-        onSnapshot(collection(db,"ucl_matches"), (snap)=>{
+        snapshotOnce(collection(db,"ucl_matches"), (snap)=>{
           snap.forEach(d=>{
             const m=d.data()||{};
             matchById.set(d.id,{id:d.id,...m});
@@ -940,7 +940,7 @@ import { getMatchesAll, getUpcomingMatches, getOwnTips, attachChatLazy } from ".
       }catch(e){ startNavTop8Countdown(null); }
 
       await buildComputedTable();
-      onSnapshot(collection(db,"ucl_matches"),()=>buildComputedTable());
+      snapshotOnce(collection(db,"ucl_matches"),()=>buildComputedTable());
 
       await initBracket();
 
@@ -989,8 +989,8 @@ import { getMatchesAll, getUpcomingMatches, getOwnTips, attachChatLazy } from ".
         });
       }
       updatePendingBadgeUcl();
-      onSnapshot(collection(db,"ucl_matches"), updatePendingBadgeUcl);
-      onSnapshot(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)), updatePendingBadgeUcl);
+      snapshotOnce(collection(db,"ucl_matches"), updatePendingBadgeUcl);
+      snapshotOnce(query(collection(db,"ucl_tips"), where("user","==", currentUserEmail)), updatePendingBadgeUcl);
 
       async function checkPositionsCompleteness(){
         const card = document.getElementById('positionsCard');
@@ -1026,10 +1026,10 @@ import { getMatchesAll, getUpcomingMatches, getOwnTips, attachChatLazy } from ".
         card.classList.toggle('attention', incomplete);
       }
       await checkPositionsCompleteness();
-      onSnapshot(doc(db,'settings','positionsLock_ucl'), checkPositionsCompleteness);
-      onSnapshot(doc(db,'ucl_top8Tips', currentUserEmail), checkPositionsCompleteness);
-      onSnapshot(doc(db,'ucl_championPickTips', currentUserEmail), checkPositionsCompleteness);
-      onSnapshot(doc(db,'ucl_goldenBootTips', currentUserEmail), checkPositionsCompleteness);
+      snapshotOnce(doc(db,'settings','positionsLock_ucl'), checkPositionsCompleteness);
+      snapshotOnce(doc(db,'ucl_top8Tips', currentUserEmail), checkPositionsCompleteness);
+      snapshotOnce(doc(db,'ucl_championPickTips', currentUserEmail), checkPositionsCompleteness);
+      snapshotOnce(doc(db,'ucl_goldenBootTips', currentUserEmail), checkPositionsCompleteness);
 
       initChat(userRef);
 

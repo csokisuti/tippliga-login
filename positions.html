@@ -127,7 +127,7 @@
       collection, getDocs, addDoc, deleteDoc, serverTimestamp,
       query, where, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
+    import { getUpcomingMatches, getOwnTips, attachChatLazy, snapshotOnce } from "./fs-cache.js";
 
     /* ÚJ: liga-váltó komponens */
     import { initLeagueSwitcher } from "./league-switcher.js";
@@ -319,7 +319,7 @@
     function watchPositionsLock(){
       const ref = doc(db, "settings", "positionsLock");
 
-      onSnapshot(ref, snap => {
+      snapshotOnce(ref, snap => {
         const d = snap.exists() ? snap.data() : {};
         const st = computeLocked(d);
 

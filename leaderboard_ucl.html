@@ -183,7 +183,7 @@
       doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc,
       query, where, orderBy, onSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getUsersAll, watchIncremental, getUpcomingMatches, getOwnTips, attachChatLazy } from "./fs-cache.js";
+import { getUsersAll, getUpcomingMatches, getOwnTips, attachChatLazy, incrementalGetDocs, snapshotOnce } from "./fs-cache.js";
     import { initLeagueSwitcher } from "./league-switcher.js";
 
     const firebaseConfig={apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",authDomain:"tippliga-4b3af.firebaseapp.com",projectId:"tippliga-4b3af",storageBucket:"tippliga-4b3af.appspot.com",messagingSenderId:"720359845241",appId:"1:720359845241:web:d3d6edcac6b43ebff053a8"};
@@ -457,7 +457,7 @@ const stakeForRound = (roundId)=>{
         });
 
         /* MATCHES */
-        onSnapshot(collection(db,"ucl_matches"), snap=>{
+        snapshotOnce(collection(db,"ucl_matches"), snap=>{
           matchesById={};
           const roundSet=new Set();
           snap.forEach(d=>{
@@ -473,37 +473,32 @@ const stakeForRound = (roundId)=>{
         });
 
         /* TIPS – utolsó verzió */
-        // Első betöltés gyorsítótárból + változások; utána csak a módosult tippeket figyeli (nem olvassa újra az egész gyűjteményt)
-        let tipsFirstLoad=true;
-        await watchIncremental(db,"ucl_tips",onSnapshot,snap=>{
-          latestTipsByUserMatch=collectLatestTips(snap);
-          if(tipsFirstLoad){ tipsFirstLoad=false; return; }
-          recomputeRows(); renderTable();
-        });
+        latestTipsByUserMatch=collectLatestTips(await incrementalGetDocs(db,"ucl_tips"));
+        recomputeRows(); renderTable();
 
         /* OFFICIAL (győztes/gólkirály) */
-        onSnapshot(doc(db,"ucl_official","current"), snap=>{
+        snapshotOnce(doc(db,"ucl_official","current"), snap=>{
           const d=snap.exists()?snap.data():{};
           officialChampion=d.champion||d.winner||d.finalWinner||d.team||"";
           officialGoldenPlayer=(d.goldenBoot&&d.goldenBoot.player)||d.goldenBootPlayer||d.topScorer||d.player||"";
           recomputeRows(); renderTable();
         });
         /* ROUND STAKES (tét szorzó) */
-        onSnapshot(doc(db,"settings","ucl_roundStakes"), snap=>{
+        snapshotOnce(doc(db,"settings","ucl_roundStakes"), snap=>{
           const d = snap.exists()? (snap.data()||{}) : {};
           roundStakes = (d.stakes && typeof d.stakes==="object") ? d.stakes : {};
           recomputeRows(); renderTable();
         });
 
         /* UCL BRACKET (továbbjutó döntések + odds) */
-        onSnapshot(doc(db,"settings","ucl_bracket"), snap=>{
+        snapshotOnce(doc(db,"settings","ucl_bracket"), snap=>{
           bracketSlots = (snap.exists() && snap.data() && snap.data().slots) ? (snap.data().slots || {}) : {};
           buildTieInfosFromBracket();
           recomputeRows(); renderTable();
         });
 
         /* UCL TOVÁBBJUTÓ TIPPEK */
-        onSnapshot(collection(db,"ucl_advance_tips"), snap=>{
+        snapshotOnce(collection(db,"ucl_advance_tips"), snap=>{
           const bySlot = {};
           snap.forEach(docu=>{
             const v = docu.data() || {};
@@ -519,7 +514,7 @@ const stakeForRound = (roundId)=>{
 
 
 
-        onSnapshot(collection(db,"ucl_championCandidates"), snap=>{
+        snapshotOnce(collection(db,"ucl_championCandidates"), snap=>{
           championBonusByTeam={};
           snap.forEach(docu=>{
             const c=docu.data()||{};
@@ -530,7 +525,7 @@ const stakeForRound = (roundId)=>{
           recomputeRows(); renderTable();
         });
 
-        onSnapshot(collection(db,"ucl_goldenBootCandidates"), snap=>{
+        snapshotOnce(collection(db,"ucl_goldenBootCandidates"), snap=>{
           goldenBonusByPlayer={};
           snap.forEach(docu=>{
             const c=docu.data()||{};
@@ -542,17 +537,17 @@ const stakeForRound = (roundId)=>{
         });
 
         /* TOP8/CHAMP/GOLDEN tippek */
-        onSnapshot(collection(db,"ucl_top8Tips"), snap=>{
+        snapshotOnce(collection(db,"ucl_top8Tips"), snap=>{
           top8TipsByEmail={};
           snap.forEach(docu=>{const t=docu.data()||{};const email=emailKey(t.email||t.user||t.userEmail||docu.id); if(email)top8TipsByEmail[email]=(Array.isArray(t.picks)?t.picks.slice(0,8):[])});
           recomputeRows(); renderTable();
         });
-        onSnapshot(collection(db,"ucl_championPickTips"), snap=>{
+        snapshotOnce(collection(db,"ucl_championPickTips"), snap=>{
           championPickByEmail={};
           snap.forEach(docu=>{const t=docu.data()||{};const email=emailKey(t.email||t.user||t.userEmail||docu.id); if(email)championPickByEmail[email]=t.team||t.champion||t.winner||t.pick||""});
           recomputeRows(); renderTable();
         });
-        onSnapshot(collection(db,"ucl_goldenBootTips"), snap=>{
+        snapshotOnce(collection(db,"ucl_goldenBootTips"), snap=>{
           goldenPickByEmail={};
           snap.forEach(docu=>{const t=docu.data()||{};const email=emailKey(t.email||t.user||t.userEmail||docu.id); if(email)goldenPickByEmail[email]=t.player||t.name||t.pick||""});
           recomputeRows(); renderTable();

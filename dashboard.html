@@ -194,7 +194,7 @@
       collection, addDoc, deleteDoc, serverTimestamp,
       query, orderBy, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { attachChatLazy } from "./fs-cache.js";
+    import { attachChatLazy, snapshotOnce } from "./fs-cache.js";
 
     import { initLeagueSwitcher } from "./league-switcher.js";
 
@@ -270,7 +270,7 @@
       const wrap = document.getElementById("tableContainer");
       wrap.innerHTML = '<div class="muted" style="padding:12px;">Tabella betöltése…</div>';
 
-      onSnapshot(ref, (snap)=>{
+      snapshotOnce(ref, (snap)=>{
         if(!snap.exists()){
           wrap.innerHTML = '<div class="muted" style="padding:12px;">Még nincs publikált tabella. Az admin felületen számoltasd újra.</div>';
           return;
