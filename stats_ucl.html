@@ -429,18 +429,12 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { app, auth, db } from "./firebase-init.js";
+    import { getOdds as getOddsRaw, tipChoice, tipDouble, stakeFromMap } from "./scoring.js";
   import { getMatchesAll, getUsersAll, incrementalGetDocs } from "./fs-cache.js";
 
   // ====== CONFIG (ugyanaz a projekt) ======
-  const firebaseConfig = {
-    apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-    authDomain: "tippliga-4b3af.firebaseapp.com",
-    projectId: "tippliga-4b3af",
-    storageBucket: "tippliga-4b3af.appspot.com",
-    messagingSenderId: "720359845241",
-    appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-  };
 
   // ====== BL-specifikus kollekciók ======
   const COLL_MATCHES = "ucl_matches";
@@ -450,9 +444,9 @@
   const MIN_ROUND = 0;                        // BL: nincs alsó limit
 
   // ====== INIT ======
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
+  // app, auth, db: lásd firebase-init.js
+  
+  
 
   // Mini utilok
   const $   = (id)=>document.getElementById(id);
@@ -460,18 +454,12 @@
   const s   = (v)=> (v==null ? "" : String(v));
 
   // Field helpers (NB1-hez igazodva)
-  const tipChoice  = t => t?.choice ?? t?.tip ?? "";
-  const tipDouble  = t => !!(t?.double ?? t?.isDouble);
+  /* tipChoice: lásd scoring.js */
+  /* tipDouble: lásd scoring.js */
   const matchRound = m => s(m?.round ?? m?.roundId ?? "");
   function roundNum(m){ const r = parseInt(matchRound(m),10); return isNaN(r)? null : r; }
 
-  function getOdds(m, key){
-    if (m?.odds && (key in m.odds)) return Number(m.odds[key]) || 0;
-    if (key==="1") return Number(m?.odds1 ?? m?.["odds1"]) || 0;
-    if (key==="X") return Number(m?.oddsX ?? m?.["oddsX"]) || 0;
-    if (key==="2") return Number(m?.odds2 ?? m?.["odds2"]) || 0;
-    return 0;
-  }
+  function getOdds(m, key){ return Number(getOddsRaw(m, key)) || 0; }
   // kickoff millis (best-effort)
   function getMatchStartMs(m){
     const cand = [m?.kickoff, m?.start, m?.startTime, m?.kickoffTime, m?.dateTime, m?.ts, m?.timestamp, m?.beginAt];
@@ -497,7 +485,7 @@
 
   // ====== Állapot ======
   const state = {
-    tips: [], tipHistory: [], matches: {}, users: {},
+    tips: [], tipHistory: [], matches: {}, users: {}, roundStakes: {},
     roundsAsc: [],
     perUserLatest: new Map(),   // legutóbbi tipp user×match
     finalTipTime: new Map(),    // utolsó tipHistory ts user×match
@@ -516,7 +504,21 @@
     recomputeAll();
   });
 
+  // Forduló-szorzó (BL): a pontok ugyanúgy számolódnak, mint a ranglistán (odds × duplázó × szorzó)
+  const stakeK = m => stakeFromMap(state.roundStakes, matchRound(m));
+
+  async function loadRoundStakes(){
+    try{
+      const snap = await getDoc(doc(db, "settings", "ucl_roundStakes"));
+      const d = snap.exists() ? (snap.data() || {}) : {};
+      state.roundStakes = (d.stakes && typeof d.stakes === "object") ? { ...d.stakes } : {};
+    }catch(e){
+      state.roundStakes = {};
+    }
+  }
+
   async function loadAll(){
+    await loadRoundStakes();
     let hSnapUcl=null, hSnapCommon=null;
     try { hSnapUcl = await incrementalGetDocs(db, COLL_HIST1, { field: "ts" }); } catch(e){}
     try { hSnapCommon = await incrementalGetDocs(db, COLL_HIST_FALLBACK, { field: "ts" }); } catch(e){}
@@ -701,7 +703,7 @@
         const ok = !!m.outcome && p===m.outcome;
         const o  = getOdds(m,p)||0;
         const r  = matchRound(m);
-        const ptsS=(ok&&o)?o:0, ptsD=(ok&&o)?(tipDouble(t)?2:1)*o:0;
+        const k=stakeK(m); const ptsS=(ok&&o)?o*k:0, ptsD=(ok&&o)?(tipDouble(t)?2:1)*o*k:0;
         (perRoundPtsS[t.user] ||= {}); (perRoundPtsD[t.user] ||= {});
         perRoundPtsS[t.user][r]=(perRoundPtsS[t.user][r]||0)+ptsS;
         perRoundPtsD[t.user][r]=(perRoundPtsD[t.user][r]||0)+ptsD;
@@ -740,7 +742,7 @@
         const p=tipChoice(t); if(!p) return;
         const o=getOdds(m,p)||0; const ok=m.outcome && p===m.outcome;
         const mult=tipDouble(t)?2:1;
-        const pts=(ok&&o)? o*mult:0; const ptsS=(ok&&o)?o:0;
+        const k=stakeK(m); const pts=(ok&&o)? o*mult*k:0; const ptsS=(ok&&o)?o*k:0;
         if (tipDouble(t)){ res.dblAll++; if (ok) res.dblHit++; if (pts) res.dblPts+=pts; }
         res.basePts += pts;
         if (o){ res.riskAll+=o; res.cAll++; if (ok){ res.riskWin+=o; res.cWin++; } }
@@ -898,7 +900,7 @@
       const p=tipChoice(t); const d=tipDouble(t); const o=getOdds(m,p)||0;
       if (p===m.outcome && o){
         const mult = (surprisesUseDouble && d) ? 2 : 1;
-        const pts = o*mult;
+        const pts = o*mult*stakeK(m);
         const label = `${s(m.homeTeam||m.home||'?')} – ${s(m.awayTeam||m.away||'?')}`;
         topSurprises.push({u:String(t.user), label, p, pts});
       }
@@ -939,8 +941,9 @@
       list.forEach(t=>{
         const m=state.matches[String(t.matchId)]; if(!m) return;
         const p=tipChoice(t); const o=getOdds(m,p)||0; const ok=m.outcome && p===m.outcome; const d=tipDouble(t);
-        const ptsS = (ok&&o)? o:0;
-        const ptsD = (ok&&o)? (d?2:1)*o:0;
+        const k = stakeK(m);
+        const ptsS = (ok&&o)? o*k:0;
+        const ptsD = (ok&&o)? (d?2:1)*o*k:0;
         const r=matchRound(m);
         (perRoundPtsL[u]  ||= {}); perRoundPtsL[u][r]  = (perRoundPtsL[u][r]  ||0)+ptsS;
         (perRoundPtsLD[u] ||= {}); perRoundPtsLD[u][r] = (perRoundPtsLD[u][r] ||0)+ptsD;
@@ -972,7 +975,7 @@
       if (Math.abs(o-maxO) < 1e-9){
         const u=String(t.user);
         const ok = (p===m.outcome);
-        const ptsS = ok? o:0;
+        const ptsS = ok? o*stakeK(m):0;
         (upsetByUser[u] ||= {tips:0,hits:0,ptsS:0});
         upsetByUser[u].tips += 1;
         if (ok){ upsetByUser[u].hits += 1; upsetByUser[u].ptsS += ptsS; }

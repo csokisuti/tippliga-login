@@ -11,20 +11,13 @@ import {
   updateDoc,
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { app, auth, db } from "./firebase-init.js";
 import { getMatchesAll, getOwnTips } from "./fs-cache.js";
 
-const firebaseConfig={
-  apiKey:"AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-  authDomain:"tippliga-4b3af.firebaseapp.com",
-  projectId:"tippliga-4b3af",
-  storageBucket:"tippliga-4b3af.appspot.com",
-  messagingSenderId:"720359845241",
-  appId:"1:720359845241:web:d3d6edcac6b43ebff053a8"
-};
 
-const app=getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth=getAuth(app);
-const db=getFirestore(app);
+// app, auth, db: lásd firebase-init.js
+
+
 
 const VALID_CHOICES=new Set(["1","X","2"]);
 const FINISHED_STATUSES=new Set(["FT","AET","PEN","AWD","CANC","ABD"]);

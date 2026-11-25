@@ -549,20 +549,14 @@
       getDoc,
       getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { app, auth, db } from "./firebase-init.js";
+    import { getOdds } from "./scoring.js";
     import { cachedGetDocs } from "./fs-cache.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyC2xpMW1xgaWIdI2JoEhK23vkC0FTF2PKc",
-      authDomain: "tippliga-4b3af.firebaseapp.com",
-      projectId: "tippliga-4b3af",
-      storageBucket: "tippliga-4b3af.appspot.com",
-      messagingSenderId: "720359845241",
-      appId: "1:720359845241:web:d3d6edcac6b43ebff053a8"
-    };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    // app, auth, db: lásd firebase-init.js
+    
+    
 
     const crestMap = {
       "Debreceni VSC": "crest/crest-dvsc.png",
@@ -612,13 +606,7 @@
 
     function matchRound(match){ return String(match?.round ?? match?.roundId ?? ""); }
 
-    function getOdds(match, key){
-      if (match?.odds && Object.prototype.hasOwnProperty.call(match.odds, key)) return match.odds[key];
-      if (key === "1") return match?.odds1 ?? match?.["odds1"];
-      if (key === "X") return match?.oddsX ?? match?.["oddsX"];
-      if (key === "2") return match?.odds2 ?? match?.["odds2"];
-      return undefined;
-    }
+    /* getOdds: lásd scoring.js */
 
     function crestFor(team){ return crestMap[team] || "fav2.png"; }
 
